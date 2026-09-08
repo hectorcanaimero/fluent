@@ -24,3 +24,17 @@
   Se confirmó que `apps/api/.env.test` no cae bajo ningún patrón de
   `.gitignore` (ni el de la raíz ni el de `apps/api/.gitignore`), con
   `git check-ignore -v apps/api/.env.test` (sin salida → no ignorado).
+
+- 2026-09-08 (T2, PR-08): El alcance de T2 en `docs/tasks/PR-08-infraestructura.md`
+  dice literalmente "verificar que `.insforge/project.json` está commiteado sin
+  secretos". Esto contradice la instrucción explícita de la sesión (y el
+  `.gitignore` real del repo, que excluye `apps/api/.insforge/` precisamente
+  porque `project.json` contiene la API key admin en texto plano, no una
+  versión "sin secretos" de ese archivo). Se siguió la instrucción explícita,
+  de mayor jerarquía: `apps/api/.insforge/project.json` se mantiene fuera del
+  repo (gitignored, verificado con `git check-ignore -v`), nunca commiteado ni
+  impreso. Lo que sí se commitea es `apps/api/insforge.toml` (config export/plan/apply
+  de la CLI, sin secretos: flags de auth como `require_email_verification`) y
+  la URL pública del proyecto en `docs/specs/SPEC-08-infraestructura.md` §6.
+  El criterio de aceptación real de T2 (`current` muestra `fluent`;
+  `metadata --json` con `requireEmailVerification: false`) se cumplió igual.

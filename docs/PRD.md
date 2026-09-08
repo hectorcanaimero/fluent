@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.2 |
+| Versión | 0.3 |
 | Fecha | 2026-09-08 |
 | Fuente | `docs/PROYECTO.md` (brief) |
 | Estado | Aprobado el 2026-09-08, con la sección 6.2 (proveedores y modelos) pendiente de visto bueno |
@@ -123,7 +123,7 @@ Prioridad: **P0** imprescindible para v1, **P1** deseable en v1, **P2** después
 | RF-2.5 | Si ningún modelo responde, la sesión se degrada a un mensaje claro, sin consumir intentos ni romper el streak. | P0 |
 | RF-2.6 | Selector de modelo por usuario. El catálogo se obtiene del endpoint de modelos de OpenRouter y se agrupa en Gratis, Económico y Premium, con precio por millón de tokens y costo estimado por sesión calculado con el promedio real de tokens del usuario. | P0 |
 | RF-2.7 | Dos roles de modelo configurables por separado: conversación (prioriza latencia) y coaching brief (prioriza calidad, corre async). Por defecto ambos usan el gratuito. | P1 |
-| RF-2.8 | Segundo proveedor: Google Gemini mediante API key de Google AI Studio pegada por el usuario, usando el endpoint compatible con OpenAI. Mismo adaptador que OpenRouter con otra URL base. | P1 |
+| RF-2.8 | Segundo proveedor desde v1: Google Gemini mediante API key de Google AI Studio pegada por el usuario, usando el endpoint compatible con OpenAI. Mismo adaptador que OpenRouter con otra URL base. El onboarding lo presenta como opción recomendada por calidad y estabilidad del free tier frente a los modelos gratuitos de OpenRouter. | P0 |
 | RF-2.9 | Si el modelo pago falla por crédito agotado o cuota, se cae a la cadena gratuita y se avisa al usuario en la sesión y en la pantalla de proveedores. | P0 |
 
 Nota sobre Google: una suscripción a Google AI Pro da acceso a la app de Gemini, no a la API. El free tier de la API existe para cualquier cuenta en Google AI Studio, con límites por minuto y por día que alcanzan para dos sesiones diarias. Cargar la key de Gemini dentro de OpenRouter es posible, pero añade comisión y un salto; no se hace en v1.

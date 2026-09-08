@@ -11,6 +11,8 @@
  *   5. (T2) El usuario A no lee `provider_credentials` (403/4xx o vacío).
  *   6. (T2) El usuario A solo ve su propia fila en `model_preferences` y
  *      puede hacer PATCH de `chat_model` sobre ella.
+ *   7. (T3) El usuario A solo ve sus sesiones, turnos y correcciones, no lee
+ *      `xp_events` ni `llm_calls`, y no puede invocar `close_session`.
  *
  * Uso (desde apps/api, con .insforge/project.json enlazado a la rama):
  *   node scripts/db-smoke.ts
@@ -275,8 +277,109 @@ async function main(): Promise<void> {
     body: patchPrefs.body,
   });
 
+  // --- T3: sesiones, turnos, correcciones y auditoría (migración 3) --------
+  const sessRes = await call('/api/database/records/sessions', {
+    admin: true,
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify([
+      { user_id: a.id, kind: 'free_topic', topic: 'Sesión de A' },
+      { user_id: b.id, kind: 'free_topic', topic: 'Sesión de B' },
+    ]),
+  });
+  if (sessRes.status >= 300) fail('crear sesiones', sessRes);
+  const [sessionA, sessionB] = sessRes.body as Array<{ id: string }>;
+
+  const turnsRes = await call('/api/database/records/turns', {
+    admin: true,
+    method: 'POST',
+    body: JSON.stringify([
+      { session_id: sessionA.id, idx: 0, role: 'user', text: 'hola de A' },
+      { session_id: sessionB.id, idx: 0, role: 'user', text: 'hola de B' },
+    ]),
+  });
+  if (turnsRes.status >= 300) fail('crear turnos', turnsRes);
+
+  const corrRes = await call('/api/database/records/corrections', {
+    admin: true,
+    method: 'POST',
+    body: JSON.stringify([
+      { session_id: sessionA.id, user_id: a.id, turn_idx: 0, original: 'I go yesterday', corrected: 'I went yesterday', category: 'past_simple' },
+      { session_id: sessionB.id, user_id: b.id, turn_idx: 0, original: 'I has', corrected: 'I have', category: 'subject_verb' },
+    ]),
+  });
+  if (corrRes.status >= 300) fail('crear correcciones', corrRes);
+
+  const mySessions = await call('/api/database/records/sessions', { token: tokenA });
+  check(
+    'A solo ve sus sesiones',
+    mySessions.status === 200 &&
+      Array.isArray(mySessions.body) &&
+      mySessions.body.length === 1 &&
+      mySessions.body[0]?.id === sessionA.id,
+    mySessions.body,
+  );
+
+  const myTurns = await call('/api/database/records/turns', { token: tokenA });
+  check(
+    'A solo ve los turnos de sus sesiones',
+    myTurns.status === 200 &&
+      Array.isArray(myTurns.body) &&
+      myTurns.body.length === 1 &&
+      myTurns.body[0]?.session_id === sessionA.id,
+    myTurns.body,
+  );
+
+  const myCorrections = await call('/api/database/records/corrections', { token: tokenA });
+  check(
+    'A solo ve sus correcciones',
+    myCorrections.status === 200 &&
+      Array.isArray(myCorrections.body) &&
+      myCorrections.body.length === 1 &&
+      myCorrections.body[0]?.user_id === a.id,
+    myCorrections.body,
+  );
+
+  for (const tabla of ['xp_events', 'llm_calls']) {
+    const res = await call(`/api/database/records/${tabla}`, { token: tokenA });
+    check(
+      `A no lee ${tabla}`,
+      res.status >= 400 || (Array.isArray(res.body) && res.body.length === 0),
+      { status: res.status, body: res.body },
+    );
+  }
+
+  const closeRes = await call('/api/database/rpc/close_session', {
+    admin: true,
+    method: 'POST',
+    body: JSON.stringify({ p_session_id: sessionA.id, p_duration_sec: 600, p_turns_count: 8 }),
+  });
+  check(
+    'close_session por RPC devuelve el resumen de XP',
+    closeRes.status < 300 && closeRes.body?.xp_earned === 80 && closeRes.body?.streak === 1,
+    { status: closeRes.status, body: closeRes.body },
+  );
+
+  const closeFromApp = await call('/api/database/rpc/close_session', {
+    token: tokenA,
+    method: 'POST',
+    body: JSON.stringify({ p_session_id: sessionA.id, p_duration_sec: 600, p_turns_count: 8 }),
+  });
+  check('la app no puede llamar a close_session', closeFromApp.status >= 400, {
+    status: closeFromApp.status,
+    body: closeFromApp.body,
+  });
+
   // --- limpieza (las cuentas de auth se quedan: solo se borran desde la
   //     API de auth y esta rama de InsForge es desechable) ------------------
+  await call(`/api/database/records/xp_events?user_id=in.(${a.id},${b.id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
+  await call(`/api/database/records/sessions?user_id=in.(${a.id},${b.id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
   await call(`/api/database/records/profiles?user_id=in.(${a.id},${b.id})`, {
     admin: true,
     method: 'DELETE',

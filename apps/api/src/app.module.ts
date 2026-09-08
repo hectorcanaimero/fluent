@@ -6,6 +6,9 @@ import { AuthModule } from './auth/auth.module.js';
 import { HealthModule } from './health/health.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { InsforgeModule } from './insforge/insforge.module.js';
+import { I18nModule } from './i18n/i18n.module.js';
+import { ProfilesModule } from './profiles/profiles.module.js';
+import { GroupsModule } from './groups/groups.module.js';
 
 @Module({
   imports: [
@@ -24,10 +27,13 @@ import { InsforgeModule } from './insforge/insforge.module.js';
     }),
     RedisModule,
     InsforgeModule,
+    I18nModule,
     // AuthModule registra AuthGuard como guard global (APP_GUARD): todas las
     // rutas exigen bearer salvo las marcadas con @Public() (SPEC-02 §4).
     AuthModule,
     HealthModule,
+    ProfilesModule,
+    GroupsModule,
   ],
   controllers: [],
   providers: [],

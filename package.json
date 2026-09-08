@@ -1,0 +1,11 @@
+{
+  "name": "fluent",
+  "private": true,
+  "packageManager": "pnpm@9.15.2",
+  "scripts": {
+    "api": "pnpm --filter @fluent/api",
+    "build": "pnpm -r build",
+    "lint": "pnpm -r lint",
+    "test": "pnpm -r test"
+  }
+}

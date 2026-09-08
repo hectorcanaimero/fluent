@@ -1,0 +1,58 @@
+name: CI
+
+on: pull_request
+
+jobs:
+  api:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: pnpm
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        run: pnpm --filter @fluent/api lint
+
+      - name: Test
+        run: pnpm --filter @fluent/api test
+
+      - name: Build
+        run: pnpm --filter @fluent/api build
+
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high
+
+  mobile:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Get Flutter dependencies
+        working-directory: apps/mobile
+        run: flutter pub get
+
+      - name: Run Flutter analyze
+        working-directory: apps/mobile
+        run: flutter analyze
+
+      - name: Run Flutter tests
+        working-directory: apps/mobile
+        run: flutter test

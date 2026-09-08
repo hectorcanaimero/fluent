@@ -25,4 +25,15 @@ async function bootstrap() {
 
   await app.listen(port);
 }
-await bootstrap();
+
+// Sin `await` a nivel de módulo a propósito: con `"type": "module"` un
+// top-level await impide que `require()` (usado por ejemplo por
+// herramientas o scripts CJS que cargan `dist/main.js`) resuelva el grafo
+// ESM de forma síncrona (Node lanza `ERR_REQUIRE_ASYNC_MODULE`). Se deja
+// como promesa "flotante" con manejo explícito de error, el patrón
+// histórico de arranque de NestJS antes de que existiera top-level await.
+bootstrap().catch((error: unknown) => {
+  // eslint-disable-next-line no-console -- el logger de Nest aún no existe si bootstrap() falla antes de crearlo
+  console.error('Error fatal al arrancar la API', error);
+  process.exitCode = 1;
+});

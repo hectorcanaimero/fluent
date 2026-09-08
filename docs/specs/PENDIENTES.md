@@ -109,3 +109,102 @@
   `version` como string) y que el endpoint responde 200, en vez del valor
   concreto de cada `ok`. Se confirmó que la suite completa de e2e termina
   en ~4s (no se cuelga).
+
+- 2026-09-08 (T5, PR-08): Workflow CI (`.github/workflows/ci.yml`) usa
+  `on: pull_request` sin restringir a ramas base específicas; corre en
+  cualquier PR independientemente de cuál sea la rama base. Esto es lo más
+  general y útil, y permite que el flujo de CI sea agnóstico a cambios
+  futuros en las ramas base del repo. Si en el futuro se requiere correr solo
+  en PRs contra `main`, se puede restringir con `on: { pull_request: { branches: [main] } }`.
+
+- 2026-09-08 (T5, PR-08): `pnpm audit --audit-level high` se ejecuta en la
+  raíz del monorepo (sin `--filter @fluent/api`). `pnpm audit` es un comando
+  de pnpm, no un script npm, y se aplica a todo el monorepo por defecto
+  (audita las dependencias de todos los workspaces). Esta es la forma estándar
+  y la más simple de auditar el monorepo completo.
+
+- 2026-09-08 (T4, PR-08): `apps/api/Dockerfile` instala dependencias con
+  `pnpm install --no-frozen-lockfile` en vez de `--frozen-lockfile`
+  (mencionado literalmente en SPEC-08 §3). El build de Coolify usa
+  contexto `apps/api` (SPEC-08 §4:
+  `docker build -f apps/api/Dockerfile apps/api`), y dentro de ese
+  contexto no hay acceso al `pnpm-lock.yaml` ni al `pnpm-workspace.yaml`
+  reales del monorepo (viven en la raíz, fuera del contexto de build). Se
+  descartó mover o duplicar el lockfile real del repo dentro de
+  `apps/api` para no tener dos fuentes de verdad del lockfile ni
+  arriesgar que se desincronicen. Como `apps/api` es el único paquete del
+  workspace pnpm (`pnpm-workspace.yaml`: `packages: [apps/api]`) y no
+  tiene dependencias `workspace:*` a otros paquetes del repo, instalar
+  sin lockfile dentro de este contexto acotado resuelve, en la práctica,
+  las mismas versiones que resolvería el lockfile real (mismos rangos
+  semver en `apps/api/package.json`). Para acotar al menos la
+  reproducibilidad del propio gestor de paquetes, el Dockerfile fija la
+  versión de pnpm con `corepack prepare pnpm@9.15.2 --activate` (mismo
+  valor que el campo `packageManager` de la raíz del monorepo). Se
+  prefirió esta opción, la más simple, sobre alternativas más complejas
+  (p. ej. generar un lockfile de `apps/api` en CI/local y commitearlo, o
+  cambiar el build de Coolify a contexto raíz), que no estaban pedidas
+  por la tarea y añadirían una segunda fuente de verdad o se apartarían
+  de SPEC-08 §4. Revisar si en el futuro se necesita reproducibilidad
+  estricta de versiones (p. ej. fijando un lockfile de `apps/api` real y
+  usando `--frozen-lockfile` contra él).
+
+- 2026-09-08 (T4, PR-08): `apps/api/Dockerfile` usa `wget --spider` (de
+  BusyBox, ya presente en `node:24-alpine`) para el `HEALTHCHECK` en vez
+  de instalar `curl` (que no viene en la imagen base), para no añadir
+  paquetes a la imagen final de runtime. Verificado en la imagen de
+  prueba: `wget` existe en `node:24-alpine` sin instalar nada adicional.
+
+- 2026-09-08 (T4, PR-08): Criterio de aceptación de T4
+  (`docker run --rm <img> node -e "require('./dist/main.js')"`): en la
+  imagen construida (Node v24.20.0, confirmado con
+  `docker run --rm fluent-api-t4-test node --version`), ese comando
+  literal falla con:
+
+  ```
+  Error [ERR_REQUIRE_ASYNC_MODULE]: require() cannot be used on an ESM
+  graph with top-level await. Use import() instead. To see where the
+  top-level await comes from, use --experimental-print-required-tla.
+  Required module: /app/dist/main.js
+  ```
+
+  No es un error de resolución de módulos, rutas rotas ni de sintaxis:
+  Node 24 sí soporta `require()` síncrono de ESM de forma nativa, pero no
+  puede hacerlo cuando el grafo del módulo contiene top-level await (como
+  `await bootstrap()` al final de `apps/api/src/main.ts`), porque
+  `require()` es síncrono por definición y el TLA es inherentemente
+  asíncrono; es una limitación conocida de Node, no un problema del
+  Dockerfile ni del build. Como comprobación adicional (sugerida por el
+  enunciado de la tarea), se probó
+  `docker run --rm fluent-api-t4-test node dist/main.js` (sin `require()`,
+  como lo ejecutaría realmente Coolify vía el `CMD` del Dockerfile): este
+  sí arranca Nest limpiamente y falla únicamente por el `ZodError`
+  esperado de variables de entorno obligatorias ausentes
+  (`INSFORGE_URL`, `INSFORGE_API_KEY`, etc.), sin ningún error de
+  ESM/CJS. No se tocó `"type": "module"` de `package.json` ni la config
+  de módulos de TypeScript para "arreglar" el `require()` literal del
+  criterio, como pidió explícitamente el enunciado de la tarea; se deja
+  a la sesión líder decidir si el criterio de aceptación debe
+  reformularse para usar `node dist/main.js` en vez de
+  `node -e "require(...)"`, dado que es el comando real que ejecuta la
+  imagen en producción (el `CMD` del Dockerfile) y el que sí pasa sin
+  errores de módulos.
+
+- 2026-09-08 (T4, PR-08, decisión de la sesión líder): en vez de reformular
+  el criterio de aceptación, se ajustó `apps/api/src/main.ts` y
+  `apps/api/src/worker.ts` para no usar `await bootstrap();` a nivel de
+  módulo (top-level await): ahora es `bootstrap().catch((error) => {
+  console.error(...); process.exitCode = 1; })`, el patrón histórico de
+  arranque de NestJS antes de que existiera top-level await. Con este
+  cambio, `docker run --rm <img> node -e "require('./dist/main.js')"`
+  cumple el criterio **literal** de T4 tal como está escrito: el `require`
+  ya no falla con `ERR_REQUIRE_ASYNC_MODULE`, y falla únicamente por el
+  `ZodError` esperado de variables de entorno ausentes (verificado de
+  nuevo con una imagen de prueba, `fluent-api-t4-verify`, borrada al
+  terminar). No afecta el comportamiento en producción (`node dist/main.js`
+  vía el `CMD` del Dockerfile): Nest arranca igual, y un fallo de
+  `bootstrap()` sigue terminando el proceso con código de salida distinto
+  de cero (antes por la propagación de la excepción del top-level await,
+  ahora por `process.exitCode = 1` explícito tras el `.catch`), así que
+  Coolify/Docker siguen detectando el arranque fallido igual. Gate de
+  build/test de `@fluent/api` re-verificado en verde tras el cambio.

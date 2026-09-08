@@ -1,0 +1,23 @@
+# Ver apps/api/Dockerfile (T4, PR-08). Reduce el contexto de build a lo
+# que realmente hace falta para `pnpm install` + `pnpm build`.
+
+node_modules
+dist
+.env
+.env.*
+!.env.example
+*.log
+.git
+.gitignore
+
+# IDE / OS
+.vscode
+.idea
+.DS_Store
+
+# Tests y docs: no hacen falta para el build de producción
+test
+*.spec.ts
+coverage
+README.md
+AGENTS.md

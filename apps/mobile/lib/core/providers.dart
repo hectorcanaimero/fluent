@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
 import '../features/auth/domain/auth_state.dart';
+import '../features/providers/data/oauth_launcher.dart';
 import 'api/fake_api.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
@@ -47,6 +48,15 @@ final fluentApiProvider = Provider<FluentApi>((ref) {
 /// `null` usa la detección del sistema. Ajustes (T8) lo cambia con un
 /// `StateProvider` para dejar elegir `es` o `pt-BR` manualmente.
 final localeOverrideProvider = StateProvider<Locale?>((ref) => null);
+
+/// Abre el navegador para el PKCE de OpenRouter (SPEC-06 §7). Con
+/// `USE_FAKE_API=true` se simula el login y el retorno del deep link.
+final oauthLauncherProvider = Provider<OAuthLauncher>((ref) {
+  if (Env.useFakeApi) {
+    return FakeOAuthLauncher();
+  }
+  return const FlutterWebAuthOAuthLauncher();
+});
 
 final authControllerProvider =
     StateNotifierProvider<AuthController, AuthState>((ref) {

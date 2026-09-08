@@ -258,4 +258,100 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get interestPets => 'Mascotas';
+
+  @override
+  String get providersTitle => 'Proveedores y modelos';
+
+  @override
+  String get providersOpenRouterTitle => 'OpenRouter';
+
+  @override
+  String get providersGeminiTitle => 'Gemini';
+
+  @override
+  String get providersGeminiRecommendedBadge => 'Recomendado';
+
+  @override
+  String get providersStatusConnected => 'Conectado';
+
+  @override
+  String get providersStatusNotConnected => 'No conectado';
+
+  @override
+  String get providersStatusError => 'Con error';
+
+  @override
+  String get providersConnectButton => 'Conectar';
+
+  @override
+  String get providersDisconnectButton => 'Desconectar';
+
+  @override
+  String providersCreditsRemaining(String amount) {
+    return 'Crédito restante: $amount USD';
+  }
+
+  @override
+  String get providersErrorGeneric =>
+      'No pudimos completar la conexión. Probá de nuevo.';
+
+  @override
+  String get providersLoadError => 'No pudimos cargar los proveedores.';
+
+  @override
+  String get providersGeminiPasteKeyButton => 'Pegar API key';
+
+  @override
+  String get providersGeminiKeyDialogTitle => 'Conectar Gemini';
+
+  @override
+  String get providersGeminiKeyLabel => 'API key de Gemini';
+
+  @override
+  String get providersGeminiKeyHelpStep1 => '1. Entrá a';
+
+  @override
+  String get providersGeminiKeyHelpStep2 => '2. Creá una API key nueva';
+
+  @override
+  String get providersGeminiKeyHelpStep3 => '3. Copiala y pegala acá';
+
+  @override
+  String get providersGeminiKeyLink => 'aistudio.google.com/apikey';
+
+  @override
+  String get providersGeminiKeyInvalid => 'Esa API key no es válida.';
+
+  @override
+  String get providersGeminiKeyCancel => 'Cancelar';
+
+  @override
+  String get providersGeminiKeyConfirm => 'Conectar';
+
+  @override
+  String get providersModelChatTitle => 'Modelo para conversar';
+
+  @override
+  String get providersModelBriefTitle => 'Modelo para el coach';
+
+  @override
+  String get providersModelTierFree => 'Gratis';
+
+  @override
+  String get providersModelTierBudget => 'Económico';
+
+  @override
+  String get providersModelTierPremium => 'Premium';
+
+  @override
+  String get providersModelEstimateFree => 'Gratis';
+
+  @override
+  String providersModelEstimatePaid(String amount) {
+    return '≈ $amount USD por sesión';
+  }
+
+  @override
+  String get providersModelProviderDisabledHint =>
+      'Conectá este proveedor para usarlo';
 }

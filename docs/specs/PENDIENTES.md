@@ -58,3 +58,23 @@ el operador las revise o las mejore más adelante.
   `connected` (poco común recién registrado, pero es el caso de los
   datos de ejemplo de `FakeApi`), se va directo a `/`; si no tiene
   ninguno, se salta a `/providers`. Documentado en el commit de T3.
+
+## T4 — Proveedores y modelos
+
+- **Crédito de OpenRouter viene de `GET /providers/:provider/status`,
+  no de `GET /me`.** SPEC-02 §4.1 no incluye `credits` en la forma de
+  `providers` que devuelve `/me`; solo aparece en el endpoint de
+  estado por proveedor (§4.2). La pantalla pide el status de cada
+  proveedor conectado además de `/me` para poder mostrar el crédito
+  restante.
+- **`Info.plist` con `CFBundleURLTypes` para `fluent://`.** El propio
+  README de `flutter_web_auth_2` dice que en iOS no hace falta
+  declarar el esquema porque `ASWebAuthenticationSession` intercepta
+  el redirect directamente. Se declaró igual (SPEC-06 lo pide
+  explícitamente) por si algo abre el link fuera de ese flujo; no
+  debería tener efecto contrario.
+- **`OAuthLauncher` como capa propia sobre `flutter_web_auth_2`.** No
+  está en la spec, pero es necesario para poder simular el login de
+  OpenRouter en tests y con `USE_FAKE_API=true` sin abrir un
+  navegador real (mismo patrón que se va a usar para voz en T6 con
+  `SpeechService`/`TtsService`).

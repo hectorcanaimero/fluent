@@ -82,5 +82,45 @@
   "interestHistory": "Historia",
   "interestHealth": "Salud",
   "interestFinance": "Finanzas",
-  "interestPets": "Mascotas"
+  "interestPets": "Mascotas",
+  "providersTitle": "Proveedores y modelos",
+  "providersOpenRouterTitle": "OpenRouter",
+  "providersGeminiTitle": "Gemini",
+  "providersGeminiRecommendedBadge": "Recomendado",
+  "providersStatusConnected": "Conectado",
+  "providersStatusNotConnected": "No conectado",
+  "providersStatusError": "Con error",
+  "providersConnectButton": "Conectar",
+  "providersDisconnectButton": "Desconectar",
+  "providersCreditsRemaining": "Crédito restante: {amount} USD",
+  "@providersCreditsRemaining": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "providersErrorGeneric": "No pudimos completar la conexión. Probá de nuevo.",
+  "providersLoadError": "No pudimos cargar los proveedores.",
+  "providersGeminiPasteKeyButton": "Pegar API key",
+  "providersGeminiKeyDialogTitle": "Conectar Gemini",
+  "providersGeminiKeyLabel": "API key de Gemini",
+  "providersGeminiKeyHelpStep1": "1. Entrá a",
+  "providersGeminiKeyHelpStep2": "2. Creá una API key nueva",
+  "providersGeminiKeyHelpStep3": "3. Copiala y pegala acá",
+  "providersGeminiKeyLink": "aistudio.google.com/apikey",
+  "providersGeminiKeyInvalid": "Esa API key no es válida.",
+  "providersGeminiKeyCancel": "Cancelar",
+  "providersGeminiKeyConfirm": "Conectar",
+  "providersModelChatTitle": "Modelo para conversar",
+  "providersModelBriefTitle": "Modelo para el coach",
+  "providersModelTierFree": "Gratis",
+  "providersModelTierBudget": "Económico",
+  "providersModelTierPremium": "Premium",
+  "providersModelEstimateFree": "Gratis",
+  "providersModelEstimatePaid": "≈ {amount} USD por sesión",
+  "@providersModelEstimatePaid": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo"
 }

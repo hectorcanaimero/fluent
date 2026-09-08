@@ -565,6 +565,186 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Mascotas'**
   String get interestPets;
+
+  /// No description provided for @providersTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Proveedores y modelos'**
+  String get providersTitle;
+
+  /// No description provided for @providersOpenRouterTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'OpenRouter'**
+  String get providersOpenRouterTitle;
+
+  /// No description provided for @providersGeminiTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Gemini'**
+  String get providersGeminiTitle;
+
+  /// No description provided for @providersGeminiRecommendedBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Recomendado'**
+  String get providersGeminiRecommendedBadge;
+
+  /// No description provided for @providersStatusConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectado'**
+  String get providersStatusConnected;
+
+  /// No description provided for @providersStatusNotConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'No conectado'**
+  String get providersStatusNotConnected;
+
+  /// No description provided for @providersStatusError.
+  ///
+  /// In es, this message translates to:
+  /// **'Con error'**
+  String get providersStatusError;
+
+  /// No description provided for @providersConnectButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar'**
+  String get providersConnectButton;
+
+  /// No description provided for @providersDisconnectButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Desconectar'**
+  String get providersDisconnectButton;
+
+  /// No description provided for @providersCreditsRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Crédito restante: {amount} USD'**
+  String providersCreditsRemaining(String amount);
+
+  /// No description provided for @providersErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la conexión. Probá de nuevo.'**
+  String get providersErrorGeneric;
+
+  /// No description provided for @providersLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar los proveedores.'**
+  String get providersLoadError;
+
+  /// No description provided for @providersGeminiPasteKeyButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar API key'**
+  String get providersGeminiPasteKeyButton;
+
+  /// No description provided for @providersGeminiKeyDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar Gemini'**
+  String get providersGeminiKeyDialogTitle;
+
+  /// No description provided for @providersGeminiKeyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'API key de Gemini'**
+  String get providersGeminiKeyLabel;
+
+  /// No description provided for @providersGeminiKeyHelpStep1.
+  ///
+  /// In es, this message translates to:
+  /// **'1. Entrá a'**
+  String get providersGeminiKeyHelpStep1;
+
+  /// No description provided for @providersGeminiKeyHelpStep2.
+  ///
+  /// In es, this message translates to:
+  /// **'2. Creá una API key nueva'**
+  String get providersGeminiKeyHelpStep2;
+
+  /// No description provided for @providersGeminiKeyHelpStep3.
+  ///
+  /// In es, this message translates to:
+  /// **'3. Copiala y pegala acá'**
+  String get providersGeminiKeyHelpStep3;
+
+  /// No description provided for @providersGeminiKeyLink.
+  ///
+  /// In es, this message translates to:
+  /// **'aistudio.google.com/apikey'**
+  String get providersGeminiKeyLink;
+
+  /// No description provided for @providersGeminiKeyInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa API key no es válida.'**
+  String get providersGeminiKeyInvalid;
+
+  /// No description provided for @providersGeminiKeyCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get providersGeminiKeyCancel;
+
+  /// No description provided for @providersGeminiKeyConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar'**
+  String get providersGeminiKeyConfirm;
+
+  /// No description provided for @providersModelChatTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelo para conversar'**
+  String get providersModelChatTitle;
+
+  /// No description provided for @providersModelBriefTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelo para el coach'**
+  String get providersModelBriefTitle;
+
+  /// No description provided for @providersModelTierFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis'**
+  String get providersModelTierFree;
+
+  /// No description provided for @providersModelTierBudget.
+  ///
+  /// In es, this message translates to:
+  /// **'Económico'**
+  String get providersModelTierBudget;
+
+  /// No description provided for @providersModelTierPremium.
+  ///
+  /// In es, this message translates to:
+  /// **'Premium'**
+  String get providersModelTierPremium;
+
+  /// No description provided for @providersModelEstimateFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis'**
+  String get providersModelEstimateFree;
+
+  /// No description provided for @providersModelEstimatePaid.
+  ///
+  /// In es, this message translates to:
+  /// **'≈ {amount} USD por sesión'**
+  String providersModelEstimatePaid(String amount);
+
+  /// No description provided for @providersModelProviderDisabledHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectá este proveedor para usarlo'**
+  String get providersModelProviderDisabledHint;
 }
 
 class _AppLocalizationsDelegate

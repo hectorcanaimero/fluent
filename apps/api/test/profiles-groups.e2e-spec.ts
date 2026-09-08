@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
 import { App } from 'supertest/types';
 import type { InsForgeClient } from '@insforge/sdk';
@@ -82,9 +82,10 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
 
     app = moduleFixture.createNestApplication();
     app.setGlobalPrefix('v1');
-    app.useGlobalPipes(
-      new ValidationPipe({ whitelist: true, forbidNonWhitelisted: true, transform: true }),
-    );
+    // El ValidationPipe global (con el exceptionFactory de PR-02/T3 que
+    // produce ApiException con details[]) ya lo aporta CommonModule
+    // (APP_PIPE) al importar AppModule; no hace falta (ni conviene, para no
+    // duplicar la validación) registrarlo también aquí.
     await app.init();
   }, 30_000);
 

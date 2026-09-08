@@ -14,5 +14,7 @@
   "SESSION_ALREADY_ACTIVE": "Você já tem uma sessão ativa.",
   "LLM_UNAVAILABLE": "O assistente não está disponível no momento. Tente novamente em alguns minutos.",
   "RATE_LIMITED": "Você fez muitas solicitações. Aguarde um momento e tente novamente.",
-  "NOT_READY": "Ainda não está pronto."
+  "NOT_READY": "Ainda não está pronto.",
+  "NOT_FOUND": "O recurso solicitado não existe.",
+  "INTERNAL": "Ocorreu um erro inesperado. Tente novamente em alguns minutos."
 }

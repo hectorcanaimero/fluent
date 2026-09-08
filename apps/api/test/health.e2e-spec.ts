@@ -41,6 +41,21 @@ describe('HealthController (e2e)', () => {
     expect(typeof response.body.insforge.ok).toBe('boolean');
   });
 
+  // PR-02/T3 (SPEC-02 §7): el healthcheck de Docker/Coolify llama a
+  // `/v1/health` cada pocos segundos, muy por encima del límite general de
+  // 60/min, así que `HealthController` lleva `@SkipThrottle()`. Se
+  // comprueba haciendo más peticiones que el límite general en el mismo
+  // minuto y verificando que ninguna vuelve 429.
+  it('/v1/health no se bloquea por rate limiting (@SkipThrottle, SPEC-02 §7)', async () => {
+    // Secuencial (no Promise.all) para no agotar los sockets del servidor
+    // efímero de supertest; lo que se comprueba es el límite de 60/min, no
+    // la concurrencia.
+    const attempts = 75;
+    for (let i = 0; i < attempts; i += 1) {
+      await request(app.getHttpServer()).get('/v1/health').expect(200);
+    }
+  });
+
   afterEach(async () => {
     await app.close();
   });

@@ -1,5 +1,4 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
@@ -10,13 +9,12 @@ async function bootstrap() {
 
   app.useLogger(app.get(Logger));
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // El filtro global de errores y el ValidationPipe global (PR-02/T3, SPEC-02
+  // §6/§8) se registran como providers `APP_FILTER`/`APP_PIPE` en
+  // `CommonModule` (importado por `AppModule`), no aquí: así se activan igual
+  // en producción (`main.ts`) y en los tests e2e, que arrancan la app con
+  // `Test.createTestingModule({ imports: [AppModule] })` sin pasar por esta
+  // función. Ver `apps/api/src/common/common.module.ts`.
 
   app.setGlobalPrefix('v1');
 

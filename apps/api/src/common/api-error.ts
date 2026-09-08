@@ -42,6 +42,21 @@ export const API_ERROR_STATUS = {
   RATE_LIMITED: 429,
   /** Resumen semanal aún no generado. */
   NOT_READY: 404,
+  /**
+   * Ruta inexistente. Extensión de PR-02/T3 (SPEC-02 §6 no define un código
+   * para esto): el 404 que Nest genera solo cuando ninguna ruta coincide, no
+   * confundir con `NOT_READY` (404 de dominio, resumen semanal) ni con un
+   * recurso concreto que no existe (eso lo modela cada dominio con su propio
+   * código, por ejemplo `NOT_ONBOARDED`). Ver docs/specs/pendientes/PR-02.md.
+   */
+  NOT_FOUND: 404,
+  /**
+   * Cualquier fallo no anticipado (bug, InsForge caído de forma inesperada,
+   * excepción de una librería). Extensión de PR-02/T3: SPEC-02 §6 no define
+   * código para 500. El filtro global nunca deja salir el mensaje ni el
+   * stack originales en producción (ver docs/specs/pendientes/PR-02.md).
+   */
+  INTERNAL: 500,
 } as const satisfies Record<string, number>;
 
 /** Unión de todos los códigos de error de SPEC-02 §6. */

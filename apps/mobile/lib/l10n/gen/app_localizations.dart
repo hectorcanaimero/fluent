@@ -313,6 +313,258 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Continuar sin grupo por ahora'**
   String get registerInvitationContinueButton;
+
+  /// No description provided for @onboardingContinueButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get onboardingContinueButton;
+
+  /// No description provided for @onboardingFinishButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get onboardingFinishButton;
+
+  /// No description provided for @onboardingErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Algo salió mal. Probá de nuevo.'**
+  String get onboardingErrorGeneric;
+
+  /// No description provided for @onboardingNameHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo te llamamos?'**
+  String get onboardingNameHeadline;
+
+  /// No description provided for @onboardingNameSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Así te van a ver tus compañeros de grupo.'**
+  String get onboardingNameSubtitle;
+
+  /// No description provided for @onboardingNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get onboardingNameLabel;
+
+  /// No description provided for @onboardingLevelHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Cómo está tu inglés ahora mismo?'**
+  String get onboardingLevelHeadline;
+
+  /// No description provided for @onboardingLevelSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin presión. Nos vamos a ajustar sobre la marcha, esto solo marca tu punto de partida.'**
+  String get onboardingLevelSubtitle;
+
+  /// No description provided for @onboardingLevelBeginnerTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Principiante'**
+  String get onboardingLevelBeginnerTitle;
+
+  /// No description provided for @onboardingLevelBeginnerSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Conozco algunas palabras y frases simples'**
+  String get onboardingLevelBeginnerSubtitle;
+
+  /// No description provided for @onboardingLevelIntermediateTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Intermedio'**
+  String get onboardingLevelIntermediateTitle;
+
+  /// No description provided for @onboardingLevelIntermediateSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedo sostener una conversación pero cometo errores'**
+  String get onboardingLevelIntermediateSubtitle;
+
+  /// No description provided for @onboardingLevelAdvancedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Avanzado'**
+  String get onboardingLevelAdvancedTitle;
+
+  /// No description provided for @onboardingLevelAdvancedSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Soy fluido y quiero pulir matices'**
+  String get onboardingLevelAdvancedSubtitle;
+
+  /// No description provided for @onboardingInterestsHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'¿De qué te gusta hablar?'**
+  String get onboardingInterestsHeadline;
+
+  /// No description provided for @onboardingInterestsSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí al menos 3. Los usamos para elegir noticias y temas para tus sesiones.'**
+  String get onboardingInterestsSubtitle;
+
+  /// No description provided for @onboardingInterestsSelectedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} seleccionados'**
+  String onboardingInterestsSelectedCount(int count);
+
+  /// No description provided for @onboardingInterestsSeeMore.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver más'**
+  String get onboardingInterestsSeeMore;
+
+  /// No description provided for @interestTravel.
+  ///
+  /// In es, this message translates to:
+  /// **'Viajes'**
+  String get interestTravel;
+
+  /// No description provided for @interestBusiness.
+  ///
+  /// In es, this message translates to:
+  /// **'Negocios'**
+  String get interestBusiness;
+
+  /// No description provided for @interestTech.
+  ///
+  /// In es, this message translates to:
+  /// **'Tecnología'**
+  String get interestTech;
+
+  /// No description provided for @interestSports.
+  ///
+  /// In es, this message translates to:
+  /// **'Deportes'**
+  String get interestSports;
+
+  /// No description provided for @interestMovies.
+  ///
+  /// In es, this message translates to:
+  /// **'Películas'**
+  String get interestMovies;
+
+  /// No description provided for @interestFood.
+  ///
+  /// In es, this message translates to:
+  /// **'Comida'**
+  String get interestFood;
+
+  /// No description provided for @interestDailyLife.
+  ///
+  /// In es, this message translates to:
+  /// **'Vida diaria'**
+  String get interestDailyLife;
+
+  /// No description provided for @interestNews.
+  ///
+  /// In es, this message translates to:
+  /// **'Noticias'**
+  String get interestNews;
+
+  /// No description provided for @interestMusic.
+  ///
+  /// In es, this message translates to:
+  /// **'Música'**
+  String get interestMusic;
+
+  /// No description provided for @interestGaming.
+  ///
+  /// In es, this message translates to:
+  /// **'Videojuegos'**
+  String get interestGaming;
+
+  /// No description provided for @interestFitness.
+  ///
+  /// In es, this message translates to:
+  /// **'Fitness'**
+  String get interestFitness;
+
+  /// No description provided for @interestBooks.
+  ///
+  /// In es, this message translates to:
+  /// **'Libros'**
+  String get interestBooks;
+
+  /// No description provided for @interestArt.
+  ///
+  /// In es, this message translates to:
+  /// **'Arte'**
+  String get interestArt;
+
+  /// No description provided for @interestScience.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciencia'**
+  String get interestScience;
+
+  /// No description provided for @interestCooking.
+  ///
+  /// In es, this message translates to:
+  /// **'Cocina'**
+  String get interestCooking;
+
+  /// No description provided for @interestPhotography.
+  ///
+  /// In es, this message translates to:
+  /// **'Fotografía'**
+  String get interestPhotography;
+
+  /// No description provided for @interestFashion.
+  ///
+  /// In es, this message translates to:
+  /// **'Moda'**
+  String get interestFashion;
+
+  /// No description provided for @interestCars.
+  ///
+  /// In es, this message translates to:
+  /// **'Autos'**
+  String get interestCars;
+
+  /// No description provided for @interestNature.
+  ///
+  /// In es, this message translates to:
+  /// **'Naturaleza'**
+  String get interestNature;
+
+  /// No description provided for @interestPolitics.
+  ///
+  /// In es, this message translates to:
+  /// **'Política'**
+  String get interestPolitics;
+
+  /// No description provided for @interestHistory.
+  ///
+  /// In es, this message translates to:
+  /// **'Historia'**
+  String get interestHistory;
+
+  /// No description provided for @interestHealth.
+  ///
+  /// In es, this message translates to:
+  /// **'Salud'**
+  String get interestHealth;
+
+  /// No description provided for @interestFinance.
+  ///
+  /// In es, this message translates to:
+  /// **'Finanzas'**
+  String get interestFinance;
+
+  /// No description provided for @interestPets.
+  ///
+  /// In es, this message translates to:
+  /// **'Mascotas'**
+  String get interestPets;
 }
 
 class _AppLocalizationsDelegate

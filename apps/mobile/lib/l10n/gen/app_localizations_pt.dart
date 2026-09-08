@@ -124,4 +124,138 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get registerInvitationContinueButton =>
       'Continuar sem grupo por enquanto';
+
+  @override
+  String get onboardingContinueButton => 'Continuar';
+
+  @override
+  String get onboardingFinishButton => 'Concluir';
+
+  @override
+  String get onboardingErrorGeneric => 'Algo deu errado. Tente de novo.';
+
+  @override
+  String get onboardingNameHeadline => 'Como podemos te chamar?';
+
+  @override
+  String get onboardingNameSubtitle =>
+      'É assim que seus colegas de grupo vão te ver.';
+
+  @override
+  String get onboardingNameLabel => 'Nome';
+
+  @override
+  String get onboardingLevelHeadline => 'Como está seu inglês agora?';
+
+  @override
+  String get onboardingLevelSubtitle =>
+      'Sem pressão. Vamos ajustar aos poucos, isso só define seu ponto de partida.';
+
+  @override
+  String get onboardingLevelBeginnerTitle => 'Iniciante';
+
+  @override
+  String get onboardingLevelBeginnerSubtitle =>
+      'Conheço algumas palavras e frases simples';
+
+  @override
+  String get onboardingLevelIntermediateTitle => 'Intermediário';
+
+  @override
+  String get onboardingLevelIntermediateSubtitle =>
+      'Consigo manter uma conversa, mas cometo erros';
+
+  @override
+  String get onboardingLevelAdvancedTitle => 'Avançado';
+
+  @override
+  String get onboardingLevelAdvancedSubtitle =>
+      'Sou fluente e quero refinar nuances';
+
+  @override
+  String get onboardingInterestsHeadline => 'Sobre o que você gosta de falar?';
+
+  @override
+  String get onboardingInterestsSubtitle =>
+      'Escolha pelo menos 3. Vamos usar para escolher notícias e temas para suas sessões.';
+
+  @override
+  String onboardingInterestsSelectedCount(int count) {
+    return '$count selecionados';
+  }
+
+  @override
+  String get onboardingInterestsSeeMore => 'Ver mais';
+
+  @override
+  String get interestTravel => 'Viagens';
+
+  @override
+  String get interestBusiness => 'Negócios';
+
+  @override
+  String get interestTech => 'Tecnologia';
+
+  @override
+  String get interestSports => 'Esportes';
+
+  @override
+  String get interestMovies => 'Filmes';
+
+  @override
+  String get interestFood => 'Comida';
+
+  @override
+  String get interestDailyLife => 'Vida diária';
+
+  @override
+  String get interestNews => 'Notícias';
+
+  @override
+  String get interestMusic => 'Música';
+
+  @override
+  String get interestGaming => 'Videogames';
+
+  @override
+  String get interestFitness => 'Fitness';
+
+  @override
+  String get interestBooks => 'Livros';
+
+  @override
+  String get interestArt => 'Arte';
+
+  @override
+  String get interestScience => 'Ciência';
+
+  @override
+  String get interestCooking => 'Culinária';
+
+  @override
+  String get interestPhotography => 'Fotografia';
+
+  @override
+  String get interestFashion => 'Moda';
+
+  @override
+  String get interestCars => 'Carros';
+
+  @override
+  String get interestNature => 'Natureza';
+
+  @override
+  String get interestPolitics => 'Política';
+
+  @override
+  String get interestHistory => 'História';
+
+  @override
+  String get interestHealth => 'Saúde';
+
+  @override
+  String get interestFinance => 'Finanças';
+
+  @override
+  String get interestPets => 'Animais de estimação';
 }

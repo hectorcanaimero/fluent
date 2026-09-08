@@ -111,12 +111,16 @@ export function calculateLlmFailureRate(
 }
 
 /**
- * Calcula el día (medianoche UTC) de una fecha.
+ * Trunca una fecha a su día **en UTC** (medianoche UTC).
+ *
+ * A propósito no mira la zona horaria de la máquina: `docs/specs/README.md`
+ * fija que todo el tiempo de la base de datos y de la API va en UTC, y estas
+ * métricas son del operador, no de un usuario concreto (no hay un perfil del
+ * que sacar la zona, a diferencia de `close_session` o de los streaks). Como
+ * el resultado se formatea con `toISOString()`, truncar por la hora local
+ * dejaba el día desplazado en cualquier máquina que no estuviera en UTC: el
+ * VPS de desarrollo (CEST) y el CI (UTC) daban ventanas distintas.
  */
 function dateOnly(date: Date): Date {
-  const ms = date.getTime();
-  const localOffset = date.getTimezoneOffset() * 60 * 1000;
-  const utcMs = ms + localOffset;
-  const dayMs = Math.floor(utcMs / DAY_MS) * DAY_MS;
-  return new Date(dayMs - localOffset);
+  return new Date(Math.floor(date.getTime() / DAY_MS) * DAY_MS);
 }

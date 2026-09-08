@@ -11,8 +11,9 @@ describe('Agregación de métricas', () => {
       const result = aggregateSessionsPerDay([], new Date('2026-09-09T00:00:00Z'));
       expect(result).toHaveLength(14);
       expect(result.every((item) => item.count === 0)).toBe(true);
-      expect(result[0].day).toBe('2026-08-26');
-      expect(result[13].day).toBe('2026-09-08');
+      // Ventana de 14 días en UTC que **incluye** el día de `now`.
+      expect(result[0].day).toBe('2026-08-27');
+      expect(result[13].day).toBe('2026-09-09');
     });
 
     it('agrega sesiones por día', () => {
@@ -28,6 +29,21 @@ describe('Agregación de métricas', () => {
 
       expect(day8?.count).toBe(2);
       expect(day7?.count).toBe(1);
+    });
+
+    it('los días son UTC, no de la zona horaria de la máquina', () => {
+      // 2026-09-09T00:30Z es todavía 2026-09-08 en cualquier zona al oeste de
+      // UTC y ya 2026-09-09 al este; el día que se reporta debe ser el UTC.
+      // Regresión: `dateOnly` truncaba por la hora local y formateaba con
+      // `toISOString()`, así que el VPS (CEST) y el CI (UTC) daban ventanas
+      // distintas y el mismo test pasaba en uno y fallaba en el otro.
+      const result = aggregateSessionsPerDay(
+        [{ started_at: '2026-09-09T00:30:00Z' }],
+        new Date('2026-09-09T00:30:00Z'),
+      );
+
+      expect(result.at(-1)).toEqual({ day: '2026-09-09', count: 1 });
+      expect(result.at(0)?.day).toBe('2026-08-27');
     });
 
     it('ordena desde el día más antiguo al más reciente', () => {

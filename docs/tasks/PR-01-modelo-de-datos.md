@@ -38,7 +38,7 @@ Sesión líder: Opus 5. Empieza ya en paralelo con PR-08; T1 se aplica a InsForg
 - Aceptación: `tsc --noEmit` en verde; revisión cruzada contra las migraciones por la sesión líder.
 - Commit: `feat(api): tipos del esquema y firmas RPC`
 
-## T7 · Fusionar rama de InsForge
+## T7 · Fusionar rama de InsForge — HECHO 2026-09-08 (`branch merge feat-datos -y --json`; el modo interactivo falla sin TTY)
 - Modelo: Sonnet 5 · Depende de: aprobación del PR · Bloquea a: todos los PRs que leen datos reales
 - Alcance: `branch merge feat-datos --dry-run`, revisar SQL, `branch merge`. Actualizar `docs/runbooks/insforge.md` con lo aprendido.
 - Aceptación: `db migrations list` en el proyecto principal muestra las 5 migraciones.

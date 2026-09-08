@@ -15,6 +15,10 @@
  *      `xp_events` ni `llm_calls`, y no puede invocar `close_session`.
  *   8. (T4) El usuario A ve, confirma y borra sus hechos, edita el texto de su
  *      brief pero no `level_hint`, y no lee `coaching_brief_history`.
+ *   9. (T5) El usuario A lee `news_items` pero no puede insertar; ve el
+ *      `weekly_summaries` de su grupo y no el de otro grupo; puede llamar a
+ *      `weekly_leaderboard` con su propio group_id pero no con el de otro
+ *      grupo (SECURITY DEFINER + FORBIDDEN de PENDIENTES §23).
  *
  * Uso (desde apps/api, con .insforge/project.json enlazado a la rama):
  *   node scripts/db-smoke.ts
@@ -465,6 +469,114 @@ async function main(): Promise<void> {
     status: dropFact.status,
     body: dropFact.body,
   });
+
+  // --- T5: noticias, resumen semanal y leaderboard (migración 5) -----------
+  const newsRes = await call('/api/database/records/news_items', {
+    admin: true,
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify([
+      {
+        source: 'smoke-feed',
+        url: `https://example.com/smoke-${RUN}`,
+        title: 'Smoke news item',
+        summary: 'Resumen de prueba',
+        tags: ['tech'],
+      },
+    ]),
+  });
+  if (newsRes.status >= 300) fail('crear news_items', newsRes);
+  const newsItem = (newsRes.body as Array<{ id: string }>)[0];
+
+  const myNews = await call('/api/database/records/news_items', { token: tokenA });
+  check(
+    'A lee news_items',
+    myNews.status === 200 &&
+      Array.isArray(myNews.body) &&
+      myNews.body.some((n: any) => n.id === newsItem.id),
+    myNews.body,
+  );
+
+  const insertNews = await call('/api/database/records/news_items', {
+    token: tokenA,
+    method: 'POST',
+    body: JSON.stringify([
+      { source: 'smoke-feed', url: `https://example.com/smoke-a-${RUN}`, title: 'A intenta insertar' },
+    ]),
+  });
+  check('A no puede insertar en news_items', insertNews.status >= 400, {
+    status: insertNews.status,
+    body: insertNews.body,
+  });
+
+  // Segundo grupo, para probar el aislamiento de weekly_summaries y el
+  // FORBIDDEN de weekly_leaderboard.
+  const group2Res = await call('/api/database/records/groups', {
+    admin: true,
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify([{ name: `Smoke ${RUN} B` }]),
+  });
+  if (group2Res.status >= 300) fail('crear segundo grupo', group2Res);
+  const group2Id: string = (Array.isArray(group2Res.body) ? group2Res.body[0] : group2Res.body).id;
+
+  const mondayISO = (() => {
+    const d = new Date();
+    const day = (d.getUTCDay() + 6) % 7; // 0 = lunes
+    d.setUTCDate(d.getUTCDate() - day);
+    return d.toISOString().slice(0, 10);
+  })();
+
+  const summariesRes = await call('/api/database/records/weekly_summaries', {
+    admin: true,
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify([
+      { group_id: groupId, week_start: mondayISO, text: 'Resumen del grupo de A', stats: {} },
+      { group_id: group2Id, week_start: mondayISO, text: 'Resumen del otro grupo', stats: {} },
+    ]),
+  });
+  if (summariesRes.status >= 300) fail('crear weekly_summaries', summariesRes);
+
+  const ownSummary = await call('/api/database/records/weekly_summaries', { token: tokenA });
+  check(
+    'A ve el weekly_summaries de su grupo y no el de otro',
+    ownSummary.status === 200 &&
+      Array.isArray(ownSummary.body) &&
+      ownSummary.body.length === 1 &&
+      ownSummary.body[0]?.group_id === groupId,
+    ownSummary.body,
+  );
+
+  const leaderboardOwn = await call('/api/database/rpc/weekly_leaderboard', {
+    token: tokenA,
+    method: 'POST',
+    body: JSON.stringify({ p_group_id: groupId, p_week_start: mondayISO }),
+  });
+  check(
+    'weekly_leaderboard con el group_id de A funciona con el token de A',
+    leaderboardOwn.status < 300 && Array.isArray(leaderboardOwn.body),
+    { status: leaderboardOwn.status, body: leaderboardOwn.body },
+  );
+
+  const leaderboardOther = await call('/api/database/rpc/weekly_leaderboard', {
+    token: tokenA,
+    method: 'POST',
+    body: JSON.stringify({ p_group_id: group2Id, p_week_start: mondayISO }),
+  });
+  check(
+    'weekly_leaderboard con el group_id de otro grupo falla para A',
+    leaderboardOther.status >= 400,
+    { status: leaderboardOther.status, body: leaderboardOther.body },
+  );
+
+  // --- limpieza T5 -----------------------------------------------------------
+  await call(`/api/database/records/weekly_summaries?group_id=in.(${groupId},${group2Id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
+  await call(`/api/database/records/groups?id=eq.${group2Id}`, { admin: true, method: 'DELETE' });
+  await call(`/api/database/records/news_items?id=eq.${newsItem.id}`, { admin: true, method: 'DELETE' });
 
   // --- limpieza (las cuentas de auth se quedan: solo se borran desde la
   //     API de auth y esta rama de InsForge es desechable) ------------------

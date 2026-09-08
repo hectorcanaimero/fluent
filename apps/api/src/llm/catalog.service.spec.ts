@@ -142,6 +142,45 @@ describe('ModelCatalogService', () => {
     });
   });
 
+  describe('refresh (SPEC-05 §8)', () => {
+    it('fuerza una descarga real incluso con la caché ya poblada', async () => {
+      const cache = new InMemoryCache();
+      await cache.set('llm:catalog:openrouter', FIXTURE_JSON, CACHE_TTL_SECONDS);
+      const { fetchImpl, calls } = okFetch(FIXTURE_JSON);
+      const service = makeService(fetchImpl, cache);
+
+      await service.refresh();
+
+      expect(calls).toHaveLength(1);
+    });
+
+    it('sobreescribe la entrada de caché con el resultado de la nueva descarga', async () => {
+      const OLD_JSON = JSON.stringify({ data: [] });
+      const cache = new InMemoryCache();
+      await cache.set('llm:catalog:openrouter', OLD_JSON, CACHE_TTL_SECONDS);
+      const { fetchImpl } = okFetch(FIXTURE_JSON);
+      const service = makeService(fetchImpl, cache);
+
+      await service.refresh();
+
+      const cached = await cache.get('llm:catalog:openrouter');
+      expect(cached).toBe(FIXTURE_JSON);
+      expect(cache.setCalls.at(-1)?.ttlSeconds).toBe(CACHE_TTL_SECONDS);
+    });
+
+    it('si la descarga falla, propaga el error y no toca la entrada de caché anterior', async () => {
+      const cache = new InMemoryCache();
+      await cache.set('llm:catalog:openrouter', FIXTURE_JSON, CACHE_TTL_SECONDS);
+      const { fetchImpl } = failingFetch('network down');
+      const service = makeService(fetchImpl, cache);
+
+      await expect(service.refresh()).rejects.toThrow('network down');
+
+      const cached = await cache.get('llm:catalog:openrouter');
+      expect(cached).toBe(FIXTURE_JSON);
+    });
+  });
+
   describe('Gemini y listModels', () => {
     it('listModels incluye los 3 modelos fijos de Gemini', async () => {
       const { fetchImpl } = okFetch(FIXTURE_JSON);

@@ -10,10 +10,16 @@
 import { Module } from '@nestjs/common';
 
 import { CoachingBriefModule } from './coaching-brief/coaching-brief.module.js';
+import { MaintenanceModule } from './maintenance/maintenance.module.js';
 import { RssIngestModule } from './rss-ingest/rss-ingest.module.js';
 import { WeeklySummaryModule } from './weekly-summary/weekly-summary.module.js';
 
 @Module({
-  imports: [CoachingBriefModule, RssIngestModule, WeeklySummaryModule],
+  imports: [
+    CoachingBriefModule,
+    RssIngestModule,
+    WeeklySummaryModule,
+    MaintenanceModule,
+  ],
 })
 export class JobsModule {}

@@ -1,5 +1,6 @@
 /**
- * Smoke de la migración 1 (SPEC-01 §2.1-§2.3, §3, §5) contra InsForge por REST.
+ * Smoke de las migraciones 1 y 2 (SPEC-01 §2.1-§2.5, §3, §5) contra InsForge
+ * por REST.
  *
  * Comprueba, con dos usuarios reales creados por la API de auth:
  *   1. `redeem_invitation` asigna el grupo y marca la invitación usada.
@@ -7,6 +8,9 @@
  *   3. El usuario A SÍ ve a B en la vista `group_members`, y solo las columnas
  *      visibles de RF-6.5.
  *   4. El usuario A no puede tocar columnas protegidas de su propio perfil (xp).
+ *   5. (T2) El usuario A no lee `provider_credentials` (403/4xx o vacío).
+ *   6. (T2) El usuario A solo ve su propia fila en `model_preferences` y
+ *      puede hacer PATCH de `chat_model` sobre ella.
  *
  * Uso (desde apps/api, con .insforge/project.json enlazado a la rama):
  *   node scripts/db-smoke.ts
@@ -233,9 +237,51 @@ async function main(): Promise<void> {
     { status: invPeek.status, body: invPeek.body },
   );
 
+  // --- T2: provider_credentials y model_preferences (migración 2) ----------
+  const credsPeek = await call('/api/database/records/provider_credentials', { token: tokenA });
+  check(
+    'A no lee provider_credentials',
+    credsPeek.status >= 400 || (Array.isArray(credsPeek.body) && credsPeek.body.length === 0),
+    { status: credsPeek.status, body: credsPeek.body },
+  );
+
+  const prefsRes = await call('/api/database/records/model_preferences', {
+    admin: true,
+    method: 'POST',
+    body: JSON.stringify([
+      { user_id: a.id, chat_model: 'openrouter/chat-a', brief_model: 'openrouter/brief-a' },
+      { user_id: b.id, chat_model: 'openrouter/chat-b', brief_model: 'openrouter/brief-b' },
+    ]),
+  });
+  if (prefsRes.status >= 300) fail('crear model_preferences', prefsRes);
+
+  const ownPrefs = await call('/api/database/records/model_preferences', { token: tokenA });
+  check(
+    'A solo ve su propia fila en model_preferences',
+    ownPrefs.status === 200 &&
+      Array.isArray(ownPrefs.body) &&
+      ownPrefs.body.length === 1 &&
+      ownPrefs.body[0]?.user_id === a.id,
+    ownPrefs.body,
+  );
+
+  const patchPrefs = await call(`/api/database/records/model_preferences?user_id=eq.${a.id}`, {
+    token: tokenA,
+    method: 'PATCH',
+    body: JSON.stringify({ chat_model: 'openrouter/chat-a-renombrado' }),
+  });
+  check('A puede hacer PATCH de chat_model sobre su propia fila', patchPrefs.status < 300, {
+    status: patchPrefs.status,
+    body: patchPrefs.body,
+  });
+
   // --- limpieza (las cuentas de auth se quedan: solo se borran desde la
   //     API de auth y esta rama de InsForge es desechable) ------------------
   await call(`/api/database/records/profiles?user_id=in.(${a.id},${b.id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
+  await call(`/api/database/records/model_preferences?user_id=in.(${a.id},${b.id})`, {
     admin: true,
     method: 'DELETE',
   });

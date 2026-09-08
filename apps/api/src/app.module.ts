@@ -16,6 +16,7 @@ import { ProvidersModule } from './providers/providers.module.js';
 import { LlmInfraModule } from './llm/llm-infra.module.js';
 import { CommonModule } from './common/common.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
+import { MemoryModule } from './memory/memory.module.js';
 
 @Module({
   imports: [
@@ -71,6 +72,8 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
     // Implementaciones de `LlmCallSink` y `LlmEventBus` (PR-03) sobre
     // InsForge y `EventEmitter2`; PR-04 y PR-05 importan este módulo.
     LlmInfraModule,
+    // Hechos y coaching brief del usuario (PR-02/T6, SPEC-02 §4.4).
+    MemoryModule,
   ],
   controllers: [],
   providers: [],

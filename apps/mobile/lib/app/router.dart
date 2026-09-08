@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../core/api/models.dart';
 import '../core/providers.dart';
 import '../core/widgets/placeholder_screen.dart';
 import '../features/auth/domain/auth_state.dart';
@@ -112,6 +113,7 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder:
                 (context, state) => SessionSummaryScreen(
                   sessionId: state.pathParameters['id']!,
+                  summary: state.extra as SessionSummary,
                 ),
           ),
         ],

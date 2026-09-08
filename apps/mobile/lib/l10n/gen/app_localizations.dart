@@ -1105,6 +1105,174 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Repetir audio'**
   String get conversationReplayAudio;
+
+  /// No description provided for @summaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Excelente sesión!'**
+  String get summaryTitle;
+
+  /// No description provided for @summaryXpEarnedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'XP ganado'**
+  String get summaryXpEarnedLabel;
+
+  /// No description provided for @summaryStreakLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha'**
+  String get summaryStreakLabel;
+
+  /// No description provided for @summaryDurationLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Duración'**
+  String get summaryDurationLabel;
+
+  /// No description provided for @summaryCorrectionsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Correcciones'**
+  String get summaryCorrectionsTitle;
+
+  /// No description provided for @summaryCorrectionsEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin correcciones esta vez, ¡muy bien!'**
+  String get summaryCorrectionsEmpty;
+
+  /// No description provided for @summaryNextIsBossBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'La próxima sesión es un Boss battle'**
+  String get summaryNextIsBossBanner;
+
+  /// No description provided for @summaryDoubleDayBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Segunda sesión del día! Bonus desbloqueado'**
+  String get summaryDoubleDayBadge;
+
+  /// No description provided for @summaryBackButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get summaryBackButton;
+
+  /// No description provided for @memoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que recuerdo de vos'**
+  String get memoryTitle;
+
+  /// No description provided for @memoryPendingSectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Para confirmar'**
+  String get memoryPendingSectionTitle;
+
+  /// No description provided for @memoryConfirmedSectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Lo que recuerdo'**
+  String get memoryConfirmedSectionTitle;
+
+  /// No description provided for @memoryConfirmedEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no hay hechos confirmados.'**
+  String get memoryConfirmedEmpty;
+
+  /// No description provided for @memoryConfirmFact.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmar'**
+  String get memoryConfirmFact;
+
+  /// No description provided for @memoryDismissFact.
+  ///
+  /// In es, this message translates to:
+  /// **'Descartar'**
+  String get memoryDismissFact;
+
+  /// No description provided for @memoryEditFactTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Editar hecho'**
+  String get memoryEditFactTitle;
+
+  /// No description provided for @memoryEditFactCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get memoryEditFactCancel;
+
+  /// No description provided for @memoryEditFactSave.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get memoryEditFactSave;
+
+  /// No description provided for @memoryBriefSectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas del coach'**
+  String get memoryBriefSectionTitle;
+
+  /// No description provided for @memoryBriefExplanation.
+  ///
+  /// In es, this message translates to:
+  /// **'El tutor lee esto antes de cada sesión para ajustar cómo te habla.'**
+  String get memoryBriefExplanation;
+
+  /// No description provided for @memoryBriefSaveButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Guardar'**
+  String get memoryBriefSaveButton;
+
+  /// No description provided for @memoryForgetAllButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Olvidar todo'**
+  String get memoryForgetAllButton;
+
+  /// No description provided for @memoryForgetAllConfirmTitle1.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Olvidar todo lo que recuerda el tutor de vos?'**
+  String get memoryForgetAllConfirmTitle1;
+
+  /// No description provided for @memoryForgetAllConfirmBody1.
+  ///
+  /// In es, this message translates to:
+  /// **'Se van a borrar todos los hechos confirmados y las notas del coach.'**
+  String get memoryForgetAllConfirmBody1;
+
+  /// No description provided for @memoryForgetAllConfirmTitle2.
+  ///
+  /// In es, this message translates to:
+  /// **'Esto no se puede deshacer'**
+  String get memoryForgetAllConfirmTitle2;
+
+  /// No description provided for @memoryForgetAllConfirmBody2.
+  ///
+  /// In es, this message translates to:
+  /// **'Confirmá de nuevo para borrar toda tu memoria.'**
+  String get memoryForgetAllConfirmBody2;
+
+  /// No description provided for @memoryForgetAllCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get memoryForgetAllCancel;
+
+  /// No description provided for @memoryForgetAllConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, olvidar todo'**
+  String get memoryForgetAllConfirm;
 }
 
 class _AppLocalizationsDelegate

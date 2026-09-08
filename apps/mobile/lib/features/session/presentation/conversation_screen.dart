@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/api/models.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -138,14 +139,22 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     if (_endingSession) return;
     _endingSession = true;
     _timer?.cancel();
+    SessionSummary? summary;
     try {
-      await ref.read(fluentApiProvider).endSession(sessionId: widget.sessionId, reason: reason);
+      final result = await ref
+          .read(fluentApiProvider)
+          .endSession(sessionId: widget.sessionId, reason: reason);
+      summary = result.summary;
     } catch (_) {
-      // Si falla el /end igual navegamos: el usuario no debe quedar
-      // atrapado en la conversación.
+      // Si falla el /end no tenemos resumen: el usuario no debe quedar
+      // atrapado en la conversación, así que vuelve a Home.
     }
     if (!mounted) return;
-    context.pushReplacement('/session/${widget.sessionId}/summary');
+    if (summary != null) {
+      context.pushReplacement('/session/${widget.sessionId}/summary', extra: summary);
+    } else {
+      context.go('/');
+    }
   }
 
   Future<void> _confirmEndByUser() async {

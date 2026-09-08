@@ -568,4 +568,93 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get conversationReplayAudio => 'Repetir áudio';
+
+  @override
+  String get summaryTitle => 'Ótima sessão!';
+
+  @override
+  String get summaryXpEarnedLabel => 'XP ganho';
+
+  @override
+  String get summaryStreakLabel => 'Sequência';
+
+  @override
+  String get summaryDurationLabel => 'Duração';
+
+  @override
+  String get summaryCorrectionsTitle => 'Correções';
+
+  @override
+  String get summaryCorrectionsEmpty => 'Sem correções dessa vez, muito bem!';
+
+  @override
+  String get summaryNextIsBossBanner => 'A próxima sessão é um Boss battle';
+
+  @override
+  String get summaryDoubleDayBadge =>
+      'Segunda sessão do dia! Bônus desbloqueado';
+
+  @override
+  String get summaryBackButton => 'Voltar';
+
+  @override
+  String get memoryTitle => 'O que eu lembro de você';
+
+  @override
+  String get memoryPendingSectionTitle => 'Para confirmar';
+
+  @override
+  String get memoryConfirmedSectionTitle => 'O que eu lembro';
+
+  @override
+  String get memoryConfirmedEmpty => 'Ainda não há fatos confirmados.';
+
+  @override
+  String get memoryConfirmFact => 'Confirmar';
+
+  @override
+  String get memoryDismissFact => 'Descartar';
+
+  @override
+  String get memoryEditFactTitle => 'Editar fato';
+
+  @override
+  String get memoryEditFactCancel => 'Cancelar';
+
+  @override
+  String get memoryEditFactSave => 'Salvar';
+
+  @override
+  String get memoryBriefSectionTitle => 'Notas do coach';
+
+  @override
+  String get memoryBriefExplanation =>
+      'O tutor lê isso antes de cada sessão para ajustar como fala com você.';
+
+  @override
+  String get memoryBriefSaveButton => 'Salvar';
+
+  @override
+  String get memoryForgetAllButton => 'Esquecer tudo';
+
+  @override
+  String get memoryForgetAllConfirmTitle1 =>
+      'Esquecer tudo o que o tutor lembra de você?';
+
+  @override
+  String get memoryForgetAllConfirmBody1 =>
+      'Todos os fatos confirmados e as notas do coach serão apagados.';
+
+  @override
+  String get memoryForgetAllConfirmTitle2 => 'Isso não pode ser desfeito';
+
+  @override
+  String get memoryForgetAllConfirmBody2 =>
+      'Confirme de novo para apagar toda a sua memória.';
+
+  @override
+  String get memoryForgetAllCancel => 'Cancelar';
+
+  @override
+  String get memoryForgetAllConfirm => 'Sim, esquecer tudo';
 }

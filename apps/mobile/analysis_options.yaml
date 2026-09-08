@@ -5,3 +5,12 @@ analyzer:
     - build/**
     - android/**
     - ios/**
+
+linter:
+  rules:
+    # Los constructores usan parámetros nombrados públicos (tokenStore,
+    # tokenRefresher, ...) que se asignan a campos privados (_tokenStore).
+    # Un "initializing formal" expondría el nombre del campo como nombre
+    # del parámetro público, lo cual rompería la convención de campos
+    # privados en toda la app.
+    prefer_initializing_formals: false

@@ -1,0 +1,303 @@
+{
+  "@@locale": "es",
+  "appTitle": "Fluent",
+  "splashLoading": "Cargando…",
+  "tabHome": "Home",
+  "tabPractice": "Practicar",
+  "tabGroup": "Grupo",
+  "tabProgress": "Progreso",
+  "comingSoonTitle": "Muy pronto",
+  "formFieldRequired": "Este campo es obligatorio.",
+  "loginWelcomeHeadline": "Hablá inglés con confianza, de a 10 minutos",
+  "loginWelcomeSubtitle": "Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.",
+  "loginBenefit1": "Conversaciones reales con un tutor de IA",
+  "loginBenefit2": "Hablá de las noticias de hoy, a tu manera",
+  "loginBenefit3": "Construí una racha que se sostiene",
+  "loginGetStartedButton": "Crear cuenta",
+  "loginAlreadyHaveAccount": "¿Ya tenés una cuenta? Iniciá sesión",
+  "loginEmailLabel": "Email",
+  "loginPasswordLabel": "Contraseña",
+  "loginSubmitButton": "Entrar",
+  "loginBackButton": "Volver",
+  "loginErrorInvalidCredentials": "Email o contraseña incorrectos.",
+  "loginErrorGeneric": "No pudimos iniciar sesión. Probá de nuevo.",
+  "registerTitle": "Crear cuenta",
+  "registerNameLabel": "Nombre",
+  "registerEmailLabel": "Email",
+  "registerPasswordLabel": "Contraseña",
+  "registerInvitationCodeLabel": "Código de invitación",
+  "registerSubmitButton": "Crear cuenta",
+  "registerGoToLogin": "¿Ya tenés cuenta? Iniciá sesión",
+  "registerErrorGeneric": "No pudimos crear la cuenta. Probá de nuevo.",
+  "registerErrorInvitationInvalid": "Ese código de invitación no es válido.",
+  "registerErrorInvitationUsed": "Ese código de invitación ya se usó.",
+  "registerErrorInvitationExpired": "Ese código de invitación venció.",
+  "registerInvitationPendingTitle": "Tu cuenta ya está creada",
+  "registerInvitationPendingBody": "El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.",
+  "registerInvitationRetryButton": "Reintentar código",
+  "registerInvitationContinueButton": "Continuar sin grupo por ahora",
+  "onboardingContinueButton": "Continuar",
+  "onboardingFinishButton": "Terminar",
+  "onboardingErrorGeneric": "Algo salió mal. Probá de nuevo.",
+  "onboardingNameHeadline": "¿Cómo te llamamos?",
+  "onboardingNameSubtitle": "Así te van a ver tus compañeros de grupo.",
+  "onboardingNameLabel": "Nombre",
+  "onboardingLevelHeadline": "¿Cómo está tu inglés ahora mismo?",
+  "onboardingLevelSubtitle": "Sin presión. Nos vamos a ajustar sobre la marcha, esto solo marca tu punto de partida.",
+  "onboardingLevelBeginnerTitle": "Principiante",
+  "onboardingLevelBeginnerSubtitle": "Conozco algunas palabras y frases simples",
+  "onboardingLevelIntermediateTitle": "Intermedio",
+  "onboardingLevelIntermediateSubtitle": "Puedo sostener una conversación pero cometo errores",
+  "onboardingLevelAdvancedTitle": "Avanzado",
+  "onboardingLevelAdvancedSubtitle": "Soy fluido y quiero pulir matices",
+  "onboardingInterestsHeadline": "¿De qué te gusta hablar?",
+  "onboardingInterestsSubtitle": "Elegí al menos 3. Los usamos para elegir noticias y temas para tus sesiones.",
+  "onboardingInterestsSelectedCount": "{count} seleccionados",
+  "@onboardingInterestsSelectedCount": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "onboardingInterestsSeeMore": "Ver más",
+  "interestTravel": "Viajes",
+  "interestBusiness": "Negocios",
+  "interestTech": "Tecnología",
+  "interestSports": "Deportes",
+  "interestMovies": "Películas",
+  "interestFood": "Comida",
+  "interestDailyLife": "Vida diaria",
+  "interestNews": "Noticias",
+  "interestMusic": "Música",
+  "interestGaming": "Videojuegos",
+  "interestFitness": "Fitness",
+  "interestBooks": "Libros",
+  "interestArt": "Arte",
+  "interestScience": "Ciencia",
+  "interestCooking": "Cocina",
+  "interestPhotography": "Fotografía",
+  "interestFashion": "Moda",
+  "interestCars": "Autos",
+  "interestNature": "Naturaleza",
+  "interestPolitics": "Política",
+  "interestHistory": "Historia",
+  "interestHealth": "Salud",
+  "interestFinance": "Finanzas",
+  "interestPets": "Mascotas",
+  "providersTitle": "Proveedores y modelos",
+  "providersOpenRouterTitle": "OpenRouter",
+  "providersGeminiTitle": "Gemini",
+  "providersGeminiRecommendedBadge": "Recomendado",
+  "providersStatusConnected": "Conectado",
+  "providersStatusNotConnected": "No conectado",
+  "providersStatusError": "Con error",
+  "providersConnectButton": "Conectar",
+  "providersDisconnectButton": "Desconectar",
+  "providersCreditsRemaining": "Crédito restante: {amount} USD",
+  "@providersCreditsRemaining": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "providersErrorGeneric": "No pudimos completar la conexión. Probá de nuevo.",
+  "providersLoadError": "No pudimos cargar los proveedores.",
+  "providersGeminiPasteKeyButton": "Pegar API key",
+  "providersGeminiKeyDialogTitle": "Conectar Gemini",
+  "providersGeminiKeyLabel": "API key de Gemini",
+  "providersGeminiKeyHelpStep1": "1. Entrá a",
+  "providersGeminiKeyHelpStep2": "2. Creá una API key nueva",
+  "providersGeminiKeyHelpStep3": "3. Copiala y pegala acá",
+  "providersGeminiKeyLink": "aistudio.google.com/apikey",
+  "providersGeminiKeyInvalid": "Esa API key no es válida.",
+  "providersGeminiKeyCancel": "Cancelar",
+  "providersGeminiKeyConfirm": "Conectar",
+  "providersModelChatTitle": "Modelo para conversar",
+  "providersModelBriefTitle": "Modelo para el coach",
+  "providersModelTierFree": "Gratis",
+  "providersModelTierBudget": "Económico",
+  "providersModelTierPremium": "Premium",
+  "providersModelEstimateFree": "Gratis",
+  "providersModelEstimatePaid": "≈ {amount} USD por sesión",
+  "@providersModelEstimatePaid": {
+    "placeholders": {
+      "amount": {"type": "String"}
+    }
+  },
+  "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo",
+  "homeGreetingMorning": "Buen día, {name}",
+  "@homeGreetingMorning": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeGreetingAfternoon": "Buenas tardes, {name}",
+  "homeGreetingEvening": "Buenas noches, {name}",
+  "homeStreakDays": "{count} días de racha",
+  "@homeStreakDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "homeGraceDayAvailable": "Día de gracia disponible esta semana",
+  "homeXpToNextLevel": "{amount} XP para subir de nivel",
+  "@homeXpToNextLevel": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "homePracticeButton": "Practicar 10 min",
+  "homeBossButton": "Boss battle",
+  "homeBossSkip": "Hoy no",
+  "homeSessionsTodayStatus": "{done} de 2 sesiones hoy",
+  "@homeSessionsTodayStatus": {
+    "placeholders": {
+      "done": {"type": "int"}
+    }
+  },
+  "homeGroupCardTitle": "Tu grupo esta semana",
+  "homeGroupSeeAll": "Ver todo",
+  "homeGroupYourPosition": "Tu posición: #{position}",
+  "@homeGroupYourPosition": {
+    "placeholders": {
+      "position": {"type": "int"}
+    }
+  },
+  "homePendingFactsCard": "Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?",
+  "@homePendingFactsCard": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "homeNoProviderBanner": "Conectá un proveedor para practicar",
+  "homeNoProviderAction": "Conectar",
+  "homeQuickTopicsTitle": "Temas rápidos",
+  "homeQuickTopicsSeeAll": "Ver todo",
+  "homeLoadError": "No pudimos cargar tu inicio.",
+  "sessionNewTitle": "Elegí un tema",
+  "sessionNewTabTopics": "Temas",
+  "sessionNewTabRoleplay": "Roleplay",
+  "sessionNewTabNews": "Noticias",
+  "sessionNewSurpriseMe": "Sorprendeme",
+  "sessionNewSurpriseMeHint": "Dejá que tu coach elija según lo que practicaste",
+  "sessionNewFreeTopicLabel": "O escribí tu propio tema",
+  "sessionNewFreeTopicSubmit": "Empezar",
+  "sessionNewTalkAboutButton": "Hablar de esto",
+  "sessionNewErrorGeneric": "No pudimos empezar la sesión. Probá de nuevo.",
+  "micPermissionTitle": "Necesitamos tu micrófono",
+  "micPermissionBody": "Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.",
+  "micPermissionContinue": "Continuar",
+  "conversationEndButton": "Terminar",
+  "conversationEndConfirmTitle": "¿Terminar la sesión?",
+  "conversationEndConfirmBody": "Vas a perder el turno que no enviaste.",
+  "conversationEndConfirmCancel": "Seguir practicando",
+  "conversationEndConfirmConfirm": "Terminar",
+  "conversationTwoMinutesWarning": "2 minutos",
+  "conversationTapToSpeak": "Tocá el micrófono y hablá, te vamos a escuchar",
+  "conversationListeningHint": "Escuchando…",
+  "conversationEditableHint": "Editá tu respuesta antes de enviar",
+  "conversationSendButton": "Enviar",
+  "conversationRetryButton": "Repetir",
+  "conversationTextFieldHint": "O escribí tu respuesta…",
+  "conversationTextModeButton": "Escribir",
+  "conversationVoiceModeButton": "Hablar",
+  "conversationCorrectionChip": "{count, plural, one{1 corrección} other{{count} correcciones}}",
+  "@conversationCorrectionChip": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "conversationCorrectionOriginalLabel": "Dijiste",
+  "conversationCorrectionCorrectedLabel": "Mejor así",
+  "conversationDegradedChip": "Usé un modelo alternativo",
+  "conversationUnavailableTitle": "El tutor no está disponible",
+  "conversationUnavailableBody": "No pudimos conectar con el modelo varias veces seguidas. ¿Querés terminar la sesión?",
+  "conversationUnavailableEnd": "Terminar sesión",
+  "conversationUnavailableStay": "Seguir esperando",
+  "conversationSendErrorGeneric": "No pudimos enviar tu mensaje. Probá de nuevo.",
+  "conversationMicUnavailableTitle": "No hay reconocimiento de voz",
+  "conversationMicUnavailableBody": "Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.",
+  "conversationMicUnavailableAccept": "Entendido",
+  "conversationSpeedButtonLabel": "{rate}x",
+  "@conversationSpeedButtonLabel": {
+    "placeholders": {
+      "rate": {"type": "String"}
+    }
+  },
+  "conversationReplayAudio": "Repetir audio",
+  "summaryTitle": "¡Excelente sesión!",
+  "summaryXpEarnedLabel": "XP ganado",
+  "summaryStreakLabel": "Racha",
+  "summaryDurationLabel": "Duración",
+  "summaryCorrectionsTitle": "Correcciones",
+  "summaryCorrectionsEmpty": "Sin correcciones esta vez, ¡muy bien!",
+  "summaryNextIsBossBanner": "La próxima sesión es un Boss battle",
+  "summaryDoubleDayBadge": "¡Segunda sesión del día! Bonus desbloqueado",
+  "summaryBackButton": "Volver",
+  "memoryTitle": "Lo que recuerdo de vos",
+  "memoryPendingSectionTitle": "Para confirmar",
+  "memoryConfirmedSectionTitle": "Lo que recuerdo",
+  "memoryConfirmedEmpty": "Todavía no hay hechos confirmados.",
+  "memoryConfirmFact": "Confirmar",
+  "memoryDismissFact": "Descartar",
+  "memoryEditFactTitle": "Editar hecho",
+  "memoryEditFactCancel": "Cancelar",
+  "memoryEditFactSave": "Guardar",
+  "memoryBriefSectionTitle": "Notas del coach",
+  "memoryBriefExplanation": "El tutor lee esto antes de cada sesión para ajustar cómo te habla.",
+  "memoryBriefSaveButton": "Guardar",
+  "memoryForgetAllButton": "Olvidar todo",
+  "memoryForgetAllConfirmTitle1": "¿Olvidar todo lo que recuerda el tutor de vos?",
+  "memoryForgetAllConfirmBody1": "Se van a borrar todos los hechos confirmados y las notas del coach.",
+  "memoryForgetAllConfirmTitle2": "Esto no se puede deshacer",
+  "memoryForgetAllConfirmBody2": "Confirmá de nuevo para borrar toda tu memoria.",
+  "memoryForgetAllCancel": "Cancelar",
+  "memoryForgetAllConfirm": "Sí, olvidar todo",
+  "groupTitle": "Grupo",
+  "groupLeaderboardTitle": "Tu grupo esta semana",
+  "groupStreak": "{count} días en racha grupal",
+  "@groupStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "groupChallengesTitle": "Desafíos",
+  "groupChallengeText": "{name} practicó sobre {topic}, ¿te animás?",
+  "@groupChallengeText": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "topic": {"type": "String"}
+    }
+  },
+  "groupChallengeAccept": "Aceptar",
+  "groupWeeklySummaryTitle": "Resumen semanal",
+  "groupShareButton": "Compartir en WhatsApp",
+  "progressTitle": "Tu progreso",
+  "progressXpLabel": "XP",
+  "progressStreakLabel": "Racha",
+  "progressLongestStreakLabel": "Racha más larga",
+  "progressSessionsThisWeekLabel": "Sesiones esta semana",
+  "progressCorrectionsTrendTitle": "Tendencia de correcciones",
+  "progressCorrectionsTrendEmpty": "Todavía no hay suficientes datos.",
+  "progressCorrectionsTrendCounts": "{count7d} en 7 días · {count30d} en 30 días",
+  "@progressCorrectionsTrendCounts": {
+    "placeholders": {
+      "count7d": {"type": "int"},
+      "count30d": {"type": "int"}
+    }
+  },
+  "settingsTitle": "Ajustes",
+  "settingsLanguageTitle": "Idioma",
+  "settingsLanguageSystem": "Detectar del sistema",
+  "settingsLanguageSpanish": "Español",
+  "settingsLanguagePortuguese": "Português (Brasil)",
+  "settingsRemindersTitle": "Recordatorios",
+  "settingsMorningReminder": "Sesión de la mañana",
+  "settingsEveningReminder": "Sesión de la tarde",
+  "settingsStreakAlert": "Alerta de racha en riesgo",
+  "settingsSoundEffects": "Efectos de sonido",
+  "settingsLogout": "Cerrar sesión",
+  "settingsDeleteAccount": "Borrar cuenta",
+  "settingsDeleteAccountConfirmTitle": "¿Borrar tu cuenta?",
+  "settingsDeleteAccountConfirmBody": "Se borran tus sesiones, hechos y preferencias. No se puede deshacer.",
+  "settingsDeleteAccountCancel": "Cancelar",
+  "settingsDeleteAccountConfirm": "Borrar cuenta"
+}

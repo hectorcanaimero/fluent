@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import type { ZodType } from 'zod';
 import { extractFirstJsonObject, parseWithSchema } from './json.js';
 import { TurnOutput, BriefOutput, WeeklyOutput } from './schemas.js';
 
@@ -19,7 +20,7 @@ const expected = JSON.parse(readFileSync(expectedPath, 'utf-8')) as Record<
   ExpectedEntry
 >;
 
-const schemaByName = {
+const schemaByName: Record<ExpectedEntry['schema'], ZodType<unknown>> = {
   turn: TurnOutput,
   brief: BriefOutput,
   weekly: WeeklyOutput,

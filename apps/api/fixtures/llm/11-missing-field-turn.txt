@@ -1,0 +1,1 @@
+{"corrections": [{"original": "I am agree with you", "corrected": "I agree with you", "category": "false_friend", "note": "En ingles no se usa 'am' antes de 'agree'."}]}

@@ -1,0 +1,1 @@
+{"reply": "That's a great point! What do you usually do on weekends?", "corrections": [{"original": "I go to gym yesterday", "corrected": "I went to the gym yesterday", "category": "past_simple", "note": "Usa el pasado simple 'went' para acciones terminadas."}]}

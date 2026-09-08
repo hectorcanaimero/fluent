@@ -1,0 +1,83 @@
+# Pendientes de especificación
+
+Registro de huecos, ambigüedades y contradicciones detectados al implementar. Regla de trabajo
+(`docs/tasks/README.md`): si la spec no lo dice, se anota aquí y se elige lo más simple.
+
+Formato: `PEND-nn · spec afectada · quién lo detectó · decisión provisional`.
+
+## PR-03 — LLM, proveedores y prompts (SPEC-03)
+
+### PEND-01 · SPEC-01 §2.14 · `llm_calls.status` no cubre todos los resultados
+`llm_calls.status` se define como `'ok','invalid_json','provider_error','rate_limited','fallback'`, pero
+PR-03/T2 exige mapear también `auth_error` (401/403) y `no_credits` (402), y el timeout no tiene código.
+
+**Decisión provisional:** el módulo usa el conjunto
+`'ok' | 'invalid_json' | 'provider_error' | 'rate_limited' | 'auth_error' | 'no_credits' | 'timeout'`.
+`'fallback'` no se usa: el hecho de que un intento sea de respaldo ya se deduce de `attempt > 1`.
+PR-01 debe ampliar el CHECK de la columna a ese conjunto.
+
+### PEND-02 · SPEC-01 §2.14 y SPEC-03 §4 · falta `prompt_version` en `llm_calls`
+SPEC-03 §4 dice que `PROMPT_VERSION` «se registra en `llm_calls`», pero la tabla de SPEC-01 §2.14 no
+tiene esa columna.
+
+**Decisión provisional:** la interfaz `LlmCallSink` de este PR incluye `promptVersion` en el registro.
+PR-01 debe añadir la columna `prompt_version text` a `llm_calls`.
+
+### PEND-03 · SPEC-03 §4.2 · el prompt de brief asume aprendiz hispanohablante
+El system prompt de cierre de sesión dice literalmente «a Spanish-speaking learner», sin placeholder de
+idioma, mientras que el resto de §4 deriva `{native_language}` de `profiles.locale` (`es` / `pt-BR`).
+
+**Decisión provisional:** se implementa el prompt **literal** de la spec (sin inventar un placeholder).
+Queda pendiente decidir si se añade `{native_language}` también ahí para los perfiles `pt-BR`.
+
+### PEND-04 · SPEC-03 §1 · `json.ts` no repara JSON sintácticamente inválido
+La spec pide extracción tolerante de «el primer bloque `{...}` balanceado». No dice nada de reparar
+comillas simples ni comas finales.
+
+**Decisión provisional (la más simple):** tras aislar el bloque balanceado se usa `JSON.parse` tal cual.
+Comillas simples y comas finales cuentan como `invalid_json` y disparan el siguiente candidato de la
+cadena de fallback.
+
+### PEND-05 · SPEC-03 §2 · contabilidad de intentos con 401/402/403
+La spec dice «máximo 3 intentos en total» y, aparte, que ante 401/403/402 no se reintenta con ese
+proveedor y se sigue la cadena. No aclara si un intento rechazado por credencial consume uno de los 3.
+
+**Decisión provisional:** sí consume intento (se ejecutó una llamada HTTP real y se registra en
+`llm_calls`), pero además se descartan de la cadena todos los candidatos restantes de ese proveedor.
+
+### PEND-06 · SPEC-03 §2 · significado exacto de `degraded`
+§2 lo define como «se usó un modelo distinto del elegido», pero PR-03/T3 exige `degraded: true` cuando
+hubo tres intentos aunque no hubiera preferencia de usuario.
+
+**Decisión provisional:** `degraded = true` si el candidato que respondió no es el primero de la lista,
+o si la preferencia del usuario se descartó por falta de credencial activa del proveedor.
+
+### PEND-07 · SPEC-03 §2 · `last_error` para 401/403
+La spec fija `last_error='NO_CREDITS'` para el 402 de OpenRouter pero no da el código para 401/403.
+
+**Decisión provisional:** el evento `credential.error` usa `code: 'AUTH_ERROR'` para 401/403 y
+`code: 'NO_CREDITS'` para 402; PR-02 los escribe tal cual en `provider_credentials.last_error`.
+
+### PEND-08 · convenciones · dónde viven las constantes del módulo LLM
+`docs/specs/README.md` manda las constantes de producto a `apps/api/src/config/product.ts`, pero
+`HISTORY_TURNS`, los truncados de SPEC-03 §3, los timeouts y las temperaturas son del módulo LLM y
+`product.ts` lo crea PR-02/PR-07.
+
+**Decisión provisional:** viven en `apps/api/src/llm/config.ts`. Si PR-07 crea `product.ts`, se
+reexportan desde allí sin duplicar valores.
+
+### PEND-09 · SPEC-03 §7 · precios de referencia de Gemini
+La spec pide «lista fija en configuración (`gemini-2.5-flash`, `gemini-2.5-flash-lite`,
+`gemini-2.5-pro`) con precios de referencia» pero no da los números.
+
+**Decisión provisional:** se dejan en `apps/api/src/llm/gemini-models.ts` como constante editable con
+los precios públicos por millón de tokens y un comentario con la fecha de consulta. El operador los
+revisa antes de producción.
+
+### PEND-10 · SPEC-03 §9 · `FALLBACK_MODELS` sigue sin validar
+El valor propuesto en §2 es provisional hasta correr `apps/api/scripts/bench-models.ts` (PR-03/T7) con
+las claves del operador. Este PR deja el script y los 20 turnos sintéticos, pero **no** lo ejecuta:
+la sesión de Claude no tiene claves de proveedor.
+
+**Decisión provisional:** `FALLBACK_MODELS` mantiene el valor propuesto en SPEC-03 §2 como valor por
+defecto del módulo hasta que el operador pegue el resultado del bench en la spec.

@@ -1,0 +1,150 @@
+{
+  "01-clean-json.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "That's a great point! What do you usually do on weekends?",
+      "corrections": [
+        {
+          "original": "I go to gym yesterday",
+          "corrected": "I went to the gym yesterday",
+          "category": "past_simple",
+          "note": "Usa el pasado simple 'went' para acciones terminadas."
+        }
+      ]
+    }
+  },
+  "02-fenced-json-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "Nice! Do you prefer coffee or tea in the morning?",
+      "corrections": [
+        {
+          "original": "She don't like coffee",
+          "corrected": "She doesn't like coffee",
+          "category": "subject_verb",
+          "note": "La tercera persona singular necesita 'doesn't'."
+        },
+        {
+          "original": "I have visited Paris last year",
+          "corrected": "I visited Paris last year",
+          "category": "present_perfect",
+          "note": "Con fecha especifica usa pasado simple, no present perfect."
+        }
+      ]
+    }
+  },
+  "03-fenced-plain-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "Sounds fun! What's your favorite season and why?",
+      "corrections": []
+    }
+  },
+  "04-prose-before-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "Interesting! How long have you been learning English?",
+      "corrections": [
+        {
+          "original": "He live in Madrid",
+          "corrected": "He lives in Madrid",
+          "category": "subject_verb",
+          "note": "Falta la 's' en tercera persona del presente simple."
+        }
+      ]
+    }
+  },
+  "05-prose-before-after-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "That's awesome! What's the best restaurant you've been to recently?",
+      "corrections": [
+        {
+          "original": "I very like pizza",
+          "corrected": "I really like pizza",
+          "category": "word_order",
+          "note": "El adverbio 'really' va antes del verbo, no 'very'."
+        }
+      ]
+    }
+  },
+  "06-weird-indentation-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "Great choice! Do you cook often at home?",
+      "corrections": [
+        {
+          "original": "I have a car since 2019",
+          "corrected": "I have had a car since 2019",
+          "category": "present_perfect",
+          "note": "Con 'since' y una accion que continua, usa present perfect."
+        }
+      ]
+    }
+  },
+  "07-braces-in-strings-turn.txt": {
+    "schema": "turn",
+    "outcome": "ok",
+    "data": {
+      "reply": "Good try! Remember to use the correct article next time.",
+      "corrections": [
+        {
+          "original": "I saw film yesterday",
+          "corrected": "I saw the film yesterday",
+          "category": "articles",
+          "note": "Usa {the} articulo antes de sustantivos especificos."
+        }
+      ]
+    }
+  },
+  "08-brief-complete.txt": {
+    "schema": "brief",
+    "outcome": "ok",
+    "data": {
+      "brief": "Keep practicing past simple vs present perfect; the learner still mixes them with time markers. Reinforce daily routine vocabulary. Enjoys talking about travel and food. Responds well to direct, encouraging feedback.",
+      "facts": [
+        {
+          "text": "The learner works as a graphic designer in Barcelona.",
+          "happens_on": null
+        },
+        {
+          "text": "The learner is planning a trip to Japan.",
+          "happens_on": "2026-11-03"
+        }
+      ],
+      "level_hint": "B1",
+      "recurring_errors": [
+        {
+          "category": "present_perfect",
+          "example": "I have visited Paris last year"
+        },
+        {
+          "category": "articles",
+          "example": "I saw film yesterday"
+        }
+      ]
+    }
+  },
+  "09-single-quotes-turn.txt": {
+    "schema": "turn",
+    "outcome": "no_json"
+  },
+  "10-trailing-comma-brief.txt": {
+    "schema": "brief",
+    "outcome": "no_json"
+  },
+  "11-missing-field-turn.txt": {
+    "schema": "turn",
+    "outcome": "schema"
+  },
+  "12-empty-response-weekly.txt": {
+    "schema": "weekly",
+    "outcome": "no_json"
+  }
+}

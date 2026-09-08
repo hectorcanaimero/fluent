@@ -50,7 +50,7 @@ La sesión líder de cada PR usa el modelo de la tabla anterior y delega cada ta
 ## Reglas para todas las sesiones
 
 1. Leer `CLAUDE.md`, el PRD, la spec del PR y este archivo antes de tocar código.
-2. No inventar: si la spec no lo dice, se anota en `docs/specs/PENDIENTES.md` y se elige lo más simple.
+2. No inventar: si la spec no lo dice, se anota en `docs/specs/pendientes/PR-xx.md` (un archivo por PR) y se elige lo más simple.
 3. Cada commit compila y pasa tests: `pnpm --filter @fluent/api build && pnpm --filter @fluent/api test`, o `flutter analyze && flutter test` en `apps/mobile`.
 4. Sin servidores de desarrollo en el VPS (ver `CLAUDE.md` global). Los tests e2e de la API usan `supertest` en memoria contra InsForge de pruebas (rama de InsForge del PR).
 5. Cada PR abre una rama de InsForge con su nombre si toca la base de datos, y la fusiona al aprobar el PR.

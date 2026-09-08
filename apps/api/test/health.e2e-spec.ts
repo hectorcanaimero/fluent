@@ -18,7 +18,7 @@ describe('HealthController (e2e)', () => {
   });
 
   // `.env.test` (apps/api/.env.test) apunta REDIS_URL e INSFORGE_URL a
-  // valores ficticios/no alcanzables (ver docs/specs/PENDIENTES.md, T3 de
+  // valores ficticios/no alcanzables (ver docs/specs/pendientes/PR-08.md, T3 de
   // PR-08), así que en este entorno e2e `redis.ok` e `insforge.ok` son
   // `false` de forma determinista y rápida (RedisModule/InsforgeModule usan
   // conexiones/timeouts acotados, sin reintentos indefinidos). Este test

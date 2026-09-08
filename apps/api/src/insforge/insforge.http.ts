@@ -30,7 +30,7 @@ export class InsforgeHttp {
    * La forma exacta del JSON de respuesta de InsForge no está documentada
    * en las specs de este repo. Se es defensivo: se intenta leer `data.id`
    * o `data.user.id` con optional chaining (ver entrada en
-   * docs/specs/PENDIENTES.md sobre esta decisión).
+   * docs/specs/pendientes/PR-08.md sobre esta decisión).
    *
    * Nunca lanza: cualquier error de red se atrapa y devuelve `{ ok: false }`.
    */

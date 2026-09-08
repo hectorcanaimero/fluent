@@ -9,7 +9,7 @@ import type { Env } from '../config/env.js';
 /**
  * `HealthService` con Redis simulado (`ioredis-mock`) y `fetch` simulado
  * (`vi.fn()`), sin tocar red ni Redis real. Ver docs/tasks/PR-08-infraestructura.md
- * T3 y docs/specs/PENDIENTES.md.
+ * T3 y docs/specs/pendientes/PR-08.md.
  */
 describe('HealthService', () => {
   const configServiceMock = {

@@ -66,7 +66,7 @@ export const GRACE_DAYS_PER_WEEK = 1;
 /**
  * Momento de reinicio del leaderboard semanal: lunes 00:00 UTC.
  *
- * Decisión de tipado (sin especificar en la spec, ver docs/specs/PENDIENTES.md):
+ * Decisión de tipado (sin especificar en la spec, ver docs/specs/pendientes/PR-08.md):
  * se representa como un literal de string legible en vez de un enum, porque
  * hoy solo existe un valor posible y un string documentado es más simple.
  */

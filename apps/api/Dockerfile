@@ -12,7 +12,7 @@
 # Dentro de ese contexto no hay acceso al `pnpm-lock.yaml` ni al
 # `pnpm-workspace.yaml` de la raíz del monorepo (viven un nivel por
 # encima, fuera del contexto). Decisión documentada en
-# docs/specs/PENDIENTES.md (2026-09-08, T4, PR-08): en vez de mover o
+# docs/specs/pendientes/PR-08.md (2026-09-08, T4, PR-08): en vez de mover o
 # duplicar el lockfile real del repo, se instala con
 # `pnpm install --no-frozen-lockfile` dentro de este contexto acotado
 # (apps/api es el único paquete del workspace, sin dependencias

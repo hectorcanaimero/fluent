@@ -745,6 +745,180 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectá este proveedor para usarlo'**
   String get providersModelProviderDisabledHint;
+
+  /// No description provided for @homeGreetingMorning.
+  ///
+  /// In es, this message translates to:
+  /// **'Buen día, {name}'**
+  String homeGreetingMorning(String name);
+
+  /// No description provided for @homeGreetingAfternoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Buenas tardes, {name}'**
+  String homeGreetingAfternoon(Object name);
+
+  /// No description provided for @homeGreetingEvening.
+  ///
+  /// In es, this message translates to:
+  /// **'Buenas noches, {name}'**
+  String homeGreetingEvening(Object name);
+
+  /// No description provided for @homeStreakDays.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} días de racha'**
+  String homeStreakDays(int count);
+
+  /// No description provided for @homeGraceDayAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Día de gracia disponible esta semana'**
+  String get homeGraceDayAvailable;
+
+  /// No description provided for @homeXpToNextLevel.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} XP para subir de nivel'**
+  String homeXpToNextLevel(int amount);
+
+  /// No description provided for @homePracticeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicar 10 min'**
+  String get homePracticeButton;
+
+  /// No description provided for @homeBossButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Boss battle'**
+  String get homeBossButton;
+
+  /// No description provided for @homeBossSkip.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy no'**
+  String get homeBossSkip;
+
+  /// No description provided for @homeSessionsTodayStatus.
+  ///
+  /// In es, this message translates to:
+  /// **'{done} de 2 sesiones hoy'**
+  String homeSessionsTodayStatus(int done);
+
+  /// No description provided for @homeGroupCardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu grupo esta semana'**
+  String get homeGroupCardTitle;
+
+  /// No description provided for @homeGroupSeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get homeGroupSeeAll;
+
+  /// No description provided for @homeGroupYourPosition.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu posición: #{position}'**
+  String homeGroupYourPosition(int position);
+
+  /// No description provided for @homePendingFactsCard.
+  ///
+  /// In es, this message translates to:
+  /// **'Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?'**
+  String homePendingFactsCard(int count);
+
+  /// No description provided for @homeNoProviderBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectá un proveedor para practicar'**
+  String get homeNoProviderBanner;
+
+  /// No description provided for @homeNoProviderAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar'**
+  String get homeNoProviderAction;
+
+  /// No description provided for @homeQuickTopicsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas rápidos'**
+  String get homeQuickTopicsTitle;
+
+  /// No description provided for @homeQuickTopicsSeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver todo'**
+  String get homeQuickTopicsSeeAll;
+
+  /// No description provided for @homeLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar tu inicio.'**
+  String get homeLoadError;
+
+  /// No description provided for @sessionNewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegí un tema'**
+  String get sessionNewTitle;
+
+  /// No description provided for @sessionNewTabTopics.
+  ///
+  /// In es, this message translates to:
+  /// **'Temas'**
+  String get sessionNewTabTopics;
+
+  /// No description provided for @sessionNewTabRoleplay.
+  ///
+  /// In es, this message translates to:
+  /// **'Roleplay'**
+  String get sessionNewTabRoleplay;
+
+  /// No description provided for @sessionNewTabNews.
+  ///
+  /// In es, this message translates to:
+  /// **'Noticias'**
+  String get sessionNewTabNews;
+
+  /// No description provided for @sessionNewSurpriseMe.
+  ///
+  /// In es, this message translates to:
+  /// **'Sorprendeme'**
+  String get sessionNewSurpriseMe;
+
+  /// No description provided for @sessionNewSurpriseMeHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Dejá que tu coach elija según lo que practicaste'**
+  String get sessionNewSurpriseMeHint;
+
+  /// No description provided for @sessionNewFreeTopicLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'O escribí tu propio tema'**
+  String get sessionNewFreeTopicLabel;
+
+  /// No description provided for @sessionNewFreeTopicSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get sessionNewFreeTopicSubmit;
+
+  /// No description provided for @sessionNewTalkAboutButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Hablar de esto'**
+  String get sessionNewTalkAboutButton;
+
+  /// No description provided for @sessionNewErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos empezar la sesión. Probá de nuevo.'**
+  String get sessionNewErrorGeneric;
 }
 
 class _AppLocalizationsDelegate

@@ -392,11 +392,15 @@ class FakeApi implements FluentApi {
 
   // ---- 4.3 Sesiones ---------------------------------------------------------
 
+  /// Gancho para tests: fuerza `bossPending` en la próxima llamada a
+  /// [getSessionSuggestions] sin tener que simular 7 sesiones reales.
+  bool bossPending = false;
+
   @override
   Future<SessionSuggestions> getSessionSuggestions() async {
     await _delay();
-    return const SessionSuggestions(
-      topics: [
+    return SessionSuggestions(
+      topics: const [
         'Your last trip',
         'A movie you loved',
         'Working from home',
@@ -404,13 +408,13 @@ class FakeApi implements FluentApi {
         'A recipe you know',
         'Learning something new',
       ],
-      roleplays: [
+      roleplays: const [
         RoleplayOption(id: 'roleplay-airport', title: 'Checking in at the airport'),
         RoleplayOption(id: 'roleplay-restaurant', title: 'Ordering at a restaurant'),
         RoleplayOption(id: 'roleplay-interview', title: 'Job interview'),
         RoleplayOption(id: 'roleplay-doctor', title: "Doctor's appointment"),
       ],
-      news: [
+      news: const [
         NewsItem(
           id: 'news-1',
           title: 'Cities expand bike lanes to cut car traffic',
@@ -441,7 +445,7 @@ class FakeApi implements FluentApi {
           time: '5 h ago',
         ),
       ],
-      bossPending: false,
+      bossPending: bossPending,
     );
   }
 

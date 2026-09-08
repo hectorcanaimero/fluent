@@ -122,5 +122,64 @@
       "amount": {"type": "String"}
     }
   },
-  "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo"
+  "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo",
+  "homeGreetingMorning": "Buen día, {name}",
+  "@homeGreetingMorning": {
+    "placeholders": {
+      "name": {"type": "String"}
+    }
+  },
+  "homeGreetingAfternoon": "Buenas tardes, {name}",
+  "homeGreetingEvening": "Buenas noches, {name}",
+  "homeStreakDays": "{count} días de racha",
+  "@homeStreakDays": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "homeGraceDayAvailable": "Día de gracia disponible esta semana",
+  "homeXpToNextLevel": "{amount} XP para subir de nivel",
+  "@homeXpToNextLevel": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "homePracticeButton": "Practicar 10 min",
+  "homeBossButton": "Boss battle",
+  "homeBossSkip": "Hoy no",
+  "homeSessionsTodayStatus": "{done} de 2 sesiones hoy",
+  "@homeSessionsTodayStatus": {
+    "placeholders": {
+      "done": {"type": "int"}
+    }
+  },
+  "homeGroupCardTitle": "Tu grupo esta semana",
+  "homeGroupSeeAll": "Ver todo",
+  "homeGroupYourPosition": "Tu posición: #{position}",
+  "@homeGroupYourPosition": {
+    "placeholders": {
+      "position": {"type": "int"}
+    }
+  },
+  "homePendingFactsCard": "Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?",
+  "@homePendingFactsCard": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "homeNoProviderBanner": "Conectá un proveedor para practicar",
+  "homeNoProviderAction": "Conectar",
+  "homeQuickTopicsTitle": "Temas rápidos",
+  "homeQuickTopicsSeeAll": "Ver todo",
+  "homeLoadError": "No pudimos cargar tu inicio.",
+  "sessionNewTitle": "Elegí un tema",
+  "sessionNewTabTopics": "Temas",
+  "sessionNewTabRoleplay": "Roleplay",
+  "sessionNewTabNews": "Noticias",
+  "sessionNewSurpriseMe": "Sorprendeme",
+  "sessionNewSurpriseMeHint": "Dejá que tu coach elija según lo que practicaste",
+  "sessionNewFreeTopicLabel": "O escribí tu propio tema",
+  "sessionNewFreeTopicSubmit": "Empezar",
+  "sessionNewTalkAboutButton": "Hablar de esto",
+  "sessionNewErrorGeneric": "No pudimos empezar la sesión. Probá de nuevo."
 }

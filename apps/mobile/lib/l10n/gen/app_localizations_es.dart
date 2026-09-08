@@ -354,4 +354,109 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get providersModelProviderDisabledHint =>
       'Conectá este proveedor para usarlo';
+
+  @override
+  String homeGreetingMorning(String name) {
+    return 'Buen día, $name';
+  }
+
+  @override
+  String homeGreetingAfternoon(Object name) {
+    return 'Buenas tardes, $name';
+  }
+
+  @override
+  String homeGreetingEvening(Object name) {
+    return 'Buenas noches, $name';
+  }
+
+  @override
+  String homeStreakDays(int count) {
+    return '$count días de racha';
+  }
+
+  @override
+  String get homeGraceDayAvailable => 'Día de gracia disponible esta semana';
+
+  @override
+  String homeXpToNextLevel(int amount) {
+    return '$amount XP para subir de nivel';
+  }
+
+  @override
+  String get homePracticeButton => 'Practicar 10 min';
+
+  @override
+  String get homeBossButton => 'Boss battle';
+
+  @override
+  String get homeBossSkip => 'Hoy no';
+
+  @override
+  String homeSessionsTodayStatus(int done) {
+    return '$done de 2 sesiones hoy';
+  }
+
+  @override
+  String get homeGroupCardTitle => 'Tu grupo esta semana';
+
+  @override
+  String get homeGroupSeeAll => 'Ver todo';
+
+  @override
+  String homeGroupYourPosition(int position) {
+    return 'Tu posición: #$position';
+  }
+
+  @override
+  String homePendingFactsCard(int count) {
+    return 'Tengo $count cosas nuevas para recordar de vos, ¿las revisás?';
+  }
+
+  @override
+  String get homeNoProviderBanner => 'Conectá un proveedor para practicar';
+
+  @override
+  String get homeNoProviderAction => 'Conectar';
+
+  @override
+  String get homeQuickTopicsTitle => 'Temas rápidos';
+
+  @override
+  String get homeQuickTopicsSeeAll => 'Ver todo';
+
+  @override
+  String get homeLoadError => 'No pudimos cargar tu inicio.';
+
+  @override
+  String get sessionNewTitle => 'Elegí un tema';
+
+  @override
+  String get sessionNewTabTopics => 'Temas';
+
+  @override
+  String get sessionNewTabRoleplay => 'Roleplay';
+
+  @override
+  String get sessionNewTabNews => 'Noticias';
+
+  @override
+  String get sessionNewSurpriseMe => 'Sorprendeme';
+
+  @override
+  String get sessionNewSurpriseMeHint =>
+      'Dejá que tu coach elija según lo que practicaste';
+
+  @override
+  String get sessionNewFreeTopicLabel => 'O escribí tu propio tema';
+
+  @override
+  String get sessionNewFreeTopicSubmit => 'Empezar';
+
+  @override
+  String get sessionNewTalkAboutButton => 'Hablar de esto';
+
+  @override
+  String get sessionNewErrorGeneric =>
+      'No pudimos empezar la sesión. Probá de nuevo.';
 }

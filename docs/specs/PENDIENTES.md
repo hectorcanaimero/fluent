@@ -78,3 +78,25 @@ el operador las revise o las mejore más adelante.
   OpenRouter en tests y con `USE_FAKE_API=true` sin abrir un
   navegador real (mismo patrón que se va a usar para voz en T6 con
   `SpeechService`/`TtsService`).
+
+## T5 — Home y nueva sesión
+
+- **"Sesiones de hoy" sin franjas fijas.** El diseño de Pen muestra
+  "Morning session" / "Evening session" con horarios y estado
+  individual, pero ningún endpoint de SPEC-02 expone eso (solo hay
+  `sessionsThisWeek` semanal y la lista paginada de `/sessions`).
+  Como el PRD adoptó "dos huecos sin franja obligatoria" (ver más
+  arriba, decisión del diseño), Home solo cuenta cuántas sesiones de
+  `GET /sessions` empezaron hoy (`{n} de 2 sesiones hoy`) en vez de
+  separar mañana/tarde con horarios exactos.
+- **Día de gracia siempre visible con racha activa.** No hay campo en
+  `/me` ni en `/progress` que diga si la gracia semanal ya se usó
+  (RF-5.2). Se muestra el aviso "Día de gracia disponible" cada vez
+  que `streak > 0`, sin verificar el estado real. Falta ese campo en
+  la API para mostrarlo bien.
+- **Posición en el grupo por nombre, no por id.** `Profile` (la
+  respuesta de `/me`) no trae el `userId` del usuario logueado, así
+  que la posición en el leaderboard de Home se calcula comparando
+  `displayName` contra `GroupMember.displayName`. Si dos miembros
+  comparten nombre, puede mostrar la posición equivocada. Se resuelve
+  agregando `userId` a `GET /me` (coordinar con PR-02).

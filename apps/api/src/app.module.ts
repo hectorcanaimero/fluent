@@ -6,6 +6,7 @@ import { HealthModule } from './health/health.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { InsforgeModule } from './insforge/insforge.module.js';
 import { QueuesModule } from './jobs/queues.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { QueuesModule } from './jobs/queues.module.js';
     // worker (`worker.module.ts`).
     QueuesModule,
     HealthModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

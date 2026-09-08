@@ -27,6 +27,32 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _future = ref.read(fluentApiProvider).getSessionSuggestions();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMicPrimer());
+  }
+
+  /// SPEC-06 §5: la primera vez que se entra acá se explica para qué se
+  /// usa el micrófono antes de que el sistema operativo muestre su
+  /// propio diálogo de permiso (eso lo dispara `SpeechService.initialize`
+  /// más adelante, en la pantalla de conversación).
+  Future<void> _maybeShowMicPrimer() async {
+    if (ref.read(micPrimerShownProvider)) return;
+    ref.read(micPrimerShownProvider.notifier).state = true;
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder:
+          (ctx) => AlertDialog(
+            title: Text(l10n.micPermissionTitle),
+            content: Text(l10n.micPermissionBody),
+            actions: [
+              ElevatedButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text(l10n.micPermissionContinue),
+              ),
+            ],
+          ),
+    );
   }
 
   @override

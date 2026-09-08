@@ -181,5 +181,46 @@
   "sessionNewFreeTopicLabel": "O escribí tu propio tema",
   "sessionNewFreeTopicSubmit": "Empezar",
   "sessionNewTalkAboutButton": "Hablar de esto",
-  "sessionNewErrorGeneric": "No pudimos empezar la sesión. Probá de nuevo."
+  "sessionNewErrorGeneric": "No pudimos empezar la sesión. Probá de nuevo.",
+  "micPermissionTitle": "Necesitamos tu micrófono",
+  "micPermissionBody": "Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.",
+  "micPermissionContinue": "Continuar",
+  "conversationEndButton": "Terminar",
+  "conversationEndConfirmTitle": "¿Terminar la sesión?",
+  "conversationEndConfirmBody": "Vas a perder el turno que no enviaste.",
+  "conversationEndConfirmCancel": "Seguir practicando",
+  "conversationEndConfirmConfirm": "Terminar",
+  "conversationTwoMinutesWarning": "2 minutos",
+  "conversationTapToSpeak": "Tocá el micrófono y hablá, te vamos a escuchar",
+  "conversationListeningHint": "Escuchando…",
+  "conversationEditableHint": "Editá tu respuesta antes de enviar",
+  "conversationSendButton": "Enviar",
+  "conversationRetryButton": "Repetir",
+  "conversationTextFieldHint": "O escribí tu respuesta…",
+  "conversationTextModeButton": "Escribir",
+  "conversationVoiceModeButton": "Hablar",
+  "conversationCorrectionChip": "{count, plural, one{1 corrección} other{{count} correcciones}}",
+  "@conversationCorrectionChip": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "conversationCorrectionOriginalLabel": "Dijiste",
+  "conversationCorrectionCorrectedLabel": "Mejor así",
+  "conversationDegradedChip": "Usé un modelo alternativo",
+  "conversationUnavailableTitle": "El tutor no está disponible",
+  "conversationUnavailableBody": "No pudimos conectar con el modelo varias veces seguidas. ¿Querés terminar la sesión?",
+  "conversationUnavailableEnd": "Terminar sesión",
+  "conversationUnavailableStay": "Seguir esperando",
+  "conversationSendErrorGeneric": "No pudimos enviar tu mensaje. Probá de nuevo.",
+  "conversationMicUnavailableTitle": "No hay reconocimiento de voz",
+  "conversationMicUnavailableBody": "Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.",
+  "conversationMicUnavailableAccept": "Entendido",
+  "conversationSpeedButtonLabel": "{rate}x",
+  "@conversationSpeedButtonLabel": {
+    "placeholders": {
+      "rate": {"type": "String"}
+    }
+  },
+  "conversationReplayAudio": "Repetir audio"
 }

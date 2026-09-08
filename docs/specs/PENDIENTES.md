@@ -100,3 +100,32 @@ el operador las revise o las mejore más adelante.
   `displayName` contra `GroupMember.displayName`. Si dos miembros
   comparten nombre, puede mostrar la posición equivocada. Se resuelve
   agregando `userId` a `GET /me` (coordinar con PR-02).
+
+## T6 — Conversación por voz
+
+- **Micrófono: toque para iniciar/parar, no "mantener para hablar".**
+  SPEC-06 §4.3 pide que el modo mantener-presionado/toque sea
+  configurable. Se implementó solo toque (tocar para escuchar, tocar
+  de nuevo para terminar); el modo "mantener" queda pendiente, es un
+  `GestureDetector.onLongPress` adicional sobre el mismo botón cuando
+  se agregue esa preferencia en Ajustes (T8).
+- **Las correcciones no se recuperan al reabrir una sesión.**
+  `GET /sessions/:id` devuelve `corrections` como lista plana, sin
+  `turnIdx` en el DTO de la API (aunque sí existe en la tabla de
+  SPEC-01). La pantalla de conversación arma los mensajes desde
+  `turns` al entrar, pero solo asocia correcciones a los turnos que
+  se envían en la sesión activa; si se refresca `/session/:id` a
+  mitad de una sesión ya iniciada, las correcciones de turnos previos
+  no se vuelven a mostrar. Se resuelve agregando `turnIdx` a
+  `Correction` en el contrato de la API.
+- **`OAuthLauncher`-style fakes para voz.** `SpeechService` y
+  `TtsService` son interfaces nuevas (no estaban en SPEC-06 más que
+  como nombres de paquete) con implementaciones reales
+  (`speech_to_text`, `flutter_tts`) y fakes (`FakeSpeechService`,
+  `FakeTtsService`) para poder simular todo el flujo de voz en tests
+  y con `USE_FAKE_API=true`, sin tocar hardware.
+- **Prueba manual pendiente.** El comportamiento real de
+  `speech_to_text` con acento hispano hablando inglés, el ducking de
+  audio contra `flutter_tts`, y el deep link de PKCE (T4) solo se
+  pueden validar en un dispositivo físico; quedan documentados como
+  pendientes en el PR, no se hicieron en este VPS.

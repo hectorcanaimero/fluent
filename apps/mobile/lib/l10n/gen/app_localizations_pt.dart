@@ -459,4 +459,113 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get sessionNewErrorGeneric =>
       'Não conseguimos começar a sessão. Tente de novo.';
+
+  @override
+  String get micPermissionTitle => 'Precisamos do seu microfone';
+
+  @override
+  String get micPermissionBody =>
+      'O Fluent usa o microfone do celular para te ouvir durante a conversa. A transcrição é processada no seu aparelho e você revisa antes de enviar.';
+
+  @override
+  String get micPermissionContinue => 'Continuar';
+
+  @override
+  String get conversationEndButton => 'Terminar';
+
+  @override
+  String get conversationEndConfirmTitle => 'Terminar a sessão?';
+
+  @override
+  String get conversationEndConfirmBody =>
+      'Você vai perder a resposta que ainda não enviou.';
+
+  @override
+  String get conversationEndConfirmCancel => 'Continuar praticando';
+
+  @override
+  String get conversationEndConfirmConfirm => 'Terminar';
+
+  @override
+  String get conversationTwoMinutesWarning => '2 minutos';
+
+  @override
+  String get conversationTapToSpeak =>
+      'Toque no microfone e fale, vamos te escutar';
+
+  @override
+  String get conversationListeningHint => 'Escutando…';
+
+  @override
+  String get conversationEditableHint => 'Edite sua resposta antes de enviar';
+
+  @override
+  String get conversationSendButton => 'Enviar';
+
+  @override
+  String get conversationRetryButton => 'Repetir';
+
+  @override
+  String get conversationTextFieldHint => 'Ou escreva sua resposta…';
+
+  @override
+  String get conversationTextModeButton => 'Escrever';
+
+  @override
+  String get conversationVoiceModeButton => 'Falar';
+
+  @override
+  String conversationCorrectionChip(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count correções',
+      one: '1 correção',
+    );
+    return '$_temp0';
+  }
+
+  @override
+  String get conversationCorrectionOriginalLabel => 'Você disse';
+
+  @override
+  String get conversationCorrectionCorrectedLabel => 'Melhor assim';
+
+  @override
+  String get conversationDegradedChip => 'Usei um modelo alternativo';
+
+  @override
+  String get conversationUnavailableTitle => 'O tutor não está disponível';
+
+  @override
+  String get conversationUnavailableBody =>
+      'Não conseguimos conectar com o modelo várias vezes seguidas. Quer terminar a sessão?';
+
+  @override
+  String get conversationUnavailableEnd => 'Terminar sessão';
+
+  @override
+  String get conversationUnavailableStay => 'Continuar esperando';
+
+  @override
+  String get conversationSendErrorGeneric =>
+      'Não conseguimos enviar sua mensagem. Tente de novo.';
+
+  @override
+  String get conversationMicUnavailableTitle => 'Sem reconhecimento de voz';
+
+  @override
+  String get conversationMicUnavailableBody =>
+      'Seu aparelho não tem reconhecimento de voz em inglês instalado. Você pode escrever no modo texto.';
+
+  @override
+  String get conversationMicUnavailableAccept => 'Entendido';
+
+  @override
+  String conversationSpeedButtonLabel(String rate) {
+    return '${rate}x';
+  }
+
+  @override
+  String get conversationReplayAudio => 'Repetir áudio';
 }

@@ -1,0 +1,201 @@
+import 'package:fluent_mobile/core/api/fake_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
+import 'package:fluent_mobile/core/errors/api_exception.dart';
+import 'package:fluent_mobile/core/providers.dart';
+import 'package:fluent_mobile/features/session/data/speech_service.dart';
+import 'package:fluent_mobile/features/session/data/tts_service.dart';
+import 'package:fluent_mobile/features/session/presentation/conversation_screen.dart';
+import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
+
+/// Garantiza que el turno vuelva con al menos una corrección, sin
+/// depender de la semilla aleatoria de [FakeApi.sendTurn].
+class _AlwaysCorrectingApi extends FakeApi {
+  _AlwaysCorrectingApi({super.artificialDelay});
+
+  @override
+  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+    final base = await super.sendTurn(sessionId: sessionId, text: text);
+    if (base.corrections.isNotEmpty) return base;
+    return base.copyWith(
+      corrections: const [
+        Correction(
+          original: 'I go there yesterday',
+          corrected: 'I went there yesterday',
+          category: 'past_simple',
+          note: 'Usá el pasado simple para acciones terminadas.',
+        ),
+      ],
+    );
+  }
+}
+
+/// Siempre falla con LLM_UNAVAILABLE, para probar el diálogo de 3
+/// intentos seguidos.
+class _UnavailableApi extends FakeApi {
+  _UnavailableApi({super.artificialDelay});
+
+  int calls = 0;
+
+  @override
+  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+    calls++;
+    throw const ApiException(
+      code: ApiErrorCode.llmUnavailable,
+      message: 'no model responded',
+      statusCode: 503,
+    );
+  }
+}
+
+const _delegates = [
+  AppLocalizations.delegate,
+  GlobalMaterialLocalizations.delegate,
+  GlobalWidgetsLocalizations.delegate,
+  GlobalCupertinoLocalizations.delegate,
+];
+
+void main() {
+  testWidgets('escuchar, editar, enviar, mostrar corrección y reproducir', (tester) async {
+    final api = _AlwaysCorrectingApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final speech = FakeSpeechService();
+    final tts = FakeTtsService();
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => speech),
+          ttsServiceProvider.overrideWith((ref) => tts),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // idle -> tap mic -> listening.
+    await tester.tap(find.byKey(const Key('conversation_mic_button')));
+    await tester.pump();
+    expect(speech.isListening, isTrue);
+
+    // El usuario dice algo; el STT simulado entrega el resultado final.
+    speech.emit('I go there yesterday', isFinal: true);
+    await tester.pump();
+
+    // listening -> reviewing, con la transcripción editable.
+    final draftField = tester.widget<TextField>(
+      find.byKey(const Key('conversation_draft_field')),
+    );
+    expect(draftField.controller!.text, 'I go there yesterday');
+
+    // Editar antes de enviar.
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'I go there yesterday, it was fun',
+    );
+
+    // Enviar -> sending -> speaking -> idle.
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pumpAndSettle();
+
+    // Se muestra la corrección de forma no intrusiva (chip expandible).
+    expect(find.byKey(const Key('conversation_correction_chip')), findsOneWidget);
+    expect(find.byKey(const Key('conversation_correction_detail')), findsNothing);
+    await tester.tap(find.byKey(const Key('conversation_correction_chip')));
+    await tester.pump();
+    expect(find.byKey(const Key('conversation_correction_detail')), findsOneWidget);
+
+    // El tutor "reprodujo" su respuesta.
+    expect(tts.spokenTexts, isNotEmpty);
+  });
+
+  testWidgets('tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar', (tester) async {
+    final api = _UnavailableApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // Modo texto para no depender del micrófono simulado.
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+
+    for (var i = 0; i < 3; i++) {
+      await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello $i');
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pumpAndSettle();
+    }
+
+    expect(api.calls, 3);
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.conversationUnavailableTitle), findsOneWidget);
+  });
+
+  testWidgets('el temporizador llega a 0 y dispara /end', (tester) async {
+    final api = FakeApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+
+    final router = GoRouter(
+      initialLocation: '/session/${created.session.id}',
+      routes: [
+        GoRoute(
+          path: '/session/:id',
+          builder:
+              (context, state) => ConversationScreen(
+                sessionId: state.pathParameters['id']!,
+                sessionDuration: const Duration(seconds: 2),
+                warningThreshold: const Duration(seconds: 1),
+              ),
+        ),
+        GoRoute(
+          path: '/session/:id/summary',
+          builder: (context, state) => const Text('SUMMARY_SCREEN'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pump(const Duration(seconds: 1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('SUMMARY_SCREEN'), findsOneWidget);
+  });
+}

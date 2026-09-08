@@ -919,6 +919,192 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos empezar la sesión. Probá de nuevo.'**
   String get sessionNewErrorGeneric;
+
+  /// No description provided for @micPermissionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Necesitamos tu micrófono'**
+  String get micPermissionTitle;
+
+  /// No description provided for @micPermissionBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.'**
+  String get micPermissionBody;
+
+  /// No description provided for @micPermissionContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get micPermissionContinue;
+
+  /// No description provided for @conversationEndButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get conversationEndButton;
+
+  /// No description provided for @conversationEndConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Terminar la sesión?'**
+  String get conversationEndConfirmTitle;
+
+  /// No description provided for @conversationEndConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Vas a perder el turno que no enviaste.'**
+  String get conversationEndConfirmBody;
+
+  /// No description provided for @conversationEndConfirmCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir practicando'**
+  String get conversationEndConfirmCancel;
+
+  /// No description provided for @conversationEndConfirmConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar'**
+  String get conversationEndConfirmConfirm;
+
+  /// No description provided for @conversationTwoMinutesWarning.
+  ///
+  /// In es, this message translates to:
+  /// **'2 minutos'**
+  String get conversationTwoMinutesWarning;
+
+  /// No description provided for @conversationTapToSpeak.
+  ///
+  /// In es, this message translates to:
+  /// **'Tocá el micrófono y hablá, te vamos a escuchar'**
+  String get conversationTapToSpeak;
+
+  /// No description provided for @conversationListeningHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Escuchando…'**
+  String get conversationListeningHint;
+
+  /// No description provided for @conversationEditableHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Editá tu respuesta antes de enviar'**
+  String get conversationEditableHint;
+
+  /// No description provided for @conversationSendButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Enviar'**
+  String get conversationSendButton;
+
+  /// No description provided for @conversationRetryButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Repetir'**
+  String get conversationRetryButton;
+
+  /// No description provided for @conversationTextFieldHint.
+  ///
+  /// In es, this message translates to:
+  /// **'O escribí tu respuesta…'**
+  String get conversationTextFieldHint;
+
+  /// No description provided for @conversationTextModeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Escribir'**
+  String get conversationTextModeButton;
+
+  /// No description provided for @conversationVoiceModeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Hablar'**
+  String get conversationVoiceModeButton;
+
+  /// No description provided for @conversationCorrectionChip.
+  ///
+  /// In es, this message translates to:
+  /// **'{count, plural, one{1 corrección} other{{count} correcciones}}'**
+  String conversationCorrectionChip(int count);
+
+  /// No description provided for @conversationCorrectionOriginalLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Dijiste'**
+  String get conversationCorrectionOriginalLabel;
+
+  /// No description provided for @conversationCorrectionCorrectedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Mejor así'**
+  String get conversationCorrectionCorrectedLabel;
+
+  /// No description provided for @conversationDegradedChip.
+  ///
+  /// In es, this message translates to:
+  /// **'Usé un modelo alternativo'**
+  String get conversationDegradedChip;
+
+  /// No description provided for @conversationUnavailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'El tutor no está disponible'**
+  String get conversationUnavailableTitle;
+
+  /// No description provided for @conversationUnavailableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectar con el modelo varias veces seguidas. ¿Querés terminar la sesión?'**
+  String get conversationUnavailableBody;
+
+  /// No description provided for @conversationUnavailableEnd.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminar sesión'**
+  String get conversationUnavailableEnd;
+
+  /// No description provided for @conversationUnavailableStay.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir esperando'**
+  String get conversationUnavailableStay;
+
+  /// No description provided for @conversationSendErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos enviar tu mensaje. Probá de nuevo.'**
+  String get conversationSendErrorGeneric;
+
+  /// No description provided for @conversationMicUnavailableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No hay reconocimiento de voz'**
+  String get conversationMicUnavailableTitle;
+
+  /// No description provided for @conversationMicUnavailableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.'**
+  String get conversationMicUnavailableBody;
+
+  /// No description provided for @conversationMicUnavailableAccept.
+  ///
+  /// In es, this message translates to:
+  /// **'Entendido'**
+  String get conversationMicUnavailableAccept;
+
+  /// No description provided for @conversationSpeedButtonLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'{rate}x'**
+  String conversationSpeedButtonLabel(String rate);
+
+  /// No description provided for @conversationReplayAudio.
+  ///
+  /// In es, this message translates to:
+  /// **'Repetir audio'**
+  String get conversationReplayAudio;
 }
 
 class _AppLocalizationsDelegate

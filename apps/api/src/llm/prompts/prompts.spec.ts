@@ -224,6 +224,7 @@ describe('truncados de SPEC-03 §3', () => {
 
 describe('buildBriefMessages', () => {
   const BRIEF_INPUT = {
+    locale: 'es' as const,
     level: 'B1' as const,
     previousBrief: 'Push past simple. Reinforce travel vocabulary.',
     knownFacts: ['The learner works as a nurse in Valencia.'],
@@ -234,6 +235,15 @@ describe('buildBriefMessages', () => {
 
   it('genera system y user tal cual SPEC-03 §4.2', () => {
     expect(buildBriefMessages(BRIEF_INPUT)).toMatchSnapshot();
+  });
+
+  it('deriva native_language del locale igual que el prompt de turno', () => {
+    expect(buildBriefMessages(BRIEF_INPUT)[0]?.content).toContain(
+      'session of a Spanish-speaking learner (level B1)',
+    );
+    expect(
+      buildBriefMessages({ ...BRIEF_INPUT, locale: 'pt-BR', level: 'A2' })[0]?.content,
+    ).toContain('session of a Brazilian Portuguese-speaking learner (level A2)');
   });
 
   it('usa None cuando no hay notas ni hechos previos', () => {

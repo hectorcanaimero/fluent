@@ -23,13 +23,6 @@ tiene esa columna.
 **Decisión provisional:** la interfaz `LlmCallSink` de este PR incluye `promptVersion` en el registro.
 PR-01 debe añadir la columna `prompt_version text` a `llm_calls`.
 
-### PEND-03 · SPEC-03 §4.2 · el prompt de brief asume aprendiz hispanohablante
-El system prompt de cierre de sesión dice literalmente «a Spanish-speaking learner», sin placeholder de
-idioma, mientras que el resto de §4 deriva `{native_language}` de `profiles.locale` (`es` / `pt-BR`).
-
-**Decisión provisional:** se implementa el prompt **literal** de la spec (sin inventar un placeholder).
-Queda pendiente decidir si se añade `{native_language}` también ahí para los perfiles `pt-BR`.
-
 ### PEND-04 · SPEC-03 §1 · `json.ts` no repara JSON sintácticamente inválido
 La spec pide extracción tolerante de «el primer bloque `{...}` balanceado». No dice nada de reparar
 comillas simples ni comas finales.

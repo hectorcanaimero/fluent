@@ -1,15 +1,17 @@
 /**
  * Prompt de cierre de sesión: brief y hechos (SPEC-03 §4.2, RF-4.1).
  *
- * El system prompt es el literal de la spec. Ver PENDIENTES PEND-03: la spec dice
- * «a Spanish-speaking learner» sin placeholder de idioma, y aquí se respeta tal cual.
+ * El system prompt es el literal de la spec, con `{native_language}` derivado de
+ * `profiles.locale` igual que en el prompt de turno (§4.1).
  */
 import { CATEGORIES } from '../schemas.js';
-import type { Level, SessionKind } from '../config.js';
+import type { Level, Locale, SessionKind } from '../config.js';
 import type { LlmMessage } from '../llm.client.js';
+import { languageForLocale } from './languages.js';
 import { formatTranscript, truncateTranscript, type HistoryTurn } from './truncate.js';
 
 export interface BriefPromptInput {
+  readonly locale: Locale;
   readonly level: Level;
   /** Notas de coaching anteriores, si las hay. */
   readonly previousBrief?: string | null;
@@ -23,7 +25,9 @@ export interface BriefPromptInput {
 
 export function buildBriefSystemPrompt(input: BriefPromptInput): string {
   return [
-    `You are the coach behind an English tutor app. You will read one full conversation session of a Spanish-speaking learner (level ${input.level}) and the previous coaching notes.`,
+    `You are the coach behind an English tutor app. You will read one full conversation session of a ${languageForLocale(
+      input.locale,
+    )}-speaking learner (level ${input.level}) and the previous coaching notes.`,
     'Produce:',
     '- "brief": coaching notes for the tutor\'s next session, in English, imperative, max 600 characters. Merge with the previous notes; keep what is still true, drop what was fixed. Include: recurring grammar issues, vocabulary to reinforce, topics the learner enjoys, tone that works.',
     '- "facts": new personal facts the learner stated about their own life (job, hobbies, plans, people, dated events). Each: "text" in English, third person, max 160 characters; "happens_on" as YYYY-MM-DD only if the learner gave a clear date, else null. Do not repeat facts already known. Do not invent. If unsure, omit. Max 4.',

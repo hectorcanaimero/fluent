@@ -256,7 +256,7 @@ describe('Content - Feeds', () => {
         'The Guardian Football',
         'Ars Technica',
         'NPR Science',
-        'ESPN Soccer',
+        'BBC Sport Football',
         'The Verge',
         'NASA Breaking News',
       ]),

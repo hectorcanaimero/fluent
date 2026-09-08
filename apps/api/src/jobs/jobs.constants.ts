@@ -43,6 +43,12 @@ export const JOB_COACHING_BRIEF = 'coaching-brief';
 export const JOB_RSS_INGEST = 'rss-ingest';
 /** Cola `social` · cron lunes 07:00 UTC (PR-05/T3). */
 export const JOB_WEEKLY_SUMMARY = 'weekly-summary';
+/**
+ * Cola `social` · job disparador, repetible cada lunes 07:00 UTC
+ * (PR-05/T3). Lista los grupos y encola un `JOB_WEEKLY_SUMMARY` por cada
+ * uno (SPEC-05 §4, último párrafo: «se encola un job por grupo»).
+ */
+export const JOB_WEEKLY_SUMMARY_DISPATCH = 'weekly-summary-dispatch';
 /** Cola `maintenance` · cron cada minuto (PR-05/T4). */
 export const JOB_SESSION_SWEEPER = 'session-sweeper';
 /** Cola `maintenance` · cron diario 03:30 UTC (PR-05/T4). */

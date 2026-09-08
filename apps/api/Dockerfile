@@ -39,7 +39,7 @@ WORKDIR /app
 RUN corepack enable && corepack prepare "pnpm@${PNPM_VERSION}" --activate
 
 COPY package.json ./
-RUN pnpm install --no-frozen-lockfile
+RUN NODE_ENV=development pnpm install --no-frozen-lockfile --prod=false
 
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src

@@ -90,3 +90,22 @@ export const XP_LEVELS: readonly XpLevel[] = [
   { name: 'Debater', minXp: 3500 },
   { name: 'Native-ish', minXp: 7000 },
 ] as const;
+
+// ---------------------------------------------------------------------------
+// SPEC-07 §7 — Desafíos cruzados (RF-6.4)
+//
+// Añadidas por PR-02/T7 (docs/specs/pendientes/PR-02.md): SPEC-07 §7 nombra
+// estos tres números en prosa ("máximo 3", "últimos 7 días", "practicado en
+// 14 días") pero no los había centralizado como constantes. Se agregan aquí,
+// junto a las de §1, para que PR-07/T2 (ChallengesService) las reutilice en
+// vez de duplicarlas con otro valor.
+// ---------------------------------------------------------------------------
+
+/** Máximo de desafíos que devuelve `GET /challenges` (RF-6.4, SPEC-07 §7). */
+export const MAX_CHALLENGES = 3;
+
+/** Ventana de sesiones válidas recientes que pueden originar un desafío. */
+export const CHALLENGE_SESSION_LOOKBACK_DAYS = 7;
+
+/** Ventana en la que un tema cuenta como "ya practicado" por el usuario. */
+export const CHALLENGE_TOPIC_COOLDOWN_DAYS = 14;

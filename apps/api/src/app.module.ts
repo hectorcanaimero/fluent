@@ -17,6 +17,8 @@ import { LlmInfraModule } from './llm/llm-infra.module.js';
 import { CommonModule } from './common/common.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { MemoryModule } from './memory/memory.module.js';
+import { ProgressModule } from './progress/progress.module.js';
+import { SocialModule } from './social/social.module.js';
 
 @Module({
   imports: [
@@ -74,6 +76,12 @@ import { MemoryModule } from './memory/memory.module.js';
     LlmInfraModule,
     // Hechos y coaching brief del usuario (PR-02/T6, SPEC-02 §4.4).
     MemoryModule,
+    // Progreso y gamificación (PR-02/T7, SPEC-02 §4.5, SPEC-07): `GET
+    // /progress`, `GET /leaderboard`, `GET /challenges`,
+    // `GET /weekly-summary`. Ver el aviso de coordinación con PR-07 en
+    // docs/specs/pendientes/PR-02.md.
+    ProgressModule,
+    SocialModule,
   ],
   controllers: [],
   providers: [],

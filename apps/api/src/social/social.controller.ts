@@ -1,4 +1,5 @@
 import { Controller, Get, Headers, Query } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { ChallengesService } from './challenges.service.js';
 import { WeekQueryDto } from './dto/week-query.dto.js';
@@ -12,6 +13,8 @@ import { WeeklySummaryService } from './weekly-summary.service.js';
  * grupo (`409 NOT_ONBOARDED` si el usuario no tiene uno, alcance de T7,
  * punto 5).
  */
+@ApiTags('Social')
+@ApiBearerAuth()
 @Controller()
 export class SocialController {
   constructor(

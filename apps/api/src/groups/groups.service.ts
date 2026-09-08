@@ -1,8 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
-import type { Env } from '../config/env.js';
 import { I18nService } from '../i18n/i18n.service.js';
+import { OwnerService } from '../common/owner.service.js';
 import { toGroupDto, toGroupMemberDto } from '../profiles/profile.mapper.js';
 import { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { GroupDto, GroupMemberDto } from '../profiles/profiles.types.js';
@@ -21,7 +20,7 @@ export class GroupsService {
     private readonly profilesRepository: ProfilesRepository,
     private readonly groupsRepository: GroupsRepository,
     private readonly i18n: I18nService,
-    private readonly configService: ConfigService<Env, true>,
+    private readonly ownerService: OwnerService,
   ) {}
 
   /** `POST /invitations/redeem` (RPC `redeem_invitation`, SPEC-01 §5). */
@@ -101,7 +100,6 @@ export class GroupsService {
   }
 
   private isOwner(userId: string, group: Group): boolean {
-    const ownerUserId = this.configService.get('OWNER_USER_ID', { infer: true });
-    return userId === group.owner_id || userId === ownerUserId;
+    return this.ownerService.isOwner(userId, group);
   }
 }

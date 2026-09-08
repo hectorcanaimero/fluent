@@ -1,6 +1,6 @@
-import { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import { I18nService } from '../i18n/i18n.service.js';
+import { OwnerService } from '../common/owner.service.js';
 import type { Group, Profile } from '../db/schema.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import { GroupsService } from './groups.service.js';
@@ -57,18 +57,23 @@ function createService(
     redeemInvitation: vi.fn(),
     createInvitations: vi.fn().mockResolvedValue(['ABCDEFGH']),
   };
-  const configService = {
-    get: vi.fn().mockReturnValue(OWNER_USER_ID),
+
+  // Mock de OwnerService que implementa la lógica de isOwner.
+  const ownerService = {
+    isOwner: vi.fn((userId: string, targetGroup: Group) => {
+      return userId === targetGroup.owner_id || userId === OWNER_USER_ID;
+    }),
+    isSystemOwner: vi.fn((userId: string) => userId === OWNER_USER_ID),
   };
 
   const service = new GroupsService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
     new I18nService(),
-    configService as unknown as ConfigService,
+    ownerService as unknown as OwnerService,
   );
 
-  return { service, profilesRepository, groupsRepository, configService };
+  return { service, profilesRepository, groupsRepository, ownerService };
 }
 
 describe('GroupsService.createInvitations — quién es "owner"', () => {

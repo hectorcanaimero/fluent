@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Headers, Post } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { GroupDto, GroupMemberDto } from '../profiles/profiles.types.js';
 import { CreateInvitationsDto } from './dto/create-invitations.dto.js';
@@ -9,6 +10,8 @@ import { DEFAULT_INVITATIONS_COUNT, GroupsService } from './groups.service.js';
  * `POST /invitations/redeem`, `POST /admin/invitations`, `GET /group`
  * (SPEC-02 §4.1). Todas exigen bearer (guard global de PR-02/T1).
  */
+@ApiTags('Groups')
+@ApiBearerAuth()
 @Controller()
 export class GroupsController {
   constructor(private readonly groupsService: GroupsService) {}

@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { ProgressService } from './progress.service.js';
 import type { ProgressResultDto } from './progress.types.js';
@@ -7,6 +8,8 @@ import type { ProgressResultDto } from './progress.types.js';
  * `GET /progress` (SPEC-02 §4.5). Exige bearer como el resto de la API
  * (guard global de PR-02/T1); no se marca `@Public()`.
  */
+@ApiTags('Progress')
+@ApiBearerAuth()
 @Controller()
 export class ProgressController {
   constructor(private readonly progressService: ProgressService) {}

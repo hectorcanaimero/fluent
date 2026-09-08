@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Put } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { PatchFactDto } from './dto/patch-fact.dto.js';
 import { PutBriefDto } from './dto/put-brief.dto.js';
@@ -12,6 +13,8 @@ import type { CoachingBriefDto, MemoryFactDto, MemoryResultDto } from './memory.
  * Todas exigen bearer (guard global de PR-02/T1); ninguna se marca
  * `@Public()`.
  */
+@ApiTags('Memory')
+@ApiBearerAuth()
 @Controller()
 export class MemoryController {
   constructor(private readonly memoryService: MemoryService) {}

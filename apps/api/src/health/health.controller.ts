@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../auth/public.decorator.js';
 import { HealthService } from './health.service.js';
@@ -13,6 +14,7 @@ import type { HealthStatus } from './health.service.js';
 // el propio healthcheck. Sin argumentos salta **todos** los throttlers
 // nombrados (`default` y `turns`), que es lo que se quiere: `/health` no
 // debe tener ningún límite.
+@ApiTags('Health')
 @Public()
 @SkipThrottle()
 @Controller('health')

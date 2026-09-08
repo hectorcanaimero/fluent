@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { ConnectGeminiDto } from './dto/connect-gemini.dto.js';
 import { PkceCompleteDto } from './dto/pkce-complete.dto.js';
@@ -15,6 +16,8 @@ import type { PkceStartDtoResponse, ProviderStatusDto } from './providers.types.
  * (`{ status, lastError, credits? }`), que es la que parsea la app con
  * `ProviderStatusResult` (`apps/mobile/lib/core/api/models.dart`).
  */
+@ApiTags('Providers')
+@ApiBearerAuth()
 @Controller('providers')
 export class ProvidersController {
   constructor(private readonly providersService: ProvidersService) {}

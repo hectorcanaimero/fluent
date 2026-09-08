@@ -19,6 +19,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { MemoryModule } from './memory/memory.module.js';
 import { ProgressModule } from './progress/progress.module.js';
 import { SocialModule } from './social/social.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -82,6 +83,8 @@ import { SocialModule } from './social/social.module.js';
     // docs/specs/pendientes/PR-02.md.
     ProgressModule,
     SocialModule,
+    // Endpoints administrativos (PR-02/T8, SPEC-02 §4.6, RF-8.2): `GET /admin/metrics`.
+    AdminModule,
   ],
   controllers: [],
   providers: [],

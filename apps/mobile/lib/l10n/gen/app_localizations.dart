@@ -140,6 +140,12 @@ abstract class AppLocalizations {
   /// **'Muy pronto'**
   String get comingSoonTitle;
 
+  /// No description provided for @formFieldRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Este campo es obligatorio.'**
+  String get formFieldRequired;
+
   /// No description provided for @loginWelcomeHeadline.
   ///
   /// In es, this message translates to:
@@ -170,17 +176,143 @@ abstract class AppLocalizations {
   /// **'Construí una racha que se sostiene'**
   String get loginBenefit3;
 
-  /// No description provided for @loginLogInButton.
+  /// No description provided for @loginGetStartedButton.
   ///
   /// In es, this message translates to:
-  /// **'Iniciar sesión'**
-  String get loginLogInButton;
+  /// **'Crear cuenta'**
+  String get loginGetStartedButton;
 
   /// No description provided for @loginAlreadyHaveAccount.
   ///
   /// In es, this message translates to:
   /// **'¿Ya tenés una cuenta? Iniciá sesión'**
   String get loginAlreadyHaveAccount;
+
+  /// No description provided for @loginEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Email'**
+  String get loginEmailLabel;
+
+  /// No description provided for @loginPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get loginPasswordLabel;
+
+  /// No description provided for @loginSubmitButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get loginSubmitButton;
+
+  /// No description provided for @loginBackButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get loginBackButton;
+
+  /// No description provided for @loginErrorInvalidCredentials.
+  ///
+  /// In es, this message translates to:
+  /// **'Email o contraseña incorrectos.'**
+  String get loginErrorInvalidCredentials;
+
+  /// No description provided for @loginErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos iniciar sesión. Probá de nuevo.'**
+  String get loginErrorGeneric;
+
+  /// No description provided for @registerTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get registerTitle;
+
+  /// No description provided for @registerNameLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Nombre'**
+  String get registerNameLabel;
+
+  /// No description provided for @registerEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Email'**
+  String get registerEmailLabel;
+
+  /// No description provided for @registerPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get registerPasswordLabel;
+
+  /// No description provided for @registerInvitationCodeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de invitación'**
+  String get registerInvitationCodeLabel;
+
+  /// No description provided for @registerSubmitButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Crear cuenta'**
+  String get registerSubmitButton;
+
+  /// No description provided for @registerGoToLogin.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Ya tenés cuenta? Iniciá sesión'**
+  String get registerGoToLogin;
+
+  /// No description provided for @registerErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos crear la cuenta. Probá de nuevo.'**
+  String get registerErrorGeneric;
+
+  /// No description provided for @registerErrorInvitationInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación no es válido.'**
+  String get registerErrorInvitationInvalid;
+
+  /// No description provided for @registerErrorInvitationUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación ya se usó.'**
+  String get registerErrorInvitationUsed;
+
+  /// No description provided for @registerErrorInvitationExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación venció.'**
+  String get registerErrorInvitationExpired;
+
+  /// No description provided for @registerInvitationPendingTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu cuenta ya está creada'**
+  String get registerInvitationPendingTitle;
+
+  /// No description provided for @registerInvitationPendingBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.'**
+  String get registerInvitationPendingBody;
+
+  /// No description provided for @registerInvitationRetryButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar código'**
+  String get registerInvitationRetryButton;
+
+  /// No description provided for @registerInvitationContinueButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar sin grupo por ahora'**
+  String get registerInvitationContinueButton;
 }
 
 class _AppLocalizationsDelegate

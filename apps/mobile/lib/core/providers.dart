@@ -2,13 +2,13 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../features/auth/data/auth_controller.dart';
+import '../features/auth/data/insforge_auth_client.dart';
 import '../features/auth/domain/auth_state.dart';
 import 'api/fake_api.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
 import 'env.dart';
 import 'http/api_client.dart';
-import 'http/noop_token_refresher.dart';
 import 'http/token_refresher.dart';
 import 'storage/token_store.dart';
 
@@ -18,11 +18,14 @@ final tokenStoreProvider = Provider<TokenStore>((ref) {
   return SecureTokenStore();
 });
 
-/// T2 sobreescribe este provider con `InsforgeAuthClient`, que implementa
-/// [TokenRefresher] contra InsForge. Hasta entonces no hay forma de
-/// refrescar y el interceptor de [ApiClient] simplemente cierra la sesión.
+/// Cliente REST de auth contra InsForge (SPEC-06 §6). Login y registro lo
+/// usan directamente; también sirve de [TokenRefresher] para `ApiClient`.
+final insforgeAuthClientProvider = Provider<InsforgeAuthClient>((ref) {
+  return InsforgeAuthClient();
+});
+
 final tokenRefresherProvider = Provider<TokenRefresher>((ref) {
-  return const NoopTokenRefresher();
+  return ref.watch(insforgeAuthClientProvider);
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {

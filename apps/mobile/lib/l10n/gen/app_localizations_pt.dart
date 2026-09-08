@@ -31,6 +31,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get comingSoonTitle => 'Em breve';
 
   @override
+  String get formFieldRequired => 'Este campo é obrigatório.';
+
+  @override
   String get loginWelcomeHeadline =>
       'Fale inglês com confiança, 10 minutos por vez';
 
@@ -48,8 +51,77 @@ class AppLocalizationsPt extends AppLocalizations {
   String get loginBenefit3 => 'Construa uma sequência que realmente se mantém';
 
   @override
-  String get loginLogInButton => 'Entrar';
+  String get loginGetStartedButton => 'Criar conta';
 
   @override
   String get loginAlreadyHaveAccount => 'Já tem uma conta? Entrar';
+
+  @override
+  String get loginEmailLabel => 'Email';
+
+  @override
+  String get loginPasswordLabel => 'Senha';
+
+  @override
+  String get loginSubmitButton => 'Entrar';
+
+  @override
+  String get loginBackButton => 'Voltar';
+
+  @override
+  String get loginErrorInvalidCredentials => 'Email ou senha incorretos.';
+
+  @override
+  String get loginErrorGeneric => 'Não conseguimos entrar. Tente de novo.';
+
+  @override
+  String get registerTitle => 'Criar conta';
+
+  @override
+  String get registerNameLabel => 'Nome';
+
+  @override
+  String get registerEmailLabel => 'Email';
+
+  @override
+  String get registerPasswordLabel => 'Senha';
+
+  @override
+  String get registerInvitationCodeLabel => 'Código de convite';
+
+  @override
+  String get registerSubmitButton => 'Criar conta';
+
+  @override
+  String get registerGoToLogin => 'Já tem conta? Entrar';
+
+  @override
+  String get registerErrorGeneric =>
+      'Não conseguimos criar a conta. Tente de novo.';
+
+  @override
+  String get registerErrorInvitationInvalid =>
+      'Esse código de convite não é válido.';
+
+  @override
+  String get registerErrorInvitationUsed =>
+      'Esse código de convite já foi usado.';
+
+  @override
+  String get registerErrorInvitationExpired =>
+      'Esse código de convite expirou.';
+
+  @override
+  String get registerInvitationPendingTitle => 'Sua conta já foi criada';
+
+  @override
+  String get registerInvitationPendingBody =>
+      'O código de convite ainda não funcionou. Tente de novo ou continue sem grupo por enquanto; você pode inserir o código mais tarde durante o onboarding.';
+
+  @override
+  String get registerInvitationRetryButton => 'Tentar código novamente';
+
+  @override
+  String get registerInvitationContinueButton =>
+      'Continuar sem grupo por enquanto';
 }

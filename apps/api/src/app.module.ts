@@ -3,6 +3,8 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv, Env } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
+import { RedisModule } from './redis/redis.module.js';
+import { InsforgeModule } from './insforge/insforge.module.js';
 
 @Module({
   imports: [
@@ -19,6 +21,8 @@ import { HealthModule } from './health/health.module.js';
         },
       }),
     }),
+    RedisModule,
+    InsforgeModule,
     HealthModule,
   ],
   controllers: [],

@@ -38,3 +38,74 @@
   la URL pública del proyecto en `docs/specs/SPEC-08-infraestructura.md` §6.
   El criterio de aceptación real de T2 (`current` muestra `fluent`;
   `metadata --json` con `requireEmailVerification: false`) se cumplió igual.
+
+- 2026-09-08 (T3, PR-08): Versión de `ioredis` fijada a `^5.11.1` en vez de
+  la última (`6.0.0`, publicada como major reciente). `ioredis-mock@8.13.1`
+  declara peer dep `ioredis@^5`, y con `ioredis@6.0.0` `pnpm` reporta el
+  peer como no satisfecho. Se prioriza compatibilidad verificada con
+  `ioredis-mock` (usado en los tests obligatorios de esta tarea) sobre la
+  versión más nueva. Revisar cuando `ioredis-mock` soporte `ioredis@6`.
+
+- 2026-09-08 (T3, PR-08): Opciones de conexión de `RedisModule`
+  (`apps/api/src/redis/redis.module.ts`) no están especificadas en ninguna
+  spec. Se eligió `lazyConnect: true` (no conecta hasta el primer comando,
+  evita que `AppModule`/tests e2e intenten conectar de verdad al arrancar),
+  `connectTimeout: 500`, `maxRetriesPerRequest: 1` y
+  `retryStrategy: (times) => (times > 2 ? null : 100)` para que un `PING`
+  contra un Redis caído o inexistente falle en un par de cientos de ms en
+  vez de reintentar indefinidamente con el backoff por defecto de `ioredis`
+  (que puede tardar >10s en agotar los 20 reintentos por defecto). Se
+  verificó empíricamente (script puntual, no commiteado) que con estas
+  opciones un `PING` contra `redis://localhost:6379` sin servidor real
+  falla en ~150-300ms y las llamadas siguientes fallan de inmediato
+  (`Connection is closed`), sin necesidad de un listener de reconexión
+  adicional. En producción, contra un Redis real, esto solo acota cuánto
+  tarda `/v1/health` en detectar una caída; no afecta al funcionamiento
+  normal. Se añadió también un listener `on('error', ...)` en ambos
+  clientes (obligatorio en `ioredis`: sin él, un error de socket no
+  manejado tira el proceso por el comportamiento por defecto de
+  `EventEmitter`).
+
+- 2026-09-08 (T3, PR-08): Forma exacta del JSON de
+  `GET {INSFORGE_URL}/api/auth/sessions/current` (SPEC-02) no documentada en
+  las specs de este repo. `InsforgeHttp.getCurrentSession` (en
+  `apps/api/src/insforge/insforge.http.ts`) asume, de forma defensiva, que
+  el id de usuario está en `data.id` o en `data.user.id` (optional
+  chaining, probando ambas formas), y devuelve `{ ok: false }` si ninguna
+  de las dos resuelve a un string no vacío. Revisar y ajustar cuando se
+  verifique la respuesta real de InsForge (por ejemplo la primera vez que
+  se integre el flujo de auth completo en otro PR).
+
+- 2026-09-08 (T3, PR-08): `InsforgeHttp.checkHealth()` llama a
+  `GET {INSFORGE_URL}/api/health` sin ninguna autenticación (sin
+  `Authorization` ni `apiKey`). Se asumió que es la opción más simple y que
+  un endpoint de health suele ser público; no hay ninguna spec que indique
+  que requiera autenticación. Si en el futuro InsForge exige `apiKey` para
+  este endpoint, habrá que añadir el header correspondiente.
+
+- 2026-09-08 (T3, PR-08): Formato de `GET /v1/health` ampliado (T3) a
+  `{ ok, version, redis: { ok }, insforge: { ok } }`, con
+  `ok = redis.ok && insforge.ok` (`apps/api/src/health/health.service.ts`).
+  Es el formato sugerido explícitamente en el alcance de T3 de
+  `docs/tasks/PR-08-infraestructura.md`; no había otra spec que lo definiera
+  con más detalle (por ejemplo, no se añadieron latencias ni mensajes de
+  error individuales, solo el booleano `ok` por servicio).
+
+- 2026-09-08 (T3, PR-08): `HealthController.check()` sigue devolviendo
+  siempre HTTP 200, incluso cuando `ok` interno es `false` (Redis o
+  InsForge caídos): el estado va en el body, no en el código HTTP. Decidir
+  códigos de fallo (p. ej. 503 cuando `ok:false`) es responsabilidad de
+  T4/Coolify/Sentinel (fuera del alcance de T3), como indica el enunciado de
+  la tarea.
+
+- 2026-09-08 (T3, PR-08): `apps/api/test/health.e2e-spec.ts` se actualizó
+  para no exigir `response.body.ok === true`: como `.env.test` apunta
+  `REDIS_URL` e `INSFORGE_URL` a valores ficticios/no alcanzables desde este
+  entorno, tras T3 el e2e obtiene de forma determinista `redis.ok:false` e
+  `insforge.ok:false` (verificado: `fetch` a la URL ficticia falla en
+  ~180ms, y el `PING` de Redis falla en <300ms gracias a las opciones de
+  conexión acotadas descritas arriba). El test ahora verifica la forma de
+  la respuesta (tipos booleanos de `ok`, `redis.ok`, `insforge.ok`, y
+  `version` como string) y que el endpoint responde 200, en vez del valor
+  concreto de cada `ok`. Se confirmó que la suite completa de e2e termina
+  en ~4s (no se cuelga).

@@ -20,6 +20,7 @@ Postgres de InsForge Cloud, esquema `public`. Las migraciones se versionan en `a
 | level | text NOT NULL | CHECK IN ('A2','B1','B2') |
 | interests | text[] NOT NULL DEFAULT '{}' | 3 a 5 tags al terminar onboarding |
 | timezone | text NOT NULL DEFAULT 'America/Sao_Paulo' | IANA |
+| locale | text NOT NULL DEFAULT 'es' | CHECK IN ('es','pt-BR'); idioma de UI y de las notas de corrección |
 | xp | int NOT NULL DEFAULT 0 | acumulado total |
 | streak | int NOT NULL DEFAULT 0 | días consecutivos |
 | longest_streak | int NOT NULL DEFAULT 0 | |
@@ -209,7 +210,7 @@ Principio: la app móvil solo toca lo que es del usuario, y solo en lectura salv
 
 | Tabla | SELECT (authenticated) | INSERT/UPDATE desde app | Notas |
 |---|---|---|---|
-| profiles | propia fila, más `display_name, level, xp, streak, group_id` de miembros del mismo grupo (vista `group_members`) | UPDATE propia fila solo columnas `display_name, level, interests, timezone` | RF-6.5 |
+| profiles | propia fila, más `display_name, level, xp, streak, group_id` de miembros del mismo grupo (vista `group_members`) | UPDATE propia fila solo columnas `display_name, level, interests, timezone, locale` | RF-6.5 |
 | groups | la del propio grupo | ninguno | |
 | invitations | ninguna | ninguno | solo API |
 | provider_credentials | ninguna | ninguno | solo API |

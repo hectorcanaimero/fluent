@@ -6,3 +6,6 @@ dist/
 .insforge/checkout/
 *.log
 .DS_Store
+# InsForge: project.json contiene la API key de admin, nunca al repo
+apps/api/.insforge/
+.insforge/

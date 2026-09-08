@@ -22,7 +22,7 @@ Sesión líder: Opus 5. Empieza ya. Este PR no toca la base de datos: es un mód
 
 ## T4 · Prompts tipados
 - Modelo: Opus 5 · Depende de: T1 · Bloquea a: PR-04, PR-05
-- Alcance: `apps/api/src/llm/prompts/turn.ts`, `brief.ts`, `weekly.ts` con funciones puras que reciben datos tipados y devuelven `messages[]` exactamente según SPEC-03 §4, incluidos `opening_rule` y bloques por `kind`; `PROMPT_VERSION`; truncados de SPEC-03 §3 (`truncateHistory`, `truncateTranscript`).
+- Alcance: `apps/api/src/llm/prompts/turn.ts`, `brief.ts`, `weekly.ts` con funciones puras que reciben datos tipados y devuelven `messages[]` exactamente según SPEC-03 §4, incluidos `opening_rule`, bloques por `kind` y los idiomas derivados de `locale` (`native_language`, `note_language`, `summary_language`); `PROMPT_VERSION`; truncados de SPEC-03 §3 (`truncateHistory`, `truncateTranscript`).
 - Aceptación: snapshot tests de los tres prompts con datos de ejemplo; test de que el historial nunca supera 8 turnos ni 600 caracteres por turno.
 - Commit: `feat(llm): prompts de turno, brief y resumen semanal`
 

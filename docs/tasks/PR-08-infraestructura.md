@@ -9,8 +9,8 @@ Sesión líder: Sonnet 5. Empieza ya. Es el primer PR que se fusiona.
 - Commit: `feat(api): configuración base, constantes de producto y health`
 
 ## T2 · Proyecto en InsForge Cloud
-- Modelo: Haiku 4.5 · Depende de: decisión del operador sobre el plan (ver SPEC-08 §6) · Bloquea a: PR-01
-- Alcance: crear el proyecto `fluent` con la CLI (`--template empty`) desde `apps/api`; aplicar `config` de SPEC-08 §6 paso 2; commitear `.insforge/project.json` (sin secretos) y documentar en `docs/specs/SPEC-08-infraestructura.md` la URL del proyecto.
+- Modelo: Haiku 4.5 · Depende de: nada (el operador ya creó el proyecto `fluent`, id `cca888af-daa6-4046-9828-f987e975dad1`, y `apps/api` ya está enlazado) · Bloquea a: PR-01
+- Alcance: aplicar `config` de SPEC-08 §6 paso 2 con la CLI; verificar que `.insforge/project.json` está commiteado sin secretos; documentar la URL del proyecto en SPEC-08.
 - Aceptación: `npx @insforge/cli current` muestra `fluent`; `npx @insforge/cli metadata --json` devuelve `requireEmailVerification: false`.
 - Commit: `chore(infra): proyecto fluent en InsForge Cloud`
 

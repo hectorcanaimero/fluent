@@ -16,6 +16,7 @@ Estado: borrador v0.1 · Cubre: RF-1.x, RF-2.1, RF-2.3, RF-2.6, RF-3.x, RF-4.2, 
 | Navegador externo | `flutter_web_auth_2` | PKCE de OpenRouter con retorno por esquema `fluent://` |
 | Compartir | `share_plus` | resumen semanal |
 | Notificaciones locales | `flutter_local_notifications` | recordatorios sin backend (pregunta abierta 4 del PRD) |
+| i18n | `flutter_localizations` + `intl` con archivos ARB | español y portugués de Brasil; detección del sistema y cambio en ajustes |
 
 Sin SDK de InsForge para Dart: se implementa un `InsforgeAuthClient` mínimo por REST (§6).
 
@@ -60,6 +61,8 @@ Cada feature: `data/` (API), `domain/` (modelos), `presentation/` (pantallas y w
 | `/settings` | ajustes | onboarded |
 | `fluent://oauth/openrouter` | deep link de retorno PKCE | interno |
 
+**Barra de pestañas:** Home · Practicar · Grupo · Progreso. El perfil y los ajustes se abren desde el avatar en la cabecera de Home. El diseño de Pen muestra Home · Practice · Progress · Profile; se sustituye Profile por Grupo.
+
 Redirección global en el router según `authState`: sin token → `/login`; con token y sin `onboarded` → `/onboarding`; sesión activa pendiente (`GET /me` devuelve `activeSessionId`) → `/session/:id`.
 
 ## 4. Pantallas clave
@@ -88,6 +91,7 @@ XP ganado con animación, streak, correcciones agrupadas por categoría, "Termin
 ### 4.5 Memoria (RF-4.2, RF-4.6)
 - Sección "Para confirmar": lista con texto editable inline, botones ✓ y ✕.
 - Sección "Lo que recuerdo": hechos confirmados, deslizar para borrar, toque para editar.
+- Todos los textos pasan por `AppLocalizations`; nunca hay cadenas literales en widgets. Una clave nueva se añade en `es` y `pt` en el mismo commit.
 - Sección "Notas del coach": texto del brief editable, con explicación de que el tutor lo lee antes de cada sesión.
 - Botón "Olvidar todo" con confirmación doble.
 

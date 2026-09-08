@@ -6,8 +6,8 @@ Nota para el VPS: `flutter analyze` y `flutter test` corren aquí; `flutter run`
 
 ## T1 · Esqueleto: tema, rutas, estado y HTTP
 - Modelo: Sonnet 5 · Depende de: nada · Bloquea a: todo
-- Alcance: dependencias de SPEC-06 §1 en `pubspec.yaml`; `app/router.dart` con las rutas y redirecciones de §3; tema derivado de los tokens del diseño de Pen (colores, tipografías, radios) en `app/theme.dart`; `core/http/api_client.dart` (dio con interceptor de refresh); `core/storage/token_store.dart`; `--dart-define` para `API_URL` e `INSFORGE_URL`; `FakeApi` con toggle por define `USE_FAKE_API`.
-- Aceptación: `flutter analyze` sin avisos; test de widget: sin token → `/login`.
+- Alcance: dependencias de SPEC-06 §1 en `pubspec.yaml`; `app/router.dart` con las rutas y redirecciones de §3; tema derivado de los tokens del diseño de Pen (colores, tipografías, radios) en `app/theme.dart`; `core/http/api_client.dart` (dio con interceptor de refresh); `core/storage/token_store.dart`; `--dart-define` para `API_URL` e `INSFORGE_URL`; `FakeApi` con toggle por define `USE_FAKE_API`; i18n con `flutter_localizations` y ARB `es` y `pt` (detección del sistema, cambio en ajustes), sin cadenas literales en widgets; Tab Bar Home · Practicar · Grupo · Progreso con perfil desde el avatar.
+- Aceptación: `flutter analyze` sin avisos; test de widget: sin token → `/login`; test de que ambos ARB tienen las mismas claves.
 - Commit: `feat(mobile): esqueleto con rutas, tema, cliente HTTP y API simulada`
 
 ## T2 · Auth contra InsForge y registro con invitación

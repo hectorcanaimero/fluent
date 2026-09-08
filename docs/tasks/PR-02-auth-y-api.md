@@ -10,7 +10,7 @@ Sesión líder: Opus 5. Empieza cuando PR-08/T1 y PR-01/T1 estén fusionados. Tr
 
 ## T2 · Cuenta, perfil e invitaciones
 - Modelo: Sonnet 5 · Depende de: T1, PR-01/T1, PR-01/T6 · Bloquea a: PR-06 onboarding real
-- Alcance: `ProfilesModule`, `GroupsModule`: `GET /me`, `PUT /me/profile`, `POST /invitations/redeem` (RPC), `POST /admin/invitations` (solo `OWNER_USER_ID`), `GET /group`, `DELETE /me`. Repositorios sobre el cliente admin. DTOs con validación (3 a 5 intereses del catálogo de PR-03/T6, `timezone` IANA válida).
+- Alcance: `ProfilesModule`, `GroupsModule`: `GET /me`, `PUT /me/profile`, `POST /invitations/redeem` (RPC), `POST /admin/invitations` (solo `OWNER_USER_ID`), `GET /group`, `DELETE /me`. Repositorios sobre el cliente admin. DTOs con validación (3 a 5 intereses del catálogo de PR-03/T6, `timezone` IANA válida, `locale` en `es`/`pt-BR`). Mensajes de error en `apps/api/src/i18n/{es,pt-BR}.json` elegidos por perfil o `Accept-Language`.
 - Aceptación: e2e con supertest contra la rama de InsForge: flujo registro → canje → `/me` con `onboarded`; errores `INVITATION_*` y `ALREADY_IN_GROUP`.
 - Commit: `feat(api): perfil, grupo e invitaciones`
 

@@ -55,13 +55,13 @@ Multi-stage: `node:24-alpine` → `pnpm install --frozen-lockfile` → `pnpm bui
 
 ## 6. InsForge: configuración inicial
 
-1. `npx @insforge/cli create --json --name fluent --org-id 8e661ac3-7b25-44c3-8945-ee430d45220a --region us-east --template empty` desde `apps/api`.
+1. Proyecto ya creado; `npx @insforge/cli link --project-id cca888af-daa6-4046-9828-f987e975dad1` desde `apps/api`.
 2. `config` : `requireEmailVerification=false` en v1, `disableSignup=false`, `allowedRedirectUrls` no aplica (auth por REST desde móvil).
 3. Migraciones de SPEC-01 con `db migrations up --all`.
 4. `secrets get ANON_KEY` y API key a las variables de Coolify.
 5. Backups: `backups create` semanal desde un cron del VPS.
 
-Cuenta actual: plan `free` con 2 proyectos (`rvlaboratorio` activo, `test` pausado). Si el plan limita el número de proyectos, el operador decide si borra `test` o sube de plan.
+Estado 2026-09-08: proyecto `fluent` creado por el operador (id `cca888af-daa6-4046-9828-f987e975dad1`, appkey `c4jzbm8x`, región `us-east`), `test` eliminado. `apps/api` enlazado.
 
 ## 7. Observabilidad
 

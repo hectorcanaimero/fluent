@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.1 |
+| Versión | 1.2 |
 | Fecha | 2026-09-08 |
 | Fuente | `docs/PROYECTO.md` (brief) |
 | Estado | Aprobado el 2026-09-08 |
@@ -110,7 +110,7 @@ Prioridad: **P0** imprescindible para v1, **P1** deseable en v1, **P2** después
 |---|---|---|
 | RF-1.1 | Registro solo por invitación. El operador genera códigos de invitación de un solo uso. | P0 |
 | RF-1.2 | Auth con InsForge (email + contraseña; OAuth social como P2). | P0 |
-| RF-1.3 | Perfil: nombre visible, nivel declarado (A2/B1/B2), intereses iniciales (3 a 5 tags). | P0 |
+| RF-1.3 | Perfil: nombre visible, nivel declarado (A2/B1/B2), intereses iniciales (3 a 5 tags), idioma de interfaz (`es` o `pt-BR`). | P0 |
 | RF-1.4 | Pertenencia a un único grupo en v1. | P0 |
 
 ### 6.2 Proveedores y modelos (BYOK)
@@ -134,7 +134,7 @@ Nota sobre Google: una suscripción a Google AI Pro da acceso a la app de Gemini
 | RF-3.1 | STT nativo (Android SpeechRecognizer, iOS Speech). El usuario ve la transcripción antes de enviar y puede corregirla. | P0 |
 | RF-3.2 | TTS nativo para las respuestas del tutor, con control de velocidad. | P0 |
 | RF-3.3 | Modo texto como alternativa cuando no hay micrófono o en lugares ruidosos. | P1 |
-| RF-3.4 | Cada turno devuelve `{reply, corrections[]}`; las correcciones se muestran de forma no intrusiva (chip expandible). | P0 |
+| RF-3.4 | Cada turno devuelve `{reply, corrections[]}`; las correcciones se muestran de forma no intrusiva (chip expandible). Las notas de corrección llegan en el idioma de interfaz del usuario. | P0 |
 | RF-3.5 | Historial de conversación enviado al modelo acotado a los últimos N turnos (N configurable, inicial 8). | P0 |
 | RF-3.6 | Temporizador visible, aviso a los 8 minutos, cierre suave a los 10. | P0 |
 | RF-3.7 | Tipos de sesión: tema libre elegido, roleplay generado, opinión sobre noticia. | P0 |
@@ -344,7 +344,7 @@ Cada fase termina con una demo usable y sus ADRs.
 ## 12. Preguntas abiertas
 
 1. ¿Lista inicial de modelos gratuitos de OpenRouter y criterio de orden? Propuesta: medir JSON válido y latencia con 20 turnos de prueba antes de fijarla.
-2. ¿El grupo comparte un solo idioma de interfaz (español) o hace falta inglés para la UI?
+2. Resuelto 2026-09-08: interfaz en español y portugués de Brasil, elegible por el usuario y detectada del sistema por defecto. El inglés se reserva para el tutor.
 3. ¿Se guarda el audio o solo la transcripción? Propuesta: solo texto en v1, por privacidad y storage.
 4. ¿Recordatorios sin push? Propuesta: notificación local programada desde la app, sin backend.
 5. ¿Nombre definitivo? Se usa "Fluent" como nombre de trabajo.

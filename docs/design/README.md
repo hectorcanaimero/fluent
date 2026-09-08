@@ -53,11 +53,11 @@ Se construyen siguiendo los componentes y tokens de arriba, y se marcan en el PR
 2. Onboarding paso 1 (nombre) y paso 4 (conectar proveedor).
 3. Proveedores y modelos (`/providers`), incluida la selección por tiers.
 4. Memoria "Lo que recuerdo de vos" (`/memory`).
-5. Grupo: leaderboard, desafíos, resumen semanal (`/group`). La Tab Bar tiene 4 pestañas; el grupo entra como tarjeta en Home y como pantalla desde ahí, o se cambia "Progress" por una pestaña "Group" con Progress dentro de Profile. Decisión pendiente del operador.
+5. Grupo: leaderboard, desafíos, resumen semanal (`/group`). Decidido 2026-09-08: la Tab Bar pasa a Home · Practicar · Grupo · Progreso, y Perfil se abre desde el avatar de la cabecera de Home.
 6. Boss battle: variante del Topic Card y del cierre.
 
 ## Diferencias con el PRD a decidir
 
-- El diseño está en inglés; el PRD dice interfaz en español (pregunta abierta 2). Los textos del diseño sirven como copy base y se traducen si se decide español.
+- Decidido 2026-09-08: interfaz en español y portugués de Brasil. Los textos en inglés del diseño son el copy base y se traducen a los dos idiomas en los archivos ARB.
 - El diseño plantea "mañana y tarde" como dos sesiones fijas con hora. El PRD habla de dos sesiones al día sin franja fija. Se adopta lo del diseño: dos huecos con recordatorio configurable, sin obligar a la franja.
 - "Fluent Plus" y "Connected accounts: Google · Apple" quedan fuera de v1.

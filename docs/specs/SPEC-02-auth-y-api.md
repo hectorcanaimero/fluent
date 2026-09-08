@@ -30,7 +30,7 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 | Método y ruta | Cuerpo | Respuesta | Notas |
 |---|---|---|---|
 | GET `/me` | | `{ profile, group, providers: [{provider,status,connectedAt}], modelPreference, onboarded }` | primera llamada de la app |
-| PUT `/me/profile` | `{ displayName, level, interests[], timezone }` | `profile` | valida 3 a 5 intereses del catálogo |
+| PUT `/me/profile` | `{ displayName, level, interests[], timezone, locale }` | `profile` | valida 3 a 5 intereses del catálogo; `locale` en `es` o `pt-BR` |
 | POST `/invitations/redeem` | `{ code }` | `{ group }` | RPC `redeem_invitation`; errores `INVITATION_INVALID`, `INVITATION_USED`, `INVITATION_EXPIRED`, `ALREADY_IN_GROUP` |
 | POST `/admin/invitations` | `{ count?: 1..10 }` | `{ codes: [] }` | solo `owner_id` del grupo; RF-8.1 |
 | GET `/group` | | `{ group, members: [{userId, displayName, level, xp, streak, lastSessionDay}] }` | RF-6.5 |

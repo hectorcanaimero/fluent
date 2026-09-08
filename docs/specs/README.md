@@ -20,7 +20,7 @@ Las specs traducen el PRD (`docs/PRD.md`, v1.1) a decisiones implementables. Un 
 - **Nombres:** tablas y columnas en `snake_case`; JSON de la API en `camelCase`; la API traduce.
 - **Errores de API:** siempre `{ "error": "CODIGO_EN_MAYUSCULAS", "message": "texto para humanos", "statusCode": 4xx }`. Códigos listados en SPEC-02.
 - **Constantes de producto** (duración de sesión, XP, probabilidades) viven en `apps/api/src/config/product.ts` y se listan en SPEC-07. Nunca se hardcodean en otro sitio.
-- **Idioma:** la UI y los mensajes de error al usuario en español. Los prompts al tutor y las respuestas del tutor en inglés. Las notas de corrección en español.
+- **Idioma:** la UI y los mensajes de error al usuario en el idioma del perfil, `es` (español) o `pt-BR` (portugués de Brasil), detectado del sistema en el primer arranque y cambiable en ajustes. Los prompts al tutor y sus respuestas en inglés. Las notas de corrección y el resumen semanal en el idioma del perfil (el del owner para el resumen). Claves de i18n en `apps/mobile/lib/l10n/app_es.arb` y `app_pt.arb`; la API tiene sus mensajes en `apps/api/src/i18n/{es,pt-BR}.json` y elige por perfil o `Accept-Language`.
 - **Trazabilidad:** cada requisito del PRD (RF-x.y) aparece citado en la spec que lo implementa.
 
 ## Estado

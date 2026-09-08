@@ -81,7 +81,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             interests: _selectedInterests.toList(),
             // TODO(pendiente): no hay paquete de detección de zona horaria
             // IANA en las dependencias de SPEC-06 §1; se usa un valor por
-            // defecto hasta agregar uno (ver docs/specs/PENDIENTES.md).
+            // defecto hasta agregar uno (ver docs/specs/pendientes/PR-06.md).
             timezone: 'America/Argentina/Buenos_Aires',
             locale: apiLocale,
           );

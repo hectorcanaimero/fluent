@@ -2,7 +2,7 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 1.0 |
+| Versión | 1.1 |
 | Fecha | 2026-09-08 |
 | Fuente | `docs/PROYECTO.md` (brief) |
 | Estado | Aprobado el 2026-09-08 |
@@ -193,7 +193,7 @@ Nota sobre Google: una suscripción a Google AI Pro da acceso a la app de Gemini
 | Disponibilidad | Best effort. Sin SLA. Si OpenRouter falla, mensaje claro y la sesión no cuenta como fallida para el streak. |
 | Privacidad | Transcripciones y hechos solo visibles para su dueño. API keys cifradas en reposo. Borrado de cuenta completo bajo pedido. |
 | Seguridad | Solo invitación. Rate limit por usuario en la API. Secretos fuera del repo. |
-| Portabilidad | Todo autoalojado en Docker vía Coolify. Sin dependencia de proveedores cerrados salvo OpenRouter. |
+| Portabilidad | API y worker en Docker vía Coolify. InsForge en su nube gestionada, con backups exportables y software open source idéntico para autoalojar si hiciera falta. |
 | Observabilidad | Logs estructurados en NestJS, métricas de jobs en BullMQ, registro de cada llamada al LLM con modelo, tokens y latencia. |
 | Documentación | Un ADR por decisión de arquitectura en `docs/adr/`. Diagramas en el repo. |
 
@@ -210,8 +210,8 @@ flowchart LR
         N[NestJS API<br/>sesiones, XP, prompts]
         W[NestJS Worker<br/>BullMQ]
         R[(Redis)]
-        I[InsForge<br/>Auth · Postgres · Storage]
     end
+    I[InsForge Cloud<br/>Auth · Postgres · Storage]
     OR[OpenRouter<br/>BYOK por usuario]
     RSS[Fuentes RSS]
 
@@ -232,7 +232,7 @@ Nota: el brief original menciona Hetzner. La infraestructura real es el VPS de C
 - **Flutter:** UI, captura y reproducción de voz, auth con InsForge, llamadas a la API.
 - **NestJS API:** construcción de prompts, adaptador de LLM compatible con OpenAI (OpenRouter, Gemini) con las credenciales del usuario, selección de modelo por rol y fallback, reglas de XP y streaks, endpoints de sesión.
 - **NestJS Worker:** jobs de coaching brief, noticias diarias, resumen semanal, recordatorios.
-- **InsForge:** identidad, Postgres y storage. Sin lógica de negocio.
+- **InsForge Cloud:** identidad, Postgres y storage. Sin lógica de negocio. Gestionado; mismo software open source si algún día se autoaloja (ADR 0001).
 - **Redis:** cola BullMQ y caché corta de prompts y noticias.
 
 ### 8.2 Modelo de datos (borrador)
@@ -329,7 +329,7 @@ Toda salida se valida contra un esquema. Si el modelo no cumple el JSON, se rein
 
 | Fase | Alcance | Resultado |
 |---|---|---|
-| 0. Fundaciones | Monorepo, InsForge en Coolify, NestJS API y worker desplegados, Flutter con auth. ADRs 1 a 4. | Login funcional en el móvil contra el VPS. |
+| 0. Fundaciones | Monorepo, proyecto en InsForge Cloud, NestJS API y worker desplegados, Flutter con auth. ADRs 1 a 4. | Login funcional en el móvil contra el VPS. |
 | 1. Conversación | BYOK PKCE, turno con JSON, STT/TTS nativo, temporizador, temas libres. | Primera sesión real de 10 minutos. |
 | 2. Memoria | Job de cierre, brief, hechos pendientes, pantalla "Lo que recuerdo", callback dosificado. | El tutor recuerda entre sesiones. |
 | 3. Juego y grupo | XP, streaks, invitaciones, leaderboard semanal, visibilidad de temas. | El grupo entra y compite. |

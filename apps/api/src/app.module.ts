@@ -1,10 +1,31 @@
 import { Module } from '@nestjs/common';
-import { AppController } from './app.controller.js';
-import { AppService } from './app.service.js';
+import { ConfigModule, ConfigService } from '@nestjs/config';
+import { LoggerModule } from 'nestjs-pino';
+import { validateEnv, Env } from './config/env.js';
+import { HealthModule } from './health/health.module.js';
+import { RedisModule } from './redis/redis.module.js';
+import { InsforgeModule } from './insforge/insforge.module.js';
 
 @Module({
-  imports: [],
-  controllers: [AppController],
-  providers: [AppService],
+  imports: [
+    ConfigModule.forRoot({
+      isGlobal: true,
+      validate: validateEnv,
+      envFilePath: process.env.NODE_ENV === 'test' ? '.env.test' : '.env',
+    }),
+    LoggerModule.forRootAsync({
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService<Env, true>) => ({
+        pinoHttp: {
+          level: configService.get('LOG_LEVEL', { infer: true }),
+        },
+      }),
+    }),
+    RedisModule,
+    InsforgeModule,
+    HealthModule,
+  ],
+  controllers: [],
+  providers: [],
 })
 export class AppModule {}

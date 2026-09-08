@@ -61,7 +61,7 @@ Multi-stage: `node:24-alpine` → `pnpm install --frozen-lockfile` → `pnpm bui
 4. `secrets get ANON_KEY` y API key a las variables de Coolify.
 5. Backups: `backups create` semanal desde un cron del VPS.
 
-Estado 2026-09-08: proyecto `fluent` creado por el operador (id `cca888af-daa6-4046-9828-f987e975dad1`, appkey `c4jzbm8x`, región `us-east`), `test` eliminado. `apps/api` enlazado.
+Estado 2026-09-08: proyecto `fluent` creado por el operador (id `cca888af-daa6-4046-9828-f987e975dad1`, appkey `c4jzbm8x`, región `us-east`), `test` eliminado. `apps/api` enlazado. URL del proyecto: `https://c4jzbm8x.us-east.insforge.app` (es el valor real de `INSFORGE_URL`). PR-08/T2: `config` aplicado con `npx @insforge/cli config export/plan/apply` (`apps/api/insforge.toml`, commiteado); `requireEmailVerification` quedó en `false`, `disableSignup` ya estaba en `false`.
 
 ## 7. Observabilidad
 

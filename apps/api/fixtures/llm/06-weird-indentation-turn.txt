@@ -1,0 +1,12 @@
+{
+    "reply":
+        "Great choice! Do you cook often at home?",
+    "corrections": [
+        {
+            "original": "I have a car since 2019",
+            "corrected": "I have had a car since 2019",
+            "category": "present_perfect",
+            "note": "Con 'since' y una accion que continua, usa present perfect."
+        }
+    ]
+}

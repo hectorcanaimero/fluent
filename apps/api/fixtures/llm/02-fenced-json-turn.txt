@@ -1,0 +1,9 @@
+```json
+{
+  "reply": "Nice! Do you prefer coffee or tea in the morning?",
+  "corrections": [
+    {"original": "She don't like coffee", "corrected": "She doesn't like coffee", "category": "subject_verb", "note": "La tercera persona singular necesita 'doesn't'."},
+    {"original": "I have visited Paris last year", "corrected": "I visited Paris last year", "category": "present_perfect", "note": "Con fecha especifica usa pasado simple, no present perfect."}
+  ]
+}
+```

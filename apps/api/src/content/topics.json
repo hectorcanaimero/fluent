@@ -1,0 +1,590 @@
+[
+  {
+    "id": "web-development-basics",
+    "title_es": "Fundamentos del desarrollo web",
+    "prompt_en": "Discuss the key technologies used in modern web development and how they work together.",
+    "tags": [
+      "tech",
+      "coding"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "artificial-intelligence-future",
+    "title_es": "El futuro de la inteligencia artificial",
+    "prompt_en": "How do you think AI will change the world in the next 10 years?",
+    "tags": [
+      "ai",
+      "automation"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "cybersecurity-importance",
+    "title_es": "La importancia de la ciberseguridad",
+    "prompt_en": "Share your thoughts on protecting personal data online.",
+    "tags": [
+      "tech",
+      "coding"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "gaming-industry-evolution",
+    "title_es": "Evolución de la industria de videojuegos",
+    "prompt_en": "How have video games changed over the last 20 years?",
+    "tags": [
+      "gaming",
+      "games",
+      "esports"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "favorite-game-mechanics",
+    "title_es": "Mecánicas de juego favoritas",
+    "prompt_en": "What types of game mechanics do you enjoy the most and why?",
+    "tags": [
+      "games",
+      "gaming"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "esports-competitive-gaming",
+    "title_es": "Esports y juego competitivo",
+    "prompt_en": "Do you follow any esports tournaments or professional gaming?",
+    "tags": [
+      "esports",
+      "games",
+      "competition"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "movie-recommendations",
+    "title_es": "Recomendaciones de películas",
+    "prompt_en": "What's your favorite movie and why would you recommend it?",
+    "tags": [
+      "movies"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "streaming-services-choice",
+    "title_es": "Elegir servicios de streaming",
+    "prompt_en": "Which streaming platforms do you use and what content do you prefer?",
+    "tags": [
+      "streaming",
+      "tv",
+      "movies"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "tv-series-binge-watching",
+    "title_es": "Series de televisión y maratones",
+    "prompt_en": "Tell me about a TV series you've binged recently.",
+    "tags": [
+      "tv",
+      "streaming"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "music-genres-preferences",
+    "title_es": "Géneros musicales y preferencias",
+    "prompt_en": "What types of music do you listen to and what draws you to them?",
+    "tags": [
+      "songs"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "concert-experiences",
+    "title_es": "Experiencias en conciertos",
+    "prompt_en": "Describe a memorable concert or live music event you've attended.",
+    "tags": [
+      "concerts",
+      "artists",
+      "songs"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "music-streaming-discovery",
+    "title_es": "Descubrir música en plataformas",
+    "prompt_en": "How do you discover new artists and songs?",
+    "tags": [
+      "streaming",
+      "songs"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "favorite-sports",
+    "title_es": "Deportes favoritos",
+    "prompt_en": "What sports do you play or enjoy watching?",
+    "tags": [
+      "songs",
+      "artists",
+      "concerts"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "fitness-training-routine",
+    "title_es": "Rutina de entrenamiento y fitness",
+    "prompt_en": "Describe your workout routine and fitness goals.",
+    "tags": [
+      "exercise"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "sports-team-support",
+    "title_es": "Equipos deportivos favoritos",
+    "prompt_en": "Which sports teams do you support and why?",
+    "tags": [
+      "competition"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "football-passion",
+    "title_es": "La pasión por el fútbol",
+    "prompt_en": "Who is your favorite football team and what makes them special to you?",
+    "tags": [
+      "soccer"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "football-players",
+    "title_es": "Jugadores de fútbol famosos",
+    "prompt_en": "Tell me about your favorite football players and their achievements.",
+    "tags": [
+      "soccer"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "football-tactics-strategy",
+    "title_es": "Tácticas y estrategia en el fútbol",
+    "prompt_en": "Discuss different football tactics and how they affect the game.",
+    "tags": [
+      "soccer",
+      "competition"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "dream-vacation-destination",
+    "title_es": "Destino de vacaciones soñado",
+    "prompt_en": "Where is your dream vacation destination and what would you do there?",
+    "tags": [
+      "tourism",
+      "destinations",
+      "flights"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "travel-planning-tips",
+    "title_es": "Consejos para planificar viajes",
+    "prompt_en": "What's your best advice for planning a successful trip abroad?",
+    "tags": [
+      "flights",
+      "tourism",
+      "destinations"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "cultural-experiences-travel",
+    "title_es": "Experiencias culturales en viajes",
+    "prompt_en": "Share a memorable cultural experience from one of your travels.",
+    "tags": [
+      "destinations",
+      "tourism",
+      "flights"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "favorite-food-dishes",
+    "title_es": "Platos y comidas favoritas",
+    "prompt_en": "What are your favorite dishes and cuisines?",
+    "tags": [
+      "cuisine"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "cooking-skills-recipes",
+    "title_es": "Habilidades culinarias y recetas",
+    "prompt_en": "Do you enjoy cooking? What's a favorite recipe you make?",
+    "tags": [
+      "cuisine"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "restaurant-experiences",
+    "title_es": "Experiencias en restaurantes",
+    "prompt_en": "Describe a memorable dining experience at a restaurant.",
+    "tags": [
+      "cuisine",
+      "tourism"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "health-wellness-habits",
+    "title_es": "Hábitos de salud y bienestar",
+    "prompt_en": "What daily habits do you practice for your health and wellness?",
+    "tags": [
+      "wellness",
+      "nutrition"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "nutrition-diet-choices",
+    "title_es": "Nutrición y elección de dieta",
+    "prompt_en": "Tell me about your dietary preferences and nutritional habits.",
+    "tags": [
+      "nutrition"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "mental-health-importance",
+    "title_es": "Importancia de la salud mental",
+    "prompt_en": "How do you maintain good mental health and manage stress?",
+    "tags": [
+      "wellness",
+      "exercise"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "scientific-discoveries",
+    "title_es": "Descubrimientos científicos recientes",
+    "prompt_en": "What recent scientific discoveries have captured your interest?",
+    "tags": [
+      "research",
+      "discovery",
+      "biology"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "biology-genetics",
+    "title_es": "Biología y genética",
+    "prompt_en": "Share your thoughts on genetic engineering and its ethical implications.",
+    "tags": [
+      "biology",
+      "research",
+      "discovery"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "physics-universe",
+    "title_es": "Física y el universo",
+    "prompt_en": "What aspects of physics fascinate you the most?",
+    "tags": [
+      "discovery",
+      "research",
+      "exploration"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "space-exploration",
+    "title_es": "Exploración del espacio",
+    "prompt_en": "Would you like to travel to space? Why or why not?",
+    "tags": [
+      "astronomy",
+      "exploration"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "planets-solar-system",
+    "title_es": "Planetas y sistema solar",
+    "prompt_en": "What do you know about the planets in our solar system?",
+    "tags": [
+      "astronomy"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "nasa-missions",
+    "title_es": "Misiones de la NASA",
+    "prompt_en": "Discuss a NASA mission that interests you and what it discovered.",
+    "tags": [
+      "astronomy",
+      "exploration"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "startup-entrepreneurship",
+    "title_es": "Startups y emprendimiento",
+    "prompt_en": "Would you ever start your own business? What would it be?",
+    "tags": [
+      "investment"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "business-strategy-success",
+    "title_es": "Estrategia empresarial y éxito",
+    "prompt_en": "What do you think are the key factors for business success?",
+    "tags": [
+      "investment"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "investment-opportunities",
+    "title_es": "Oportunidades de inversión",
+    "prompt_en": "What types of investments interest you the most?",
+    "tags": [
+      "investment"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "money-management",
+    "title_es": "Gestión del dinero",
+    "prompt_en": "How do you approach budgeting and managing your money?",
+    "tags": [
+      "savings"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "savings-goals",
+    "title_es": "Objetivos de ahorro",
+    "prompt_en": "What are your financial goals for the next five years?",
+    "tags": [
+      "savings"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "stocks-investing",
+    "title_es": "Inversión en bolsa",
+    "prompt_en": "Do you invest in the stock market? Share your perspective on investing.",
+    "tags": [
+      "savings",
+      "investment"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "ai-ethics-concerns",
+    "title_es": "Ética de la IA y preocupaciones",
+    "prompt_en": "What ethical concerns do you have about artificial intelligence development?",
+    "tags": [
+      "ai",
+      "automation"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "robot-automation",
+    "title_es": "Robots y automatización",
+    "prompt_en": "How do you think robots and automation will affect jobs in the future?",
+    "tags": [
+      "automation",
+      "ai"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "car-preferences",
+    "title_es": "Preferencias de automóviles",
+    "prompt_en": "What's your dream car and what features are most important to you?",
+    "tags": [
+      "vehicles"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "electric-vehicles",
+    "title_es": "Vehículos eléctricos",
+    "prompt_en": "What's your opinion on electric vehicles and sustainable transportation?",
+    "tags": [
+      "automotive",
+      "vehicles"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "racing-motorsports",
+    "title_es": "Racing y deportes de motor",
+    "prompt_en": "Do you follow motorsports? Which racing competitions do you enjoy?",
+    "tags": [
+      "exploration",
+      "automotive"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "fashion-trends-style",
+    "title_es": "Tendencias de moda y estilo",
+    "prompt_en": "How do you express yourself through fashion and personal style?",
+    "tags": [
+      "designer",
+      "trends"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "designer-brands",
+    "title_es": "Marcas de diseño favoritas",
+    "prompt_en": "What are your favorite fashion designers or brands and why?",
+    "tags": [
+      "designer",
+      "trends"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "sustainable-fashion",
+    "title_es": "Moda sostenible",
+    "prompt_en": "What's your perspective on sustainable and ethical fashion?",
+    "tags": [
+      "designer",
+      "trends"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "photography-hobby",
+    "title_es": "Fotografía como pasatiempo",
+    "prompt_en": "Do you enjoy photography? What subjects do you like to photograph?",
+    "tags": [
+      "cameras"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "photography-techniques",
+    "title_es": "Técnicas fotográficas",
+    "prompt_en": "Discuss the importance of lighting and composition in photography.",
+    "tags": [
+      "cameras"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "photo-editing-skills",
+    "title_es": "Habilidades de edición de fotos",
+    "prompt_en": "What photo editing software do you use and how do you enhance your images?",
+    "tags": [
+      "creative",
+      "cameras"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "art-appreciation",
+    "title_es": "Apreciación del arte",
+    "prompt_en": "What type of art appeals to you most and why?",
+    "tags": [
+      "art"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "painting-creative-expression",
+    "title_es": "Pintura y expresión creativa",
+    "prompt_en": "Do you paint or create art? Describe your creative process.",
+    "tags": [
+      "art",
+      "creative"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "design-principles",
+    "title_es": "Principios de diseño",
+    "prompt_en": "What makes good design? Share your thoughts on design principles.",
+    "tags": [
+      "art",
+      "creative"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "favorite-books",
+    "title_es": "Libros favoritos",
+    "prompt_en": "What's your favorite book and why does it resonate with you?",
+    "tags": [
+      "books",
+      "reading"
+    ],
+    "level_min": "A2"
+  },
+  {
+    "id": "reading-habits",
+    "title_es": "Hábitos de lectura",
+    "prompt_en": "How often do you read and what genres do you prefer?",
+    "tags": [
+      "reading",
+      "fiction"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "literary-authors",
+    "title_es": "Autores literarios",
+    "prompt_en": "Tell me about an author whose work you admire.",
+    "tags": [
+      "books",
+      "fiction"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "history-interest",
+    "title_es": "Interés por la historia",
+    "prompt_en": "What historical period or event fascinates you the most?",
+    "tags": [
+      "historical"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "ancient-civilizations",
+    "title_es": "Civilizaciones antiguas",
+    "prompt_en": "Discuss what you know about ancient civilizations and their achievements.",
+    "tags": [
+      "historical"
+    ],
+    "level_min": "B1"
+  },
+  {
+    "id": "world-wars-history",
+    "title_es": "Guerras mundiales e historia",
+    "prompt_en": "Share your perspective on how world wars shaped modern society.",
+    "tags": [
+      "historical"
+    ],
+    "level_min": "B2"
+  },
+  {
+    "id": "wildlife-animals",
+    "title_es": "Vida silvestre y animales",
+    "prompt_en": "What animals do you find most interesting and why?",
+    "tags": [
+      "research"
+    ],
+    "level_min": "A2"
+  }
+]

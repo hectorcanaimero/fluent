@@ -1,0 +1,262 @@
+[
+  {
+    "id": "b01",
+    "kind": "free_topic",
+    "topic": "last weekend",
+    "history": [
+      { "role": "tutor", "text": "Hi! Tell me about your last weekend. What did you do?" }
+    ],
+    "userMessage": "Yesterday I go to the beach with my friends and we swim in a sea until late.",
+    "planted": [
+      { "category": "past_simple", "trigger": "go to the beach" },
+      { "category": "articles", "trigger": "in a sea" }
+    ]
+  },
+  {
+    "id": "b02",
+    "kind": "free_topic",
+    "topic": "daily routine",
+    "history": [
+      { "role": "tutor", "text": "What does a normal Monday look like for you?" }
+    ],
+    "userMessage": "My sister work in a hospital and she always is tired when she comes home.",
+    "planted": [
+      { "category": "subject_verb", "trigger": "My sister work" },
+      { "category": "word_order", "trigger": "she always is tired" }
+    ]
+  },
+  {
+    "id": "b03",
+    "kind": "free_topic",
+    "topic": "travel plans",
+    "history": [
+      { "role": "tutor", "text": "Are you planning any trips this year?" }
+    ],
+    "userMessage": "I have visited Rome last summer and I want to go there again in July.",
+    "planted": [
+      { "category": "present_perfect", "trigger": "I have visited Rome last summer" },
+      { "category": "prepositions", "trigger": "go there again in July" }
+    ]
+  },
+  {
+    "id": "b04",
+    "kind": "free_topic",
+    "topic": "food and cooking",
+    "history": [
+      { "role": "tutor", "text": "Do you like cooking at home?" }
+    ],
+    "userMessage": "I cook every day because the restaurants are very expensives in my city.",
+    "planted": [
+      { "category": "plurals", "trigger": "very expensives" },
+      { "category": "articles", "trigger": "the restaurants are" }
+    ]
+  },
+  {
+    "id": "b05",
+    "kind": "roleplay",
+    "topic": "hotel check-in with overbooking",
+    "history": [
+      { "role": "tutor", "text": "Good evening! I am afraid we have a problem with your booking. How can I help?" }
+    ],
+    "userMessage": "I am here since two hours and nobody explain me what happens with my room.",
+    "planted": [
+      { "category": "present_perfect", "trigger": "I am here since two hours" },
+      { "category": "prepositions", "trigger": "explain me" }
+    ]
+  },
+  {
+    "id": "b06",
+    "kind": "free_topic",
+    "topic": "work and career",
+    "history": [
+      { "role": "tutor", "text": "What do you enjoy most about your job?" }
+    ],
+    "userMessage": "I am working in this company since 2019 and I am responsible of the new designers.",
+    "planted": [
+      { "category": "present_perfect", "trigger": "I am working in this company since 2019" },
+      { "category": "prepositions", "trigger": "responsible of" }
+    ]
+  },
+  {
+    "id": "b07",
+    "kind": "free_topic",
+    "topic": "sports and fitness",
+    "history": [
+      { "role": "tutor", "text": "Do you do any sport during the week?" }
+    ],
+    "userMessage": "I go to gym three times per week and yesterday I runned ten kilometers.",
+    "planted": [
+      { "category": "articles", "trigger": "go to gym" },
+      { "category": "past_simple", "trigger": "I runned" }
+    ]
+  },
+  {
+    "id": "b08",
+    "kind": "free_topic",
+    "topic": "learning English",
+    "history": [
+      { "role": "tutor", "text": "How long have you been studying English?" }
+    ],
+    "userMessage": "If I would have more time, I will study English every morning before the work.",
+    "planted": [
+      { "category": "conditional", "trigger": "If I would have more time" },
+      { "category": "articles", "trigger": "before the work" }
+    ]
+  },
+  {
+    "id": "b09",
+    "kind": "free_topic",
+    "topic": "family",
+    "history": [
+      { "role": "tutor", "text": "Tell me about the people you live with." }
+    ],
+    "userMessage": "My parents lives in a small village and I visit them the last weekend of each month.",
+    "planted": [
+      { "category": "subject_verb", "trigger": "My parents lives" },
+      { "category": "prepositions", "trigger": "visit them the last weekend" }
+    ]
+  },
+  {
+    "id": "b10",
+    "kind": "news",
+    "topic": "remote work is losing ground in big companies",
+    "history": [
+      { "role": "tutor", "text": "Some big companies are ending remote work. What do you think about that?" }
+    ],
+    "userMessage": "I am agree with the workers because the companies must to respect their time.",
+    "planted": [
+      { "category": "vocabulary", "trigger": "I am agree" },
+      { "category": "modal", "trigger": "must to respect" }
+    ]
+  },
+  {
+    "id": "b11",
+    "kind": "free_topic",
+    "topic": "music",
+    "history": [
+      { "role": "tutor", "text": "What kind of music do you listen to?" }
+    ],
+    "userMessage": "I listen music every day and last night I have gone to a concert with my brother.",
+    "planted": [
+      { "category": "prepositions", "trigger": "listen music" },
+      { "category": "present_perfect", "trigger": "last night I have gone" }
+    ]
+  },
+  {
+    "id": "b12",
+    "kind": "free_topic",
+    "topic": "technology",
+    "history": [
+      { "role": "tutor", "text": "Has any app changed the way you work?" }
+    ],
+    "userMessage": "Yes, this app is very useful for organize my tasks, but sometimes it don't work well.",
+    "planted": [
+      { "category": "prepositions", "trigger": "for organize" },
+      { "category": "subject_verb", "trigger": "it don't work" }
+    ]
+  },
+  {
+    "id": "b13",
+    "kind": "roleplay",
+    "topic": "returning a faulty product",
+    "history": [
+      { "role": "tutor", "text": "Hello, welcome to customer service. What seems to be the problem?" }
+    ],
+    "userMessage": "I bought this headphones two weeks ago and now they doesn't turn on.",
+    "planted": [
+      { "category": "plurals", "trigger": "this headphones" },
+      { "category": "subject_verb", "trigger": "they doesn't turn on" }
+    ]
+  },
+  {
+    "id": "b14",
+    "kind": "free_topic",
+    "topic": "films and series",
+    "history": [
+      { "role": "tutor", "text": "Have you watched anything good lately?" }
+    ],
+    "userMessage": "I watched a very funny movie, it was about a man that lost his memory in a airport.",
+    "planted": [
+      { "category": "articles", "trigger": "in a airport" },
+      { "category": "vocabulary", "trigger": "a man that lost" }
+    ]
+  },
+  {
+    "id": "b15",
+    "kind": "free_topic",
+    "topic": "city life",
+    "history": [
+      { "role": "tutor", "text": "What do you like and dislike about your city?" }
+    ],
+    "userMessage": "There is a lot of peoples in the streets and the traffic is worst than before.",
+    "planted": [
+      { "category": "plurals", "trigger": "a lot of peoples" },
+      { "category": "vocabulary", "trigger": "worst than before" }
+    ]
+  },
+  {
+    "id": "b16",
+    "kind": "free_topic",
+    "topic": "health",
+    "history": [
+      { "role": "tutor", "text": "How do you take care of yourself during a busy week?" }
+    ],
+    "userMessage": "I try to sleep eight hours, but if I sleep late I feel me very tired all the day.",
+    "planted": [
+      { "category": "vocabulary", "trigger": "I feel me" },
+      { "category": "articles", "trigger": "all the day" }
+    ]
+  },
+  {
+    "id": "b17",
+    "kind": "roleplay",
+    "topic": "a job interview for a remote position",
+    "history": [
+      { "role": "tutor", "text": "Thanks for joining. Could you tell me about your experience?" }
+    ],
+    "userMessage": "I working as a developer for five years and I am used to work with international teams.",
+    "planted": [
+      { "category": "subject_verb", "trigger": "I working as a developer" },
+      { "category": "present_perfect", "trigger": "for five years" }
+    ]
+  },
+  {
+    "id": "b18",
+    "kind": "boss",
+    "topic": "whether cities should ban private cars",
+    "history": [
+      { "role": "tutor", "text": "Should big cities ban private cars from the centre? Why?" }
+    ],
+    "userMessage": "I think that yes, because the pollution affect to everybody and we can use more the metro.",
+    "planted": [
+      { "category": "prepositions", "trigger": "affect to everybody" },
+      { "category": "word_order", "trigger": "we can use more the metro" }
+    ]
+  },
+  {
+    "id": "b19",
+    "kind": "free_topic",
+    "topic": "weekend plans",
+    "history": [
+      { "role": "tutor", "text": "Any plans for the weekend?" }
+    ],
+    "userMessage": "On Saturday I will pick up my sister at the airport and after we will hang up with friends.",
+    "planted": [
+      { "category": "phrasal_verb", "trigger": "hang up with friends" },
+      { "category": "prepositions", "trigger": "at the airport and after" }
+    ]
+  },
+  {
+    "id": "b20",
+    "kind": "free_topic",
+    "topic": "studying and exams",
+    "history": [
+      { "role": "tutor", "text": "Are you preparing for any exam at the moment?" }
+    ],
+    "userMessage": "Yes, I am preparing an exam in December, so I must to study but I am very embarrassed with my level.",
+    "planted": [
+      { "category": "false_friend", "trigger": "I am very embarrassed" },
+      { "category": "modal", "trigger": "I must to study" }
+    ]
+  }
+]

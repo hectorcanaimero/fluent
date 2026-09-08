@@ -1,0 +1,146 @@
+[
+  {
+    "id": "technology",
+    "label_es": "Tecnología",
+    "label_pt": "Tecnologia",
+    "tags": ["tech", "coding", "automation"]
+  },
+  {
+    "id": "videogames",
+    "label_es": "Videojuegos",
+    "label_pt": "Videojogos",
+    "tags": ["gaming", "games", "esports"]
+  },
+  {
+    "id": "movies-series",
+    "label_es": "Cine y series",
+    "label_pt": "Cinema e séries",
+    "tags": ["movies", "tv", "streaming"]
+  },
+  {
+    "id": "music",
+    "label_es": "Música",
+    "label_pt": "Música",
+    "tags": ["songs", "concerts", "artists"]
+  },
+  {
+    "id": "sports",
+    "label_es": "Deportes",
+    "label_pt": "Esportes",
+    "tags": ["competition", "games", "exercise"]
+  },
+  {
+    "id": "football",
+    "label_es": "Fútbol",
+    "label_pt": "Futebol",
+    "tags": ["soccer", "competition", "exploration"]
+  },
+  {
+    "id": "travel",
+    "label_es": "Viajes",
+    "label_pt": "Viagens",
+    "tags": ["tourism", "destinations", "flights"]
+  },
+  {
+    "id": "cooking",
+    "label_es": "Comida y cocina",
+    "label_pt": "Comida e culinária",
+    "tags": ["cuisine", "research", "nutrition"]
+  },
+  {
+    "id": "health-fitness",
+    "label_es": "Salud y fitness",
+    "label_pt": "Saúde e fitness",
+    "tags": ["exercise", "nutrition", "wellness"]
+  },
+  {
+    "id": "science",
+    "label_es": "Ciencia",
+    "label_pt": "Ciência",
+    "tags": ["research", "discovery", "biology"]
+  },
+  {
+    "id": "space",
+    "label_es": "Espacio",
+    "label_pt": "Espaço",
+    "tags": ["astronomy", "exploration", "discovery"]
+  },
+  {
+    "id": "business-entrepreneurship",
+    "label_es": "Negocios y emprendimiento",
+    "label_pt": "Negócios e empreendedorismo",
+    "tags": ["investment", "research", "exploration"]
+  },
+  {
+    "id": "personal-finance",
+    "label_es": "Finanzas personales",
+    "label_pt": "Finanças pessoais",
+    "tags": ["investment", "savings", "research"]
+  },
+  {
+    "id": "artificial-intelligence",
+    "label_es": "Inteligencia artificial",
+    "label_pt": "Inteligência artificial",
+    "tags": ["ai", "automation", "research"]
+  },
+  {
+    "id": "cars-motor",
+    "label_es": "Coches y motor",
+    "label_pt": "Carros e motor",
+    "tags": ["vehicles", "automotive", "exploration"]
+  },
+  {
+    "id": "fashion",
+    "label_es": "Moda",
+    "label_pt": "Moda",
+    "tags": ["designer", "trends", "creative"]
+  },
+  {
+    "id": "photography",
+    "label_es": "Fotografía",
+    "label_pt": "Fotografia",
+    "tags": ["cameras", "creative", "discovery"]
+  },
+  {
+    "id": "art-design",
+    "label_es": "Arte y diseño",
+    "label_pt": "Arte e design",
+    "tags": ["art", "creative", "research"]
+  },
+  {
+    "id": "books-literature",
+    "label_es": "Libros y literatura",
+    "label_pt": "Livros e literatura",
+    "tags": ["reading", "books", "fiction"]
+  },
+  {
+    "id": "history",
+    "label_es": "Historia",
+    "label_pt": "História",
+    "tags": ["historical", "research", "exploration"]
+  },
+  {
+    "id": "nature-animals",
+    "label_es": "Naturaleza y animales",
+    "label_pt": "Natureza e animais",
+    "tags": ["research", "discovery", "exploration"]
+  },
+  {
+    "id": "environment",
+    "label_es": "Medio ambiente",
+    "label_pt": "Meio ambiente",
+    "tags": ["research", "discovery", "exploration"]
+  },
+  {
+    "id": "education-career",
+    "label_es": "Educación y carrera",
+    "label_pt": "Educação e carreira",
+    "tags": ["investment", "research", "exploration"]
+  },
+  {
+    "id": "family-relationships",
+    "label_es": "Vida familiar y relaciones",
+    "label_pt": "Vida familiar e relacionamentos",
+    "tags": ["competition", "games", "exploration"]
+  }
+]

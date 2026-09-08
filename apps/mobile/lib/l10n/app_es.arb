@@ -1,0 +1,17 @@
+{
+  "@@locale": "es",
+  "appTitle": "Fluent",
+  "splashLoading": "Cargando…",
+  "tabHome": "Home",
+  "tabPractice": "Practicar",
+  "tabGroup": "Grupo",
+  "tabProgress": "Progreso",
+  "comingSoonTitle": "Muy pronto",
+  "loginWelcomeHeadline": "Hablá inglés con confianza, de a 10 minutos",
+  "loginWelcomeSubtitle": "Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.",
+  "loginBenefit1": "Conversaciones reales con un tutor de IA",
+  "loginBenefit2": "Hablá de las noticias de hoy, a tu manera",
+  "loginBenefit3": "Construí una racha que se sostiene",
+  "loginLogInButton": "Iniciar sesión",
+  "loginAlreadyHaveAccount": "¿Ya tenés una cuenta? Iniciá sesión"
+}

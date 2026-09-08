@@ -4,6 +4,7 @@ import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { Env } from './config/env.js';
+import { mountBullBoard } from './admin/bull-board.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
@@ -20,9 +21,14 @@ async function bootstrap() {
 
   app.setGlobalPrefix('v1');
 
+  // Bull Board (SPEC-05 §9): panel de las 4 colas de BullMQ en
+  // `/admin/queues`, protegido por bearer de owner. Ver `admin/bull-board.ts`
+  // — extraído a una función propia para que los tests e2e puedan montarlo
+  // también sobre una app de test que no pasa por este `bootstrap()`.
+  mountBullBoard(app);
+
   const configService = app.get(ConfigService<Env, true>);
   const port = configService.get('PORT', { infer: true });
-
   await app.listen(port);
 }
 

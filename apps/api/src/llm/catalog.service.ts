@@ -193,25 +193,7 @@ export class ModelCatalogService {
     if (cached !== null) return cached;
 
     try {
-      const headers: Record<string, string> = { ...PROVIDERS.openrouter.extraHeaders };
-      if (apiKey !== undefined && apiKey.length > 0) {
-        headers.Authorization = `Bearer ${apiKey}`;
-      }
-
-      const response = await this.fetchImpl(`${PROVIDERS.openrouter.baseUrl}/models`, {
-        method: 'GET',
-        headers,
-      });
-
-      if (!response.ok) {
-        throw new Error(`respuesta HTTP ${response.status}`);
-      }
-
-      const rawJson = await response.text();
-      // Se cachea el JSON crudo, tal cual llega, sin la key (que nunca formó parte
-      // del cuerpo de la respuesta).
-      await this.cache.set(CACHE_KEY, rawJson, CACHE_TTL_SECONDS);
-      return rawJson;
+      return await this.downloadAndCache(apiKey);
     } catch (error) {
       const cached = await this.cache.get(CACHE_KEY);
       if (cached !== null) return cached;
@@ -220,6 +202,44 @@ export class ModelCatalogService {
         `No se pudo descargar el catálogo de OpenRouter y no hay caché disponible: ${redact(message, apiKey)}`,
       );
     }
+  }
+
+  /**
+   * Fuerza una descarga real del catálogo de OpenRouter, ignorando la caché, y
+   * sobreescribe la entrada cacheada (job `model-catalog`, SPEC-05 §8).
+   *
+   * Si la descarga falla, la excepción se propaga tal cual (sin el mensaje
+   * "y no hay caché disponible" de `fetchRawCatalog`, que no aplica aquí) para
+   * que el llamador (BullMQ) reintente. La entrada anterior de la caché no se
+   * toca hasta que `downloadAndCache` complete un `set` con éxito, así que un
+   * fallo de red no borra el catálogo previo (SPEC-05 §8: «si falla, se
+   * conserva el anterior»).
+   */
+  async refresh(apiKey?: string): Promise<void> {
+    await this.downloadAndCache(apiKey);
+  }
+
+  /** Descarga real (sin mirar la caché) y sobreescribe `CACHE_KEY`. Lanza si la petición falla. */
+  private async downloadAndCache(apiKey?: string): Promise<string> {
+    const headers: Record<string, string> = { ...PROVIDERS.openrouter.extraHeaders };
+    if (apiKey !== undefined && apiKey.length > 0) {
+      headers.Authorization = `Bearer ${apiKey}`;
+    }
+
+    const response = await this.fetchImpl(`${PROVIDERS.openrouter.baseUrl}/models`, {
+      method: 'GET',
+      headers,
+    });
+
+    if (!response.ok) {
+      throw new Error(`respuesta HTTP ${response.status}`);
+    }
+
+    const rawJson = await response.text();
+    // Se cachea el JSON crudo, tal cual llega, sin la key (que nunca formó parte
+    // del cuerpo de la respuesta).
+    await this.cache.set(CACHE_KEY, rawJson, CACHE_TTL_SECONDS);
+    return rawJson;
   }
 
   /** SPEC-03 §7: `avgTokensIn * priceIn + avgTokensOut * priceOut`, en USD. */

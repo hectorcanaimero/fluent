@@ -40,6 +40,19 @@ export const BossTopicSchema = z.object({
   level_min: z.enum(['B1', 'B2']),
 });
 
+/**
+ * Fuente RSS del job `rss-ingest` (SPEC-05 §3). `tags` son etiquetas del
+ * catálogo de `INTERESTS` que representan el tema del feed; puede estar
+ * vacío cuando el feed es genérico (p. ej. BBC World) y no encaja en ningún
+ * tag del catálogo — ver PEND-13 de docs/specs/pendientes/PR-05.md.
+ */
+export const FeedSchema = z.object({
+  name: z.string().min(1),
+  url: z.string().url(),
+  tags: z.array(z.string().min(1)).max(5),
+  lang: z.literal('en'),
+});
+
 // ============================================================================
 // Tipos
 // ============================================================================
@@ -48,6 +61,7 @@ export type Interest = z.infer<typeof InterestSchema>;
 export type Roleplay = z.infer<typeof RoleplaySchema>;
 export type Topic = z.infer<typeof TopicSchema>;
 export type BossTopic = z.infer<typeof BossTopicSchema>;
+export type Feed = z.infer<typeof FeedSchema>;
 
 // ============================================================================
 // Carga
@@ -77,6 +91,11 @@ export const BOSS_TOPICS: readonly BossTopic[] = Object.freeze(
   z.array(BossTopicSchema).parse(bossTopicsData),
 );
 
+const feedsData = loadJson('feeds.json');
+export const FEEDS: readonly Feed[] = Object.freeze(
+  z.array(FeedSchema).parse(feedsData),
+);
+
 // ============================================================================
 // Funciones auxiliares
 // ============================================================================
@@ -95,4 +114,8 @@ export function getTopic(id: string): Topic | undefined {
 
 export function getBossTopic(id: string): BossTopic | undefined {
   return BOSS_TOPICS.find((bt) => bt.id === id);
+}
+
+export function getFeed(name: string): Feed | undefined {
+  return FEEDS.find((f) => f.name === name);
 }

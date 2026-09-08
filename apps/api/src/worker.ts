@@ -8,11 +8,15 @@ import { WorkerModule } from './worker.module.js';
  * de arranque sobrescrito en Coolify).
  *
  * Sin servidor HTTP: no llama a `app.listen()`. `app.init()` inicializa el
- * árbol de módulos de Nest (y con él, cuando PR-05 añada los processors de
- * BullMQ, empieza a consumir jobs) y mantiene el proceso vivo mientras
- * haya handles activos. Como `RedisModule` conecta de forma perezosa y aún
- * no hay procesadores, se añade un `setInterval` de mantenimiento y manejo
- * de SIGTERM para un cierre limpio.
+ * árbol de módulos de Nest (y con él los processors de BullMQ de
+ * `JobsModule`, que empiezan a consumir jobs) y mantiene el proceso vivo
+ * mientras haya listeners/handles activos (las conexiones de `RedisModule` y
+ * las de los `Worker` de BullMQ ya bastan por sí solas). Se conserva de
+ * todos modos el `setInterval` de mantenimiento y el manejo de SIGTERM/SIGINT
+ * para un cierre limpio (Coolify manda SIGTERM en cada deploy): es un
+ * cinturón de seguridad barato y un apagado ordenado (`app.close()` antes de
+ * salir) es mejor que depender solo de que el proceso muera cuando BullMQ
+ * cierre sus conexiones.
  *
  * Sin `ValidationPipe` ni `setGlobalPrefix`: son específicos de HTTP
  * (`@nestjs/platform-express`) y el worker no expone ningún endpoint.
@@ -25,11 +29,11 @@ async function bootstrap() {
   await app.init();
 
   const logger = app.get(Logger);
-  logger.log('Worker iniciado; a la espera de procesadores de colas (PR-05)', 'Worker');
+  logger.log('Worker iniciado; procesadores de colas activos (PR-05)', 'Worker');
 
-  // Mantener el proceso vivo aunque ningún módulo tenga handles abiertos
-  // todavía (RedisModule conecta de forma perezosa). Cuando PR-05 registre
-  // los workers de BullMQ, esto deja de ser necesario pero no molesta.
+  // Cinturón de seguridad: aunque los `Worker` de BullMQ ya mantienen el
+  // proceso vivo por sí solos, este intervalo no molesta y cubre el caso de
+  // que todas las colas se queden temporalmente sin conexión activa.
   const keepAlive = setInterval(() => undefined, 60_000);
 
   const shutdown = async (signal: string) => {

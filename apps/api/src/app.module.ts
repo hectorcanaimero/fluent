@@ -5,6 +5,8 @@ import { validateEnv, Env } from './config/env.js';
 import { HealthModule } from './health/health.module.js';
 import { RedisModule } from './redis/redis.module.js';
 import { InsforgeModule } from './insforge/insforge.module.js';
+import { QueuesModule } from './jobs/queues.module.js';
+import { AdminModule } from './admin/admin.module.js';
 
 @Module({
   imports: [
@@ -23,7 +25,12 @@ import { InsforgeModule } from './insforge/insforge.module.js';
     }),
     RedisModule,
     InsforgeModule,
+    // Solo la infraestructura de colas: la API encola (`JOB_DISPATCHER`) pero
+    // no consume. Los procesadores viven en `JobsModule`, que importa el
+    // worker (`worker.module.ts`).
+    QueuesModule,
     HealthModule,
+    AdminModule,
   ],
   controllers: [],
   providers: [],

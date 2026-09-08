@@ -19,6 +19,8 @@ Estado: borrador v0.1 · Cubre: RF-1.x, RF-2.1, RF-2.3, RF-2.6, RF-3.x, RF-4.2, 
 
 Sin SDK de InsForge para Dart: se implementa un `InsforgeAuthClient` mínimo por REST (§6).
 
+**Diseño:** las pantallas siguen `docs/design/fluent.pen`. Tokens, componentes, correspondencia con estas rutas y pantallas que faltan están en `docs/design/README.md`. Tipografía Plus Jakarta Sans, color primario #0E9C8C, acento #F0813B, radios 20/14/999, padding de pantalla 20.
+
 ## 2. Estructura
 
 ```

@@ -1273,6 +1273,198 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Sí, olvidar todo'**
   String get memoryForgetAllConfirm;
+
+  /// No description provided for @groupTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Grupo'**
+  String get groupTitle;
+
+  /// No description provided for @groupLeaderboardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu grupo esta semana'**
+  String get groupLeaderboardTitle;
+
+  /// No description provided for @groupStreak.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} días en racha grupal'**
+  String groupStreak(int count);
+
+  /// No description provided for @groupChallengesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Desafíos'**
+  String get groupChallengesTitle;
+
+  /// No description provided for @groupChallengeText.
+  ///
+  /// In es, this message translates to:
+  /// **'{name} practicó sobre {topic}, ¿te animás?'**
+  String groupChallengeText(String name, String topic);
+
+  /// No description provided for @groupChallengeAccept.
+  ///
+  /// In es, this message translates to:
+  /// **'Aceptar'**
+  String get groupChallengeAccept;
+
+  /// No description provided for @groupWeeklySummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Resumen semanal'**
+  String get groupWeeklySummaryTitle;
+
+  /// No description provided for @groupShareButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir en WhatsApp'**
+  String get groupShareButton;
+
+  /// No description provided for @progressTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu progreso'**
+  String get progressTitle;
+
+  /// No description provided for @progressXpLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'XP'**
+  String get progressXpLabel;
+
+  /// No description provided for @progressStreakLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha'**
+  String get progressStreakLabel;
+
+  /// No description provided for @progressLongestStreakLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha más larga'**
+  String get progressLongestStreakLabel;
+
+  /// No description provided for @progressSessionsThisWeekLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones esta semana'**
+  String get progressSessionsThisWeekLabel;
+
+  /// No description provided for @progressCorrectionsTrendTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tendencia de correcciones'**
+  String get progressCorrectionsTrendTitle;
+
+  /// No description provided for @progressCorrectionsTrendEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no hay suficientes datos.'**
+  String get progressCorrectionsTrendEmpty;
+
+  /// No description provided for @progressCorrectionsTrendCounts.
+  ///
+  /// In es, this message translates to:
+  /// **'{count7d} en 7 días · {count30d} en 30 días'**
+  String progressCorrectionsTrendCounts(int count7d, int count30d);
+
+  /// No description provided for @settingsTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ajustes'**
+  String get settingsTitle;
+
+  /// No description provided for @settingsLanguageTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Idioma'**
+  String get settingsLanguageTitle;
+
+  /// No description provided for @settingsLanguageSystem.
+  ///
+  /// In es, this message translates to:
+  /// **'Detectar del sistema'**
+  String get settingsLanguageSystem;
+
+  /// No description provided for @settingsLanguageSpanish.
+  ///
+  /// In es, this message translates to:
+  /// **'Español'**
+  String get settingsLanguageSpanish;
+
+  /// No description provided for @settingsLanguagePortuguese.
+  ///
+  /// In es, this message translates to:
+  /// **'Português (Brasil)'**
+  String get settingsLanguagePortuguese;
+
+  /// No description provided for @settingsRemindersTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Recordatorios'**
+  String get settingsRemindersTitle;
+
+  /// No description provided for @settingsMorningReminder.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión de la mañana'**
+  String get settingsMorningReminder;
+
+  /// No description provided for @settingsEveningReminder.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión de la tarde'**
+  String get settingsEveningReminder;
+
+  /// No description provided for @settingsStreakAlert.
+  ///
+  /// In es, this message translates to:
+  /// **'Alerta de racha en riesgo'**
+  String get settingsStreakAlert;
+
+  /// No description provided for @settingsSoundEffects.
+  ///
+  /// In es, this message translates to:
+  /// **'Efectos de sonido'**
+  String get settingsSoundEffects;
+
+  /// No description provided for @settingsLogout.
+  ///
+  /// In es, this message translates to:
+  /// **'Cerrar sesión'**
+  String get settingsLogout;
+
+  /// No description provided for @settingsDeleteAccount.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar cuenta'**
+  String get settingsDeleteAccount;
+
+  /// No description provided for @settingsDeleteAccountConfirmTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Borrar tu cuenta?'**
+  String get settingsDeleteAccountConfirmTitle;
+
+  /// No description provided for @settingsDeleteAccountConfirmBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se borran tus sesiones, hechos y preferencias. No se puede deshacer.'**
+  String get settingsDeleteAccountConfirmBody;
+
+  /// No description provided for @settingsDeleteAccountCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get settingsDeleteAccountCancel;
+
+  /// No description provided for @settingsDeleteAccountConfirm.
+  ///
+  /// In es, this message translates to:
+  /// **'Borrar cuenta'**
+  String get settingsDeleteAccountConfirm;
 }
 
 class _AppLocalizationsDelegate

@@ -64,6 +64,11 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
+  Future<void> deleteAccount() => _client.guard(() async {
+    await _client.dio.delete('/me');
+  });
+
+  @override
   Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) => _client.guard(() async {
     final res = await _client.dio.post(
       '/providers/openrouter/pkce/start',

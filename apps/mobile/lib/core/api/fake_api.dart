@@ -249,6 +249,15 @@ class FakeApi implements FluentApi {
     return GroupResponse(group: _group!, members: List.unmodifiable(_members));
   }
 
+  /// Gancho de test: si `deleteAccount()` se llamó.
+  bool accountDeleted = false;
+
+  @override
+  Future<void> deleteAccount() async {
+    await _delay();
+    accountDeleted = true;
+  }
+
   // ---- 4.2 Proveedores y modelos ------------------------------------------
 
   @override

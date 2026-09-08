@@ -5,6 +5,7 @@ import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/providers/data/oauth_launcher.dart';
+import '../features/settings/data/reminder_service.dart';
 import '../features/session/data/speech_service.dart';
 import '../features/session/data/tts_service.dart';
 import 'api/fake_api.dart';
@@ -13,6 +14,7 @@ import 'api/http_fluent_api.dart';
 import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
+import 'share/share_service.dart';
 import 'storage/token_store.dart';
 
 /// Providers raíz compartidos por toda la app. Cada feature agrega los
@@ -80,6 +82,20 @@ final ttsServiceProvider = Provider<TtsService>((ref) {
     return FakeTtsService();
   }
   return FlutterTtsService();
+});
+
+/// Compartir el resumen semanal por WhatsApp (SPEC-06 §4.7).
+final shareServiceProvider = Provider<ShareService>((ref) {
+  return const SharePlusService();
+});
+
+/// Recordatorios locales (SPEC-06 §8). Con `USE_FAKE_API=true` no toca
+/// notificaciones reales.
+final reminderServiceProvider = Provider<ReminderService>((ref) {
+  if (Env.useFakeApi) {
+    return FakeReminderService();
+  }
+  return FlutterLocalNotificationsReminderService();
 });
 
 final authControllerProvider =

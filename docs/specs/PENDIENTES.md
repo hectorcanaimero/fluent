@@ -129,3 +129,34 @@ el operador las revise o las mejore más adelante.
   audio contra `flutter_tts`, y el deep link de PKCE (T4) solo se
   pueden validar en un dispositivo físico; quedan documentados como
   pendientes en el PR, no se hicieron en este VPS.
+
+## T8 — Grupo, progreso y ajustes
+
+- **`DELETE /me` no está en la tabla de endpoints de SPEC-02 §4.1.**
+  SPEC-06 §9 sí lo pide explícitamente para borrar cuenta ("`DELETE
+  /me` en la API borra datos por cascada, luego logout en InsForge").
+  Se agregó `deleteAccount()` al contrato `FluentApi` siguiendo
+  SPEC-06; falta sincronizar la tabla de SPEC-02 para que quede
+  documentado en un solo lugar.
+- **Recordatorios, alerta de racha y sonido no se persisten entre
+  arranques.** No hay ningún paquete de almacenamiento local simple
+  (tipo `shared_preferences`) en las dependencias de SPEC-06 §1. Los
+  horarios de recordatorio (por defecto 8:30/20:30, como pide SPEC-06
+  §8) y los toggles de alerta de racha/sonido viven en estado de
+  `SettingsScreen` y se pierden al reabrir la app; las notificaciones
+  ya programadas en el sistema operativo sí persisten (las programa
+  `flutter_local_notifications`), pero la app no recuerda qué hora
+  eligió el usuario para mostrarla la próxima vez. Se resuelve
+  agregando `shared_preferences` (o guardando la preferencia en el
+  perfil vía la API) en un PR posterior.
+- **`ReminderService` sin probar en dispositivo.** Igual que
+  `SpeechService`/`TtsService`/`OAuthLauncher`, es una interfaz nueva
+  no listada en SPEC-06 con una implementación real
+  (`flutter_local_notifications` + `timezone`) y una fake para tests.
+  La entrega real de las notificaciones diarias solo se puede
+  verificar en un dispositivo físico.
+- **Selector de idioma con opción "detectar del sistema".**
+  SPEC-06 dice que el idioma se detecta del sistema por defecto y se
+  puede cambiar en ajustes; se implementó como tres opciones (Sistema
+  / Español / Português) en vez de un simple toggle es/pt-BR, para
+  poder volver a la detección automática.

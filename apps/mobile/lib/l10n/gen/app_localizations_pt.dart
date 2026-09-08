@@ -657,4 +657,107 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get memoryForgetAllConfirm => 'Sim, esquecer tudo';
+
+  @override
+  String get groupTitle => 'Grupo';
+
+  @override
+  String get groupLeaderboardTitle => 'Seu grupo essa semana';
+
+  @override
+  String groupStreak(int count) {
+    return '$count dias de sequência em grupo';
+  }
+
+  @override
+  String get groupChallengesTitle => 'Desafios';
+
+  @override
+  String groupChallengeText(String name, String topic) {
+    return '$name praticou sobre $topic, topa?';
+  }
+
+  @override
+  String get groupChallengeAccept => 'Aceitar';
+
+  @override
+  String get groupWeeklySummaryTitle => 'Resumo semanal';
+
+  @override
+  String get groupShareButton => 'Compartilhar no WhatsApp';
+
+  @override
+  String get progressTitle => 'Seu progresso';
+
+  @override
+  String get progressXpLabel => 'XP';
+
+  @override
+  String get progressStreakLabel => 'Sequência';
+
+  @override
+  String get progressLongestStreakLabel => 'Maior sequência';
+
+  @override
+  String get progressSessionsThisWeekLabel => 'Sessões essa semana';
+
+  @override
+  String get progressCorrectionsTrendTitle => 'Tendência de correções';
+
+  @override
+  String get progressCorrectionsTrendEmpty => 'Ainda não há dados suficientes.';
+
+  @override
+  String progressCorrectionsTrendCounts(int count7d, int count30d) {
+    return '$count7d em 7 dias · $count30d em 30 dias';
+  }
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsLanguageTitle => 'Idioma';
+
+  @override
+  String get settingsLanguageSystem => 'Detectar do sistema';
+
+  @override
+  String get settingsLanguageSpanish => 'Espanhol';
+
+  @override
+  String get settingsLanguagePortuguese => 'Português (Brasil)';
+
+  @override
+  String get settingsRemindersTitle => 'Lembretes';
+
+  @override
+  String get settingsMorningReminder => 'Sessão da manhã';
+
+  @override
+  String get settingsEveningReminder => 'Sessão da tarde';
+
+  @override
+  String get settingsStreakAlert => 'Alerta de sequência em risco';
+
+  @override
+  String get settingsSoundEffects => 'Efeitos sonoros';
+
+  @override
+  String get settingsLogout => 'Sair';
+
+  @override
+  String get settingsDeleteAccount => 'Apagar conta';
+
+  @override
+  String get settingsDeleteAccountConfirmTitle => 'Apagar sua conta?';
+
+  @override
+  String get settingsDeleteAccountConfirmBody =>
+      'Suas sessões, fatos e preferências serão apagados. Isso não pode ser desfeito.';
+
+  @override
+  String get settingsDeleteAccountCancel => 'Cancelar';
+
+  @override
+  String get settingsDeleteAccountConfirm => 'Apagar conta';
 }

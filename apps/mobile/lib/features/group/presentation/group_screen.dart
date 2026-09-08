@@ -1,15 +1,188 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../core/widgets/placeholder_screen.dart';
+import '../../../app/theme.dart';
+import '../../../core/api/models.dart';
+import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../domain/group_data.dart';
 
-/// Se completa en T8 (`feat(mobile): grupo, progreso y ajustes`).
-class GroupScreen extends StatelessWidget {
+/// Grupo (SPEC-06 §4.7): leaderboard semanal, desafíos y resumen semanal
+/// compartible.
+class GroupScreen extends ConsumerStatefulWidget {
   const GroupScreen({super.key});
+
+  @override
+  ConsumerState<GroupScreen> createState() => _GroupScreenState();
+}
+
+class _GroupScreenState extends ConsumerState<GroupScreen> {
+  late Future<GroupScreenData> _future;
+  bool _startingChallenge = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _future = _load();
+  }
+
+  Future<GroupScreenData> _load() async {
+    final api = ref.read(fluentApiProvider);
+    final results = await Future.wait([api.getLeaderboard(), api.getChallenges()]);
+    WeeklySummaryResult? weeklySummary;
+    try {
+      weeklySummary = await api.getWeeklySummary();
+    } catch (_) {
+      weeklySummary = null;
+    }
+    return GroupScreenData(
+      leaderboard: results[0] as LeaderboardResult,
+      challenges: results[1] as List<ChallengeItem>,
+      weeklySummary: weeklySummary,
+    );
+  }
+
+  Future<void> _acceptChallenge(ChallengeItem challenge) async {
+    if (_startingChallenge) return;
+    setState(() => _startingChallenge = true);
+    try {
+      final result = await ref
+          .read(fluentApiProvider)
+          .createSession(kind: 'topic', topic: challenge.topic);
+      if (!mounted) return;
+      context.push('/session/${result.session.id}');
+    } finally {
+      if (mounted) setState(() => _startingChallenge = false);
+    }
+  }
+
+  Future<void> _shareWeeklySummary(String text) async {
+    await ref.read(shareServiceProvider).shareText(text);
+  }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    return PlaceholderScreen(title: l10n.comingSoonTitle);
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.groupTitle)),
+      body: SafeArea(
+        child: FutureBuilder<GroupScreenData>(
+          future: _future,
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return const Center(child: CircularProgressIndicator());
+            }
+            final data = snapshot.data!;
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.screenPad),
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        l10n.groupLeaderboardTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    ),
+                    Row(
+                      children: [
+                        const Icon(Icons.local_fire_department, color: AppColors.accent, size: 18),
+                        const SizedBox(width: 4),
+                        Text(l10n.groupStreak(data.leaderboard.groupStreak)),
+                      ],
+                    ),
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                for (var i = 0; i < data.leaderboard.rows.length; i++)
+                  _LeaderboardRowTile(key: Key('leaderboard_row_$i'), rank: i + 1, row: data.leaderboard.rows[i]),
+                const SizedBox(height: AppSpacing.xl),
+                if (data.challenges.isNotEmpty) ...[
+                  Text(l10n.groupChallengesTitle, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.sm),
+                  for (final challenge in data.challenges)
+                    Container(
+                      key: Key('challenge_${challenge.sessionId}'),
+                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                      padding: const EdgeInsets.all(AppSpacing.md),
+                      decoration: BoxDecoration(
+                        color: AppColors.primarySoft,
+                        borderRadius: BorderRadius.circular(AppRadius.md),
+                      ),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: Text(
+                              l10n.groupChallengeText(challenge.displayName, challenge.topic),
+                            ),
+                          ),
+                          TextButton(
+                            onPressed: _startingChallenge ? null : () => _acceptChallenge(challenge),
+                            child: Text(l10n.groupChallengeAccept),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: AppSpacing.xl),
+                ],
+                if (data.weeklySummary != null) ...[
+                  Text(l10n.groupWeeklySummaryTitle, style: Theme.of(context).textTheme.titleMedium),
+                  const SizedBox(height: AppSpacing.sm),
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.md),
+                    decoration: BoxDecoration(
+                      color: AppColors.surface,
+                      borderRadius: BorderRadius.circular(AppRadius.md),
+                      border: Border.all(color: AppColors.border),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Text(data.weeklySummary!.text),
+                        const SizedBox(height: AppSpacing.md),
+                        ElevatedButton.icon(
+                          key: const Key('group_share_button'),
+                          onPressed: () => _shareWeeklySummary(data.weeklySummary!.text),
+                          icon: const Icon(Icons.share),
+                          label: Text(l10n.groupShareButton),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _LeaderboardRowTile extends StatelessWidget {
+  const _LeaderboardRowTile({super.key, required this.rank, required this.row});
+
+  final int rank;
+  final LeaderboardRow row;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 28,
+            child:
+                rank == 1
+                    ? const Icon(Icons.emoji_events, color: AppColors.gold, size: 20)
+                    : Text('$rank', textAlign: TextAlign.center),
+          ),
+          Expanded(child: Text(row.displayName)),
+          Text('${row.xpWeek} XP'),
+        ],
+      ),
+    );
   }
 }

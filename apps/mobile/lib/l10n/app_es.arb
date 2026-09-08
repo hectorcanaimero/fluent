@@ -250,5 +250,54 @@
   "memoryForgetAllConfirmTitle2": "Esto no se puede deshacer",
   "memoryForgetAllConfirmBody2": "Confirmá de nuevo para borrar toda tu memoria.",
   "memoryForgetAllCancel": "Cancelar",
-  "memoryForgetAllConfirm": "Sí, olvidar todo"
+  "memoryForgetAllConfirm": "Sí, olvidar todo",
+  "groupTitle": "Grupo",
+  "groupLeaderboardTitle": "Tu grupo esta semana",
+  "groupStreak": "{count} días en racha grupal",
+  "@groupStreak": {
+    "placeholders": {
+      "count": {"type": "int"}
+    }
+  },
+  "groupChallengesTitle": "Desafíos",
+  "groupChallengeText": "{name} practicó sobre {topic}, ¿te animás?",
+  "@groupChallengeText": {
+    "placeholders": {
+      "name": {"type": "String"},
+      "topic": {"type": "String"}
+    }
+  },
+  "groupChallengeAccept": "Aceptar",
+  "groupWeeklySummaryTitle": "Resumen semanal",
+  "groupShareButton": "Compartir en WhatsApp",
+  "progressTitle": "Tu progreso",
+  "progressXpLabel": "XP",
+  "progressStreakLabel": "Racha",
+  "progressLongestStreakLabel": "Racha más larga",
+  "progressSessionsThisWeekLabel": "Sesiones esta semana",
+  "progressCorrectionsTrendTitle": "Tendencia de correcciones",
+  "progressCorrectionsTrendEmpty": "Todavía no hay suficientes datos.",
+  "progressCorrectionsTrendCounts": "{count7d} en 7 días · {count30d} en 30 días",
+  "@progressCorrectionsTrendCounts": {
+    "placeholders": {
+      "count7d": {"type": "int"},
+      "count30d": {"type": "int"}
+    }
+  },
+  "settingsTitle": "Ajustes",
+  "settingsLanguageTitle": "Idioma",
+  "settingsLanguageSystem": "Detectar del sistema",
+  "settingsLanguageSpanish": "Español",
+  "settingsLanguagePortuguese": "Português (Brasil)",
+  "settingsRemindersTitle": "Recordatorios",
+  "settingsMorningReminder": "Sesión de la mañana",
+  "settingsEveningReminder": "Sesión de la tarde",
+  "settingsStreakAlert": "Alerta de racha en riesgo",
+  "settingsSoundEffects": "Efectos de sonido",
+  "settingsLogout": "Cerrar sesión",
+  "settingsDeleteAccount": "Borrar cuenta",
+  "settingsDeleteAccountConfirmTitle": "¿Borrar tu cuenta?",
+  "settingsDeleteAccountConfirmBody": "Se borran tus sesiones, hechos y preferencias. No se puede deshacer.",
+  "settingsDeleteAccountCancel": "Cancelar",
+  "settingsDeleteAccountConfirm": "Borrar cuenta"
 }

@@ -18,6 +18,11 @@ abstract class FluentApi {
   Future<List<String>> createInvitations({int count = 1});
   Future<GroupResponse> getGroup();
 
+  /// Borra la cuenta en cascada (SPEC-06 §9). Después de esto la app debe
+  /// cerrar sesión contra InsForge; ese paso lo hace quien llame, no esta
+  /// interfaz.
+  Future<void> deleteAccount();
+
   // 4.2 Proveedores y modelos
   Future<PkceStartResult> startOpenRouterPkce(String callbackUrl);
   Future<ProviderStatusResult> completeOpenRouterPkce({

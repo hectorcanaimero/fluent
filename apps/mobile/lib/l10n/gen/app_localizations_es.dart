@@ -657,4 +657,108 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get memoryForgetAllConfirm => 'Sí, olvidar todo';
+
+  @override
+  String get groupTitle => 'Grupo';
+
+  @override
+  String get groupLeaderboardTitle => 'Tu grupo esta semana';
+
+  @override
+  String groupStreak(int count) {
+    return '$count días en racha grupal';
+  }
+
+  @override
+  String get groupChallengesTitle => 'Desafíos';
+
+  @override
+  String groupChallengeText(String name, String topic) {
+    return '$name practicó sobre $topic, ¿te animás?';
+  }
+
+  @override
+  String get groupChallengeAccept => 'Aceptar';
+
+  @override
+  String get groupWeeklySummaryTitle => 'Resumen semanal';
+
+  @override
+  String get groupShareButton => 'Compartir en WhatsApp';
+
+  @override
+  String get progressTitle => 'Tu progreso';
+
+  @override
+  String get progressXpLabel => 'XP';
+
+  @override
+  String get progressStreakLabel => 'Racha';
+
+  @override
+  String get progressLongestStreakLabel => 'Racha más larga';
+
+  @override
+  String get progressSessionsThisWeekLabel => 'Sesiones esta semana';
+
+  @override
+  String get progressCorrectionsTrendTitle => 'Tendencia de correcciones';
+
+  @override
+  String get progressCorrectionsTrendEmpty =>
+      'Todavía no hay suficientes datos.';
+
+  @override
+  String progressCorrectionsTrendCounts(int count7d, int count30d) {
+    return '$count7d en 7 días · $count30d en 30 días';
+  }
+
+  @override
+  String get settingsTitle => 'Ajustes';
+
+  @override
+  String get settingsLanguageTitle => 'Idioma';
+
+  @override
+  String get settingsLanguageSystem => 'Detectar del sistema';
+
+  @override
+  String get settingsLanguageSpanish => 'Español';
+
+  @override
+  String get settingsLanguagePortuguese => 'Português (Brasil)';
+
+  @override
+  String get settingsRemindersTitle => 'Recordatorios';
+
+  @override
+  String get settingsMorningReminder => 'Sesión de la mañana';
+
+  @override
+  String get settingsEveningReminder => 'Sesión de la tarde';
+
+  @override
+  String get settingsStreakAlert => 'Alerta de racha en riesgo';
+
+  @override
+  String get settingsSoundEffects => 'Efectos de sonido';
+
+  @override
+  String get settingsLogout => 'Cerrar sesión';
+
+  @override
+  String get settingsDeleteAccount => 'Borrar cuenta';
+
+  @override
+  String get settingsDeleteAccountConfirmTitle => '¿Borrar tu cuenta?';
+
+  @override
+  String get settingsDeleteAccountConfirmBody =>
+      'Se borran tus sesiones, hechos y preferencias. No se puede deshacer.';
+
+  @override
+  String get settingsDeleteAccountCancel => 'Cancelar';
+
+  @override
+  String get settingsDeleteAccountConfirm => 'Borrar cuenta';
 }

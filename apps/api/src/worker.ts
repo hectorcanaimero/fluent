@@ -8,11 +8,11 @@ import { WorkerModule } from './worker.module.js';
  * de arranque sobrescrito en Coolify).
  *
  * Sin servidor HTTP: no llama a `app.listen()`. `app.init()` inicializa el
- * árbol de módulos de Nest (y con él, cuando PR-05 añada los processors de
- * BullMQ, empieza a consumir jobs) y mantiene el proceso vivo mientras
- * haya listeners/handles activos (p. ej. las conexiones de `RedisModule`),
- * sin necesidad de un `setInterval` ni similar para evitar que el event
- * loop termine.
+ * árbol de módulos de Nest (y con él los processors de BullMQ de
+ * `JobsModule`, que empiezan a consumir jobs) y mantiene el proceso vivo
+ * mientras haya listeners/handles activos (las conexiones de `RedisModule` y
+ * las de los `Worker` de BullMQ), sin necesidad de un `setInterval` ni
+ * similar para evitar que el event loop termine.
  *
  * Sin `ValidationPipe` ni `setGlobalPrefix`: son específicos de HTTP
  * (`@nestjs/platform-express`) y el worker no expone ningún endpoint.

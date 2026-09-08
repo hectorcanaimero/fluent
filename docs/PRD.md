@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.3 |
+| Versión | 1.0 |
 | Fecha | 2026-09-08 |
 | Fuente | `docs/PROYECTO.md` (brief) |
-| Estado | Aprobado el 2026-09-08, con la sección 6.2 (proveedores y modelos) pendiente de visto bueno |
+| Estado | Aprobado el 2026-09-08 |
 
 ---
 
@@ -356,5 +356,5 @@ Cada fase termina con una demo usable y sus ADRs.
 
 | Rol | Nombre | Estado |
 |---|---|---|
-| Dueño del producto | Alejandro | Aprobado 2026-09-08 (sección 6.2 pendiente) |
+| Dueño del producto | Alejandro | Aprobado 2026-09-08 |
 | Arquitectura | Claude | Aprobado 2026-09-08 |

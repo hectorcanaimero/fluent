@@ -13,6 +13,8 @@
  *      puede hacer PATCH de `chat_model` sobre ella.
  *   7. (T3) El usuario A solo ve sus sesiones, turnos y correcciones, no lee
  *      `xp_events` ni `llm_calls`, y no puede invocar `close_session`.
+ *   8. (T4) El usuario A ve, confirma y borra sus hechos, edita el texto de su
+ *      brief pero no `level_hint`, y no lee `coaching_brief_history`.
  *
  * Uso (desde apps/api, con .insforge/project.json enlazado a la rama):
  *   node scripts/db-smoke.ts
@@ -370,8 +372,110 @@ async function main(): Promise<void> {
     body: closeFromApp.body,
   });
 
+  // --- T4: hechos y coaching brief (migración 4) ---------------------------
+  const factsRes = await call('/api/database/records/facts', {
+    admin: true,
+    method: 'POST',
+    headers: { Prefer: 'return=representation' },
+    body: JSON.stringify([
+      { user_id: a.id, text: 'Works as a designer', status: 'pending' },
+      { user_id: b.id, text: 'Plays the guitar', status: 'pending' },
+    ]),
+  });
+  if (factsRes.status >= 300) fail('crear hechos', factsRes);
+  const factA = (factsRes.body as Array<{ id: string }>)[0];
+
+  const briefsRes = await call('/api/database/records/coaching_briefs', {
+    admin: true,
+    method: 'POST',
+    body: JSON.stringify([
+      { user_id: a.id, text: 'Brief de A', level_hint: 'B1' },
+      { user_id: b.id, text: 'Brief de B', level_hint: 'A2' },
+    ]),
+  });
+  if (briefsRes.status >= 300) fail('crear briefs', briefsRes);
+
+  const myFacts = await call('/api/database/records/facts', { token: tokenA });
+  check(
+    'A solo ve sus hechos',
+    myFacts.status === 200 && Array.isArray(myFacts.body) && myFacts.body.length === 1,
+    myFacts.body,
+  );
+
+  const confirm = await call(`/api/database/records/facts?id=eq.${factA.id}`, {
+    token: tokenA,
+    method: 'PATCH',
+    body: JSON.stringify({ status: 'confirmed' }),
+  });
+  check('A puede confirmar un hecho suyo', confirm.status < 300, {
+    status: confirm.status,
+    body: confirm.body,
+  });
+
+  const stealFact = await call(`/api/database/records/facts?id=eq.${factA.id}`, {
+    token: tokenA,
+    method: 'PATCH',
+    body: JSON.stringify({ use_count: 99 }),
+  });
+  check('A no puede tocar use_count de un hecho', stealFact.status >= 400, {
+    status: stealFact.status,
+    body: stealFact.body,
+  });
+
+  const myBrief = await call('/api/database/records/coaching_briefs', { token: tokenA });
+  check(
+    'A solo ve su coaching brief',
+    myBrief.status === 200 && Array.isArray(myBrief.body) && myBrief.body.length === 1,
+    myBrief.body,
+  );
+
+  const editBrief = await call(`/api/database/records/coaching_briefs?user_id=eq.${a.id}`, {
+    token: tokenA,
+    method: 'PATCH',
+    body: JSON.stringify({ text: 'Brief editado por el usuario' }),
+  });
+  check('A puede editar el texto de su brief', editBrief.status < 300, {
+    status: editBrief.status,
+    body: editBrief.body,
+  });
+
+  const editLevel = await call(`/api/database/records/coaching_briefs?user_id=eq.${a.id}`, {
+    token: tokenA,
+    method: 'PATCH',
+    body: JSON.stringify({ level_hint: 'B2' }),
+  });
+  check('A no puede cambiar level_hint de su brief', editLevel.status >= 400, {
+    status: editLevel.status,
+    body: editLevel.body,
+  });
+
+  const historyPeek = await call('/api/database/records/coaching_brief_history', { token: tokenA });
+  check(
+    'A no lee coaching_brief_history',
+    historyPeek.status >= 400 ||
+      (Array.isArray(historyPeek.body) && historyPeek.body.length === 0),
+    { status: historyPeek.status, body: historyPeek.body },
+  );
+
+  const dropFact = await call(`/api/database/records/facts?id=eq.${factA.id}`, {
+    token: tokenA,
+    method: 'DELETE',
+  });
+  check('A puede borrar un hecho suyo', dropFact.status < 300, {
+    status: dropFact.status,
+    body: dropFact.body,
+  });
+
   // --- limpieza (las cuentas de auth se quedan: solo se borran desde la
   //     API de auth y esta rama de InsForge es desechable) ------------------
+  await call(`/api/database/records/coaching_briefs?user_id=in.(${a.id},${b.id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
+  await call(`/api/database/records/facts?user_id=in.(${a.id},${b.id})`, {
+    admin: true,
+    method: 'DELETE',
+  });
   await call(`/api/database/records/xp_events?user_id=in.(${a.id},${b.id})`, {
     admin: true,
     method: 'DELETE',

@@ -16,7 +16,7 @@
 --   - update_group_streaks: grupo con activos que practicaron ayer/hoy sube
 --     group_streak; un miembro inactivo (>14 días) no bloquea al grupo; un
 --     activo que no practicó ayer lo pone a 0; segunda ejecución el mismo
---     día no lo vuelve a subir (columna group_streak_day, PENDIENTES §25).
+--     día no lo vuelve a subir (columna group_streak_day, pendientes/PR-01 §25).
 --
 -- Perfiles con timezone = 'UTC' para que "hoy"/"ayer"/"anteayer" sean
 -- deterministas. `current_date` se lee aparte porque puede no coincidir con
@@ -170,7 +170,7 @@ BEGIN
 
   -- Segunda ejecución el mismo día: a A no se le vuelve a tocar el streak
   -- (idempotencia; sin esta rama, apply_streak_grace le pondría el streak a
-  -- 0 justo después de haberle concedido la gracia. Ver PENDIENTES §24).
+  -- 0 justo después de haberle concedido la gracia. Ver pendientes/PR-01 §24).
   v_res := public.apply_streak_grace();
 
   SELECT streak, grace_used_week INTO v_streak, v_grace FROM public.profiles WHERE user_id = v_a;
@@ -181,7 +181,7 @@ BEGIN
   DELETE FROM public.profiles WHERE user_id IN (v_a, v_b, v_c, v_d);
 
   -- =========================================================================
-  -- 3. update_group_streaks (SPEC-05 §6 paso 2, SPEC-07 §6, PENDIENTES §25)
+  -- 3. update_group_streaks (SPEC-05 §6 paso 2, SPEC-07 §6, pendientes/PR-01 §25)
   -- =========================================================================
   INSERT INTO public.groups (name) VALUES ('SQLTEST social streak') RETURNING id INTO v_group2;
 

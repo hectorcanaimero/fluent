@@ -1,6 +1,6 @@
 -- SPEC-01 §6 migración 2 · proveedores y preferencias de modelo
 -- Cubre: SPEC-01 §2.4 (provider_credentials), §2.5 (model_preferences), §3 (RLS).
--- Notas de diseño fuera de spec anotadas en docs/specs/PENDIENTES.md.
+-- Notas de diseño fuera de spec anotadas en docs/specs/pendientes/PR-01.md.
 --
 -- InsForge concede por defecto SELECT/INSERT/UPDATE/DELETE a `anon` y
 -- `authenticated` sobre cada tabla nueva de `public` y NO activa RLS.
@@ -41,7 +41,7 @@ REVOKE ALL ON public.provider_credentials FROM anon, authenticated;
 -- 2. model_preferences (SPEC-01 §2.5, RF-2.6, RF-2.7)
 --    La app lee y actualiza su propia fila; solo la API (clave admin) crea o
 --    borra filas, típicamente al terminar el onboarding o al desconectar un
---    proveedor. Decisión fuera de spec (PENDIENTES §9): se añade el mismo
+--    proveedor. Decisión fuera de spec (pendientes/PR-01 §9): se añade el mismo
 --    CHECK de proveedor que provider_credentials en chat_provider y
 --    brief_provider, para que la columna nunca contenga un proveedor que la
 --    API no sepa resolver.

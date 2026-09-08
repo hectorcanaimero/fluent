@@ -2,7 +2,7 @@
 -- Cubre: SPEC-01 §2.6 (sessions), §2.7 (turns), §2.8 (corrections),
 --        §2.13 (xp_events), §2.14 (llm_calls), §3 (RLS) y la función
 --        `close_session` de §5, que implementa SPEC-07 §2.
--- Decisiones fuera de spec: docs/specs/PENDIENTES.md.
+-- Decisiones fuera de spec: docs/specs/pendientes/PR-01.md.
 
 -- ---------------------------------------------------------------------------
 -- 1. sessions (SPEC-01 §2.6)
@@ -15,7 +15,7 @@ CREATE TABLE public.sessions (
   kind                   text NOT NULL CHECK (kind IN ('free_topic', 'roleplay', 'news', 'boss')),
   topic                  text NOT NULL,
   news_item_id           uuid,
-  -- SPEC-07 §2 y §7: bonus de desafío cruzado. Ver PENDIENTES.
+  -- SPEC-07 §2 y §7: bonus de desafío cruzado. Ver docs/specs/pendientes/PR-01.md.
   challenge_from_user_id uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   status                 text NOT NULL DEFAULT 'active'
                            CHECK (status IN ('active', 'ended', 'abandoned')),
@@ -81,7 +81,7 @@ CREATE INDEX corrections_session_idx ON public.corrections (session_id);
 
 -- ---------------------------------------------------------------------------
 -- 4. xp_events (SPEC-01 §2.13). `streak_7` se añade al catálogo: SPEC-07 §2
---    emite ese evento con XP_STREAK_7_BONUS. Ver PENDIENTES.
+--    emite ese evento con XP_STREAK_7_BONUS. Ver docs/specs/pendientes/PR-01.md.
 -- ---------------------------------------------------------------------------
 CREATE TABLE public.xp_events (
   id         uuid PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -309,7 +309,7 @@ BEGIN
 
   -- El bonus de los 7 días solo se paga cuando el streak avanza en esta
   -- llamada; si no, la segunda sesión del día lo cobraría otra vez.
-  -- Ver PENDIENTES.
+  -- Ver docs/specs/pendientes/PR-01.md.
   IF v_streak_changed AND v_streak % 7 = 0 THEN
     v_streak_bonus := c_xp_streak_7_bonus;
     v_xp := v_xp + v_streak_bonus;

@@ -1,7 +1,7 @@
 -- SPEC-01 §6 migración 1 · grupos, invitaciones, perfiles
 -- Cubre: SPEC-01 §2.1 (profiles), §2.2 (groups), §2.3 (invitations),
 --        §3 (RLS y vista group_members), §5 (redeem_invitation).
--- Notas de diseño fuera de spec anotadas en docs/specs/PENDIENTES.md.
+-- Notas de diseño fuera de spec anotadas en docs/specs/pendientes/PR-01.md.
 --
 -- InsForge concede por defecto SELECT/INSERT/UPDATE/DELETE a `anon` y
 -- `authenticated` sobre cada tabla nueva de `public` y NO activa RLS.
@@ -29,7 +29,7 @@ CREATE TABLE public.groups (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   name         text NOT NULL CHECK (char_length(name) BETWEEN 1 AND 60),
   -- owner_id nullable + SET NULL: borrar la cuenta del operador (RNF privacidad)
-  -- no debe bloquearse por el grupo. PENDIENTES §1.
+  -- no debe bloquearse por el grupo. pendientes/PR-01 §1.
   owner_id     uuid REFERENCES auth.users(id) ON DELETE SET NULL,
   group_streak int NOT NULL DEFAULT 0 CHECK (group_streak >= 0),
   created_at   timestamptz NOT NULL DEFAULT now()
@@ -140,7 +140,7 @@ REVOKE ALL ON public.invitations FROM anon, authenticated;
 --    las columnas visibles. Se deja como vista SECURITY DEFINER (por defecto,
 --    dueño project_admin) porque la RLS de profiles limita a la fila propia y
 --    una vista SECURITY INVOKER no podría mostrar a los demás miembros.
---    El filtrado por grupo lo hace el WHERE. PENDIENTES §2.
+--    El filtrado por grupo lo hace el WHERE. pendientes/PR-01 §2.
 -- ---------------------------------------------------------------------------
 CREATE VIEW public.group_members AS
 SELECT
@@ -162,7 +162,7 @@ GRANT SELECT ON public.group_members TO authenticated;
 -- 8. RPC redeem_invitation (SPEC-01 §5, SPEC-02 §3)
 --    p_user_id opcional: la API la llama con la clave admin (auth.uid() nulo)
 --    y pasa el id del usuario; desde un token de usuario basta el código.
---    PENDIENTES §3.
+--    pendientes/PR-01 §3.
 --    Errores: INVITATION_INVALID, INVITATION_USED, INVITATION_EXPIRED,
 --             ALREADY_IN_GROUP, PROFILE_NOT_FOUND, UNAUTHENTICATED.
 -- ---------------------------------------------------------------------------

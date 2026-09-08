@@ -2,7 +2,7 @@
 -- Cubre: SPEC-01 §2.11 (news_items), §2.12 (weekly_summaries), §3 (RLS),
 --        §5 (`weekly_leaderboard`), SPEC-07 §5 (leaderboard) y §6 (streak
 --        grupal), SPEC-05 §6 (`apply_streak_grace`, `update_group_streaks`).
--- Decisiones fuera de spec: docs/specs/PENDIENTES.md, entradas 23 a 25.
+-- Decisiones fuera de spec: docs/specs/pendientes/PR-01.md, entradas 23 a 25.
 
 -- ---------------------------------------------------------------------------
 -- 1. news_items (SPEC-01 §2.11, RF-7.1)
@@ -23,7 +23,7 @@ CREATE TABLE public.news_items (
 CREATE INDEX news_items_day_idx ON public.news_items (day DESC);
 CREATE INDEX news_items_tags_idx ON public.news_items USING gin (tags);
 
--- La FK que la migración 3 no pudo declarar todavía (SPEC-01 §2.6, PENDIENTES §14).
+-- La FK que la migración 3 no pudo declarar todavía (SPEC-01 §2.6, pendientes/PR-01 §14).
 ALTER TABLE public.sessions
   ADD CONSTRAINT sessions_news_item_id_fkey
   FOREIGN KEY (news_item_id) REFERENCES public.news_items(id) ON DELETE SET NULL;
@@ -76,7 +76,7 @@ CREATE POLICY weekly_summaries_select_own_group ON public.weekly_summaries
 --    leaderboard de un grupo ajeno pasando cualquier group_id: si hay un
 --    usuario autenticado (auth.uid() no nulo) y su grupo no es p_group_id,
 --    se rechaza. Con la clave admin auth.uid() es nulo y no se filtra.
---    Ver PENDIENTES §23.
+--    Ver pendientes/PR-01 §23.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.weekly_leaderboard(p_group_id uuid, p_week_start date)
 RETURNS jsonb
@@ -125,7 +125,7 @@ BEGIN
     ) xp ON xp.user_id = p.user_id
     LEFT JOIN (
       -- "ended_at": mismo criterio que close_session para el día de la
-      -- sesión (PENDIENTES §17).
+      -- sesión (pendientes/PR-01 §17).
       SELECT s.user_id, count(*) AS total
       FROM public.sessions s
       WHERE s.status = 'ended'
@@ -154,7 +154,7 @@ GRANT EXECUTE ON FUNCTION public.weekly_leaderboard(uuid, date) TO authenticated
 --    pide SPEC-05 §6 al pie de la letra: sin ella, una segunda ejecución del
 --    job el mismo día pondría el streak a 0 justo después de haber concedido
 --    la gracia, rompiendo la idempotencia que exige SPEC-05 §1.
---    Ver PENDIENTES §24.
+--    Ver pendientes/PR-01 §24.
 -- ---------------------------------------------------------------------------
 CREATE OR REPLACE FUNCTION public.apply_streak_grace()
 RETURNS jsonb
@@ -214,7 +214,7 @@ REVOKE ALL ON FUNCTION public.apply_streak_grace() FROM PUBLIC, anon, authentica
 --    sin decir dónde vive el job ni cómo lo hace idempotente si se ejecuta
 --    dos veces el mismo día. Se resuelve con una función propia y una
 --    columna que guarda el último día (UTC) en que se actualizó el grupo, a
---    imagen de `close_session`/`last_session_day`. Ver PENDIENTES §25.
+--    imagen de `close_session`/`last_session_day`. Ver pendientes/PR-01 §25.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.groups ADD COLUMN group_streak_day date;
 

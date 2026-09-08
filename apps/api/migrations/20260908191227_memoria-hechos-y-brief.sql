@@ -1,7 +1,7 @@
 -- SPEC-01 §6 migración 4 · memoria: hechos y coaching brief
 -- Cubre: SPEC-01 §2.9 (facts), §2.10 (coaching_briefs y coaching_brief_history),
 --        §3 (RLS), §5 (`pick_callback_fact`) y SPEC-05 §2 paso 4 (`apply_brief`).
--- Decisiones fuera de spec: docs/specs/PENDIENTES.md.
+-- Decisiones fuera de spec: docs/specs/pendientes/PR-01.md.
 
 -- ---------------------------------------------------------------------------
 -- 1. Normalización de hechos
@@ -128,7 +128,7 @@ CREATE POLICY coaching_briefs_delete_own ON public.coaching_briefs
   USING (user_id = (SELECT auth.uid()));
 
 -- coaching_brief_history: material de estudio, no lo expone la app.
--- SPEC-01 §3 no le da fila en la tabla de políticas. Ver PENDIENTES.
+-- SPEC-01 §3 no le da fila en la tabla de políticas. Ver docs/specs/pendientes/PR-01.md.
 ALTER TABLE public.coaching_brief_history ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.coaching_brief_history FROM anon, authenticated;
 

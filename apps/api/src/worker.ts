@@ -10,9 +10,9 @@ import { WorkerModule } from './worker.module.js';
  * Sin servidor HTTP: no llama a `app.listen()`. `app.init()` inicializa el
  * árbol de módulos de Nest (y con él, cuando PR-05 añada los processors de
  * BullMQ, empieza a consumir jobs) y mantiene el proceso vivo mientras
- * haya listeners/handles activos (p. ej. las conexiones de `RedisModule`),
- * sin necesidad de un `setInterval` ni similar para evitar que el event
- * loop termine.
+ * haya handles activos. Como `RedisModule` conecta de forma perezosa y aún
+ * no hay procesadores, se añade un `setInterval` de mantenimiento y manejo
+ * de SIGTERM para un cierre limpio.
  *
  * Sin `ValidationPipe` ni `setGlobalPrefix`: son específicos de HTTP
  * (`@nestjs/platform-express`) y el worker no expone ningún endpoint.
@@ -23,6 +23,23 @@ async function bootstrap() {
   app.useLogger(app.get(Logger));
 
   await app.init();
+
+  const logger = app.get(Logger);
+  logger.log('Worker iniciado; a la espera de procesadores de colas (PR-05)', 'Worker');
+
+  // Mantener el proceso vivo aunque ningún módulo tenga handles abiertos
+  // todavía (RedisModule conecta de forma perezosa). Cuando PR-05 registre
+  // los workers de BullMQ, esto deja de ser necesario pero no molesta.
+  const keepAlive = setInterval(() => undefined, 60_000);
+
+  const shutdown = async (signal: string) => {
+    logger.log(`Señal ${signal} recibida, cerrando el worker`, 'Worker');
+    clearInterval(keepAlive);
+    await app.close();
+    process.exit(0);
+  };
+  process.once('SIGTERM', () => void shutdown('SIGTERM'));
+  process.once('SIGINT', () => void shutdown('SIGINT'));
 }
 
 // Sin `await` a nivel de módulo, mismo motivo que en `main.ts`: evita

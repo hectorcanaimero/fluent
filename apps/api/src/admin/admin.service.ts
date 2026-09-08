@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { ApiException } from '../common/api-error.js';
 import { OwnerService } from '../common/owner.service.js';
 import { AdminRepository } from './admin.repository.js';
+import { QueueMetricsService } from './queue-metrics.service.js';
 import {
   aggregateSessionsPerDay,
   calculateAvgDurationSec,
@@ -12,16 +13,20 @@ import type { AdminMetricsDto } from './admin.types.js';
 /**
  * `GET /admin/metrics` (SPEC-02 §4.6, RF-8.2).
  *
- * Solo owner. Devuelve métricas del sistema de los últimos 14 días:
+ * Solo owner. Devuelve, en una sola respuesta, las cuatro métricas de
+ * RF-8.2 (últimos 14 días para las tres primeras):
  * - Sesiones por día
  * - Duración media
  * - Tasa de fallo de LLM
+ * - Jobs pendientes: contadores de las 4 colas de BullMQ (SPEC-05 §9), que
+ *   aporta `QueueMetricsService` (antes `AdminMetricsController` de PR-05).
  */
 @Injectable()
 export class AdminService {
   constructor(
     private readonly ownerService: OwnerService,
     private readonly adminRepository: AdminRepository,
+    private readonly queueMetricsService: QueueMetricsService,
   ) {}
 
   /**
@@ -33,10 +38,11 @@ export class AdminService {
       throw ApiException.forbidden('Solo el owner del sistema puede acceder a esta sección.');
     }
 
-    const [sessionRows, durationRows, llmCallRows] = await Promise.all([
+    const [sessionRows, durationRows, llmCallRows, queues] = await Promise.all([
       this.adminRepository.listRecentSessions(now),
       this.adminRepository.listRecentEndedSessions(now),
       this.adminRepository.listRecentLlmCalls(now),
+      this.queueMetricsService.list(),
     ]);
 
     const sessionsPerDay = aggregateSessionsPerDay(sessionRows, now);
@@ -48,6 +54,7 @@ export class AdminService {
       avgDurationSec,
       llmFailureRate: rate,
       llmFailureRateTotals: { total, failed },
+      queues,
     };
   }
 }

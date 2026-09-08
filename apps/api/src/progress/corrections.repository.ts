@@ -2,8 +2,18 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
-import { TABLES } from '../db/schema.js';
-import type { CorrectionTrendRow } from './corrections-trend.js';
+import { TABLES, type CorrectionCategory } from '../db/schema.js';
+
+/**
+ * Fila mínima de `corrections` (SPEC-01 §2.8) que necesita la tendencia de
+ * `GET /progress`. Vivía en `corrections-trend.ts`, que se borró al fusionar
+ * PR-07: la agregación la hace ahora `ProgressService` de `src/game/`
+ * (docs/specs/pendientes/PR-02.md PEND-71).
+ */
+export interface CorrectionTrendRow {
+  readonly category: CorrectionCategory;
+  readonly created_at: string; // ISO 8601 timestamp
+}
 
 /**
  * Días hacia atrás que trae `listRecentForTrend` (`correctionsTrend` de
@@ -24,16 +34,19 @@ export const CORRECTIONS_TREND_ROW_LIMIT = 3000;
 
 /**
  * Repositorio de solo lectura de `corrections` (SPEC-01 §2.8) para
- * `ProgressService` (`GET /progress`, `correctionsTrend`).
+ * `GET /progress` (`correctionsTrend`). Lo consume
+ * `InsforgeProgressRepository`, que implementa el `ProgressRepository` que
+ * espera `src/game/progress.service.ts`.
  */
 @Injectable()
 export class CorrectionsRepository {
   constructor(@Inject(INSFORGE_ADMIN_CLIENT) private readonly admin: InsForgeClient) {}
 
   /**
-   * Filas de `corrections` del usuario en los últimos
-   * `CORRECTIONS_TREND_LOOKBACK_DAYS` días, solo `category`/`created_at`
-   * (lo mínimo que necesita `aggregateCorrectionsTrend`).
+   * Filas de `corrections` del usuario desde `sinceIso`, solo
+   * `category`/`created_at` (lo mínimo que necesita la agregación de
+   * `src/game/progress.service.ts`). El servicio pide siempre los últimos
+   * `CORRECTIONS_TREND_LOOKBACK_DAYS` días.
    */
   async listRecentForTrend(userId: string, sinceIso: string): Promise<CorrectionTrendRow[]> {
     const result = await this.admin.database

@@ -2,6 +2,7 @@ import type { Profile } from '../db/schema.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
 import type { CorrectionsRepository } from './corrections.repository.js';
+import { InsforgeProgressRepository } from './progress.repository.js';
 import { ProgressService } from './progress.service.js';
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
@@ -27,13 +28,22 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
   };
 }
 
-describe('ProgressService.getProgress', () => {
-  const now = new Date('2026-09-09T12:00:00.000Z'); // Wednesday, week start 2026-09-07
+/**
+ * `ProgressService` es un adaptador: la lógica se prueba en
+ * `src/game/progress.service.spec.ts` y el mapeo en `progress.mapper.spec.ts`.
+ * Lo que se comprueba aquí es el cableado extremo a extremo del endpoint: que
+ * el repositorio traduce bien las filas de InsForge y que la respuesta tiene
+ * la forma de SPEC-02 §4.5.
+ */
+describe('ProgressService.getProgress (adaptador de src/game)', () => {
+  const now = new Date('2026-09-09T12:00:00.000Z'); // miércoles; lunes = 2026-09-07
 
-  function createService(profile: Profile, sessionsThisWeek: number, correctionsRows: unknown[]) {
-    const profilesRepository = {
-      ensureProfile: vi.fn().mockResolvedValue(profile),
-    };
+  function createService(
+    profile: Profile,
+    sessionsThisWeek: number,
+    correctionsRows: unknown[],
+  ) {
+    const profilesRepository = { ensureProfile: vi.fn().mockResolvedValue(profile) };
     const sessionsQuery = {
       countValidSessionsSince: vi.fn().mockResolvedValue(sessionsThisWeek),
     };
@@ -42,40 +52,49 @@ describe('ProgressService.getProgress', () => {
     };
 
     const service = new ProgressService(
-      profilesRepository as unknown as ProfilesRepository,
-      sessionsQuery as unknown as SessionsQueryRepository,
-      correctionsRepository as unknown as CorrectionsRepository,
+      new InsforgeProgressRepository(
+        profilesRepository as unknown as ProfilesRepository,
+        sessionsQuery as unknown as SessionsQueryRepository,
+        correctionsRepository as unknown as CorrectionsRepository,
+      ),
     );
 
     return { service, profilesRepository, sessionsQuery, correctionsRepository };
   }
 
-  it('maps xp/streak/level from the profile and passes through sessionsThisWeek/correctionsTrend', async () => {
+  it('mapea el perfil y las correcciones al DTO de la app', async () => {
     const profile = makeProfile({ xp: 1600, streak: 4, longest_streak: 10 });
     const correctionsRows = [{ category: 'articles', created_at: now.toISOString() }];
-    const { service, sessionsQuery, correctionsRepository } = createService(profile, 2, correctionsRows);
+    const { service, sessionsQuery, correctionsRepository } = createService(
+      profile,
+      2,
+      correctionsRows,
+    );
 
     const result = await service.getProgress('user-1', now);
 
-    expect(result.xp).toBe(1600);
-    expect(result.streak).toBe(4);
-    expect(result.longestStreak).toBe(10);
-    expect(result.level).toEqual({ name: 'Storyteller', min: 1500, next: 3500 });
-    expect(result.sessionsThisWeek).toBe(2);
-    expect(result.correctionsTrend).toEqual([{ category: 'articles', count30d: 1, count7d: 1 }]);
+    expect(result).toEqual({
+      xp: 1600,
+      level: { name: 'Storyteller', min: 1500, next: 3500 },
+      streak: 4,
+      longestStreak: 10,
+      sessionsThisWeek: 2,
+      correctionsTrend: [{ category: 'articles', count30d: 1, count7d: 1 }],
+    });
 
     // sessionsThisWeek se cuenta desde el lunes 00:00 UTC de la semana en curso.
     expect(sessionsQuery.countValidSessionsSince).toHaveBeenCalledWith(
       'user-1',
       '2026-09-07T00:00:00.000Z',
     );
+    // La tendencia arranca 30 días antes de `now`.
     expect(correctionsRepository.listRecentForTrend).toHaveBeenCalledWith(
       'user-1',
-      expect.any(String),
+      '2026-08-10T12:00:00.000Z',
     );
   });
 
-  it('a user with no data yet gets a well-formed empty response', async () => {
+  it('un usuario sin datos recibe una respuesta bien formada', async () => {
     const profile = makeProfile({ xp: 0, streak: 0, longest_streak: 0 });
     const { service } = createService(profile, 0, []);
 

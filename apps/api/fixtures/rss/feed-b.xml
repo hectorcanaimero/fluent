@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fixture Sport &amp; Science Feed</title>
+    <link>https://example.com/sport-science</link>
+    <description>Fixture feed B for rss-ingest tests (football/space-flavoured items).</description>
+    <language>en</language>
+    <item>
+      <title>Local team wins football championship</title>
+      <link>https://example.com/sport/football-champs</link>
+      <guid>https://example.com/sport/football-champs</guid>
+      <description><![CDATA[<p>Fans celebrated in the streets after the club secured its first title &amp; a place in next season's cup.</p>]]></description>
+      <pubDate>Wed, 03 Sep 2026 18:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Scientists announce new discovery about space exploration</title>
+      <link>https://example.com/science/space-discovery</link>
+      <guid>https://example.com/science/space-discovery</guid>
+      <description><![CDATA[<p>The team says the finding could change how future missions plan their route through deep space &amp; save fuel.</p>]]></description>
+      <pubDate>Wed, 03 Sep 2026 06:20:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Football transfer news: star striker signs new deal</title>
+      <link>https://example.com/sport/transfer</link>
+      <guid>https://example.com/sport/transfer</guid>
+      <description><![CDATA[<p>The striker signed a four-year contract &amp; will stay at the club through 2030, the team confirmed.</p>]]></description>
+      <pubDate>Thu, 04 Sep 2026 10:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Marine biologists study ocean life patterns</title>
+      <link>https://example.com/science/ocean</link>
+      <guid>https://example.com/science/ocean</guid>
+      <description><![CDATA[<p>Researchers tracked migration routes &amp; found new evidence of behavioural change linked to warmer waters.</p>]]></description>
+      <pubDate>Thu, 04 Sep 2026 15:30:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

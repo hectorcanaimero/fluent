@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { CredentialsModule } from '../credentials/credentials.module.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
 import { MeController } from './me.controller.js';
+import { PendingActionsService } from './pending-actions.service.js';
 import { ProfilesRepository } from './profiles.repository.js';
 import { ProfilesService } from './profiles.service.js';
 
@@ -22,9 +23,17 @@ import { ProfilesService } from './profiles.service.js';
   // PR-02/T4 lee `CredentialsRepository` (docs/specs/pendientes/PR-02.md
   // PEND-15). La dependencia va en un solo sentido: `CredentialsModule` no
   // conoce a `ProfilesModule`.
+  //
+  // `PendingActionsService` inyecta `RedisService`, que viene de `RedisModule`
+  // (`@Global()`), así que no hace falta importarlo aquí.
   imports: [CredentialsModule],
   controllers: [MeController],
-  providers: [ProfilesRepository, GroupsRepository, ProfilesService],
+  providers: [
+    ProfilesRepository,
+    GroupsRepository,
+    PendingActionsService,
+    ProfilesService,
+  ],
   exports: [ProfilesRepository],
 })
 export class ProfilesModule {}

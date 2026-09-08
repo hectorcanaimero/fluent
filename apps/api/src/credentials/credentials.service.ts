@@ -1,20 +1,11 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import type { Env } from '../config/env.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
 import type {
   ActiveCredential,
   CredentialsSource,
 } from '../llm/model-resolver.js';
 import type { CredentialErrorCode } from '../llm/llm.service.js';
-import {
-  credentialAad,
-  decodeMasterKey,
-  decryptSecret,
-  encryptSecret,
-  fromByteaHex,
-  toByteaHex,
-} from './credentials.crypto.js';
+import { CredentialsCrypto } from './credentials.crypto.js';
 import {
   CredentialsRepository,
   type ProviderStatusRow,
@@ -36,34 +27,10 @@ import {
 export class CredentialsService implements CredentialsSource {
   private readonly logger = new Logger(CredentialsService.name);
 
-  /** Clave con la que se **cifra** siempre (la actual). */
-  private readonly currentKey: Buffer;
-  /**
-   * Claves con las que se intenta **descifrar**, en orden: la actual y, si
-   * está configurada, la anterior (`CREDENTIALS_MASTER_KEY_PREVIOUS`), que es
-   * lo que permite rotar sin recifrar todas las filas de golpe.
-   */
-  private readonly decryptionKeys: readonly Buffer[];
-
   constructor(
-    configService: ConfigService<Env, true>,
+    private readonly crypto: CredentialsCrypto,
     private readonly repository: CredentialsRepository,
-  ) {
-    // Falla el arranque si la clave maestra no es base64 de 32 bytes.
-    this.currentKey = decodeMasterKey(
-      configService.get('CREDENTIALS_MASTER_KEY', { infer: true }),
-      'CREDENTIALS_MASTER_KEY',
-    );
-
-    const previousRaw = configService.get('CREDENTIALS_MASTER_KEY_PREVIOUS', {
-      infer: true,
-    });
-    const previousKey = previousRaw
-      ? decodeMasterKey(previousRaw, 'CREDENTIALS_MASTER_KEY_PREVIOUS')
-      : null;
-
-    this.decryptionKeys = previousKey ? [this.currentKey, previousKey] : [this.currentKey];
-  }
+  ) {}
 
   /**
    * `CredentialsSource.listActive`: credenciales `active` del usuario con la
@@ -108,18 +75,14 @@ export class CredentialsService implements CredentialsSource {
    * `connected_at = now()`.
    */
   async saveApiKey(userId: string, provider: Provider, apiKey: string): Promise<void> {
-    const secret = encryptSecret(
-      this.currentKey,
-      apiKey,
-      credentialAad(userId, provider),
-    );
+    const encrypted = this.crypto.encrypt(userId, provider, apiKey);
 
     await this.repository.save({
       userId,
       provider,
-      keyCiphertext: toByteaHex(secret.ciphertext),
-      keyIv: toByteaHex(secret.iv),
-      keyTag: toByteaHex(secret.tag),
+      keyCiphertext: encrypted.key_ciphertext,
+      keyIv: encrypted.key_iv,
+      keyTag: encrypted.key_tag,
     });
   }
 
@@ -158,15 +121,7 @@ export class CredentialsService implements CredentialsSource {
    */
   private tryDecrypt(row: ProviderCredential): string | null {
     try {
-      return decryptSecret(
-        this.decryptionKeys,
-        {
-          ciphertext: fromByteaHex(row.key_ciphertext),
-          iv: fromByteaHex(row.key_iv),
-          tag: fromByteaHex(row.key_tag),
-        },
-        credentialAad(row.user_id, row.provider),
-      );
+      return this.crypto.decrypt(row.user_id, row.provider, row);
     } catch {
       this.logger.warn(
         `No se pudo descifrar la credencial de '${row.provider}' del usuario ${row.user_id}; se ignora.`,

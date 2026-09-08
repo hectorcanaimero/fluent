@@ -3,6 +3,7 @@ import { ApiException } from '../common/api-error.js';
 import { OwnerService } from '../common/owner.service.js';
 import { AdminService } from './admin.service.js';
 import type { AdminRepository } from './admin.repository.js';
+import type { QueueMetricsService } from './queue-metrics.service.js';
 
 const OWNER_USER_ID = '9595625c-aea8-4120-accc-ed149d0a84c6';
 
@@ -18,7 +19,7 @@ function makeConfigService(): ConfigService {
  * para poder comprobar que un no-owner **ni siquiera llega** a la base.
  */
 function makeAdminRepository() {
-  const calls = { sessions: 0, ended: 0, llm: 0 };
+  const calls = { sessions: 0, ended: 0, llm: 0, queues: 0 };
   const now = new Date('2026-09-09T12:00:00.000Z');
 
   const repository = {
@@ -48,11 +49,27 @@ function makeAdminRepository() {
   return { repository, calls, now };
 }
 
+/** Doble de `QueueMetricsService` (SPEC-05 §9), con el mismo contador. */
+function makeQueueMetricsService(calls: { queues: number }) {
+  return {
+    list: async () => {
+      calls.queues += 1;
+      return [
+        { name: 'brief', waiting: 1, active: 0, failed: 2 },
+        { name: 'content', waiting: 0, active: 0, failed: 0 },
+        { name: 'social', waiting: 3, active: 1, failed: 0 },
+        { name: 'maintenance', waiting: 0, active: 0, failed: 0 },
+      ];
+    },
+  } as unknown as QueueMetricsService;
+}
+
 function makeService() {
   const { repository, calls, now } = makeAdminRepository();
   const service = new AdminService(
     new OwnerService(makeConfigService()),
     repository,
+    makeQueueMetricsService(calls),
   );
   return { service, calls, now };
 }
@@ -66,7 +83,7 @@ describe('AdminService · GET /admin/metrics (SPEC-02 §4.6, RF-8.2)', () => {
     );
 
     // No se consulta nada: el rechazo es anterior a cualquier lectura.
-    expect(calls).toEqual({ sessions: 0, ended: 0, llm: 0 });
+    expect(calls).toEqual({ sessions: 0, ended: 0, llm: 0, queues: 0 });
   });
 
   it('el cuerpo del 403 cumple el formato de SPEC-02 §6', async () => {
@@ -111,5 +128,24 @@ describe('AdminService · GET /admin/metrics (SPEC-02 §4.6, RF-8.2)', () => {
     // 2 fallos de 4 llamadas.
     expect(metrics.llmFailureRate).toBeCloseTo(0.5);
     expect(metrics.llmFailureRateTotals).toEqual({ total: 4, failed: 2 });
+  });
+
+  it('incluye los jobs pendientes de las 4 colas en la misma respuesta (RF-8.2)', async () => {
+    const { service, now } = makeService();
+
+    const metrics = await service.getMetrics(OWNER_USER_ID, now);
+
+    expect(metrics.queues.map((queue) => queue.name)).toEqual([
+      'brief',
+      'content',
+      'social',
+      'maintenance',
+    ]);
+    expect(metrics.queues[0]).toEqual({
+      name: 'brief',
+      waiting: 1,
+      active: 0,
+      failed: 2,
+    });
   });
 });

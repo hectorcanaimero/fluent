@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import { MASTER_KEY_BYTES } from '../credentials/credentials.crypto.js';
+import { CredentialsCrypto, MASTER_KEY_BYTES } from '../credentials/credentials.crypto.js';
 import type {
   CredentialRowInput,
   CredentialsRepository,
@@ -144,12 +144,12 @@ function createHarness(handlers: Record<string, Handler>) {
   const redis = createFakeRedis();
   const credentialsRepository = createFakeCredentialsRepository();
   const credentialsService = new CredentialsService(
-    {
+    new CredentialsCrypto({
       get: (key: string) =>
         key === 'CREDENTIALS_MASTER_KEY'
           ? randomBytes(MASTER_KEY_BYTES).toString('base64')
           : undefined,
-    } as unknown as ConfigService<Env, true>,
+    } as unknown as ConfigService<Env, true>),
     credentialsRepository as unknown as CredentialsRepository,
   );
 

@@ -24,7 +24,7 @@ import {
   credentialAad,
   decodeMasterKey,
   decryptSecret,
-  fromByteaHex,
+  decodeBytea,
 } from '../src/credentials/credentials.crypto.js';
 import type { ProviderCredential } from '../src/db/schema.js';
 
@@ -221,8 +221,8 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
       expect(row).not.toBeNull();
       expect(row!.status).toBe('active');
       expect(JSON.stringify(row)).not.toContain(FAKE_OPENROUTER_KEY);
-      expect(fromByteaHex(row!.key_iv)).toHaveLength(12);
-      expect(fromByteaHex(row!.key_tag)).toHaveLength(16);
+      expect(decodeBytea(row!.key_iv)).toHaveLength(12);
+      expect(decodeBytea(row!.key_tag)).toHaveLength(16);
 
       const masterKey = decodeMasterKey(
         process.env.CREDENTIALS_MASTER_KEY!,
@@ -232,9 +232,9 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
         decryptSecret(
           [masterKey],
           {
-            ciphertext: fromByteaHex(row!.key_ciphertext),
-            iv: fromByteaHex(row!.key_iv),
-            tag: fromByteaHex(row!.key_tag),
+            ciphertext: decodeBytea(row!.key_ciphertext),
+            iv: decodeBytea(row!.key_iv),
+            tag: decodeBytea(row!.key_tag),
           },
           credentialAad(user.id, 'openrouter'),
         ),
@@ -359,9 +359,9 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
         decryptSecret(
           [masterKey],
           {
-            ciphertext: fromByteaHex(row!.key_ciphertext),
-            iv: fromByteaHex(row!.key_iv),
-            tag: fromByteaHex(row!.key_tag),
+            ciphertext: decodeBytea(row!.key_ciphertext),
+            iv: decodeBytea(row!.key_iv),
+            tag: decodeBytea(row!.key_tag),
           },
           credentialAad(user.id, 'gemini'),
         ),

@@ -3,7 +3,7 @@ import { Logger } from '@nestjs/common';
 import type { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
-import { fromByteaHex, MASTER_KEY_BYTES } from './credentials.crypto.js';
+import { CredentialsCrypto, decodeBytea, MASTER_KEY_BYTES } from './credentials.crypto.js';
 import type { CredentialRowInput, CredentialsRepository } from './credentials.repository.js';
 import { CredentialsService } from './credentials.service.js';
 
@@ -83,8 +83,11 @@ function createService(
   current: string,
   previous?: string,
 ) {
+  // `CredentialsService` ya no lee las claves maestras: delega en
+  // `CredentialsCrypto` (la única implementación de cifrado, PEND-72), que es
+  // quien valida `CREDENTIALS_MASTER_KEY` al construirse.
   return new CredentialsService(
-    createConfig(current, previous),
+    new CredentialsCrypto(createConfig(current, previous) as never),
     repository as unknown as CredentialsRepository,
   );
 }
@@ -144,8 +147,8 @@ describe('CredentialsService', () => {
     const row = repository.rows.get(`${USER_A}:openrouter`)!;
 
     expect(row.key_ciphertext).toMatch(/^\\x[0-9a-f]+$/);
-    expect(fromByteaHex(row.key_iv)).toHaveLength(12);
-    expect(fromByteaHex(row.key_tag)).toHaveLength(16);
+    expect(decodeBytea(row.key_iv)).toHaveLength(12);
+    expect(decodeBytea(row.key_tag)).toHaveLength(16);
     expect(JSON.stringify(row)).not.toContain(FAKE_OPENROUTER_KEY);
   });
 

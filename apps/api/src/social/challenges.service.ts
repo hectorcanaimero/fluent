@@ -1,34 +1,35 @@
 import { Injectable } from '@nestjs/common';
-import { CHALLENGE_TOPIC_COOLDOWN_DAYS } from '../config/product.js';
+import {
+  ChallengesService as GameChallengesService,
+  type ChallengeCandidateSession,
+  type ChallengesRepository,
+} from '../game/challenges.service.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
 import { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
-import { CHALLENGE_SESSION_LOOKBACK_DAYS, pickChallenges, type CandidateSession } from './challenge-picker.js';
 import { GroupAccessService } from './group-access.service.js';
 import type { ChallengesResultDto } from './social.types.js';
-
-const DAY_MS = 24 * 60 * 60 * 1000;
 
 /**
  * `GET /challenges` (SPEC-07 §7, RF-6.4). Sin LLM.
  *
- * **AVISO para PR-07/T2** (docs/specs/pendientes/PR-02.md): esta clase es lo
- * que el alcance de PR-07/T2 describe como `ChallengesService.listFor`.
- * PR-07/T2 no estaba fusionado cuando T7 lo necesitó; **debe adoptar esta
- * clase** (y la función pura `pickChallenges` de `challenge-picker.ts`, y
- * `sessions-query/sessions-query.repository.ts`) en vez de duplicarlas. La
- * columna `sessions.challenge_from_user_id` que menciona su alcance ya
- * existe desde PR-01 (`docs/specs/pendientes/PR-01.md` §13, se adelantó
- * ahí); no hace falta ninguna migración nueva para esto.
+ * Adaptador delgado sobre `ChallengesService` de
+ * `src/game/challenges.service.ts` (PR-07/T2), que es quien aplica las reglas
+ * de SPEC-07 §7 (ventana de 7 días, cooldown de 14 días por tema, un desafío
+ * por miembro, máximo 3). Este PR aporta lo que su comentario encargaba a
+ * «PR-02/T7»: el acceso al grupo, el `ChallengesRepository` contra InsForge y
+ * el envoltorio `{items}` que espera la app.
  *
- * **Limitación conocida, documentada en vez de inventada** (alcance de T7,
- * punto 3): SPEC-07 §7 dice «un desafío por miembro **por semana**», pero no
- * hay ninguna tabla que registre "ya se ofreció este desafío esta semana" —
- * la única fuente es `sessions` (lo que el usuario ya jugó, no lo que se le
- * ofreció). Sin esa tabla, `GET /challenges` es **idempotente por petición**
- * (mismos datos → mismo resultado) pero puede repetir el mismo desafío en
- * llamadas sucesivas de la misma semana si el candidato no cambia; no hay
- * forma de "descartar" un desafío ofrecido sin aceptarlo. Se documenta como
- * hueco en vez de inventar una tabla fuera del alcance de T7.
+ * Antes de fusionar PR-07 esta clase tenía su propia copia de esas reglas en
+ * `challenge-picker.ts`, documentado como PEND-53; ese archivo se borró (ver
+ * docs/specs/pendientes/PR-02.md PEND-71).
+ *
+ * **Limitación conocida, documentada en vez de inventada**: SPEC-07 §7 dice
+ * «un desafío por miembro **por semana**», pero no hay ninguna tabla que
+ * registre "ya se ofreció este desafío esta semana" — la única fuente es
+ * `sessions` (lo que el usuario ya jugó, no lo que se le ofreció). Sin esa
+ * tabla, `GET /challenges` es **idempotente por petición** (mismos datos →
+ * mismo resultado) pero puede repetir el mismo desafío en llamadas sucesivas
+ * de la misma semana si el candidato no cambia.
  */
 @Injectable()
 export class ChallengesService {
@@ -52,35 +53,67 @@ export class ChallengesService {
       return { items: [] };
     }
 
-    const memberIds = members.map((member) => member.user_id);
-    const sevenDaysAgoIso = new Date(now.getTime() - CHALLENGE_SESSION_LOOKBACK_DAYS * DAY_MS).toISOString();
-    const fourteenDaysAgoIso = new Date(
-      now.getTime() - CHALLENGE_TOPIC_COOLDOWN_DAYS * DAY_MS,
-    ).toISOString();
+    const candidates = await new GameChallengesService(
+      this.repositoryFor(members),
+    ).listFor(userId, now);
 
-    const [candidateRows, practicedTopics] = await Promise.all([
-      this.sessionsQuery.listCandidateSessionsForMembers(memberIds, sevenDaysAgoIso),
-      this.sessionsQuery.listTopicsSince(userId, fourteenDaysAgoIso),
-    ]);
+    // Se recorta `endedAt`: ordena los candidatos en `src/game/`, pero SPEC-02
+    // §4.5 no lo incluye en la respuesta.
+    return {
+      items: candidates.map((candidate) => ({
+        fromUserId: candidate.fromUserId,
+        displayName: candidate.displayName,
+        topic: candidate.topic,
+        kind: candidate.kind,
+        sessionId: candidate.sessionId,
+      })),
+    };
+  }
 
-    const displayNameByUserId = new Map(members.map((member) => [member.user_id, member.display_name]));
+  /**
+   * `ChallengesRepository` de `src/game/` construido para **este** grupo: las
+   * consultas necesitan la lista de miembros, que solo se conoce ya dentro de
+   * la petición, así que el adaptador se crea por llamada en vez de ser un
+   * provider de Nest (mismo patrón que `LeaderboardService`).
+   *
+   * Aquí es donde se aplica la definición de "sesión válida" de SPEC-07 §2
+   * (`status = 'ended' AND xp_earned > 0`, con `ended_at` no nulo) que la
+   * interfaz de `src/game/` da por hecha: `listCandidateSessionsForMembers`
+   * trae también las sesiones sin XP para que el filtro se vea en un solo
+   * sitio.
+   */
+  private repositoryFor(
+    members: readonly { user_id: string; display_name: string }[],
+  ): ChallengesRepository {
+    const displayNameByUserId = new Map(
+      members.map((member) => [member.user_id, member.display_name]),
+    );
+    const memberIds = [...displayNameByUserId.keys()];
 
-    const candidates: CandidateSession[] = candidateRows.map((row) => ({
-      sessionId: row.id,
-      userId: row.user_id,
-      displayName: displayNameByUserId.get(row.user_id) ?? '',
-      topic: row.topic,
-      kind: row.kind,
-      endedAt: row.ended_at,
-      xpEarned: row.xp_earned,
-    }));
+    return {
+      listLatestSessionsByGroupMember: async (
+        _userId: string,
+        sinceIso: string,
+      ): Promise<ChallengeCandidateSession[]> => {
+        const rows = await this.sessionsQuery.listCandidateSessionsForMembers(
+          memberIds,
+          sinceIso,
+        );
 
-    const items = pickChallenges(candidates, {
-      requestingUserId: userId,
-      practicedTopics,
-      now,
-    });
+        return rows
+          .filter((row) => row.xp_earned > 0 && row.ended_at !== null)
+          .map((row) => ({
+            sessionId: row.id,
+            userId: row.user_id,
+            displayName: displayNameByUserId.get(row.user_id) ?? '',
+            kind: row.kind,
+            topic: row.topic,
+            endedAt: row.ended_at as string,
+          }));
+      },
 
-    return { items };
+      recentTopics: (topicsUserId: string, sinceIso: string) =>
+        this.sessionsQuery.listTopicsSince(topicsUserId, sinceIso),
+    };
   }
 }

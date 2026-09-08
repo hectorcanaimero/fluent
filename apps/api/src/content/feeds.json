@@ -1,0 +1,66 @@
+[
+  {
+    "name": "BBC World",
+    "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "tags": [],
+    "lang": "en"
+  },
+  {
+    "name": "BBC Technology",
+    "url": "http://feeds.bbci.co.uk/news/technology/rss.xml",
+    "tags": [
+      "tech"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "The Guardian Football",
+    "url": "https://www.theguardian.com/football/rss",
+    "tags": [
+      "soccer"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "Ars Technica",
+    "url": "https://feeds.arstechnica.com/arstechnica/index",
+    "tags": [
+      "tech"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "NPR Science",
+    "url": "https://feeds.npr.org/1007/rss.xml",
+    "tags": [
+      "research",
+      "discovery"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "BBC Sport Football",
+    "url": "http://feeds.bbci.co.uk/sport/football/rss.xml",
+    "tags": [
+      "soccer"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "The Verge",
+    "url": "https://www.theverge.com/rss/index.xml",
+    "tags": [
+      "tech"
+    ],
+    "lang": "en"
+  },
+  {
+    "name": "NASA Breaking News",
+    "url": "https://www.nasa.gov/news-release/feed/",
+    "tags": [
+      "astronomy",
+      "exploration"
+    ],
+    "lang": "en"
+  }
+]

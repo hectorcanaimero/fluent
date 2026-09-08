@@ -1,4 +1,4 @@
-import type { ChallengeCandidate } from './challenge-picker.js';
+import type { SessionKind } from '../db/schema.js';
 
 /**
  * Fila de `GET /leaderboard` (SPEC-02 §4.5). Nombres de campo exactamente
@@ -20,8 +20,23 @@ export interface LeaderboardResultDto {
   readonly groupStreak: number;
 }
 
-/** Elemento de `GET /challenges` (SPEC-02 §4.5, RF-6.4). */
-export type ChallengeItemDto = ChallengeCandidate;
+/**
+ * Elemento de `GET /challenges` (SPEC-02 §4.5, RF-6.4).
+ *
+ * Estos cinco campos, y solo estos: es lo que lista SPEC-02 §4.5 y lo que
+ * espera `apps/mobile/lib/core/api/models.dart::ChallengeItem` (no se toca ese
+ * archivo). El `ChallengeCandidate` de `src/game/challenges.service.ts` trae
+ * además `endedAt`, que sirve para ordenar los candidatos pero no forma parte
+ * de la respuesta: lo recorta `ChallengesService` al mapear
+ * (docs/specs/pendientes/PR-02.md PEND-71).
+ */
+export interface ChallengeItemDto {
+  readonly fromUserId: string;
+  readonly displayName: string;
+  readonly topic: string;
+  readonly kind: SessionKind;
+  readonly sessionId: string;
+}
 
 /** Respuesta de `GET /challenges`: envuelta en `items` (contrato exacto de la app). */
 export interface ChallengesResultDto {

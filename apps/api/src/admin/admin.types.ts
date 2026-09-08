@@ -1,3 +1,5 @@
+import type { QueueMetrics } from './queue-metrics.service.js';
+
 /**
  * Elemento de `sessionsPerDay[]` en `GET /admin/metrics`.
  * Contabiliza todas las sesiones (validas e inválidas) iniciadas en ese día.
@@ -8,8 +10,15 @@ export interface SessionsPerDayItem {
 }
 
 /**
- * Respuesta de `GET /admin/metrics` (SPEC-02 §4.6, RF-8.2).
+ * Respuesta de `GET /admin/metrics` (SPEC-02 §4.6, RF-8.2, SPEC-05 §9).
  * Solo accesible para el owner del sistema.
+ *
+ * RF-8.2 pide las cuatro cosas en un mismo sitio: «sesiones por día (14 d),
+ * duración media, tasa de fallo LLM, jobs pendientes». Las tres primeras
+ * salen de `sessions`/`llm_calls` (PR-02/T8) y la última de los contadores
+ * de las colas de BullMQ (PR-05); al fusionar las dos ramas se unieron en
+ * este único DTO en vez de dejar dos controladores peleándose por la misma
+ * ruta (docs/specs/pendientes/PR-02.md PEND-73, PEND-63).
  */
 export interface AdminMetricsDto {
   /**
@@ -33,4 +42,10 @@ export interface AdminMetricsDto {
     total: number;
     failed: number;
   };
+
+  /**
+   * Contadores (`waiting`, `active`, `failed`) de las 4 colas de BullMQ
+   * (SPEC-05 §9): los «jobs pendientes» de RF-8.2.
+   */
+  queues: QueueMetrics[];
 }

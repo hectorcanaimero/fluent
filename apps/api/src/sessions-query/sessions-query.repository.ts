@@ -6,10 +6,14 @@ import { TABLES, type SessionKind } from '../db/schema.js';
 
 /**
  * Repositorio de lectura de `sessions` (SPEC-01 §2.6) compartido por
- * `ProgressModule` (`GET /progress`, PR-02/T7 ~ PR-07/T1) y `SocialModule`
- * (`GET /challenges`, PR-02/T7 ~ PR-07/T2): las tres consultas que necesitan
- * ambos son proyecciones simples sobre `sessions`, sin invariantes, así que
- * no hace falta una RPC.
+ * `ProgressModule` (`GET /progress`) y `SocialModule` (`GET /challenges`):
+ * las tres consultas que necesitan ambos son proyecciones simples sobre
+ * `sessions`, sin invariantes, así que no hace falta una RPC.
+ *
+ * Es la mitad "datos" de las interfaces `ProgressRepository` y
+ * `ChallengesRepository` que declara `src/game/` (PR-07): los adaptadores que
+ * las implementan (`progress/progress.repository.ts` y el repositorio por
+ * llamada de `social/challenges.service.ts`) se apoyan en estos métodos.
  *
  * Vive en su propio módulo hoja (`SessionsQueryModule`, sin imports propios)
  * para que `ProgressModule` y `SocialModule` lo importen cada uno por su
@@ -63,8 +67,8 @@ export class SessionsQueryRepository {
    * cerradas desde `sinceIso`, más recientes primero. Trae también las que
    * no dieron XP y las `kind`/`ended_at`/`xp_earned`: la regla exacta (válida,
    * dentro de la ventana, tema no practicado, una por miembro, máximo 3) la
-   * aplica la función pura `pickChallenges` (`social/challenge-picker.ts`),
-   * no esta consulta — así queda testeable sin red ni base de datos.
+   * aplica `ChallengesService` de `src/game/` (PR-07/T2), no esta consulta —
+   * así queda testeable sin red ni base de datos.
    */
   async listCandidateSessionsForMembers(
     userIds: readonly string[],

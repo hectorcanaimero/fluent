@@ -15,8 +15,13 @@ export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
   /**
-   * `GET /admin/metrics` (SPEC-02 §4.6, RF-8.2).
-   * Solo owner del sistema. Devuelve métricas de los últimos 14 días.
+   * `GET /admin/metrics` (SPEC-02 §4.6, RF-8.2, SPEC-05 §9).
+   *
+   * Solo owner del sistema (401 lo da el `AuthGuard` global, 403 lo da
+   * `AdminService` con `OwnerService`). Devuelve las métricas de producto de
+   * los últimos 14 días **y** los contadores de las 4 colas de BullMQ: es el
+   * único `GET /admin/metrics` del repo tras fusionar PR-05
+   * (docs/specs/pendientes/PR-02.md PEND-73).
    */
   @Get('metrics')
   getMetrics(@CurrentUser('id') userId: string): Promise<AdminMetricsDto> {

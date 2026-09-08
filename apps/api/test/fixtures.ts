@@ -216,7 +216,8 @@ export async function seedCorrection(admin: InsForgeClient, params: SeedCorrecti
 /**
  * Inserta un `weekly_summaries` (SPEC-01 §2.12). `weekStart` debe ser un
  * lunes (`EXTRACT(ISODOW FROM week_start) = 1`, CHECK de la migración) —
- * usar `resolveWeekStart`/`formatIsoDate` de `src/common/iso-week.ts` para
+ * usar `resolveWeekStart` de `src/common/iso-week.ts` (o `isoDateString` de
+ * `src/game/iso-week.ts`) para
  * calcularlo, nunca una fecha arbitraria.
  */
 export async function seedWeeklySummary(

@@ -12,7 +12,7 @@ Estado: borrador v0.1 · Cubre: RNF de costo, disponibilidad, seguridad, portabi
 | Redis | VPS, Coolify | recurso Redis 7, sin exposición pública |
 | App móvil | dispositivos | builds locales en la Mac del operador; distribución por APK directo e TestFlight interno |
 
-Dominio de desarrollo: `fluent-api.13.140.175.146.sslip.io` con certificado de Let's Encrypt gestionado por Traefik. Al tener dominio propio, se cambia en Coolify y en la variable `API_URL` de la app.
+Dominio de la API: `https://fluent.usebot.chat` (Cloudflare proxy → Traefik con Let's Encrypt), con `fluent-api.13.140.175.146.sslip.io` como alias de respaldo. Configurado el 2026-09-08.
 
 ## 2. Variables de entorno de la API y el worker
 

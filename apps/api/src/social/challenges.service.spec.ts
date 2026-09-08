@@ -32,6 +32,13 @@ function createService(params: {
   return { service, groupAccess, groupsRepository, sessionsQuery };
 }
 
+/**
+ * Las reglas de SPEC-07 §7 (ventana de 7 días, cooldown de 14, una por
+ * miembro, máximo 3, desempate) se prueban en
+ * `src/game/challenges.service.spec.ts`, que es donde viven desde que se
+ * fusionó PR-07 (PEND-71). Aquí se prueba lo que aporta este PR: el acceso al
+ * grupo, el filtro de "sesión válida" del repositorio y el DTO.
+ */
 describe('ChallengesService.listChallenges', () => {
   it('returns an empty list when the user has no other group members', async () => {
     const { service } = createService({ members: [{ user_id: 'me', display_name: 'Me' }] });
@@ -56,7 +63,7 @@ describe('ChallengesService.listChallenges', () => {
     );
   });
 
-  it('maps candidate rows through pickChallenges, using the member display name', async () => {
+  it('maps candidate rows to the DTO, using the member display name', async () => {
     const members = [
       { user_id: 'me', display_name: 'Me' },
       { user_id: 'friend-1', display_name: 'Beto' },
@@ -112,5 +119,80 @@ describe('ChallengesService.listChallenges', () => {
     const result = await service.listChallenges('me', undefined, NOW);
 
     expect(result).toEqual({ items: [] });
+  });
+
+  // El filtro de "sesión válida" (SPEC-07 §2) lo aplica el repositorio que
+  // este servicio le pasa a `src/game/`, no el servicio de reglas: se prueba
+  // aquí. Antes vivía en `challenge-picker.spec.ts`, que se borró (PEND-71).
+  it('descarta sesiones sin XP: no son válidas (SPEC-07 §2)', async () => {
+    const members = [
+      { user_id: 'me', display_name: 'Me' },
+      { user_id: 'friend-1', display_name: 'Beto' },
+    ];
+    const candidateRows = [
+      {
+        id: 'session-1',
+        user_id: 'friend-1',
+        topic: 'economy',
+        kind: 'free_topic',
+        ended_at: NOW.toISOString(),
+        xp_earned: 0,
+      },
+    ];
+    const { service } = createService({ members, candidateRows });
+
+    const result = await service.listChallenges('me', undefined, NOW);
+
+    expect(result).toEqual({ items: [] });
+  });
+
+  it('descarta sesiones sin ended_at', async () => {
+    const members = [
+      { user_id: 'me', display_name: 'Me' },
+      { user_id: 'friend-1', display_name: 'Beto' },
+    ];
+    const candidateRows = [
+      {
+        id: 'session-1',
+        user_id: 'friend-1',
+        topic: 'economy',
+        kind: 'free_topic',
+        ended_at: null,
+        xp_earned: 60,
+      },
+    ];
+    const { service } = createService({ members, candidateRows });
+
+    const result = await service.listChallenges('me', undefined, NOW);
+
+    expect(result).toEqual({ items: [] });
+  });
+
+  it('no expone endedAt: el DTO tiene exactamente los 5 campos de SPEC-02 §4.5', async () => {
+    const members = [
+      { user_id: 'me', display_name: 'Me' },
+      { user_id: 'friend-1', display_name: 'Beto' },
+    ];
+    const candidateRows = [
+      {
+        id: 'session-1',
+        user_id: 'friend-1',
+        topic: 'economy',
+        kind: 'free_topic',
+        ended_at: NOW.toISOString(),
+        xp_earned: 60,
+      },
+    ];
+    const { service } = createService({ members, candidateRows });
+
+    const result = await service.listChallenges('me', undefined, NOW);
+
+    expect(Object.keys(result.items[0]!).sort()).toEqual([
+      'displayName',
+      'fromUserId',
+      'kind',
+      'sessionId',
+      'topic',
+    ]);
   });
 });

@@ -3,10 +3,12 @@ import {
   ROLEPLAYS,
   TOPICS,
   BOSS_TOPICS,
+  FEEDS,
   InterestSchema,
   RoleplaySchema,
   TopicSchema,
   BossTopicSchema,
+  FeedSchema,
 } from './index.js';
 
 describe('Content - Interests', () => {
@@ -199,6 +201,66 @@ describe('Content - Boss Topics', () => {
   it('should have majority B2 topics', () => {
     const b2Count = BOSS_TOPICS.filter((bt) => bt.level_min === 'B2').length;
     expect(b2Count).toBeGreaterThan(20);
+  });
+});
+
+describe('Content - Feeds', () => {
+  it('should have exactly 8 feeds', () => {
+    expect(FEEDS).toHaveLength(8);
+  });
+
+  it('should validate all feeds against schema', () => {
+    expect(() => {
+      FEEDS.forEach((feed: typeof FEEDS[number]) => {
+        FeedSchema.parse(feed);
+      });
+    }).not.toThrow();
+  });
+
+  it('should always have lang "en"', () => {
+    FEEDS.forEach((feed: typeof FEEDS[number]) => {
+      expect(feed.lang).toBe('en');
+    });
+  });
+
+  it('should have URLs with valid URL shape', () => {
+    FEEDS.forEach((feed: typeof FEEDS[number]) => {
+      expect(() => new URL(feed.url)).not.toThrow();
+    });
+  });
+
+  it('should have unique names', () => {
+    const names = FEEDS.map((f: typeof FEEDS[number]) => f.name);
+    const uniqueNames = new Set(names);
+    expect(uniqueNames.size).toBe(names.length);
+  });
+
+  it('should have unique URLs', () => {
+    const urls = FEEDS.map((f: typeof FEEDS[number]) => f.url);
+    const uniqueUrls = new Set(urls);
+    expect(uniqueUrls.size).toBe(urls.length);
+  });
+
+  it('should be frozen', () => {
+    expect(() => {
+      (FEEDS as any).push({});
+    }).toThrow();
+  });
+
+  it('should include the 8 sources of SPEC-05 §3', () => {
+    const names = FEEDS.map((f: typeof FEEDS[number]) => f.name);
+    expect(names).toEqual(
+      expect.arrayContaining([
+        'BBC World',
+        'BBC Technology',
+        'The Guardian Football',
+        'Ars Technica',
+        'NPR Science',
+        'BBC Sport Football',
+        'The Verge',
+        'NASA Breaking News',
+      ]),
+    );
   });
 });
 

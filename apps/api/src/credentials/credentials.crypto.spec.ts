@@ -1,10 +1,15 @@
-import { randomBytes } from 'node:crypto';
+import { createCipheriv, randomBytes } from 'node:crypto';
+import type { ConfigService } from '@nestjs/config';
+import type { Provider } from '../db/schema.js';
 import {
   credentialAad,
+  CredentialDecryptError,
+  CredentialsCrypto,
+  decodeBytea,
   decodeMasterKey,
   decryptSecret,
   encryptSecret,
-  fromByteaHex,
+  type EncryptedCredential,
   IV_BYTES,
   MASTER_KEY_BYTES,
   TAG_BYTES,
@@ -147,17 +152,157 @@ describe('encryptSecret / decryptSecret (AES-256-GCM, SPEC-02 §5)', () => {
   });
 });
 
-describe('toByteaHex / fromByteaHex (formato bytea de PostgREST)', () => {
+describe('toByteaHex / decodeBytea (formato bytea de PostgREST)', () => {
   it('serializes to the \\x<hex> string that PostgREST accepts and returns', () => {
     expect(toByteaHex(Buffer.from([0x07, 0x07, 0xff]))).toBe('\\x0707ff');
   });
 
   it('round trips any buffer', () => {
     const value = randomBytes(48);
-    expect(fromByteaHex(toByteaHex(value)).equals(value)).toBe(true);
+    expect(decodeBytea(toByteaHex(value)).equals(value)).toBe(true);
   });
 
   it('tolerates a value without the \\x prefix', () => {
-    expect(fromByteaHex('0707ff').equals(Buffer.from([0x07, 0x07, 0xff]))).toBe(true);
+    expect(decodeBytea('0707ff').equals(Buffer.from([0x07, 0x07, 0xff]))).toBe(true);
+  });
+
+  // Casos heredados de `src/crypto/credentials-cipher.spec.ts` (PR-05), que
+  // se borró al unificar el cifrado (PEND-72).
+  it('decodifica el formato hex de salida de Postgres', () => {
+    expect(decodeBytea('\\x48656c6c6f').toString('utf8')).toBe('Hello');
+  });
+
+  it('cae a base64 cuando el valor no es hex', () => {
+    expect(decodeBytea('SGVsbG8sIHdvcmxk').toString('utf8')).toBe('Hello, world');
+  });
+});
+
+/**
+ * Casos heredados de `src/crypto/credentials-cipher.spec.ts` (PR-05): la
+ * clase `CredentialsCipher` que solo descifraba se borró al fusionar, y su
+ * cobertura vive aquí sobre `CredentialsCrypto`, que cifra y descifra.
+ */
+describe('CredentialsCrypto', () => {
+  const CURRENT_KEY = fakeMasterKey();
+  const PREVIOUS_KEY = fakeMasterKey();
+  const OTHER_KEY = fakeMasterKey();
+  const PROVIDER: Provider = 'openrouter';
+
+  function cryptoWith(current: Buffer, previous?: Buffer): CredentialsCrypto {
+    const values: Record<string, string | undefined> = {
+      CREDENTIALS_MASTER_KEY: current.toString('base64'),
+      CREDENTIALS_MASTER_KEY_PREVIOUS: previous?.toString('base64'),
+    };
+    const configService = {
+      get: (key: string) => values[key],
+    } as unknown as ConfigService;
+    return new CredentialsCrypto(configService as never);
+  }
+
+  /** Cifrado de referencia, para poder fabricar filas en base64 también. */
+  function encryptRow(
+    masterKey: Buffer,
+    userId: string,
+    provider: Provider,
+    plaintext: string,
+    encoding: 'bytea-hex' | 'base64' = 'bytea-hex',
+  ): EncryptedCredential {
+    const iv = randomBytes(IV_BYTES);
+    const cipher = createCipheriv('aes-256-gcm', masterKey, iv);
+    cipher.setAAD(Buffer.from(credentialAad(userId, provider), 'utf8'));
+    const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+    const encode = (buffer: Buffer): string =>
+      encoding === 'base64' ? buffer.toString('base64') : toByteaHex(buffer);
+
+    return {
+      key_ciphertext: encode(ciphertext),
+      key_iv: encode(iv),
+      key_tag: encode(cipher.getAuthTag()),
+    };
+  }
+
+  it('round-trip: lo que cifra lo descifra', () => {
+    const crypto = cryptoWith(CURRENT_KEY);
+    const row = crypto.encrypt(USER_ID, PROVIDER, FAKE_API_KEY);
+
+    expect(row.key_ciphertext).toMatch(/^\\x[0-9a-f]+$/);
+    expect(crypto.decrypt(USER_ID, PROVIDER, row)).toBe(FAKE_API_KEY);
+  });
+
+  it('descifra registros escritos en base64', () => {
+    const row = encryptRow(CURRENT_KEY, USER_ID, PROVIDER, FAKE_API_KEY, 'base64');
+
+    expect(cryptoWith(CURRENT_KEY).decrypt(USER_ID, PROVIDER, row)).toBe(FAKE_API_KEY);
+  });
+
+  it('descifra con CREDENTIALS_MASTER_KEY_PREVIOUS durante una rotación', () => {
+    const row = encryptRow(PREVIOUS_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+
+    expect(cryptoWith(CURRENT_KEY, PREVIOUS_KEY).decrypt(USER_ID, PROVIDER, row)).toBe(
+      FAKE_API_KEY,
+    );
+  });
+
+  it('falla si ninguna de las dos claves autentica el registro', () => {
+    const row = encryptRow(OTHER_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+
+    expect(() =>
+      cryptoWith(CURRENT_KEY, PREVIOUS_KEY).decrypt(USER_ID, PROVIDER, row),
+    ).toThrow(CredentialDecryptError);
+  });
+
+  it('falla si el AAD no corresponde al usuario (SPEC-02 §5)', () => {
+    const row = encryptRow(CURRENT_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+
+    expect(() =>
+      cryptoWith(CURRENT_KEY).decrypt(
+        '00000000-0000-0000-0000-000000000000',
+        PROVIDER,
+        row,
+      ),
+    ).toThrow(CredentialDecryptError);
+  });
+
+  it('falla si el AAD no corresponde al proveedor', () => {
+    const row = encryptRow(CURRENT_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+
+    expect(() => cryptoWith(CURRENT_KEY).decrypt(USER_ID, 'gemini', row)).toThrow(
+      CredentialDecryptError,
+    );
+  });
+
+  it('rechaza un IV que no tiene 12 bytes', () => {
+    const row = encryptRow(CURRENT_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+    const corrupted = { ...row, key_iv: '\\x0102030405' };
+
+    expect(() => cryptoWith(CURRENT_KEY).decrypt(USER_ID, PROVIDER, corrupted)).toThrow(
+      /IV inválido/,
+    );
+  });
+
+  it('rechaza un tag que no tiene 16 bytes', () => {
+    const row = encryptRow(CURRENT_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+    const corrupted = { ...row, key_tag: '\\x0102030405' };
+
+    expect(() => cryptoWith(CURRENT_KEY).decrypt(USER_ID, PROVIDER, corrupted)).toThrow(
+      /Tag inválido/,
+    );
+  });
+
+  it('rechaza en el constructor una clave maestra que no tiene 32 bytes', () => {
+    expect(() => cryptoWith(randomBytes(16))).toThrow(/CREDENTIALS_MASTER_KEY/);
+  });
+
+  it('no filtra ni el secreto ni la clave en el mensaje de error', () => {
+    const row = encryptRow(OTHER_KEY, USER_ID, PROVIDER, FAKE_API_KEY);
+
+    try {
+      cryptoWith(CURRENT_KEY).decrypt(USER_ID, PROVIDER, row);
+      expect.unreachable('debería haber lanzado');
+    } catch (error) {
+      const message = (error as Error).message;
+      expect(message).not.toContain(FAKE_API_KEY);
+      expect(message).not.toContain(CURRENT_KEY.toString('base64'));
+    }
   });
 });

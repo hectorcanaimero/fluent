@@ -1,3 +1,7 @@
+import {
+  PendingActionsService,
+  WEEKLY_SUMMARY_NEEDS_CREDENTIAL,
+} from './pending-actions.service.js';
 import { ProfilesService } from './profiles.service.js';
 import type { CredentialsRepository } from '../credentials/credentials.repository.js';
 import type { ProfilesRepository } from './profiles.repository.js';
@@ -39,7 +43,11 @@ const dto: UpdateProfileDto = Object.assign(
   },
 );
 
-function createService(profile: Profile, group: unknown = null) {
+function createService(
+  profile: Profile,
+  group: unknown = null,
+  pendingActions: string[] = [],
+) {
   const profilesRepository = {
     ensureProfile: vi.fn().mockResolvedValue(profile),
     update: vi.fn().mockImplementation(async (_userId: string, patch: Record<string, unknown>) => ({
@@ -64,13 +72,24 @@ function createService(profile: Profile, group: unknown = null) {
     ]),
   };
 
+  const pendingActionsService = {
+    listFor: vi.fn().mockResolvedValue(pendingActions),
+  };
+
   const service = new ProfilesService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
     credentialsRepository as unknown as CredentialsRepository,
+    pendingActionsService as unknown as PendingActionsService,
   );
 
-  return { service, profilesRepository, groupsRepository, credentialsRepository };
+  return {
+    service,
+    profilesRepository,
+    groupsRepository,
+    credentialsRepository,
+    pendingActionsService,
+  };
 }
 
 describe('ProfilesService.updateProfile — cálculo de onboarded_at', () => {
@@ -145,13 +164,25 @@ describe('ProfilesService.getMe', () => {
     expect(groupsRepository.findById).not.toHaveBeenCalled();
   });
 
-  it('includes pendingActions: [] and the full interests catalog', async () => {
+  it('includes an empty pendingActions and the full interests catalog', async () => {
     const profile = makeProfile();
-    const { service } = createService(profile);
+    const { service, pendingActionsService } = createService(profile);
 
     const me = await service.getMe('user-1');
 
     expect(me.pendingActions).toEqual([]);
+    expect(pendingActionsService.listFor).toHaveBeenCalledWith('user-1');
     expect(me.interestsCatalog.length).toBeGreaterThan(0);
+  });
+
+  // `pendingActions` deja de ser siempre `[]` al fusionar PR-05
+  // (docs/specs/pendientes/PR-02.md PEND-76).
+  it('expone la acción pendiente que deja el job weekly-summary en Redis', async () => {
+    const profile = makeProfile();
+    const { service } = createService(profile, null, [WEEKLY_SUMMARY_NEEDS_CREDENTIAL]);
+
+    const me = await service.getMe('user-1');
+
+    expect(me.pendingActions).toEqual(['WEEKLY_SUMMARY_NEEDS_CREDENTIAL']);
   });
 });

@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { INTERESTS } from '../content/index.js';
 import { CredentialsRepository } from '../credentials/credentials.repository.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
+import { PendingActionsService } from './pending-actions.service.js';
 import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper.js';
 import { ProfilesRepository } from './profiles.repository.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
@@ -21,17 +22,22 @@ export class ProfilesService {
     // `provider_credentials` la lee su propio repositorio desde PR-02/T4
     // (docs/specs/pendientes/PR-02.md PEND-15).
     private readonly credentialsRepository: CredentialsRepository,
+    // `pendingActions` (SPEC-02 §4.1): hoy solo el aviso que deja el job
+    // `weekly-summary` de PR-05 en Redis (PEND-76).
+    private readonly pendingActions: PendingActionsService,
   ) {}
 
   async getMe(userId: string): Promise<MeDto> {
     const profile = await this.profilesRepository.ensureProfile(userId);
 
-    const [group, providers, modelPreference, activeSessionId] = await Promise.all([
-      profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
-      this.credentialsRepository.listStatuses(userId),
-      this.profilesRepository.getModelPreference(userId),
-      this.profilesRepository.getActiveSessionId(userId),
-    ]);
+    const [group, providers, modelPreference, activeSessionId, pendingActions] =
+      await Promise.all([
+        profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
+        this.credentialsRepository.listStatuses(userId),
+        this.profilesRepository.getModelPreference(userId),
+        this.profilesRepository.getActiveSessionId(userId),
+        this.pendingActions.listFor(userId),
+      ]);
 
     return {
       profile: toProfileDto(profile),
@@ -41,7 +47,7 @@ export class ProfilesService {
       onboarded: profile.onboarded_at !== null,
       activeSessionId,
       interestsCatalog: INTERESTS_CATALOG_IDS,
-      pendingActions: [],
+      pendingActions,
     };
   }
 

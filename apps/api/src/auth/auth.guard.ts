@@ -84,26 +84,47 @@ export class AuthGuard implements CanActivate {
       );
     }
 
-    const cacheKey = authCacheKey(token);
-    const cachedUserId = await this.readCache(cacheKey);
+    const userId = await this.resolveUserId(token);
 
-    if (cachedUserId) {
-      request.user = { id: cachedUserId };
-      return true;
-    }
-
-    const session = await this.insforgeHttp.getCurrentSession(token);
-
-    if (!session.ok) {
+    if (userId === null) {
       throw ApiException.unauthenticated(
         'El token de acceso es inválido o ha expirado.',
       );
     }
 
-    await this.writeCache(cacheKey, session.userId);
-    request.user = { id: session.userId };
+    request.user = { id: userId };
 
     return true;
+  }
+
+  /**
+   * Resuelve un access token a su `userId` con la misma caché e
+   * introspección que usa `canActivate`, o `null` si el token no vale.
+   *
+   * Es público (y `AuthModule` expone `AuthGuard` con `useExisting` sobre
+   * `APP_GUARD`) porque hay dos rutas que **no** pasan por el guard global de
+   * Nest y aun así necesitan resolver el bearer con la misma lógica: el panel
+   * de colas `/admin/queues` de PR-05, montado como middleware Express crudo
+   * fuera del prefijo `v1` (`admin/bull-board.ts`), y `/v1/docs` en
+   * producción (`main.ts`). Ver `auth/owner-bearer.middleware.ts`.
+   */
+  async resolveUserId(token: string): Promise<string | null> {
+    const cacheKey = authCacheKey(token);
+    const cachedUserId = await this.readCache(cacheKey);
+
+    if (cachedUserId) {
+      return cachedUserId;
+    }
+
+    const session = await this.insforgeHttp.getCurrentSession(token);
+
+    if (!session.ok) {
+      return null;
+    }
+
+    await this.writeCache(cacheKey, session.userId);
+
+    return session.userId;
   }
 
   /** `@Public()` en el handler o en el controlador (el handler manda). */

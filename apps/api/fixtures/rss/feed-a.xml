@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+  <channel>
+    <title>Fixture Tech Feed</title>
+    <link>https://example.com/tech</link>
+    <description>Fixture feed A for rss-ingest tests (tech-flavoured items).</description>
+    <language>en</language>
+    <item>
+      <title>Breakthrough AI chip promises faster training</title>
+      <link>https://example.com/tech/ai-chip</link>
+      <guid>https://example.com/tech/ai-chip</guid>
+      <description><![CDATA[<p>Researchers unveiled a new <a href="https://example.com">AI</a> chip that speeds up model training &amp; cuts energy costs by half.</p>]]></description>
+      <pubDate>Mon, 01 Sep 2026 08:00:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Startup raises funds for climate tech</title>
+      <link>https://example.com/tech/climate-startup</link>
+      <guid>https://example.com/tech/climate-startup</guid>
+      <description><![CDATA[<p>The startup says its <b>automation</b> platform will help factories cut emissions &amp; save water.</p>]]></description>
+      <pubDate>Mon, 01 Sep 2026 09:30:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>New smartphone released with camera upgrades</title>
+      <link>https://example.com/tech/smartphone</link>
+      <guid>https://example.com/tech/smartphone</guid>
+      <description><![CDATA[<p>The phone ships with improved cameras &amp; a longer battery life than last year's model.</p>]]></description>
+      <pubDate>Tue, 02 Sep 2026 07:15:00 GMT</pubDate>
+    </item>
+    <item>
+      <title>Robotics lab shows off new automation arm</title>
+      <link>https://example.com/tech/robotics</link>
+      <guid>https://example.com/tech/robotics</guid>
+      <description><![CDATA[<p>The lab's new arm can handle delicate parts &amp; adapts to <a href="https://example.com/x">new tasks</a> without reprogramming.</p>]]></description>
+      <pubDate>Tue, 02 Sep 2026 12:45:00 GMT</pubDate>
+    </item>
+  </channel>
+</rss>

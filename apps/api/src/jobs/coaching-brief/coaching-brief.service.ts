@@ -21,7 +21,7 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 import type { Level } from '../../db/schema.js';
 import type { BriefFactInput } from '../../db/rpc.js';
-import { CredentialsCipher } from '../../crypto/credentials-cipher.js';
+import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
 import { buildBriefMessages } from '../../llm/prompts/brief.js';
@@ -52,7 +52,7 @@ export class CoachingBriefService {
 
   constructor(
     private readonly repository: CoachingBriefRepository,
-    private readonly cipher: CredentialsCipher,
+    private readonly crypto: CredentialsCrypto,
     private readonly llm: LlmService,
     configService: ConfigService<Env, true>,
   ) {
@@ -95,7 +95,7 @@ export class CoachingBriefService {
       try {
         credentials.push({
           provider: row.provider,
-          apiKey: this.cipher.decrypt(userId, row.provider, row),
+          apiKey: this.crypto.decrypt(userId, row.provider, row),
         });
       } catch (error) {
         // Nunca se registra la clave, solo el proveedor y el motivo.

@@ -73,6 +73,10 @@ export interface CorrectionTrendEntry {
 /** Fila de `profiles` que necesita `ProgressService`, ya traducida a camelCase. */
 export interface ProgressProfileRow {
   readonly xp: number;
+  /** `profiles.streak`: días consecutivos con sesión válida (SPEC-07 §3). */
+  readonly streak: number;
+  /** `profiles.longest_streak`: récord histórico de `streak`. */
+  readonly longestStreak: number;
   readonly timezone: string;
   /**
    * Lunes ('YYYY-MM-DD') de la semana en que se usó la gracia, o `null` si nunca
@@ -111,7 +115,11 @@ export interface ProgressRepository {
 
 /** Resumen de progreso que consume la pantalla de Home (RF-5.1 a RF-5.4). */
 export interface ProgressSummary {
+  /** `profiles.xp` tal cual, el mismo con el que se resolvió `level`. */
+  readonly xp: number;
   readonly level: XpLevelProgress;
+  readonly streak: number;
+  readonly longestStreak: number;
   readonly sessionsThisWeek: number;
   readonly correctionsTrend: readonly CorrectionTrendEntry[];
   readonly grace: GraceStatus;
@@ -131,6 +139,11 @@ export class ProgressService {
    * - `grace`: 'used' si `grace_used_week` coincide con el lunes UTC de la
    *   semana de `now` (ver docs/specs/pendientes/PR-07.md — se compara contra
    *   UTC, no contra `profile.timezone`).
+   * - `xp`, `streak` y `longestStreak`: pasan tal cual desde `profiles`. Los
+   *   añadió PR-02 al fusionar (docs/specs/pendientes/PR-02.md PEND-71):
+   *   `GET /progress` los devuelve (`apps/mobile/lib/core/api/models.dart`
+   *   `ProgressResult`) y sin ellos el controlador tendría que volver a leer
+   *   el perfil que este servicio ya pide.
    */
   async getProgress(userId: string, now: Date = new Date()): Promise<ProgressSummary> {
     const profile = await this.repo.getProfile(userId);
@@ -150,7 +163,15 @@ export class ProgressService {
     const grace: GraceStatus =
       profile.graceUsedWeek === isoDateString(weekStart) ? 'used' : 'available';
 
-    return { level, sessionsThisWeek, correctionsTrend, grace };
+    return {
+      xp: profile.xp,
+      level,
+      streak: profile.streak,
+      longestStreak: profile.longestStreak,
+      sessionsThisWeek,
+      correctionsTrend,
+      grace,
+    };
   }
 }
 

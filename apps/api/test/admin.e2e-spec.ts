@@ -4,6 +4,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import { GenericContainer, type StartedTestContainer } from 'testcontainers';
 import { InsforgeHttp } from '../src/insforge/insforge.http.js';
+import { AdminRepository } from '../src/admin/admin.repository.js';
 import { mountBullBoard } from '../src/admin/bull-board.js';
 
 // El reaper de testcontainers es otro contenedor más; se desactiva y el
@@ -18,6 +19,13 @@ process.env.TESTCONTAINERS_RYUK_DISABLED = 'true';
  * error). El `REDIS_URL` ficticio de `.env.test` (PR-08) hace que ambos
  * endpoints devuelvan 500. Por eso este test levanta un Redis real en
  * Docker, igual que `coaching-brief-queue.e2e-spec.ts`.
+ *
+ * `AdminRepository` sí se sustituye por un doble: las tres métricas de
+ * producto (SPEC-02 §4.6) leen `sessions` y `llm_calls` de InsForge, y
+ * `.env.test` apunta a propósito a una instancia que no existe. Lo que este
+ * e2e comprueba es el contrato de la ruta (autorización + forma de la
+ * respuesta), no la agregación: eso ya está en
+ * `src/admin/metrics-aggregation.spec.ts` y `src/admin/admin.service.spec.ts`.
  *
  * IMPORTANTE: `AppModule` se importa con `import()` **dinámico** dentro de
  * `beforeAll`, no con un `import` estático de nivel de módulo. `AppModule`
@@ -44,11 +52,20 @@ describe('Admin Endpoints (e2e)', () => {
 
   // Debe coincidir con `OWNER_USER_ID` de `apps/api/.env.test` (el
   // `ConfigModule` real de `AppModule` carga ese archivo cuando
-  // `NODE_ENV=test`): `OwnerAuthGuard`/`checkOwnerBearer` comparan el
-  // `userId` que devuelve `InsforgeHttp.getCurrentSession` (mockeado aquí)
-  // contra ese valor de configuración real, no contra uno arbitrario.
+  // `NODE_ENV=test`): `OwnerService` compara el `userId` que devuelve
+  // `InsforgeHttp.getCurrentSession` (mockeado aquí) contra ese valor de
+  // configuración real, no contra uno arbitrario.
   const ownerId = '9595625c-aea8-4120-accc-ed149d0a84c6';
   const otherUserId = 'other-user-id';
+
+  /**
+   * Un token distinto por caso: el `AuthGuard` global cachea `token ->
+   * userId` en el Redis del contenedor (SPEC-02 §2) y ese Redis sobrevive a
+   * los `beforeEach`, así que reutilizar el mismo string haría que el segundo
+   * test viera el `userId` del primero.
+   */
+  const ownerToken = (name: string): string => `owner_token_${name}`;
+  const otherToken = (name: string): string => `other_token_${name}`;
 
   beforeAll(async () => {
     container = await new GenericContainer('redis:7-alpine')
@@ -72,11 +89,32 @@ describe('Admin Endpoints (e2e)', () => {
       checkHealth: vi.fn(),
     };
 
+    // Datos deterministas para las métricas de producto: 2 sesiones hoy,
+    // duraciones 600/300 (media 450) y 2 fallos de 4 llamadas al LLM.
+    const adminRepositoryMock = {
+      listRecentSessions: async () => [
+        { started_at: new Date().toISOString() },
+        { started_at: new Date().toISOString() },
+      ],
+      listRecentEndedSessions: async () => [
+        { duration_sec: 600 },
+        { duration_sec: 300 },
+      ],
+      listRecentLlmCalls: async () => [
+        { status: 'ok' },
+        { status: 'ok' },
+        { status: 'timeout' },
+        { status: 'provider_error' },
+      ],
+    };
+
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
       .overrideProvider(InsforgeHttp)
       .useValue(insforgeHttpMock)
+      .overrideProvider(AdminRepository)
+      .useValue(adminRepositoryMock)
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -114,7 +152,7 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 401 when bearer token is invalid', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: false,
       });
 
@@ -128,14 +166,14 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 403 when bearer token belongs to non-owner user', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: true,
         userId: otherUserId,
       });
 
       const response = await request(app.getHttpServer())
         .get('/v1/admin/metrics')
-        .set('Authorization', 'Bearer valid_token')
+        .set('Authorization', `Bearer ${otherToken('metrics')}`)
         .expect(403);
 
       expect(response.body.error).toBe('FORBIDDEN');
@@ -143,14 +181,14 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 200 with metrics when authenticated as owner', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: true,
         userId: ownerId,
       });
 
       const response = await request(app.getHttpServer())
         .get('/v1/admin/metrics')
-        .set('Authorization', 'Bearer valid_token')
+        .set('Authorization', `Bearer ${ownerToken('metrics')}`)
         .expect(200);
 
       expect(response.body.queues).toBeDefined();
@@ -174,14 +212,14 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('includes all 4 queue names in response', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: true,
         userId: ownerId,
       });
 
       const response = await request(app.getHttpServer())
         .get('/v1/admin/metrics')
-        .set('Authorization', 'Bearer valid_token')
+        .set('Authorization', `Bearer ${ownerToken('queue-names')}`)
         .expect(200);
 
       const queueNames = response.body.queues.map(
@@ -191,6 +229,40 @@ describe('Admin Endpoints (e2e)', () => {
       expect(queueNames).toContain('content');
       expect(queueNames).toContain('social');
       expect(queueNames).toContain('maintenance');
+    });
+
+    /**
+     * Las tres métricas de producto de SPEC-02 §4.6 / RF-8.2 viajan en la
+     * **misma** respuesta que las colas: el endpoint es uno solo desde que se
+     * fusionaron PR-02/T8 y PR-05 (docs/specs/pendientes/PR-02.md PEND-73).
+     */
+    it('incluye sessionsPerDay, avgDurationSec y llmFailureRate junto a las colas', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
+        ok: true,
+        userId: ownerId,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/v1/admin/metrics')
+        .set('Authorization', `Bearer ${ownerToken('product-metrics')}`)
+        .expect(200);
+
+      // 14 días, del más antiguo al más reciente, incluidos los vacíos.
+      expect(Array.isArray(response.body.sessionsPerDay)).toBe(true);
+      expect(response.body.sessionsPerDay).toHaveLength(14);
+      expect(response.body.sessionsPerDay.at(-1)).toMatchObject({ count: 2 });
+      for (const item of response.body.sessionsPerDay) {
+        expect(item.day).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+        expect(typeof item.count).toBe('number');
+      }
+
+      expect(response.body.avgDurationSec).toBe(450);
+
+      expect(response.body.llmFailureRate).toBeCloseTo(0.5);
+      expect(response.body.llmFailureRateTotals).toEqual({ total: 4, failed: 2 });
+
+      // Y las colas siguen ahí: una sola respuesta con las cuatro métricas.
+      expect(response.body.queues).toHaveLength(4);
     });
   });
 
@@ -205,7 +277,7 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 401 when bearer token is invalid', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: false,
       });
 
@@ -219,14 +291,14 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 403 when bearer token belongs to non-owner user', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: true,
         userId: otherUserId,
       });
 
       const response = await request(app.getHttpServer())
         .get('/admin/queues')
-        .set('Authorization', 'Bearer valid_token')
+        .set('Authorization', `Bearer ${otherToken('queues')}`)
         .expect(403);
 
       expect(response.body.error).toBe('FORBIDDEN');
@@ -234,7 +306,7 @@ describe('Admin Endpoints (e2e)', () => {
     });
 
     it('returns 200 when authenticated as owner', async () => {
-      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValueOnce({
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
         ok: true,
         userId: ownerId,
       });
@@ -243,7 +315,7 @@ describe('Admin Endpoints (e2e)', () => {
       // (no verificamos el contenido exacto porque depende de la librería @bull-board)
       const response = await request(app.getHttpServer())
         .get('/admin/queues')
-        .set('Authorization', 'Bearer valid_token')
+        .set('Authorization', `Bearer ${ownerToken('queues')}`)
         .expect(200);
 
       expect(response.status).toBe(200);

@@ -49,6 +49,8 @@ function fakeRepo(options: {
 function profile(overrides: Partial<ProgressProfileRow> = {}): ProgressProfileRow {
   return {
     xp: 0,
+    streak: 0,
+    longestStreak: 0,
     timezone: 'America/Sao_Paulo',
     graceUsedWeek: null,
     ...overrides,
@@ -146,6 +148,44 @@ describe('ProgressService.getProgress', () => {
     expect(byCategory.plurals).toBeUndefined();
   });
 
+  // Casos de borde heredados de `src/progress/corrections-trend.spec.ts`
+  // (PR-02/T7), que se borró al quedarnos con esta implementación (PEND-71).
+  it('una corrección justo en el límite de 7 días cuenta como reciente (>=)', async () => {
+    const createdAt = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const repo = fakeRepo({
+      profile: profile(),
+      corrections: [{ category: 'articles', createdAt }],
+    });
+
+    const result = await new ProgressService(repo).getProgress('user-1', now);
+
+    expect(result.correctionsTrend).toEqual([
+      { category: 'articles', last7: 1, last30: 1 },
+    ]);
+  });
+
+  it('una corrección un milisegundo más allá del límite ya no cuenta en last7', async () => {
+    const createdAt = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000 - 1).toISOString();
+    const repo = fakeRepo({
+      profile: profile(),
+      corrections: [{ category: 'articles', createdAt }],
+    });
+
+    const result = await new ProgressService(repo).getProgress('user-1', now);
+
+    expect(result.correctionsTrend).toEqual([
+      { category: 'articles', last7: 0, last30: 1 },
+    ]);
+  });
+
+  it('sin correcciones, la tendencia es un array vacío', async () => {
+    const repo = fakeRepo({ profile: profile(), corrections: [] });
+
+    const result = await new ProgressService(repo).getProgress('user-1', now);
+
+    expect(result.correctionsTrend).toEqual([]);
+  });
+
   it('grace = "available" cuando graceUsedWeek no coincide con el lunes de `now`', async () => {
     const repo = fakeRepo({ profile: profile({ graceUsedWeek: null }) });
     const service = new ProgressService(repo);
@@ -171,5 +211,28 @@ describe('ProgressService.getProgress', () => {
     const result = await service.getProgress('user-1', now);
 
     expect(result.grace).toBe('used');
+  });
+});
+
+/**
+ * `xp`, `streak` y `longestStreak` se añadieron al resumen al fusionar PR-07
+ * en PR-02 (PEND-71): son parte del contrato de `GET /progress`.
+ */
+describe('ProgressService.getProgress · campos del perfil', () => {
+  it('devuelve xp, streak y longestStreak tal cual vienen de profiles', async () => {
+    const repo = fakeRepo({
+      profile: profile({ xp: 1600, streak: 4, longestStreak: 10 }),
+      sessionsThisWeek: 2,
+    });
+
+    const summary = await new ProgressService(repo).getProgress(
+      'user-1',
+      new Date('2026-09-09T12:00:00.000Z'),
+    );
+
+    expect(summary.xp).toBe(1600);
+    expect(summary.streak).toBe(4);
+    expect(summary.longestStreak).toBe(10);
+    expect(summary.level.current.name).toBe('Storyteller');
   });
 });

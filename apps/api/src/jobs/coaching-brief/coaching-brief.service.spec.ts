@@ -1,7 +1,8 @@
 import { randomBytes, createCipheriv } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 
-import { CredentialsCipher, credentialAad } from '../../crypto/credentials-cipher.js';
+import { CredentialsCrypto, credentialAad } from '../../credentials/credentials.crypto.js';
+import type { Provider } from '../../db/schema.js';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import { CoachingBriefService } from './coaching-brief.service.js';
 import type {
@@ -14,10 +15,10 @@ const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '22222222-2222-4222-8222-222222222222';
 const MASTER_KEY = randomBytes(32);
 
-function encryptedKey(plaintext: string, provider = 'openrouter') {
+function encryptedKey(plaintext: string, provider: Provider = 'openrouter') {
   const iv = randomBytes(12);
   const cipher = createCipheriv('aes-256-gcm', MASTER_KEY, iv);
-  cipher.setAAD(credentialAad(USER_ID, provider));
+  cipher.setAAD(Buffer.from(credentialAad(USER_ID, provider), 'utf8'));
   const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
   return {
     provider: provider as 'openrouter',
@@ -27,12 +28,12 @@ function encryptedKey(plaintext: string, provider = 'openrouter') {
   };
 }
 
-function makeCipher(): CredentialsCipher {
+function makeCipher(): CredentialsCrypto {
   const values: Record<string, string | undefined> = {
     CREDENTIALS_MASTER_KEY: MASTER_KEY.toString('base64'),
     CREDENTIALS_MASTER_KEY_PREVIOUS: undefined,
   };
-  return new CredentialsCipher({
+  return new CredentialsCrypto({
     get: (key: string) => values[key],
   } as unknown as ConfigService<never, true>);
 }
@@ -92,8 +93,6 @@ function makeRepository(state: RepoState) {
     updateSuggestedLevel: vi.fn(async (_userId: string, level: Level) => {
       state.suggestedLevel = level;
     }),
-    insertLlmCall: vi.fn(async () => {}),
-    markCredentialError: vi.fn(async () => {}),
   };
 }
 

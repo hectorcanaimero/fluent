@@ -19,7 +19,7 @@ import { Queue, QueueEvents } from 'bullmq';
 import { GenericContainer, type StartedTestContainer } from 'testcontainers';
 
 import { validateEnv } from './../src/config/env.js';
-import { CredentialsCipher } from './../src/crypto/credentials-cipher.js';
+import { CredentialsCrypto } from './../src/credentials/credentials.crypto.js';
 import type { BriefJobStatus, Level } from './../src/db/schema.js';
 import { LlmUnavailableError, LlmService } from './../src/llm/llm.service.js';
 import { CoachingBriefProcessor } from './../src/jobs/coaching-brief/coaching-brief.processor.js';
@@ -117,9 +117,7 @@ class FakeRepository extends CoachingBriefRepository {
     this.suggestedLevelWrites.push({ userId, level });
   }
 
-  async insertLlmCall() {}
 
-  async markCredentialError() {}
 }
 
 const LLM_OK = {
@@ -170,7 +168,7 @@ describe('cola brief + coaching-brief (e2e con Redis real)', () => {
       providers: [
         { provide: CoachingBriefRepository, useValue: repository },
         { provide: LlmService, useValue: { complete } },
-        CredentialsCipher,
+        CredentialsCrypto,
         CoachingBriefService,
         CoachingBriefProcessor,
       ],

@@ -9,19 +9,30 @@
  * repositorio simulado en memoria (ver challenges.service.spec.ts).
  */
 import type { SessionKind } from '../db/schema.js';
+import {
+  CHALLENGE_SESSION_LOOKBACK_DAYS,
+  CHALLENGE_TOPIC_COOLDOWN_DAYS,
+  MAX_CHALLENGES,
+} from '../config/product.js';
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
+// Las tres constantes de SPEC-07 §7 viven en `config/product.ts` (las
+// centralizó PR-02/T7); aquí solo se les da un nombre local que se lea bien.
 /** Ventana de "los últimos 7 días" para la sesión candidata de cada miembro (SPEC-07 §7). */
-const CANDIDATE_WINDOW_DAYS = 7;
+const CANDIDATE_WINDOW_DAYS = CHALLENGE_SESSION_LOOKBACK_DAYS;
 /** Ventana de "los últimos 14 días" para los topics propios que descartan un candidato (SPEC-07 §7). */
-const OWN_TOPICS_WINDOW_DAYS = 14;
+const OWN_TOPICS_WINDOW_DAYS = CHALLENGE_TOPIC_COOLDOWN_DAYS;
 /** Máximo de desafíos devueltos (SPEC-07 §7: "Máximo 3"). */
-const MAX_CANDIDATES = 3;
+const MAX_CANDIDATES = MAX_CHALLENGES;
 
 /** Sesión válida de un miembro del grupo, candidata a convertirse en desafío. */
 export interface ChallengeCandidateSession {
+  /** `sessions.id` de la sesión que origina el desafío. */
+  readonly sessionId: string;
   /** Miembro del grupo que practicó (nunca el usuario que pide la lista). */
   readonly userId: string;
+  /** `profiles.display_name` de ese miembro. */
+  readonly displayName: string;
   readonly kind: SessionKind;
   readonly topic: string;
   /** ISO 8601 timestamp (columna `sessions.ended_at`). */
@@ -62,18 +73,34 @@ export interface ChallengesRepository {
   ): Promise<ChallengeCandidateSession[]>;
 
   /**
-   * Topics que el propio `userId` practicó en una sesión válida con
-   * `ended_at >= sinceIso`.
+   * Topics que el propio `userId` practicó desde `sinceIso`.
+   *
+   * La implementación de PR-02 (`SessionsQueryRepository.listTopicsSince`)
+   * cuenta **cualquier** sesión, válida o no, y filtra por `started_at`, no
+   * por `ended_at`: haber practicado un tema no depende de que la sesión
+   * llegara a dar XP. Decisión documentada en
+   * docs/specs/pendientes/PR-02.md (PEND-71 al fusionar).
    */
   recentTopics(userId: string, sinceIso: string): Promise<ReadonlySet<string>>;
 }
 
-/** Desafío candidato que devuelve `GET /challenges` (SPEC-07 §7). */
+/**
+ * Desafío candidato que devuelve `GET /challenges` (SPEC-07 §7).
+ *
+ * `sessionId` y `displayName` los añadió PR-02 al fusionar: son parte del
+ * contrato que espera la app (`apps/mobile/lib/core/api/models.dart`
+ * `ChallengeItem`) y sin ellos el controlador tendría que volver a cruzar los
+ * datos por su cuenta. Ver docs/specs/pendientes/PR-02.md PEND-71.
+ */
 export interface ChallengeCandidate {
   /** Miembro del grupo del que viene el desafío (futuro `sessions.challenge_from_user_id`). */
   readonly fromUserId: string;
+  /** Nombre visible de ese miembro. */
+  readonly displayName: string;
   readonly kind: SessionKind;
   readonly topic: string;
+  /** `sessions.id` de la sesión que originó el desafío. */
+  readonly sessionId: string;
   /** `ended_at` de la sesión del miembro que originó el desafío. */
   readonly endedAt: string;
 }
@@ -95,7 +122,10 @@ export class ChallengesService {
    * - Máximo 3 resultados; si hay más de 3 miembros con candidato válido, se
    *   ordenan por `endedAt` descendente (el desafío más reciente primero) y
    *   se recorta a 3 — SPEC-07 §7 no fija el criterio de orden, ver
-   *   docs/specs/pendientes/PR-07.md.
+   *   docs/specs/pendientes/PR-07.md. A igualdad de `endedAt` desempata el
+   *   `userId` ascendente, para que el resultado sea determinista (mismo
+   *   criterio de "menor user_id" que usa `weekly_leaderboard`); lo añadió
+   *   PR-02 al fusionar, ver PEND-71.
    *
    * NO aplica aquí la regla "un desafío por miembro por semana": esa
    * restricción es de PR-04, al crear la sesión con `challengeFromUserId`
@@ -134,11 +164,17 @@ export class ChallengesService {
       .filter((session) => !recentTopics.has(session.topic))
       .map((session) => ({
         fromUserId: session.userId,
+        displayName: session.displayName,
         kind: session.kind,
         topic: session.topic,
+        sessionId: session.sessionId,
         endedAt: session.endedAt,
       }))
-      .sort((a, b) => new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime());
+      .sort(
+        (a, b) =>
+          new Date(b.endedAt).getTime() - new Date(a.endedAt).getTime() ||
+          a.fromUserId.localeCompare(b.fromUserId),
+      );
 
     return candidates.slice(0, MAX_CANDIDATES);
   }

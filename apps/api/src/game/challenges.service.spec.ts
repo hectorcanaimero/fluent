@@ -41,7 +41,9 @@ function fakeRepo(options: {
 
 function session(overrides: Partial<ChallengeCandidateSession> = {}): ChallengeCandidateSession {
   return {
+    sessionId: 'session-1',
     userId: 'member-1',
+    displayName: 'Miembro 1',
     kind: 'free_topic',
     topic: 'travel',
     endedAt: '2026-09-08T10:00:00.000Z',
@@ -150,8 +152,10 @@ describe('ChallengesService.listFor', () => {
     // Se queda con la sesión más reciente (2026-09-08), no con la de 2026-09-06.
     expect(result[0]).toEqual({
       fromUserId: 'member-1',
+      displayName: 'Miembro 1',
       kind: 'free_topic',
       topic: 'food',
+      sessionId: 'session-1',
       endedAt: '2026-09-08T10:00:00.000Z',
     });
   });
@@ -186,10 +190,12 @@ describe('ChallengesService.listFor', () => {
     expect(result.map((c) => c.fromUserId)).toEqual(['member-2', 'member-3', 'member-4']);
   });
 
-  it('devuelve los campos kind/topic/endedAt tal como vienen de la sesión candidata', async () => {
+  it('devuelve los campos de la sesión candidata tal cual, incluidos sessionId y displayName', async () => {
     const sessions = [
       session({
+        sessionId: 'session-42',
         userId: 'member-1',
+        displayName: 'Bea',
         kind: 'roleplay',
         topic: 'job interview',
         endedAt: '2026-09-08T10:00:00.000Z',
@@ -203,10 +209,29 @@ describe('ChallengesService.listFor', () => {
     expect(result).toEqual([
       {
         fromUserId: 'member-1',
+        displayName: 'Bea',
         kind: 'roleplay',
         topic: 'job interview',
+        sessionId: 'session-42',
         endedAt: '2026-09-08T10:00:00.000Z',
       },
     ]);
+  });
+
+  // Desempate determinista añadido al fusionar PR-02 (PEND-71); antes dos
+  // candidatos con el mismo `endedAt` quedaban en un orden arbitrario.
+  it('a igualdad de endedAt, ordena por fromUserId ascendente', async () => {
+    const endedAt = '2026-09-08T10:00:00.000Z';
+    const sessions = [
+      session({ userId: 'member-c', topic: 'music', endedAt }),
+      session({ userId: 'member-a', topic: 'food', endedAt }),
+      session({ userId: 'member-b', topic: 'sports', endedAt }),
+    ];
+    const repo = fakeRepo({ sessions });
+    const service = new ChallengesService(repo);
+
+    const result = await service.listFor('user-1', now);
+
+    expect(result.map((c) => c.fromUserId)).toEqual(['member-a', 'member-b', 'member-c']);
   });
 });

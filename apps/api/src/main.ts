@@ -1,23 +1,23 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
 import { Env } from './config/env.js';
+import { setupOpenApi } from './openapi.js';
 import { mountBullBoard } from './admin/bull-board.js';
+import { createOwnerBearerMiddleware } from './auth/owner-bearer.middleware.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   app.useLogger(app.get(Logger));
 
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
+  // El filtro global de errores y el ValidationPipe global (PR-02/T3, SPEC-02
+  // §6/§8) se registran como providers `APP_FILTER`/`APP_PIPE` en
+  // `CommonModule` (importado por `AppModule`), no aquí: así se activan igual
+  // en producción (`main.ts`) y en los tests e2e, que arrancan la app con
+  // `Test.createTestingModule({ imports: [AppModule] })` sin pasar por esta
+  // función. Ver `apps/api/src/common/common.module.ts`.
 
   app.setGlobalPrefix('v1');
 
@@ -28,6 +28,19 @@ async function bootstrap() {
   mountBullBoard(app);
 
   const configService = app.get(ConfigService<Env, true>);
+  const nodeEnv = configService.get('NODE_ENV', { infer: true });
+
+  // OpenAPI en `/v1/docs` (SPEC-02 §8). En producción, antes de
+  // `setupOpenApi`, se instala el middleware de owner: la documentación no es
+  // pública en el despliegue real. Es el mismo middleware que protege
+  // `/admin/queues` (`auth/owner-bearer.middleware.ts`), así que hay una sola
+  // implementación de "bearer válido y además owner" en todo el repo.
+  if (nodeEnv === 'production') {
+    app.use(/^\/v1\/docs/, createOwnerBearerMiddleware(app));
+  }
+
+  setupOpenApi(app, configService);
+
   const port = configService.get('PORT', { infer: true });
   await app.listen(port);
 }

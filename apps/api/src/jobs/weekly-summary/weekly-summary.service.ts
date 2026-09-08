@@ -25,7 +25,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { Env } from '../../config/env.js';
-import { CredentialsCipher } from '../../crypto/credentials-cipher.js';
+import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
 import { buildWeeklyMessages, type WeeklyMember } from '../../llm/prompts/weekly.js';
@@ -81,7 +81,7 @@ export class WeeklySummaryService {
 
   constructor(
     private readonly repository: WeeklySummaryRepository,
-    private readonly cipher: CredentialsCipher,
+    private readonly crypto: CredentialsCrypto,
     private readonly llm: LlmService,
     private readonly pendingCredentials: WeeklySummaryPendingCredentialStore,
     configService: ConfigService<Env, true>,
@@ -126,7 +126,7 @@ export class WeeklySummaryService {
       try {
         credentials.push({
           provider: row.provider,
-          apiKey: this.cipher.decrypt(ownerId, row.provider, row),
+          apiKey: this.crypto.decrypt(ownerId, row.provider, row),
         });
       } catch (error) {
         // Nunca se registra la clave, solo el proveedor y el motivo.

@@ -17,7 +17,7 @@ import {
   type WeeklyLeaderboardArgs,
   type WeeklyLeaderboardEntry,
 } from '../../db/rpc.js';
-import type { EncryptedCredential } from '../../crypto/credentials-cipher.js';
+import type { EncryptedCredential } from '../../credentials/credentials.crypto.js';
 import { weekRangeUtc } from './week-range.js';
 
 /* ============================================================================
@@ -44,20 +44,6 @@ export interface InsertWeeklySummaryRow {
   readonly week_start: string;
   readonly text: string;
   readonly stats: Record<string, unknown>;
-}
-
-export interface LlmCallRow {
-  readonly user_id: string | null;
-  readonly session_id: string | null;
-  readonly purpose: string;
-  readonly provider: string | null;
-  readonly model: string | null;
-  readonly prompt_version: number;
-  readonly tokens_in: number | null;
-  readonly tokens_out: number | null;
-  readonly latency_ms: number | null;
-  readonly status: string;
-  readonly attempt: number;
 }
 
 /* ============================================================================
@@ -92,12 +78,6 @@ export abstract class WeeklySummaryRepository {
   /** `profiles.locale` del owner, para `{summary_language}` (SPEC-03 §4.3). */
   abstract loadOwnerLocale(ownerId: string): Promise<Locale | null>;
   abstract insertWeeklySummary(row: InsertWeeklySummaryRow): Promise<void>;
-  abstract insertLlmCall(row: LlmCallRow): Promise<void>;
-  abstract markCredentialError(
-    userId: string,
-    provider: Provider,
-    code: string,
-  ): Promise<void>;
 }
 
 /* ============================================================================
@@ -252,24 +232,5 @@ export class InsforgeWeeklySummaryRepository extends WeeklySummaryRepository {
   async insertWeeklySummary(row: InsertWeeklySummaryRow): Promise<void> {
     const result = await this.db.from(TABLES.weeklySummaries).insert(row);
     unwrap(result as PostgrestLike<unknown>, 'guardar el resumen semanal');
-  }
-
-  async insertLlmCall(row: LlmCallRow): Promise<void> {
-    const result = await this.db.from(TABLES.llmCalls).insert(row);
-    unwrap(result as PostgrestLike<unknown>, 'registrar la llamada al LLM');
-  }
-
-  async markCredentialError(
-    userId: string,
-    provider: Provider,
-    code: string,
-  ): Promise<void> {
-    const result = await this.db
-      .from(TABLES.providerCredentials)
-      .update({ status: 'error', last_error: code })
-      .eq('user_id', userId)
-      .eq('provider', provider)
-      .eq('status', 'active');
-    unwrap(result as PostgrestLike<unknown>, 'marcar la credencial como error');
   }
 }

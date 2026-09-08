@@ -20,7 +20,7 @@ import type {
   TurnRole,
 } from '../../db/schema.js';
 import { RPC, type ApplyBriefArgs, type ApplyBriefResult } from '../../db/rpc.js';
-import type { EncryptedCredential } from '../../crypto/credentials-cipher.js';
+import type { EncryptedCredential } from '../../credentials/credentials.crypto.js';
 
 /* ============================================================================
    Formas mínimas que el job necesita de cada tabla
@@ -54,20 +54,6 @@ export interface BriefCredentialRow extends EncryptedCredential {
   readonly provider: Provider;
 }
 
-export interface LlmCallRow {
-  readonly user_id: string | null;
-  readonly session_id: string | null;
-  readonly purpose: string;
-  readonly provider: string | null;
-  readonly model: string | null;
-  readonly prompt_version: number;
-  readonly tokens_in: number | null;
-  readonly tokens_out: number | null;
-  readonly latency_ms: number | null;
-  readonly status: string;
-  readonly attempt: number;
-}
-
 /* ============================================================================
    Contrato
    ========================================================================== */
@@ -93,12 +79,6 @@ export abstract class CoachingBriefRepository {
     limit: number,
   ): Promise<(Level | null)[]>;
   abstract updateSuggestedLevel(userId: string, level: Level): Promise<void>;
-  abstract insertLlmCall(row: LlmCallRow): Promise<void>;
-  abstract markCredentialError(
-    userId: string,
-    provider: Provider,
-    code: string,
-  ): Promise<void>;
 }
 
 /* ============================================================================
@@ -256,24 +236,5 @@ export class InsforgeCoachingBriefRepository extends CoachingBriefRepository {
       .update({ suggested_level: level })
       .eq('user_id', userId);
     unwrap(result as PostgrestLike<unknown>, 'guardar suggested_level');
-  }
-
-  async insertLlmCall(row: LlmCallRow): Promise<void> {
-    const result = await this.db.from(TABLES.llmCalls).insert(row);
-    unwrap(result as PostgrestLike<unknown>, 'registrar la llamada al LLM');
-  }
-
-  async markCredentialError(
-    userId: string,
-    provider: Provider,
-    code: string,
-  ): Promise<void> {
-    const result = await this.db
-      .from(TABLES.providerCredentials)
-      .update({ status: 'error', last_error: code })
-      .eq('user_id', userId)
-      .eq('provider', provider)
-      .eq('status', 'active');
-    unwrap(result as PostgrestLike<unknown>, 'marcar la credencial como error');
   }
 }

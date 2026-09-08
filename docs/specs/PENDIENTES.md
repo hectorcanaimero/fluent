@@ -1,76 +1,162 @@
-# Pendientes de especificación
+# Pendientes y decisiones sin spec — PR-06 app móvil
 
-Registro de huecos, ambigüedades y contradicciones detectados al implementar. Regla de trabajo
-(`docs/tasks/README.md`): si la spec no lo dice, se anota aquí y se elige lo más simple.
+Cosas que la spec o el diseño no cubrían y se resolvieron con la opción
+más simple durante la construcción de `apps/mobile`. Se listan para que
+el operador las revise o las mejore más adelante.
 
-Formato: `PEND-nn · spec afectada · quién lo detectó · decisión provisional`.
+## T1 — Esqueleto
 
-## PR-03 — LLM, proveedores y prompts (SPEC-03)
+- **Riverpod sin codegen.** SPEC-06 §1 lista `flutter_riverpod` y
+  `riverpod_annotation`. Se usó solo `flutter_riverpod` (providers
+  escritos a mano) para no sumar un segundo generador de código
+  (`riverpod_generator`) junto a `freezed`/`json_serializable`. Los
+  providers son igual de tipados y testeables; si más adelante se
+  quiere el azúcar de `@riverpod`, es un cambio mecánico.
+- **Portugués como `pt` en vez de `pt_BR`.** Los ARB son
+  `app_es.arb`/`app_pt.arb` (como pide la tarea). `gen-l10n` exige que
+  el `@@locale` del archivo coincida con el sufijo del nombre; como
+  solo soportamos una variante de portugués, se usó `pt` en vez de
+  `pt_BR`. Un dispositivo con `pt_BR` cae en `pt` por el resolución de
+  locale por defecto de Flutter (coincide el idioma). Si el día de
+  mañana hace falta portugués europeo también, ahí sí se necesita
+  `pt_BR` explícito y este archivo pasa a `app_pt_BR.arb`.
+- **Fuente Plus Jakarta Sans no incluida.** El diseño la especifica,
+  pero no hay archivos de fuente en el repo ni licencia verificada.
+  `app/theme.dart` referencia la familia `PlusJakartaSans`; sin los
+  archivos declarados en `pubspec.yaml` (`fonts:`), Flutter cae en la
+  fuente del sistema. El operador debe conseguir los `.ttf` (Google
+  Fonts, OFL) y declararlos.
+- **`freezed`/`build_runner` actualizados más allá de lo fijado en
+  SPEC-06.** La versión que resolvía `pubspec.yaml` originalmente
+  (`freezed ^2.5.7`) traía un `analyzer` transitivo (7.7.1) más viejo
+  que el lenguaje de Dart 3.13 del SDK del VPS, lo que rompía
+  `build_runner` al analizar el propio Flutter SDK. Se subió a
+  `freezed ^4.0.1` / `build_runner ^2.16.1` / `json_serializable
+  ^6.14.1`, que resuelven un `analyzer` compatible. Esto también obliga
+  a declarar las clases `@freezed` como `abstract class` (sintaxis de
+  Freezed 3+), distinto de los ejemplos con Freezed 2.x que puedan
+  encontrarse en otros repos.
 
-### PEND-01 · SPEC-01 §2.14 · `llm_calls.status` no cubre todos los resultados
-`llm_calls.status` se define como `'ok','invalid_json','provider_error','rate_limited','fallback'`, pero
-PR-03/T2 exige mapear también `auth_error` (401/403) y `no_credits` (402), y el timeout no tiene código.
+## T3 — Onboarding
 
-**Decisión provisional:** el módulo usa el conjunto
-`'ok' | 'invalid_json' | 'provider_error' | 'rate_limited' | 'auth_error' | 'no_credits' | 'timeout'`.
-`'fallback'` no se usa: el hecho de que un intento sea de respaldo ya se deduce de `attempt > 1`.
-PR-01 debe ampliar el CHECK de la columna a ese conjunto.
+- **Zona horaria por defecto.** SPEC-06 §1 no incluye ningún paquete
+  de detección de zona horaria IANA (algo como `flutter_timezone`).
+  `dart:core` solo da la abreviatura (`ART`, no
+  `America/Argentina/Buenos_Aires`). Hasta que se agregue esa
+  dependencia, el onboarding manda siempre
+  `America/Argentina/Buenos_Aires` como zona horaria del perfil. Esto
+  afecta el cálculo de "día" para streaks (SPEC-01) si el usuario está
+  en otro huso horario.
+- **"Placement chat de 1 minuto" (paso Nivel).** Marcado P2 en
+  `docs/design/README.md`. No se implementó ningún flujo real; si se
+  agrega el texto en el futuro, debe ir con su propia pantalla y no
+  como una promesa vacía.
+- **Paso 4 (conectar proveedor) condicional.** La tarea dice "salto a
+  la pantalla de proveedores en el paso 4", pero el criterio de
+  aceptación dice "al terminar navega a `/`". Se resolvió así: al
+  terminar el paso de intereses, si el usuario ya tiene algún proveedor
+  `connected` (poco común recién registrado, pero es el caso de los
+  datos de ejemplo de `FakeApi`), se va directo a `/`; si no tiene
+  ninguno, se salta a `/providers`. Documentado en el commit de T3.
 
-### PEND-02 · SPEC-01 §2.14 y SPEC-03 §4 · falta `prompt_version` en `llm_calls`
-SPEC-03 §4 dice que `PROMPT_VERSION` «se registra en `llm_calls`», pero la tabla de SPEC-01 §2.14 no
-tiene esa columna.
+## T4 — Proveedores y modelos
 
-**Decisión provisional:** la interfaz `LlmCallSink` de este PR incluye `promptVersion` en el registro.
-PR-01 debe añadir la columna `prompt_version text` a `llm_calls`.
+- **Crédito de OpenRouter viene de `GET /providers/:provider/status`,
+  no de `GET /me`.** SPEC-02 §4.1 no incluye `credits` en la forma de
+  `providers` que devuelve `/me`; solo aparece en el endpoint de
+  estado por proveedor (§4.2). La pantalla pide el status de cada
+  proveedor conectado además de `/me` para poder mostrar el crédito
+  restante.
+- **`Info.plist` con `CFBundleURLTypes` para `fluent://`.** El propio
+  README de `flutter_web_auth_2` dice que en iOS no hace falta
+  declarar el esquema porque `ASWebAuthenticationSession` intercepta
+  el redirect directamente. Se declaró igual (SPEC-06 lo pide
+  explícitamente) por si algo abre el link fuera de ese flujo; no
+  debería tener efecto contrario.
+- **`OAuthLauncher` como capa propia sobre `flutter_web_auth_2`.** No
+  está en la spec, pero es necesario para poder simular el login de
+  OpenRouter en tests y con `USE_FAKE_API=true` sin abrir un
+  navegador real (mismo patrón que se va a usar para voz en T6 con
+  `SpeechService`/`TtsService`).
 
-### PEND-04 · SPEC-03 §1 · `json.ts` no repara JSON sintácticamente inválido
-La spec pide extracción tolerante de «el primer bloque `{...}` balanceado». No dice nada de reparar
-comillas simples ni comas finales.
+## T5 — Home y nueva sesión
 
-**Decisión provisional (la más simple):** tras aislar el bloque balanceado se usa `JSON.parse` tal cual.
-Comillas simples y comas finales cuentan como `invalid_json` y disparan el siguiente candidato de la
-cadena de fallback.
+- **"Sesiones de hoy" sin franjas fijas.** El diseño de Pen muestra
+  "Morning session" / "Evening session" con horarios y estado
+  individual, pero ningún endpoint de SPEC-02 expone eso (solo hay
+  `sessionsThisWeek` semanal y la lista paginada de `/sessions`).
+  Como el PRD adoptó "dos huecos sin franja obligatoria" (ver más
+  arriba, decisión del diseño), Home solo cuenta cuántas sesiones de
+  `GET /sessions` empezaron hoy (`{n} de 2 sesiones hoy`) en vez de
+  separar mañana/tarde con horarios exactos.
+- **Día de gracia siempre visible con racha activa.** No hay campo en
+  `/me` ni en `/progress` que diga si la gracia semanal ya se usó
+  (RF-5.2). Se muestra el aviso "Día de gracia disponible" cada vez
+  que `streak > 0`, sin verificar el estado real. Falta ese campo en
+  la API para mostrarlo bien.
+- **Posición en el grupo por nombre, no por id.** `Profile` (la
+  respuesta de `/me`) no trae el `userId` del usuario logueado, así
+  que la posición en el leaderboard de Home se calcula comparando
+  `displayName` contra `GroupMember.displayName`. Si dos miembros
+  comparten nombre, puede mostrar la posición equivocada. Se resuelve
+  agregando `userId` a `GET /me` (coordinar con PR-02).
 
-### PEND-05 · SPEC-03 §2 · contabilidad de intentos con 401/402/403
-La spec dice «máximo 3 intentos en total» y, aparte, que ante 401/403/402 no se reintenta con ese
-proveedor y se sigue la cadena. No aclara si un intento rechazado por credencial consume uno de los 3.
+## T6 — Conversación por voz
 
-**Decisión provisional:** sí consume intento (se ejecutó una llamada HTTP real y se registra en
-`llm_calls`), pero además se descartan de la cadena todos los candidatos restantes de ese proveedor.
+- **Micrófono: toque para iniciar/parar, no "mantener para hablar".**
+  SPEC-06 §4.3 pide que el modo mantener-presionado/toque sea
+  configurable. Se implementó solo toque (tocar para escuchar, tocar
+  de nuevo para terminar); el modo "mantener" queda pendiente, es un
+  `GestureDetector.onLongPress` adicional sobre el mismo botón cuando
+  se agregue esa preferencia en Ajustes (T8).
+- **Las correcciones no se recuperan al reabrir una sesión.**
+  `GET /sessions/:id` devuelve `corrections` como lista plana, sin
+  `turnIdx` en el DTO de la API (aunque sí existe en la tabla de
+  SPEC-01). La pantalla de conversación arma los mensajes desde
+  `turns` al entrar, pero solo asocia correcciones a los turnos que
+  se envían en la sesión activa; si se refresca `/session/:id` a
+  mitad de una sesión ya iniciada, las correcciones de turnos previos
+  no se vuelven a mostrar. Se resuelve agregando `turnIdx` a
+  `Correction` en el contrato de la API.
+- **`OAuthLauncher`-style fakes para voz.** `SpeechService` y
+  `TtsService` son interfaces nuevas (no estaban en SPEC-06 más que
+  como nombres de paquete) con implementaciones reales
+  (`speech_to_text`, `flutter_tts`) y fakes (`FakeSpeechService`,
+  `FakeTtsService`) para poder simular todo el flujo de voz en tests
+  y con `USE_FAKE_API=true`, sin tocar hardware.
+- **Prueba manual pendiente.** El comportamiento real de
+  `speech_to_text` con acento hispano hablando inglés, el ducking de
+  audio contra `flutter_tts`, y el deep link de PKCE (T4) solo se
+  pueden validar en un dispositivo físico; quedan documentados como
+  pendientes en el PR, no se hicieron en este VPS.
 
-### PEND-06 · SPEC-03 §2 · significado exacto de `degraded`
-§2 lo define como «se usó un modelo distinto del elegido», pero PR-03/T3 exige `degraded: true` cuando
-hubo tres intentos aunque no hubiera preferencia de usuario.
+## T8 — Grupo, progreso y ajustes
 
-**Decisión provisional:** `degraded = true` si el candidato que respondió no es el primero de la lista,
-o si la preferencia del usuario se descartó por falta de credencial activa del proveedor.
-
-### PEND-07 · SPEC-03 §2 · `last_error` para 401/403
-La spec fija `last_error='NO_CREDITS'` para el 402 de OpenRouter pero no da el código para 401/403.
-
-**Decisión provisional:** el evento `credential.error` usa `code: 'AUTH_ERROR'` para 401/403 y
-`code: 'NO_CREDITS'` para 402; PR-02 los escribe tal cual en `provider_credentials.last_error`.
-
-### PEND-08 · convenciones · dónde viven las constantes del módulo LLM
-`docs/specs/README.md` manda las constantes de producto a `apps/api/src/config/product.ts`, pero
-`HISTORY_TURNS`, los truncados de SPEC-03 §3, los timeouts y las temperaturas son del módulo LLM y
-`product.ts` lo crea PR-02/PR-07.
-
-**Decisión provisional:** viven en `apps/api/src/llm/config.ts`. Si PR-07 crea `product.ts`, se
-reexportan desde allí sin duplicar valores.
-
-### PEND-09 · SPEC-03 §7 · precios de referencia de Gemini
-La spec pide «lista fija en configuración (`gemini-2.5-flash`, `gemini-2.5-flash-lite`,
-`gemini-2.5-pro`) con precios de referencia» pero no da los números.
-
-**Decisión provisional:** se dejan en `apps/api/src/llm/gemini-models.ts` como constante editable con
-los precios públicos por millón de tokens y un comentario con la fecha de consulta. El operador los
-revisa antes de producción.
-
-### PEND-10 · SPEC-03 §9 · `FALLBACK_MODELS` sigue sin validar
-El valor propuesto en §2 es provisional hasta correr `apps/api/scripts/bench-models.ts` (PR-03/T7) con
-las claves del operador. Este PR deja el script y los 20 turnos sintéticos, pero **no** lo ejecuta:
-la sesión de Claude no tiene claves de proveedor.
-
-**Decisión provisional:** `FALLBACK_MODELS` mantiene el valor propuesto en SPEC-03 §2 como valor por
-defecto del módulo hasta que el operador pegue el resultado del bench en la spec.
+- **`DELETE /me` no está en la tabla de endpoints de SPEC-02 §4.1.**
+  SPEC-06 §9 sí lo pide explícitamente para borrar cuenta ("`DELETE
+  /me` en la API borra datos por cascada, luego logout en InsForge").
+  Se agregó `deleteAccount()` al contrato `FluentApi` siguiendo
+  SPEC-06; falta sincronizar la tabla de SPEC-02 para que quede
+  documentado en un solo lugar.
+- **Recordatorios, alerta de racha y sonido no se persisten entre
+  arranques.** No hay ningún paquete de almacenamiento local simple
+  (tipo `shared_preferences`) en las dependencias de SPEC-06 §1. Los
+  horarios de recordatorio (por defecto 8:30/20:30, como pide SPEC-06
+  §8) y los toggles de alerta de racha/sonido viven en estado de
+  `SettingsScreen` y se pierden al reabrir la app; las notificaciones
+  ya programadas en el sistema operativo sí persisten (las programa
+  `flutter_local_notifications`), pero la app no recuerda qué hora
+  eligió el usuario para mostrarla la próxima vez. Se resuelve
+  agregando `shared_preferences` (o guardando la preferencia en el
+  perfil vía la API) en un PR posterior.
+- **`ReminderService` sin probar en dispositivo.** Igual que
+  `SpeechService`/`TtsService`/`OAuthLauncher`, es una interfaz nueva
+  no listada en SPEC-06 con una implementación real
+  (`flutter_local_notifications` + `timezone`) y una fake para tests.
+  La entrega real de las notificaciones diarias solo se puede
+  verificar en un dispositivo físico.
+- **Selector de idioma con opción "detectar del sistema".**
+  SPEC-06 dice que el idioma se detecta del sistema por defecto y se
+  puede cambiar en ajustes; se implementó como tres opciones (Sistema
+  / Español / Português) en vez de un simple toggle es/pt-BR, para
+  poder volver a la detección automática.

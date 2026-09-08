@@ -24,6 +24,21 @@
 	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<!-- Retorno del PKCE de OpenRouter (SPEC-06 §7): fluent://oauth/openrouter.
+	     ASWebAuthenticationSession no lo exige, pero lo dejamos declarado
+	     para que el esquema funcione también si algo abre el link fuera de
+	     ese flujo. -->
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>dev.fluent.fluent_mobile.oauth</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>fluent</string>
+			</array>
+		</dict>
+	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>UIApplicationSceneManifest</key>

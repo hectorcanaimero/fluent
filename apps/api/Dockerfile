@@ -81,7 +81,7 @@ USER node
 # El límite de memoria (1 GB API / 768 MB worker) se configura en Coolify
 # (T6), no aquí.
 HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/v1/health" || exit 1
+  CMD if [ "$FLUENT_PROCESS" = "worker" ]; then pgrep -f "dist/worker.js" >/dev/null || exit 1; else wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/v1/health" || exit 1; fi
 
 # Comando por defecto: la API. El worker sobrescribe este comando en
 # Coolify con `node dist/worker.js` (SPEC-08 §1).

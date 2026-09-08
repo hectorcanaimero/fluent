@@ -2,10 +2,10 @@
 
 | Campo | Valor |
 |---|---|
-| Versión | 0.1 (borrador para aprobación) |
+| Versión | 0.2 |
 | Fecha | 2026-09-08 |
 | Fuente | `docs/PROYECTO.md` (brief) |
-| Estado | En revisión |
+| Estado | Aprobado el 2026-09-08, con la sección 6.2 (proveedores y modelos) pendiente de visto bueno |
 
 ---
 
@@ -55,7 +55,7 @@ Niveles: se soportan varios niveles desde el día uno. En el onboarding el usuar
 1. **Una llamada por turno.** El modelo responde y corrige en la misma llamada, con salida JSON estructurada.
 2. **Una llamada extra por sesión, no por turno**, para el coaching brief, ejecutada en background.
 3. **Contexto pequeño y estructurado.** El "conocimiento" del usuario cabe entero en el prompt.
-4. **Modelos gratuitos por defecto, con fallback.** Lista ordenada de modelos; si el primero falla o degrada, se pasa al siguiente.
+4. **Gratis por defecto, pago por elección del usuario.** El operador nunca paga LLM. Cada usuario usa modelos gratuitos salvo que elija uno pago con su propia cuenta. Debajo de cualquier elección hay una cadena de fallback gratuita.
 5. **Voz en el dispositivo.** STT y TTS con las APIs nativas del sistema operativo, sin servicios externos de audio.
 6. **Magia dosificada.** El callback de memoria no aparece en todas las aperturas.
 7. **El usuario ve y edita lo que el tutor recuerda.** Transparencia y corrección de alucinaciones.
@@ -113,14 +113,20 @@ Prioridad: **P0** imprescindible para v1, **P1** deseable en v1, **P2** después
 | RF-1.3 | Perfil: nombre visible, nivel declarado (A2/B1/B2), intereses iniciales (3 a 5 tags). | P0 |
 | RF-1.4 | Pertenencia a un único grupo en v1. | P0 |
 
-### 6.2 BYOK con OpenRouter
+### 6.2 Proveedores y modelos (BYOK)
 | ID | Requisito | Prioridad |
 |---|---|---|
-| RF-2.1 | Conexión de cuenta OpenRouter vía OAuth PKCE desde la app (flujo validado en el POC). | P0 |
-| RF-2.2 | La API key del usuario se guarda cifrada en el backend y nunca se expone a la app después de la conexión. | P0 |
-| RF-2.3 | Pantalla de estado de la conexión: conectada, revocada, con error. Reconexión en un toque. | P0 |
-| RF-2.4 | Lista configurable de modelos gratuitos en orden de preferencia, con fallback automático. | P0 |
-| RF-2.5 | Si ningún modelo responde, la sesión se degrada a un mensaje claro, sin consumir intentos. | P0 |
+| RF-2.1 | Conexión de cuenta OpenRouter vía OAuth PKCE desde la app (flujo validado en el POC). Es el proveedor por defecto. | P0 |
+| RF-2.2 | Las credenciales de cada proveedor se guardan cifradas en el backend y nunca se exponen a la app después de la conexión. | P0 |
+| RF-2.3 | Pantalla de estado por proveedor: conectado, revocado, con error. Reconexión en un toque. Para OpenRouter se muestra el crédito restante de la key. | P0 |
+| RF-2.4 | Cadena de fallback de modelos gratuitos configurable por el operador, en orden de preferencia. Se aplica siempre debajo del modelo elegido por el usuario. | P0 |
+| RF-2.5 | Si ningún modelo responde, la sesión se degrada a un mensaje claro, sin consumir intentos ni romper el streak. | P0 |
+| RF-2.6 | Selector de modelo por usuario. El catálogo se obtiene del endpoint de modelos de OpenRouter y se agrupa en Gratis, Económico y Premium, con precio por millón de tokens y costo estimado por sesión calculado con el promedio real de tokens del usuario. | P0 |
+| RF-2.7 | Dos roles de modelo configurables por separado: conversación (prioriza latencia) y coaching brief (prioriza calidad, corre async). Por defecto ambos usan el gratuito. | P1 |
+| RF-2.8 | Segundo proveedor: Google Gemini mediante API key de Google AI Studio pegada por el usuario, usando el endpoint compatible con OpenAI. Mismo adaptador que OpenRouter con otra URL base. | P1 |
+| RF-2.9 | Si el modelo pago falla por crédito agotado o cuota, se cae a la cadena gratuita y se avisa al usuario en la sesión y en la pantalla de proveedores. | P0 |
+
+Nota sobre Google: una suscripción a Google AI Pro da acceso a la app de Gemini, no a la API. El free tier de la API existe para cualquier cuenta en Google AI Studio, con límites por minuto y por día que alcanzan para dos sesiones diarias. Cargar la key de Gemini dentro de OpenRouter es posible, pero añade comisión y un salto; no se hace en v1.
 
 ### 6.3 Conversación por voz
 | ID | Requisito | Prioridad |
@@ -224,7 +230,7 @@ Nota: el brief original menciona Hetzner. La infraestructura real es el VPS de C
 
 ### 8.1 Responsabilidades
 - **Flutter:** UI, captura y reproducción de voz, auth con InsForge, llamadas a la API.
-- **NestJS API:** construcción de prompts, proxy a OpenRouter con la key del usuario, reglas de XP y streaks, endpoints de sesión.
+- **NestJS API:** construcción de prompts, adaptador de LLM compatible con OpenAI (OpenRouter, Gemini) con las credenciales del usuario, selección de modelo por rol y fallback, reglas de XP y streaks, endpoints de sesión.
 - **NestJS Worker:** jobs de coaching brief, noticias diarias, resumen semanal, recordatorios.
 - **InsForge:** identidad, Postgres y storage. Sin lógica de negocio.
 - **Redis:** cola BullMQ y caché corta de prompts y noticias.
@@ -237,7 +243,8 @@ erDiagram
     USER ||--|| PROFILE : has
     USER ||--o{ FACT : remembers
     USER ||--o| COACHING_BRIEF : current
-    USER ||--o| OPENROUTER_CREDENTIAL : owns
+    USER ||--o{ PROVIDER_CREDENTIAL : owns
+    USER ||--o| MODEL_PREFERENCE : sets
     USER }o--|| GROUP : belongs
     SESSION ||--o{ TURN : contains
     SESSION ||--o{ CORRECTION : produced
@@ -247,7 +254,8 @@ erDiagram
 
     USER { uuid id  text email  timestamptz created_at }
     PROFILE { uuid user_id  text display_name  text level  text[] interests  int xp  int streak  date last_session_day }
-    OPENROUTER_CREDENTIAL { uuid user_id  bytea key_encrypted  text status  timestamptz connected_at }
+    PROVIDER_CREDENTIAL { uuid id  uuid user_id  text provider  bytea key_encrypted  text status  timestamptz connected_at }
+    MODEL_PREFERENCE { uuid user_id  text chat_provider  text chat_model  text brief_provider  text brief_model }
     SESSION { uuid id  uuid user_id  text kind  text topic  timestamptz started_at  timestamptz ended_at  int xp_earned  text model_used }
     TURN { uuid id  uuid session_id  int idx  text role  text text  int tokens_in  int tokens_out  int latency_ms }
     CORRECTION { uuid id  uuid session_id  int turn_idx  text original  text corrected  text category  text note }
@@ -340,6 +348,7 @@ Cada fase termina con una demo usable y sus ADRs.
 3. ¿Se guarda el audio o solo la transcripción? Propuesta: solo texto en v1, por privacidad y storage.
 4. ¿Recordatorios sin push? Propuesta: notificación local programada desde la app, sin backend.
 5. ¿Nombre definitivo? Se usa "Fluent" como nombre de trabajo.
+6. ¿Se abre en v1 un proveedor genérico "compatible con OpenAI" para cualquier URL y key, o solo OpenRouter y Gemini? Propuesta: solo los dos en v1; el genérico es trivial de añadir después.
 
 ---
 
@@ -347,5 +356,5 @@ Cada fase termina con una demo usable y sus ADRs.
 
 | Rol | Nombre | Estado |
 |---|---|---|
-| Dueño del producto | | Pendiente |
-| Arquitectura | | Pendiente |
+| Dueño del producto | Alejandro | Aprobado 2026-09-08 (sección 6.2 pendiente) |
+| Arquitectura | Claude | Aprobado 2026-09-08 |

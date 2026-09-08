@@ -11,7 +11,7 @@ import type {
 import { CredentialsService } from '../credentials/credentials.service.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
 import type { RedisService } from '../redis/redis.service.js';
-import type { ModelPreferencesRepository } from './model-preferences.repository.js';
+import type { ModelPreferencesRepository } from '../models/model-preferences.repository.js';
 import { PkceStore, PKCE_TTL_SECONDS } from './pkce.store.js';
 import {
   GEMINI_MODELS_URL,

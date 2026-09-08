@@ -4,7 +4,7 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CredentialsService } from '../credentials/credentials.service.js';
 import type { Provider } from '../db/schema.js';
-import { ModelPreferencesRepository } from './model-preferences.repository.js';
+import { ModelPreferencesRepository } from '../models/model-preferences.repository.js';
 import {
   buildOpenRouterAuthUrl,
   codeChallengeS256,

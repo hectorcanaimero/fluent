@@ -11,6 +11,7 @@ import { I18nModule } from './i18n/i18n.module.js';
 import { ProfilesModule } from './profiles/profiles.module.js';
 import { GroupsModule } from './groups/groups.module.js';
 import { CredentialsModule } from './credentials/credentials.module.js';
+import { ModelsModule } from './models/models.module.js';
 import { ProvidersModule } from './providers/providers.module.js';
 import { LlmInfraModule } from './llm/llm-infra.module.js';
 import { CommonModule } from './common/common.module.js';
@@ -58,6 +59,14 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
     ProfilesModule,
     GroupsModule,
     CredentialsModule,
+    // `ModelsModule` (catálogo y preferencias, SPEC-02 §4.2, PR-02/T5) va
+    // antes de `ProvidersModule`: éste la importa para reutilizar
+    // `ModelPreferencesRepository` en `DELETE /providers/:provider`
+    // (docs/specs/pendientes/PR-02.md PEND-26). El orden de este array no
+    // afecta a la resolución de dependencias entre módulos (solo importa
+    // para el orden de los `APP_GUARD`, ver PEND-23); se declara así para
+    // que se lea en el mismo orden en que se resuelven.
+    ModelsModule,
     ProvidersModule,
     // Implementaciones de `LlmCallSink` y `LlmEventBus` (PR-03) sobre
     // InsForge y `EventEmitter2`; PR-04 y PR-05 importan este módulo.

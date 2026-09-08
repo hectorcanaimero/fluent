@@ -19,15 +19,6 @@ const MIN_DISPLAY_NAME_LENGTH = 2;
 const MAX_DISPLAY_NAME_LENGTH = 30;
 const FALLBACK_DISPLAY_NAME = 'Usuario';
 
-/** Estado de una credencial de proveedor tal y como lo necesita `GET /me`. */
-export type ProviderConnectionStatus = 'active' | 'revoked' | 'error' | 'not_connected';
-
-export interface ProviderStatusRow {
-  provider: 'openrouter' | 'gemini';
-  status: ProviderConnectionStatus;
-  connectedAt: string | null;
-}
-
 export interface ModelPreferenceRow {
   chatProvider: string;
   chatModel: string;
@@ -70,12 +61,15 @@ export function localPartOfEmail(email: string | null | undefined): string | nul
 
 /**
  * Repositorio de `profiles` (SPEC-01 §2.1) sobre el cliente admin de
- * InsForge. Incluye también un puñado de lecturas de solo proyección sobre
- * `provider_credentials`, `model_preferences` y `sessions` que necesita
- * `GET /me` (SPEC-02 §4.1): esas tres tablas todavía no tienen su propio
- * repositorio (llegan en PR-02/T4, T5 y T7), así que se leen aquí de forma
- * mínima en vez de bloquear T2 en tareas que no le tocan. Ver
- * docs/specs/pendientes/PR-02.md.
+ * InsForge. Incluye también un par de lecturas de solo proyección sobre
+ * `model_preferences` y `sessions` que necesita `GET /me` (SPEC-02 §4.1):
+ * esas dos tablas todavía no tienen su propio repositorio (llegan en
+ * PR-02/T5 y T7), así que se leen aquí de forma mínima en vez de bloquear T2
+ * en tareas que no le tocan. Ver docs/specs/pendientes/PR-02.md PEND-15.
+ *
+ * La lectura equivalente de `provider_credentials` sí migró ya a
+ * `CredentialsRepository.listStatuses` (PR-02/T4), que es quien manda sobre
+ * esa tabla.
  */
 @Injectable()
 export class ProfilesRepository {
@@ -152,37 +146,6 @@ export class ProfilesRepository {
       throw new Error(`update: no existe profiles.user_id=${userId}`);
     }
     return updated;
-  }
-
-  /**
-   * Estado de conexión de cada proveedor (`GET /me`, SPEC-02 §4.1). Siempre
-   * devuelve las dos entradas (`openrouter`, `gemini`); `not_connected`
-   * cuando no hay fila en `provider_credentials`, que no es uno de los
-   * estados de SPEC-01 §2.4 pero es el único que le sirve a la app para un
-   * proveedor que nunca se conectó (la app solo lo usa para mostrar texto,
-   * ver `apps/mobile/lib/core/api/models.dart::ProviderInfo`).
-   */
-  async listProviderStatuses(userId: string): Promise<ProviderStatusRow[]> {
-    const result = await this.admin.database
-      .from(TABLES.providerCredentials)
-      .select('provider, status, connected_at')
-      .eq('user_id', userId);
-
-    const rows =
-      unwrapInsforge<
-        { provider: 'openrouter' | 'gemini'; status: string; connected_at: string }[]
-      >(result) ?? [];
-
-    const byProvider = new Map(rows.map((row) => [row.provider, row]));
-
-    return (['openrouter', 'gemini'] as const).map((provider) => {
-      const row = byProvider.get(provider);
-      return {
-        provider,
-        status: row ? (row.status as ProviderConnectionStatus) : 'not_connected',
-        connectedAt: row?.connected_at ?? null,
-      };
-    });
   }
 
   /** Preferencia de modelo (`GET /me`); `null` si el usuario no la tiene todavía. */

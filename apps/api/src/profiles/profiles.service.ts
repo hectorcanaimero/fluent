@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { INTERESTS } from '../content/index.js';
+import { CredentialsRepository } from '../credentials/credentials.repository.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
 import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper.js';
 import { ProfilesRepository } from './profiles.repository.js';
@@ -17,6 +18,9 @@ export class ProfilesService {
   constructor(
     private readonly profilesRepository: ProfilesRepository,
     private readonly groupsRepository: GroupsRepository,
+    // `provider_credentials` la lee su propio repositorio desde PR-02/T4
+    // (docs/specs/pendientes/PR-02.md PEND-15).
+    private readonly credentialsRepository: CredentialsRepository,
   ) {}
 
   async getMe(userId: string): Promise<MeDto> {
@@ -24,7 +28,7 @@ export class ProfilesService {
 
     const [group, providers, modelPreference, activeSessionId] = await Promise.all([
       profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
-      this.profilesRepository.listProviderStatuses(userId),
+      this.credentialsRepository.listStatuses(userId),
       this.profilesRepository.getModelPreference(userId),
       this.profilesRepository.getActiveSessionId(userId),
     ]);

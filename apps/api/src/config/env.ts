@@ -18,7 +18,14 @@ export const envSchema = z.object({
   INSFORGE_ANON_KEY: z.string().min(1),
   REDIS_URL: z.string().min(1),
   CREDENTIALS_MASTER_KEY: z.string().min(1),
-  CREDENTIALS_MASTER_KEY_PREVIOUS: z.string().min(1).optional(),
+  // Solo durante una rotación de clave (SPEC-02 §5). `.env.example` la deja
+  // vacía, y dotenv entrega esas líneas como `''`, así que una cadena vacía
+  // (o solo espacios) se trata como «no configurada» en vez de fallar el
+  // arranque. Ver docs/specs/pendientes/PR-02.md PEND-30.
+  CREDENTIALS_MASTER_KEY_PREVIOUS: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
   OPENROUTER_OAUTH_CALLBACK: z.string().min(1),
   FALLBACK_MODELS: z.string().min(1),
   PROMPT_VERSION: z.coerce.number().int().default(1),

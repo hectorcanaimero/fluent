@@ -1,4 +1,5 @@
 import { ProfilesService } from './profiles.service.js';
+import type { CredentialsRepository } from '../credentials/credentials.repository.js';
 import type { ProfilesRepository } from './profiles.repository.js';
 import type { GroupsRepository } from '../groups/groups.repository.js';
 import type { Profile } from '../db/schema.js';
@@ -45,10 +46,6 @@ function createService(profile: Profile, group: unknown = null) {
       ...profile,
       ...patch,
     })),
-    listProviderStatuses: vi.fn().mockResolvedValue([
-      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
-      { provider: 'gemini', status: 'not_connected', connectedAt: null },
-    ]),
     getModelPreference: vi.fn().mockResolvedValue(null),
     getActiveSessionId: vi.fn().mockResolvedValue(null),
     purgeAppData: vi.fn().mockResolvedValue(undefined),
@@ -58,12 +55,22 @@ function createService(profile: Profile, group: unknown = null) {
     findById: vi.fn().mockResolvedValue(group),
   };
 
+  // `provider_credentials` la lee `CredentialsRepository` desde PR-02/T4
+  // (docs/specs/pendientes/PR-02.md PEND-15).
+  const credentialsRepository = {
+    listStatuses: vi.fn().mockResolvedValue([
+      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
+      { provider: 'gemini', status: 'not_connected', connectedAt: null },
+    ]),
+  };
+
   const service = new ProfilesService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
+    credentialsRepository as unknown as CredentialsRepository,
   );
 
-  return { service, profilesRepository, groupsRepository };
+  return { service, profilesRepository, groupsRepository, credentialsRepository };
 }
 
 describe('ProfilesService.updateProfile — cálculo de onboarded_at', () => {

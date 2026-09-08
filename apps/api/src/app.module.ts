@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv, Env } from './config/env.js';
 import { AuthModule } from './auth/auth.module.js';
@@ -9,6 +10,9 @@ import { InsforgeModule } from './insforge/insforge.module.js';
 import { I18nModule } from './i18n/i18n.module.js';
 import { ProfilesModule } from './profiles/profiles.module.js';
 import { GroupsModule } from './groups/groups.module.js';
+import { CredentialsModule } from './credentials/credentials.module.js';
+import { ProvidersModule } from './providers/providers.module.js';
+import { LlmInfraModule } from './llm/llm-infra.module.js';
 import { CommonModule } from './common/common.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 
@@ -27,6 +31,11 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
         },
       }),
     }),
+    // Bus de eventos en proceso (`@nestjs/event-emitter`): lo usa el evento
+    // `credential.error` de SPEC-03 §2 (`NestLlmEventBus` lo emite,
+    // `CredentialErrorListener` lo consume). Es global, así que basta con
+    // registrarlo una vez aquí.
+    EventEmitterModule.forRoot(),
     RedisModule,
     InsforgeModule,
     I18nModule,
@@ -48,6 +57,11 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
     HealthModule,
     ProfilesModule,
     GroupsModule,
+    CredentialsModule,
+    ProvidersModule,
+    // Implementaciones de `LlmCallSink` y `LlmEventBus` (PR-03) sobre
+    // InsForge y `EventEmitter2`; PR-04 y PR-05 importan este módulo.
+    LlmInfraModule,
   ],
   controllers: [],
   providers: [],

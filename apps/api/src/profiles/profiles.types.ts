@@ -1,5 +1,5 @@
 import type { Level, Locale } from '../db/schema.js';
-import type { ProviderConnectionStatus } from './profiles.repository.js';
+import type { ProviderConnectionStatus } from '../credentials/credentials.repository.js';
 
 /**
  * `profile` de `GET /me` y cuerpo de `PUT /me/profile` (SPEC-02 §4.1).

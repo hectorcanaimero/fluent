@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CredentialsModule } from '../credentials/credentials.module.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
 import { MeController } from './me.controller.js';
 import { ProfilesRepository } from './profiles.repository.js';
@@ -17,6 +18,11 @@ import { ProfilesService } from './profiles.service.js';
  * ninguno de los dos guarda estado propio.
  */
 @Module({
+  // `GET /me` necesita el estado de `provider_credentials`, que desde
+  // PR-02/T4 lee `CredentialsRepository` (docs/specs/pendientes/PR-02.md
+  // PEND-15). La dependencia va en un solo sentido: `CredentialsModule` no
+  // conoce a `ProfilesModule`.
+  imports: [CredentialsModule],
   controllers: [MeController],
   providers: [ProfilesRepository, GroupsRepository, ProfilesService],
   exports: [ProfilesRepository],

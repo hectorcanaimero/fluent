@@ -4,8 +4,19 @@ import { REDIS_CACHE_CLIENT } from './redis.constants.js';
 
 /**
  * Envoltorio fino sobre la conexión de caché de Redis, para que otros
- * módulos (por ejemplo `HealthService`) no se acoplen directamente a
- * `ioredis`.
+ * módulos (por ejemplo `HealthService` o `AuthGuard`) no se acoplen
+ * directamente a `ioredis`.
+ *
+ * Política común a todos los métodos: **nunca lanzan**. Un Redis caído
+ * degrada el servicio (más llamadas a InsForge, catálogos recalculados)
+ * pero no debe tumbar peticiones, así que los errores se loguean como
+ * `warn` y se devuelve el valor neutro (`null` / `false` / nada).
+ *
+ * La firma de `get`/`set` es intencionadamente compatible con la interfaz
+ * `CacheStore` de `apps/api/src/llm/catalog.service.ts`
+ * (`get(key): Promise<string | null>`, `set(key, value, ttlSeconds):
+ * Promise<void>`), para que ese servicio pueda usar `RedisService`
+ * directamente como almacén.
  */
 @Injectable()
 export class RedisService {
@@ -25,6 +36,56 @@ export class RedisService {
       return reply === 'PONG';
     } catch (error) {
       this.logger.warn(`Redis PING falló: ${(error as Error).message}`);
+      return false;
+    }
+  }
+
+  /**
+   * Lee una clave de la caché. Devuelve `null` si no existe **o** si Redis
+   * falla: para quien llama, un fallo de caché es indistinguible de un
+   * *miss*, que es exactamente el comportamiento deseado.
+   */
+  async get(key: string): Promise<string | null> {
+    try {
+      return await this.cacheClient.get(key);
+    } catch (error) {
+      this.logger.warn(
+        `Redis GET '${key}' falló: ${(error as Error).message}`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Escribe una clave con expiración (`SET key value EX ttlSeconds`).
+   *
+   * Devuelve `Promise<void>` (y no un booleano de éxito) a propósito, para
+   * ser compatible con la interfaz `CacheStore` del catálogo de modelos: un
+   * fallo de escritura solo significa «no se cacheó», nunca un error que
+   * quien llama deba manejar, así que se traga aquí dentro.
+   */
+  async set(key: string, value: string, ttlSeconds: number): Promise<void> {
+    try {
+      await this.cacheClient.set(key, value, 'EX', ttlSeconds);
+    } catch (error) {
+      this.logger.warn(
+        `Redis SET '${key}' falló: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /**
+   * Borra una clave. Devuelve `true` si se borró algo, `false` si la clave
+   * no existía o si Redis falló.
+   */
+  async del(key: string): Promise<boolean> {
+    try {
+      const removed = await this.cacheClient.del(key);
+      return removed > 0;
+    } catch (error) {
+      this.logger.warn(
+        `Redis DEL '${key}' falló: ${(error as Error).message}`,
+      );
       return false;
     }
   }

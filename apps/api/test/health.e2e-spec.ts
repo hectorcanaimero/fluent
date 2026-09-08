@@ -17,6 +17,11 @@ describe('HealthController (e2e)', () => {
     await app.init();
   });
 
+  // Sin cabecera `Authorization`: `/v1/health` es la única ruta pública
+  // (SPEC-02 §4), marcada con `@Public()` en `HealthController`, así que el
+  // `AuthGuard` global (APP_GUARD, PR-02/T1) la deja pasar sin bearer. Si
+  // alguien quitase ese decorador, este test fallaría con 401.
+  //
   // `.env.test` (apps/api/.env.test) apunta REDIS_URL e INSFORGE_URL a
   // valores ficticios/no alcanzables (ver docs/specs/pendientes/PR-08.md, T3 de
   // PR-08), así que en este entorno e2e `redis.ok` e `insforge.ok` son

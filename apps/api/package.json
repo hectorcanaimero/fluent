@@ -8,6 +8,8 @@
   "type": "module",
   "scripts": {
     "build": "nest build",
+    "build:scripts": "tsc -p tsconfig.scripts.json",
+    "bench:models": "tsc -p tsconfig.scripts.json && node dist-scripts/scripts/bench-models.js",
     "deploy": "nest deploy",
     "format": "prettier --write \"src/**/*.ts\" \"test/**/*.ts\"",
     "start": "nest start",

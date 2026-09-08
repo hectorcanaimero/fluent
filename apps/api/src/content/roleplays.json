@@ -1,0 +1,212 @@
+[
+  {
+    "id": "barcelona-airport-missed-flight",
+    "title_es": "Aeropuerto de Barcelona con vuelo perdido",
+    "role": "Airport customer service representative",
+    "situation": "The learner has just missed a connecting flight at Barcelona airport and needs to rebook and understand the available options.",
+    "level_min": "B1"
+  },
+  {
+    "id": "remote-job-interview",
+    "title_es": "Entrevista de trabajo remoto",
+    "role": "Tech company hiring manager",
+    "situation": "The learner is interviewing for a remote software developer position and needs to answer questions about their experience and skills.",
+    "level_min": "B1"
+  },
+  {
+    "id": "return-defective-product",
+    "title_es": "Devolver un producto defectuoso",
+    "role": "Customer service representative at an electronics store",
+    "situation": "The learner bought a laptop last week and it stopped working. They are returning it and need to get a refund or replacement.",
+    "level_min": "A2"
+  },
+  {
+    "id": "ask-directions-london",
+    "title_es": "Pedir indicaciones en Londres",
+    "role": "Friendly local pedestrian in London",
+    "situation": "The learner is lost in London and needs directions to Big Ben. They ask for help and listen to the directions.",
+    "level_min": "A2"
+  },
+  {
+    "id": "restaurant-reservation-time-change",
+    "title_es": "Reservar mesa y cambiar la hora",
+    "role": "Restaurant receptionist",
+    "situation": "The learner is calling to make a dinner reservation for tomorrow at 8 PM, but then needs to change it to 7 PM.",
+    "level_min": "A2"
+  },
+  {
+    "id": "explain-bug-colleague",
+    "title_es": "Explicar un bug a un compañero",
+    "role": "Senior developer reviewing code",
+    "situation": "The learner's colleague found a bug in their code. They need to explain what they were trying to do and how they will fix it.",
+    "level_min": "B2"
+  },
+  {
+    "id": "negotiate-rent",
+    "title_es": "Negociar alquiler",
+    "role": "Landlord of an apartment",
+    "situation": "The learner is interested in renting an apartment and needs to negotiate the price, lease terms, and utilities included.",
+    "level_min": "B2"
+  },
+  {
+    "id": "doctor-appointment",
+    "title_es": "Cita en el médico",
+    "role": "Doctor at a medical clinic",
+    "situation": "The learner has had a cough for a week and stomach pain. They describe their symptoms and listen to the diagnosis.",
+    "level_min": "A2"
+  },
+  {
+    "id": "hotel-check-in-overbooking",
+    "title_es": "Check-in de hotel con overbooking",
+    "role": "Hotel receptionist",
+    "situation": "The learner arrives at their hotel but the receptionist says their room is unavailable due to overbooking. They need to negotiate a solution.",
+    "level_min": "B1"
+  },
+  {
+    "id": "introduce-friend-at-party",
+    "title_es": "Presentar a un amigo en una fiesta",
+    "role": "Host at a casual party",
+    "situation": "The learner is bringing a friend to a party and needs to introduce them to the host and other guests, making small talk.",
+    "level_min": "A2"
+  },
+  {
+    "id": "coffee-shop-order",
+    "title_es": "Pedir en una cafetería",
+    "role": "Barista at a coffee shop",
+    "situation": "The learner is ordering coffee and a pastry and needs to ask questions about the options before placing the order.",
+    "level_min": "A2"
+  },
+  {
+    "id": "bank-open-account",
+    "title_es": "Abrir cuenta bancaria",
+    "role": "Bank customer service officer",
+    "situation": "The learner wants to open a new checking account and needs to answer questions about their income and spending habits.",
+    "level_min": "A2"
+  },
+  {
+    "id": "complaint-noisy-neighbor",
+    "title_es": "Queja sobre vecino ruidoso",
+    "role": "Neighbor in an apartment building",
+    "situation": "The learner's neighbor's music is too loud at night. They need to talk to the neighbor politely and explain the problem.",
+    "level_min": "B1"
+  },
+  {
+    "id": "interview-podcast",
+    "title_es": "Entrevista en un podcast",
+    "role": "Podcast host interviewing about a business",
+    "situation": "The learner is the founder of a startup being interviewed. They share their story, challenges, and vision for the future.",
+    "level_min": "B2"
+  },
+  {
+    "id": "book-hotel-room",
+    "title_es": "Reservar habitación de hotel",
+    "role": "Hotel receptionist",
+    "situation": "The learner is booking a hotel room for a business trip and needs to ask about amenities, wifi, and room rates.",
+    "level_min": "B1"
+  },
+  {
+    "id": "gym-membership",
+    "title_es": "Contratar membresía de gimnasio",
+    "role": "Gym membership consultant",
+    "situation": "The learner is interested in joining a gym and needs to ask about classes, equipment, and membership prices.",
+    "level_min": "A2"
+  },
+  {
+    "id": "car-rental",
+    "title_es": "Alquilar un auto",
+    "role": "Car rental agent",
+    "situation": "The learner needs to rent a car for a week and needs to discuss insurance options, fuel, and pickup times.",
+    "level_min": "B1"
+  },
+  {
+    "id": "real-estate-viewing",
+    "title_es": "Visita de propiedad inmobiliaria",
+    "role": "Real estate agent showing a house",
+    "situation": "The learner is viewing a house to buy and needs to ask about the neighborhood, property condition, and closing timeline.",
+    "level_min": "B1"
+  },
+  {
+    "id": "visa-interview",
+    "title_es": "Entrevista de visa",
+    "role": "Immigration officer",
+    "situation": "The learner is applying for a student visa and needs to explain their study plans, financial situation, and future goals.",
+    "level_min": "B2"
+  },
+  {
+    "id": "restaurant-complaint",
+    "title_es": "Queja en un restaurante",
+    "role": "Restaurant manager",
+    "situation": "The learner's food is cold and the service was slow. They need to complain politely and request a solution.",
+    "level_min": "B1"
+  },
+  {
+    "id": "clothes-fitting-room",
+    "title_es": "Probador de tienda de ropa",
+    "role": "Fashion store assistant",
+    "situation": "The learner is trying on clothes and needs a different size. They ask for help from the assistant and make a purchase.",
+    "level_min": "A2"
+  },
+  {
+    "id": "client-presentation",
+    "title_es": "Presentación a un cliente",
+    "role": "Senior client evaluating a proposal",
+    "situation": "The learner is pitching a marketing strategy to a big client and needs to answer tough questions about ROI and timeline.",
+    "level_min": "B2"
+  },
+  {
+    "id": "student-professor-office-hours",
+    "title_es": "Atención en horario de oficina con profesor",
+    "role": "University professor",
+    "situation": "The learner is struggling with a subject and is meeting with the professor to ask for help, explain what is confusing, and discuss study strategies.",
+    "level_min": "B1"
+  },
+  {
+    "id": "hairdresser-appointment",
+    "title_es": "Cita en la peluquería",
+    "role": "Hairdresser",
+    "situation": "The learner is getting a haircut and color. They describe the style they want and discuss maintenance tips.",
+    "level_min": "B1"
+  },
+  {
+    "id": "tech-support-call",
+    "title_es": "Llamada de soporte técnico",
+    "role": "Tech support representative",
+    "situation": "The learner's internet is down. They troubleshoot the problem with the support person and work to get it fixed.",
+    "level_min": "B1"
+  },
+  {
+    "id": "concert-ticket-purchase",
+    "title_es": "Compra de entradas de concierto",
+    "role": "Ticket counter agent",
+    "situation": "The learner wants to buy concert tickets and needs to ask about availability, seating, and payment methods.",
+    "level_min": "A2"
+  },
+  {
+    "id": "landlord-maintenance-request",
+    "title_es": "Solicitud de mantenimiento al casero",
+    "role": "Landlord of a rental property",
+    "situation": "The learner's shower is leaking and the heating doesn't work. They report the issues and negotiate repair timing.",
+    "level_min": "B1"
+  },
+  {
+    "id": "freelance-project-negotiation",
+    "title_es": "Negociación de proyecto freelance",
+    "role": "Client hiring a freelancer",
+    "situation": "The learner is negotiating terms for a web design project. They discuss timeline, price, revisions, and deliverables.",
+    "level_min": "B2"
+  },
+  {
+    "id": "pharmacy-prescription",
+    "title_es": "Farmacia - receta y medicamentos",
+    "role": "Pharmacist",
+    "situation": "The learner is picking up a prescription and needs advice on side effects and dosage.",
+    "level_min": "A2"
+  },
+  {
+    "id": "immigration-form-help",
+    "title_es": "Ayuda con formularios de inmigración",
+    "role": "Immigration consultant",
+    "situation": "The learner needs help filling out immigration forms and asks questions about required documents and processing time.",
+    "level_min": "B2"
+  }
+]

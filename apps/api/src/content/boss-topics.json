@@ -1,0 +1,242 @@
+[
+  {
+    "id": "economics-capitalism-systems",
+    "title_es": "Sistemas económicos y capitalismo",
+    "prompt_en": "Is capitalism the best economic system, or should societies explore alternatives?",
+    "level_min": "B2"
+  },
+  {
+    "id": "wealth-inequality-gap",
+    "title_es": "Desigualdad de riqueza",
+    "prompt_en": "What are the root causes of wealth inequality and how can societies address it?",
+    "level_min": "B2"
+  },
+  {
+    "id": "philosophy-meaning-life",
+    "title_es": "Filosofía y significado de la vida",
+    "prompt_en": "What do you think gives life meaning and purpose?",
+    "level_min": "B2"
+  },
+  {
+    "id": "ethics-moral-dilemmas",
+    "title_es": "Ética y dilemas morales",
+    "prompt_en": "How do you approach difficult ethical decisions with no clear right answer?",
+    "level_min": "B2"
+  },
+  {
+    "id": "free-will-destiny",
+    "title_es": "Libre albedrío y destino",
+    "prompt_en": "Do you believe in free will or is everything predetermined by fate?",
+    "level_min": "B2"
+  },
+  {
+    "id": "consciousness-mind",
+    "title_es": "Conciencia y mente",
+    "prompt_en": "What is consciousness and can artificial intelligence ever truly be conscious?",
+    "level_min": "B2"
+  },
+  {
+    "id": "scientific-method-truth",
+    "title_es": "Método científico y verdad",
+    "prompt_en": "How reliable is science at finding truth about the world?",
+    "level_min": "B1"
+  },
+  {
+    "id": "art-meaning-interpretation",
+    "title_es": "Significado e interpretación del arte",
+    "prompt_en": "Can art have universal meaning or is it purely subjective?",
+    "level_min": "B2"
+  },
+  {
+    "id": "international-politics-conflict",
+    "title_es": "Política internacional y conflictos",
+    "prompt_en": "How should the international community respond to authoritarian regimes?",
+    "level_min": "B2"
+  },
+  {
+    "id": "democracy-governance",
+    "title_es": "Democracia y gobernanza",
+    "prompt_en": "Is democracy the best form of government or are there viable alternatives?",
+    "level_min": "B2"
+  },
+  {
+    "id": "immigration-borders",
+    "title_es": "Inmigración y fronteras",
+    "prompt_en": "What should be the balance between open immigration and border control?",
+    "level_min": "B2"
+  },
+  {
+    "id": "ai-ethics-risks",
+    "title_es": "Ética y riesgos de la IA",
+    "prompt_en": "What are the biggest ethical risks with powerful AI systems?",
+    "level_min": "B2"
+  },
+  {
+    "id": "technology-human-connection",
+    "title_es": "Tecnología y conexión humana",
+    "prompt_en": "Is technology bringing us closer or driving us apart as a society?",
+    "level_min": "B1"
+  },
+  {
+    "id": "privacy-surveillance",
+    "title_es": "Privacidad y vigilancia",
+    "prompt_en": "How much privacy should individuals sacrifice for security and public safety?",
+    "level_min": "B2"
+  },
+  {
+    "id": "historical-responsibility",
+    "title_es": "Responsabilidad histórica",
+    "prompt_en": "Should nations take responsibility for historical injustices committed by previous generations?",
+    "level_min": "B2"
+  },
+  {
+    "id": "colonialism-legacy",
+    "title_es": "Colonialismo y legado",
+    "prompt_en": "How do the effects of colonialism continue to influence modern geopolitics?",
+    "level_min": "B2"
+  },
+  {
+    "id": "public-health-ethics",
+    "title_es": "Salud pública y ética",
+    "prompt_en": "When should individual freedoms be limited for public health?",
+    "level_min": "B2"
+  },
+  {
+    "id": "medical-ethics-dilemmas",
+    "title_es": "Dilemas éticos médicos",
+    "prompt_en": "How should healthcare systems allocate limited resources fairly?",
+    "level_min": "B2"
+  },
+  {
+    "id": "mental-health-stigma",
+    "title_es": "Salud mental y estigma",
+    "prompt_en": "How can society better support mental health and reduce stigma?",
+    "level_min": "B1"
+  },
+  {
+    "id": "genetic-engineering-limits",
+    "title_es": "Ingeniería genética y límites",
+    "prompt_en": "Where should we draw the line on genetic engineering and enhancement?",
+    "level_min": "B2"
+  },
+  {
+    "id": "urban-planning-cities",
+    "title_es": "Planificación urbana y ciudades",
+    "prompt_en": "What makes a city sustainable and livable for its residents?",
+    "level_min": "B1"
+  },
+  {
+    "id": "housing-crisis-solutions",
+    "title_es": "Crisis de vivienda y soluciones",
+    "prompt_en": "How should governments address the affordable housing crisis?",
+    "level_min": "B2"
+  },
+  {
+    "id": "law-justice-system",
+    "title_es": "Ley y sistema de justicia",
+    "prompt_en": "How should societies balance punishment and rehabilitation in criminal justice?",
+    "level_min": "B2"
+  },
+  {
+    "id": "human-rights-violations",
+    "title_es": "Derechos humanos y violaciones",
+    "prompt_en": "What obligations do wealthy nations have to protect human rights globally?",
+    "level_min": "B2"
+  },
+  {
+    "id": "sociology-social-behavior",
+    "title_es": "Sociología y comportamiento social",
+    "prompt_en": "How do social structures shape individual behavior and beliefs?",
+    "level_min": "B2"
+  },
+  {
+    "id": "inequality-social-mobility",
+    "title_es": "Desigualdad y movilidad social",
+    "prompt_en": "Is social mobility achievable in highly unequal societies?",
+    "level_min": "B2"
+  },
+  {
+    "id": "cultural-identity-globalization",
+    "title_es": "Identidad cultural y globalización",
+    "prompt_en": "How should cultures preserve their identity in an increasingly globalized world?",
+    "level_min": "B2"
+  },
+  {
+    "id": "energy-future-sustainability",
+    "title_es": "Energía, futuro y sostenibilidad",
+    "prompt_en": "How can the world transition to sustainable energy without economic collapse?",
+    "level_min": "B2"
+  },
+  {
+    "id": "nuclear-power-debate",
+    "title_es": "Debate sobre energía nuclear",
+    "prompt_en": "Should nuclear power play a larger role in fighting climate change?",
+    "level_min": "B1"
+  },
+  {
+    "id": "resource-depletion",
+    "title_es": "Agotamiento de recursos",
+    "prompt_en": "What happens when Earth's natural resources become too scarce?",
+    "level_min": "B2"
+  },
+  {
+    "id": "media-misinformation",
+    "title_es": "Medios de comunicación y desinformación",
+    "prompt_en": "How can society combat misinformation in the age of social media?",
+    "level_min": "B2"
+  },
+  {
+    "id": "journalism-truth",
+    "title_es": "Periodismo y búsqueda de la verdad",
+    "prompt_en": "What responsibilities do journalists have in shaping public opinion?",
+    "level_min": "B1"
+  },
+  {
+    "id": "social-media-addiction",
+    "title_es": "Redes sociales y adicción",
+    "prompt_en": "Are social media companies responsible for the addiction they create?",
+    "level_min": "B2"
+  },
+  {
+    "id": "gender-equality",
+    "title_es": "Igualdad de género",
+    "prompt_en": "What structural changes are needed to achieve true gender equality?",
+    "level_min": "B2"
+  },
+  {
+    "id": "religion-secularism",
+    "title_es": "Religión y secularismo",
+    "prompt_en": "How should secular societies balance religious freedom with secular values?",
+    "level_min": "B2"
+  },
+  {
+    "id": "animal-rights-ethics",
+    "title_es": "Derechos animales y ética",
+    "prompt_en": "What ethical obligations do humans have toward animals?",
+    "level_min": "B1"
+  },
+  {
+    "id": "consumer-culture-materialism",
+    "title_es": "Cultura de consumo y materialismo",
+    "prompt_en": "Is consumerism necessary for economic growth or a destructive force?",
+    "level_min": "B2"
+  },
+  {
+    "id": "education-system-reform",
+    "title_es": "Sistema educativo y reforma",
+    "prompt_en": "How should education systems be reformed to prepare people for the future?",
+    "level_min": "B2"
+  },
+  {
+    "id": "work-life-meaning",
+    "title_es": "Trabajo, vida y significado",
+    "prompt_en": "In a world of automation, what role should work play in human fulfillment?",
+    "level_min": "B2"
+  },
+  {
+    "id": "future-artificial-intelligence",
+    "title_es": "Futuro y inteligencia artificial",
+    "prompt_en": "How do you imagine human society evolving alongside advanced artificial intelligence?",
+    "level_min": "B2"
+  }
+]

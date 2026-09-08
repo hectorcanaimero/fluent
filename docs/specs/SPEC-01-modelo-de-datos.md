@@ -198,7 +198,8 @@ Toda modificación de `profiles.xp` pasa por `xp_events`. Permite recalcular y d
 | provider, model | text | |
 | tokens_in, tokens_out | int | |
 | latency_ms | int | |
-| status | text NOT NULL | 'ok','invalid_json','provider_error','rate_limited','fallback' |
+| status | text NOT NULL | 'ok','invalid_json','provider_error','rate_limited','fallback','auth_error','no_credits','timeout' |
+| prompt_version | int NOT NULL DEFAULT 1 | versión del prompt usado (SPEC-03 §4) |
 | attempt | int NOT NULL DEFAULT 1 | |
 | created_at | timestamptz | |
 

@@ -1,7 +1,7 @@
 /**
  * Lista fija de modelos de Gemini (SPEC-03 §7).
  *
- * PEND-09 (`docs/specs/PENDIENTES.md`): la spec pide una lista fija con "precios de
+ * PEND-09 (`docs/specs/pendientes/PR-03.md`): la spec pide una lista fija con "precios de
  * referencia" pero no da los números. Los precios de abajo son precios públicos de
  * referencia por millón de tokens, consultados el 2026-09-08. El operador debe
  * revisarlos antes de producción (pueden haber cambiado).

@@ -1,7 +1,7 @@
 /**
  * Constantes del módulo LLM (SPEC-03 §2, §3 y §4).
  *
- * Ver `docs/specs/PENDIENTES.md` PEND-08: las constantes de producto viven en
+ * Ver `docs/specs/pendientes/PR-03.md` PEND-08: las constantes de producto viven en
  * `config/product.ts`, pero ese fichero lo crea otro PR y estas son propias del
  * módulo LLM, así que viven aquí y se reexportarán desde allí sin duplicar valores.
  */

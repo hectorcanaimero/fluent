@@ -22,9 +22,9 @@
 # de la raíz del monorepo) para que al menos el propio gestor de paquetes
 # sea reproducible.
 #
-# La misma imagen sirve para la API y el worker (SPEC-08 §1): el comando
-# por defecto (CMD) es el de la API; Coolify arranca `fluent-worker`
-# sobrescribiendo el comando a `node dist/worker.js`.
+# La misma imagen sirve para la API y el worker (SPEC-08 §1): la variable
+# FLUENT_PROCESS (api | worker) decide qué proceso arranca; Coolify la fija
+# en `fluent-worker`.
 
 ARG PNPM_VERSION=9.15.2
 
@@ -85,4 +85,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
 
 # Comando por defecto: la API. El worker sobrescribe este comando en
 # Coolify con `node dist/worker.js` (SPEC-08 §1).
-CMD ["node", "dist/main.js"]
+# FLUENT_PROCESS=api (por defecto) arranca la API; FLUENT_PROCESS=worker arranca el worker.
+CMD ["sh", "-c", "if [ \"$FLUENT_PROCESS\" = \"worker\" ]; then exec node dist/worker.js; else exec node dist/main.js; fi"]

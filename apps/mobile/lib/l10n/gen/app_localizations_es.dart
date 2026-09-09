@@ -188,76 +188,76 @@ class AppLocalizationsEs extends AppLocalizations {
   String get onboardingInterestsSeeMore => 'Ver más';
 
   @override
-  String get interestTravel => 'Viajes';
+  String get interestTechnology => 'Tecnología';
 
   @override
-  String get interestBusiness => 'Negocios';
+  String get interestVideogames => 'Videojuegos';
 
   @override
-  String get interestTech => 'Tecnología';
-
-  @override
-  String get interestSports => 'Deportes';
-
-  @override
-  String get interestMovies => 'Películas';
-
-  @override
-  String get interestFood => 'Comida';
-
-  @override
-  String get interestDailyLife => 'Vida diaria';
-
-  @override
-  String get interestNews => 'Noticias';
+  String get interestMoviesSeries => 'Cine y series';
 
   @override
   String get interestMusic => 'Música';
 
   @override
-  String get interestGaming => 'Videojuegos';
+  String get interestSports => 'Deportes';
 
   @override
-  String get interestFitness => 'Fitness';
+  String get interestFootball => 'Fútbol';
 
   @override
-  String get interestBooks => 'Libros';
+  String get interestTravel => 'Viajes';
 
   @override
-  String get interestArt => 'Arte';
+  String get interestCooking => 'Comida y cocina';
+
+  @override
+  String get interestHealthFitness => 'Salud y fitness';
 
   @override
   String get interestScience => 'Ciencia';
 
   @override
-  String get interestCooking => 'Cocina';
+  String get interestSpace => 'Espacio';
 
   @override
-  String get interestPhotography => 'Fotografía';
+  String get interestBusinessEntrepreneurship => 'Negocios y emprendimiento';
+
+  @override
+  String get interestPersonalFinance => 'Finanzas personales';
+
+  @override
+  String get interestArtificialIntelligence => 'Inteligencia artificial';
+
+  @override
+  String get interestCarsMotor => 'Coches y motor';
 
   @override
   String get interestFashion => 'Moda';
 
   @override
-  String get interestCars => 'Autos';
+  String get interestPhotography => 'Fotografía';
 
   @override
-  String get interestNature => 'Naturaleza';
+  String get interestArtDesign => 'Arte y diseño';
 
   @override
-  String get interestPolitics => 'Política';
+  String get interestBooksLiterature => 'Libros y literatura';
 
   @override
   String get interestHistory => 'Historia';
 
   @override
-  String get interestHealth => 'Salud';
+  String get interestNatureAnimals => 'Naturaleza y animales';
 
   @override
-  String get interestFinance => 'Finanzas';
+  String get interestEnvironment => 'Medio ambiente';
 
   @override
-  String get interestPets => 'Mascotas';
+  String get interestEducationCareer => 'Educación y carrera';
+
+  @override
+  String get interestFamilyRelationships => 'Vida familiar y relaciones';
 
   @override
   String get providersTitle => 'Proveedores y modelos';
@@ -418,6 +418,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeNoProviderAction => 'Conectar';
+
+  @override
+  String get homePendingActionWeeklySummaryCredential =>
+      'El resumen semanal del grupo no se pudo generar: conectá un proveedor para que siga funcionando.';
+
+  @override
+  String get homePendingActionAction => 'Revisar';
 
   @override
   String get homeQuickTopicsTitle => 'Temas rápidos';

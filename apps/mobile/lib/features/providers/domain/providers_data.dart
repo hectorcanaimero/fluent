@@ -24,5 +24,5 @@ class ProvidersData {
     return null;
   }
 
-  bool isConnected(String provider) => providerInfo(provider)?.status == 'connected';
+  bool isConnected(String provider) => providerInfo(provider)?.status == 'active';
 }

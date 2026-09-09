@@ -117,6 +117,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     _NoProviderBanner(),
                     const SizedBox(height: AppSpacing.lg),
                   ],
+                  if (data.hasWeeklySummaryCredentialPending) ...[
+                    _PendingActionBanner(),
+                    const SizedBox(height: AppSpacing.lg),
+                  ],
                   _PrimaryCta(
                     data: data,
                     onPractice: () => context.push('/session/new'),
@@ -290,6 +294,37 @@ class _NoProviderBanner extends StatelessWidget {
           TextButton(
             onPressed: () => context.push('/providers'),
             child: Text(l10n.homeNoProviderAction),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PendingActionBanner extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Container(
+      key: const Key('home_pending_action_banner'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        children: [
+          const Icon(Icons.info_outline, color: AppColors.gold),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(
+              l10n.homePendingActionWeeklySummaryCredential,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ),
+          TextButton(
+            onPressed: () => context.push('/providers'),
+            child: Text(l10n.homePendingActionAction),
           ),
         ],
       ),

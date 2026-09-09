@@ -104,6 +104,7 @@ class ApiClient {
         message: (data['message'] as String?) ?? e.message ?? 'error',
         statusCode: e.response?.statusCode,
         details: (data['details'] as List?)?.cast<Map<String, dynamic>>(),
+        activeSessionId: data['activeSessionId'] as String?,
       );
     }
     return ApiException(

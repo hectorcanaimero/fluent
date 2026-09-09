@@ -1,3 +1,4 @@
+import '../errors/api_exception.dart';
 import '../http/api_client.dart';
 import 'fluent_api.dart';
 import 'models.dart';
@@ -258,16 +259,18 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<WeeklySummaryResult?> getWeeklySummary({String? week}) => _client.guard(() async {
+  Future<WeeklySummaryResult?> getWeeklySummary({String? week}) async {
     try {
-      final res = await _client.dio.get(
-        '/weekly-summary',
-        queryParameters: {'week': ?week},
-      );
-      return WeeklySummaryResult.fromJson(res.data as Map<String, dynamic>);
-    } on Exception catch (e) {
-      if (e.toString().contains('NOT_READY')) return null;
+      return await _client.guard(() async {
+        final res = await _client.dio.get(
+          '/weekly-summary',
+          queryParameters: {'week': ?week},
+        );
+        return WeeklySummaryResult.fromJson(res.data as Map<String, dynamic>);
+      });
+    } on ApiException catch (e) {
+      if (e.code == ApiErrorCode.notReady) return null;
       rethrow;
     }
-  });
+  }
 }

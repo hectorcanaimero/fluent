@@ -1,5 +1,6 @@
 import 'dart:math';
 
+import '../../features/onboarding/data/interests_catalog.dart';
 import '../errors/api_exception.dart';
 import 'fluent_api.dart';
 import 'models.dart';
@@ -25,6 +26,7 @@ class FakeApi implements FluentApi {
   ModelPreference? _modelPreference;
   bool _onboarded = true;
   String? _activeSessionId;
+  final List<String> _pendingActions = const [];
 
   final List<GroupMember> _members = [];
   final List<MemoryFact> _pendingFacts = [];
@@ -42,7 +44,7 @@ class FakeApi implements FluentApi {
     _profile = const Profile(
       displayName: 'María',
       level: 'B1',
-      interests: ['travel', 'tech', 'movies', 'daily_life'],
+      interests: ['travel', 'technology', 'movies-series', 'music'],
       timezone: 'America/Argentina/Buenos_Aires',
       locale: 'es',
       xp: 720,
@@ -57,7 +59,7 @@ class FakeApi implements FluentApi {
     _providers.addAll(const [
       ProviderInfo(
         provider: 'openrouter',
-        status: 'connected',
+        status: 'active',
         connectedAt: '2026-08-20T10:00:00Z',
       ),
       ProviderInfo(provider: 'gemini', status: 'not_connected'),
@@ -165,32 +167,8 @@ class FakeApi implements FluentApi {
       modelPreference: _modelPreference,
       onboarded: _onboarded,
       activeSessionId: _activeSessionId,
-      interestsCatalog: const [
-        'travel',
-        'business',
-        'tech',
-        'sports',
-        'movies',
-        'food',
-        'daily_life',
-        'news',
-        'music',
-        'gaming',
-        'fitness',
-        'books',
-        'art',
-        'science',
-        'cooking',
-        'photography',
-        'fashion',
-        'cars',
-        'nature',
-        'politics',
-        'history',
-        'health',
-        'finance',
-        'pets',
-      ],
+      interestsCatalog: kFallbackInterests,
+      pendingActions: _pendingActions,
     );
   }
 
@@ -275,9 +253,9 @@ class FakeApi implements FluentApi {
     required String codeVerifierId,
   }) async {
     await _delay();
-    _setProviderStatus('openrouter', 'connected');
+    _setProviderStatus('openrouter', 'active');
     return const ProviderStatusResult(
-      status: 'connected',
+      status: 'active',
       credits: ProviderCredits(total: 10, used: 1.2),
     );
   }
@@ -288,8 +266,8 @@ class FakeApi implements FluentApi {
     if (apiKey.trim().isEmpty || apiKey.trim().length < 8) {
       _fail(ApiErrorCode.providerKeyInvalid, 'invalid gemini api key');
     }
-    _setProviderStatus('gemini', 'connected');
-    return const ProviderStatusResult(status: 'connected');
+    _setProviderStatus('gemini', 'active');
+    return const ProviderStatusResult(status: 'active');
   }
 
   @override
@@ -309,7 +287,7 @@ class FakeApi implements FluentApi {
     return ProviderStatusResult(
       status: info.status,
       credits:
-          provider == 'openrouter' && info.status == 'connected'
+          provider == 'openrouter' && info.status == 'active'
               ? const ProviderCredits(total: 10, used: 1.2)
               : null,
     );
@@ -320,7 +298,7 @@ class FakeApi implements FluentApi {
     final updated = ProviderInfo(
       provider: provider,
       status: status,
-      connectedAt: status == 'connected' ? DateTime.now().toIso8601String() : null,
+      connectedAt: status == 'active' ? DateTime.now().toIso8601String() : null,
     );
     if (idx == -1) {
       _providers.add(updated);
@@ -385,7 +363,7 @@ class FakeApi implements FluentApi {
   }) async {
     await _delay();
     final providerConnected = _providers.any(
-      (p) => p.provider == chatProvider && p.status == 'connected',
+      (p) => p.provider == chatProvider && p.status == 'active',
     );
     if (!providerConnected) {
       _fail(ApiErrorCode.modelNotAvailable, 'provider not connected', statusCode: 400);
@@ -471,12 +449,10 @@ class FakeApi implements FluentApi {
         code: ApiErrorCode.sessionAlreadyActive,
         message: 'a session is already active',
         statusCode: 409,
-        details: [
-          {'activeSessionId': _activeSessionId},
-        ],
+        activeSessionId: _activeSessionId,
       );
     }
-    final providerConnected = _providers.any((p) => p.status == 'connected');
+    final providerConnected = _providers.any((p) => p.status == 'active');
     if (!providerConnected) {
       _fail(ApiErrorCode.providerNotConnected, 'no provider connected', statusCode: 409);
     }

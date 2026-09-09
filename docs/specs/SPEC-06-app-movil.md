@@ -120,6 +120,7 @@ POST {INSFORGE_URL}/api/auth/refresh?client_type=mobile    { refreshToken }
 POST {INSFORGE_URL}/api/auth/logout                         Authorization: Bearer
 ```
 
+- **Todas las llamadas a InsForge sin sesión (alta, inicio de sesión, refresh) llevan `Authorization: Bearer <INSFORGE_ANON_KEY>`**; InsForge responde `AUTH_INVALID_CREDENTIALS "No token provided"` si falta. La anon key viaja en la app como `--dart-define=INSFORGE_ANON_KEY`. Verificado el 2026-09-09 contra el proyecto real.
 - `accessToken` en memoria y en `flutter_secure_storage`; `refreshToken` solo en secure storage.
 - Interceptor de `dio`: en 401 de la API, refresca una vez con lock y reintenta; si el refresh falla, cierra sesión.
 - Registro: primero `users` en InsForge, luego `POST /invitations/redeem` en la API con el código; si el código falla, la cuenta queda creada pero sin grupo y la app vuelve a pedirlo en onboarding.

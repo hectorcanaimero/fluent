@@ -88,6 +88,35 @@ describe('RedisService', () => {
     });
   });
 
+  describe('setIfAbsent', () => {
+    it('writes the key with SET … EX ttl NX and returns true', async () => {
+      const double = createRedisDouble();
+
+      await expect(
+        createService(double).setIfAbsent('session:s1:turn', '1', 5),
+      ).resolves.toBe(true);
+      expect(double.set).toHaveBeenCalledWith('session:s1:turn', '1', 'EX', 5, 'NX');
+    });
+
+    it('returns false when the key already exists (Redis replies null)', async () => {
+      const double = createRedisDouble();
+      double.set.mockResolvedValueOnce(null as unknown as 'OK');
+
+      await expect(
+        createService(double).setIfAbsent('session:s1:turn', '1', 5),
+      ).resolves.toBe(false);
+    });
+
+    it('fails open (true) instead of throwing when Redis is down', async () => {
+      const double = createRedisDouble();
+      double.set.mockRejectedValueOnce(new Error('Connection is closed.'));
+
+      await expect(
+        createService(double).setIfAbsent('session:s1:turn', '1', 5),
+      ).resolves.toBe(true);
+    });
+  });
+
   describe('del', () => {
     it('returns true when a key was removed', async () => {
       const double = createRedisDouble();

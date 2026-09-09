@@ -88,10 +88,22 @@ export interface SeedProfileOverrides {
   readonly displayName?: string;
   readonly groupId?: string | null;
   readonly level?: 'A2' | 'B1' | 'B2';
+  readonly locale?: 'es' | 'pt-BR';
+  /** Ids del catálogo `INTERESTS` (`src/content/interests.json`). Por defecto `[]`. */
+  readonly interests?: string[];
   readonly xp?: number;
   readonly streak?: number;
   readonly longestStreak?: number;
   readonly lastSessionDay?: string | null; // ISO date
+  readonly sessionsCount?: number;
+  /**
+   * `profiles.onboarded_at`. Por defecto **ahora**: casi todo endpoint de la
+   * API exige un perfil onboarded (`409 NOT_ONBOARDED`, SPEC-02 §6), así que
+   * el fixture siembra el caso normal. Pasar `null` explícitamente para
+   * sembrar el caso "perfil a medias" (añadido por PR-04/T1, que necesita
+   * probar los dos lados).
+   */
+  readonly onboardedAt?: string | null;
 }
 
 /** Inserta la fila de `profiles` de un usuario ya registrado (mismo `INSERT` mínimo que `ensureProfile`). */
@@ -104,11 +116,16 @@ export async function seedProfile(
     user_id: userId,
     display_name: clampDisplayName(overrides.displayName ?? `Fixture ${userId.slice(0, 8)}`),
     level: overrides.level ?? 'A2',
+    locale: overrides.locale ?? 'es',
+    interests: overrides.interests ?? [],
     group_id: overrides.groupId ?? null,
     xp: overrides.xp ?? 0,
     streak: overrides.streak ?? 0,
     longest_streak: overrides.longestStreak ?? 0,
     last_session_day: overrides.lastSessionDay ?? null,
+    sessions_count: overrides.sessionsCount ?? 0,
+    onboarded_at:
+      overrides.onboardedAt === undefined ? new Date().toISOString() : overrides.onboardedAt,
   });
 
   if (error) {
@@ -126,6 +143,15 @@ export interface SeedSessionParams {
   readonly endedDaysAgo?: number;
   readonly durationSec?: number;
   readonly turnsCount?: number;
+  /**
+   * `started_at` explícito, solo con `status: 'active'` (con cualquier otro
+   * `status` se ignora: `startedAt` sale de `endedAt - durationSec`). Añadido
+   * por PR-04/T3 para los tests de `POST /sessions/:id/end`, que necesitan
+   * una sesión activa con una antigüedad concreta para que
+   * `duration_sec = now - started_at` dé un valor predecible sin esperar en
+   * el test.
+   */
+  readonly startedAt?: string;
 }
 
 /** Inserta una sesión (`sessions`, SPEC-01 §2.6) ya cerrada (por defecto) con el XP indicado. */
@@ -139,7 +165,7 @@ export async function seedSession(admin: InsForgeClient, params: SeedSessionPara
   const startedAt =
     endedAt !== null
       ? new Date(new Date(endedAt).getTime() - durationSec * 1000).toISOString()
-      : new Date().toISOString();
+      : (params.startedAt ?? new Date().toISOString());
 
   const { data, error } = await admin.database
     .from('sessions')

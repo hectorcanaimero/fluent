@@ -60,6 +60,7 @@ describe('OpenAPI Swagger (SPEC-02 §8)', () => {
     expect(paths).toContain('/v1/progress');
     expect(paths).toContain('/v1/leaderboard');
     expect(paths).toContain('/v1/challenges');
+    expect(paths).toContain('/v1/sessions');
     expect(paths).toContain('/v1/admin/metrics');
 
     // El documento debe incluir la definición de BearerAuth.

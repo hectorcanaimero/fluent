@@ -94,7 +94,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       _sessionTopic = detail.session.topic;
       _messages.addAll(
         detail.turns.map(
-          (t) => ChatMessage(role: t.role == 'assistant' ? 'assistant' : 'user', text: t.text),
+          (t) => ChatMessage(role: t.role == 'user' ? 'user' : 'assistant', text: t.text),
         ),
       );
       _loading = false;

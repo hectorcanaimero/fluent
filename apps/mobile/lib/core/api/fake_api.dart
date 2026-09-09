@@ -478,7 +478,7 @@ class FakeApi implements FluentApi {
             ? "Hey María! Last time you mentioned you're planning a trip. "
                 "Let's talk about ${resolvedTopic.toLowerCase()} — how does that sound?"
             : "Hi María, ready to talk about ${resolvedTopic.toLowerCase()}? Tell me more.";
-    _sessionTurns[id]!.add(TurnRecord(idx: 0, role: 'assistant', text: opening));
+    _sessionTurns[id]!.add(TurnRecord(idx: 0, role: 'tutor', text: opening));
 
     return CreateSessionResult(
       session: session,
@@ -518,7 +518,7 @@ class FakeApi implements FluentApi {
     final reply =
         "That's interesting! Can you tell me a bit more about why you feel that way?";
     _sessionTurns[sessionId]!.add(
-      TurnRecord(idx: _turnCounter, role: 'assistant', text: reply),
+      TurnRecord(idx: _turnCounter, role: 'tutor', text: reply),
     );
 
     return TurnResult(

@@ -1,7 +1,12 @@
+import 'dart:convert';
+
+import 'package:dio/dio.dart';
+
 import '../errors/api_exception.dart';
 import '../http/api_client.dart';
 import 'fluent_api.dart';
 import 'models.dart';
+import 'turn_stream_event.dart';
 
 /// Implementación real de [FluentApi] contra `{API_URL}/v1` (SPEC-02 §4).
 /// Es la implementación por defecto desde T9 (`USE_FAKE_API=false`).
@@ -172,6 +177,128 @@ class HttpFluentApi implements FluentApi {
     );
     return TurnResult.fromJson(res.data as Map<String, dynamic>);
   });
+
+  /// `POST /sessions/:id/turns/stream` (SPEC-04 §4). Se pide con
+  /// `ResponseType.stream` para no dejar que Dio bufferee el cuerpo entero
+  /// antes de entregarlo (lo que anularía el streaming) y se parsea el
+  /// formato SSE de `apps/api/src/sessions/turn-stream.ts` línea a línea:
+  /// cada evento es `event: <nombre>\ndata: <json>\n\n`.
+  ///
+  /// Un error **antes** del primer evento (403/409/429/400, SPEC-02 §6)
+  /// llega igual que en cualquier otro endpoint: como `DioException` con un
+  /// cuerpo JSON. La diferencia con [ApiClient.mapDioException] es que, al
+  /// pedir el stream sin bufferear, Dio entrega ese cuerpo como un
+  /// [ResponseBody] sin decodificar en vez de como un `Map` ya parseado
+  /// (`ResponseType.stream` no distingue éxito de error al transformar la
+  /// respuesta), así que hay que leerlo y decodificarlo a mano
+  /// (`_mapStreamDioException`).
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  }) async* {
+    Response<ResponseBody> response;
+    try {
+      response = await _client.dio.post<ResponseBody>(
+        '/sessions/$sessionId/turns/stream',
+        data: {'text': text},
+        options: Options(
+          responseType: ResponseType.stream,
+          // El turno puede tardar más que el timeout general de lectura
+          // (`ApiClient`, 20 s): sin esto Dio cortaría un turno lento a
+          // mitad de stream con un `DioException` de timeout.
+          receiveTimeout: Duration.zero,
+        ),
+      );
+    } on DioException catch (e) {
+      throw await _mapStreamDioException(e);
+    }
+
+    final lines = response.data!.stream
+        .cast<List<int>>()
+        .transform(utf8.decoder)
+        .transform(const LineSplitter());
+
+    String? eventName;
+    final dataBuffer = StringBuffer();
+
+    await for (final line in lines) {
+      if (line.startsWith('event:')) {
+        eventName = line.substring('event:'.length).trim();
+        continue;
+      }
+      if (line.startsWith('data:')) {
+        dataBuffer.write(line.substring('data:'.length).trim());
+        continue;
+      }
+      if (line.isEmpty) {
+        final name = eventName;
+        final raw = dataBuffer.toString();
+        eventName = null;
+        dataBuffer.clear();
+        if (name == null || raw.isEmpty) continue;
+        final event = _parseStreamEvent(name, raw);
+        if (event != null) yield event;
+      }
+    }
+  }
+
+  /// Un evento cuyo nombre no reconoce esta versión de la app se ignora en
+  /// vez de tumbar el stream: es lo mismo que ya hace la app con campos JSON
+  /// desconocidos en las respuestas normales.
+  TurnStreamEvent? _parseStreamEvent(String name, String rawData) {
+    final data = jsonDecode(rawData);
+    switch (name) {
+      case 'token':
+        return TurnStreamToken((data as Map<String, dynamic>)['text'] as String);
+      case 'corrections':
+        final list = (data as Map<String, dynamic>)['corrections'] as List;
+        return TurnStreamCorrections(
+          list.map((e) => Correction.fromJson(e as Map<String, dynamic>)).toList(),
+        );
+      case 'done':
+        return TurnStreamDone(TurnResult.fromJson(data as Map<String, dynamic>));
+      case 'error':
+        final body = data as Map<String, dynamic>;
+        return TurnStreamError(
+          ApiException(
+            code: ApiErrorCode.fromWire(body['error'] as String?),
+            message: (body['message'] as String?) ?? 'stream error',
+            statusCode: body['statusCode'] as int?,
+          ),
+        );
+      default:
+        return null;
+    }
+  }
+
+  /// Ver el comentario de [sendTurnStream]: con `ResponseType.stream`, un
+  /// `DioException` de un status de error trae el cuerpo sin decodificar
+  /// (`ResponseBody`) en vez del `Map` que espera
+  /// [ApiClient.mapDioException]. Se lee y decodifica a mano y, si no es
+  /// JSON válido o no es un `ResponseBody`, se cae al mapeo genérico.
+  Future<ApiException> _mapStreamDioException(DioException e) async {
+    final data = e.response?.data;
+    if (data is ResponseBody) {
+      try {
+        final bytes = await data.stream.expand((chunk) => chunk).toList();
+        final decoded = jsonDecode(utf8.decode(bytes));
+        if (decoded is Map<String, dynamic>) {
+          return ApiException(
+            code: ApiErrorCode.fromWire(decoded['error'] as String?),
+            message: (decoded['message'] as String?) ?? e.message ?? 'error',
+            statusCode: e.response?.statusCode,
+            details: (decoded['details'] as List?)?.cast<Map<String, dynamic>>(),
+            activeSessionId: decoded['activeSessionId'] as String?,
+          );
+        }
+      } catch (_) {
+        // Cuerpo no es JSON válido (o falló al leer el stream): se cae al
+        // mapeo genérico de abajo.
+      }
+    }
+    return ApiClient.mapDioException(e);
+  }
 
   @override
   Future<SessionEndResult> endSession({

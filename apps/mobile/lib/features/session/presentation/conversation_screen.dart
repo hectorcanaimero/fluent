@@ -6,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/api/turn_stream_event.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -260,6 +261,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   /// "3 intentos seguidos" mira `result.unavailable`, no una excepción; el
   /// catch de abajo queda solo para errores reales (403/409/429/400 o de
   /// red). Ver PEND de `docs/specs/pendientes/PR-06.md`.
+  ///
+  /// El turno se pide por streaming (`_sendTurnWithStreamFallback`): la
+  /// burbuja del tutor va creciendo token a token, pero el mensaje del
+  /// usuario y las correcciones no se pintan hasta tener el `TurnResult`
+  /// completo (por streaming o por la caída al endpoint sin streaming), para
+  /// poder deshacer ambos de una si el turno termina en error — igual que
+  /// antes de que existiera el streaming.
   Future<void> _send() async {
     final l10n = AppLocalizations.of(context);
     final text = _draftController.text.trim();
@@ -267,18 +275,47 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     setState(() {
       _state = ConvState.sending;
       _errorMessage = null;
+      _messages.add(ChatMessage(role: 'user', text: text));
     });
+    final userIndex = _messages.length - 1;
+    _scrollToBottom();
+
+    int? assistantIndex;
+    final liveReply = StringBuffer();
+    void onToken(String delta) {
+      liveReply.write(delta);
+      if (!mounted) return;
+      setState(() {
+        final aIdx = assistantIndex;
+        if (aIdx == null) {
+          assistantIndex = _messages.length;
+          _messages.add(ChatMessage(role: 'assistant', text: liveReply.toString()));
+        } else {
+          _messages[aIdx] = _messages[aIdx].copyWith(text: liveReply.toString());
+        }
+      });
+      _scrollToBottom();
+    }
+
     try {
-      final result = await ref
-          .read(fluentApiProvider)
-          .sendTurn(sessionId: widget.sessionId, text: text);
+      final result = await _sendTurnWithStreamFallback(text: text, onToken: onToken);
       _unavailableCount = result.unavailable ? _unavailableCount + 1 : 0;
       if (!mounted) return;
       setState(() {
-        _messages.add(ChatMessage(role: 'user', text: text, corrections: result.corrections));
-        _messages.add(
-          ChatMessage(role: 'assistant', text: result.reply, degraded: result.degraded),
-        );
+        _messages[userIndex] = _messages[userIndex].copyWith(corrections: result.corrections);
+        final aIdx = assistantIndex;
+        if (aIdx == null) {
+          _messages.add(
+            ChatMessage(role: 'assistant', text: result.reply, degraded: result.degraded),
+          );
+        } else {
+          // `done` es la fuente de verdad (SPEC-04 §4, PEND-56 de PR-04.md):
+          // reemplaza cualquier texto parcial pintado por los `token`.
+          _messages[aIdx] = _messages[aIdx].copyWith(
+            text: result.reply,
+            degraded: result.degraded,
+          );
+        }
         _draftController.clear();
         _state = ConvState.speaking;
       });
@@ -297,10 +334,59 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     } on ApiException catch (_) {
       if (!mounted) return;
       setState(() {
+        final aIdx = assistantIndex;
+        if (aIdx != null) _messages.removeAt(aIdx);
+        _messages.removeAt(userIndex);
         _state = ConvState.reviewing;
         _errorMessage = l10n.conversationSendErrorGeneric;
       });
     }
+  }
+
+  /// Consume `POST /sessions/:id/turns/stream` (SPEC-04 §4) llamando
+  /// [onToken] por cada delta de texto y devolviendo el `TurnResult` del
+  /// evento `done` (la fuente de verdad, PEND-56 de
+  /// `docs/specs/pendientes/PR-04.md`).
+  ///
+  /// Si el stream falla, cae al endpoint sin streaming
+  /// (`POST /sessions/:id/turns`, SPEC-04 §4 «si el parser falla, cae al
+  /// modo no streaming»): un error que llega **antes** de cualquier evento
+  /// se relanza tal cual en vez de reintentar (es el mismo `403/409/429/400`
+  /// que daría el endpoint sin streaming, así que reintentar solo gastaría
+  /// una llamada de más); cualquier otro corte —de red, o un `error` SSE
+  /// después de haber empezado a recibir tokens— cae al endpoint completo.
+  /// Ver PEND de `docs/specs/pendientes/PR-06.md` sobre el turno duplicado
+  /// que puede producir esa caída si el stream ya había terminado del lado
+  /// del servidor cuando se corta la conexión.
+  Future<TurnResult> _sendTurnWithStreamFallback({
+    required String text,
+    required void Function(String delta) onToken,
+  }) async {
+    final api = ref.read(fluentApiProvider);
+    var sawEvent = false;
+    try {
+      final stream = api.sendTurnStream(sessionId: widget.sessionId, text: text);
+      await for (final event in stream) {
+        sawEvent = true;
+        switch (event) {
+          case TurnStreamToken(text: final delta):
+            onToken(delta);
+          case TurnStreamCorrections():
+            // `done` trae la misma lista: no hace falta pintarla dos veces.
+            break;
+          case TurnStreamDone(result: final result):
+            return result;
+          case TurnStreamError(exception: final exception):
+            throw exception;
+        }
+      }
+    } on ApiException {
+      if (!sawEvent) rethrow;
+    } catch (_) {
+      // Fallo de transporte antes de cualquier evento: se intenta igual el
+      // modo completo abajo.
+    }
+    return api.sendTurn(sessionId: widget.sessionId, text: text);
   }
 
   Future<void> _showUnavailableDialog() async {

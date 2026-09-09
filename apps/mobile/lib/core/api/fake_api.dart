@@ -4,6 +4,7 @@ import '../../features/onboarding/data/interests_catalog.dart';
 import '../errors/api_exception.dart';
 import 'fluent_api.dart';
 import 'models.dart';
+import 'turn_stream_event.dart';
 
 /// Implementación de [FluentApi] con datos de ejemplo realistas (María,
 /// streak 12, grupo "Los Fluentes") para construir todas las pantallas sin
@@ -537,6 +538,25 @@ class FakeApi implements FluentApi {
       modelUsed: _modelPreference?.chatModel,
       degraded: false,
     );
+  }
+
+  /// Simula el streaming de `POST /sessions/:id/turns/stream` (SPEC-04 §4)
+  /// partiendo el `reply` de [sendTurn] en palabras, con un pequeño retraso
+  /// entre cada una (proporcional a [artificialDelay], cero en los tests que
+  /// lo desactivan) para que la UI tenga algo real que animar.
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  }) async* {
+    final result = await sendTurn(sessionId: sessionId, text: text);
+    final words = result.reply.split(' ');
+    for (var i = 0; i < words.length; i++) {
+      await _delay();
+      yield TurnStreamToken(i == 0 ? words[i] : ' ${words[i]}');
+    }
+    yield TurnStreamCorrections(result.corrections);
+    yield TurnStreamDone(result);
   }
 
   @override

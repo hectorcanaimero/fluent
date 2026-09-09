@@ -108,5 +108,8 @@ void main() {
 
     final sessions = await api.getSessions();
     expect(sessions.items, isNotEmpty);
+    // SPEC-07 §7: challengeFromUserId va en el POST /sessions del desafío
+    // aceptado (el primero de FakeApi.getChallenges es de 'user-ana').
+    expect(api.lastChallengeFromUserId, 'user-ana');
   });
 }

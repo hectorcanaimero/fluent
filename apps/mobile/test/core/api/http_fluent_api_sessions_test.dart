@@ -94,6 +94,42 @@ void main() {
     expect(result.opening.callbackUsed, isFalse);
   });
 
+  // SPEC-07 §7: al aceptar un desafío, la app manda challengeFromUserId.
+  test('POST /sessions manda challengeFromUserId cuando se acepta un desafío', () async {
+    Map<String, dynamic>? sentBody;
+    adapter.onPost(
+      '/sessions',
+      (server) => server.replyCallback(201, (options) {
+        sentBody = options.data as Map<String, dynamic>;
+        return {
+          'session': {
+            'id': 'session-2',
+            'kind': 'free_topic',
+            'topic': 'traveling solo',
+            'startedAt': '2026-09-08T10:00:00.000Z',
+            'endedAt': null,
+            'xpEarned': 0,
+            'modelUsed': null,
+          },
+          'opening': {'text': 'Hi! Ready to talk about traveling solo?', 'callbackUsed': false},
+        };
+      }),
+      data: Matchers.any,
+    );
+
+    await api.createSession(
+      kind: 'free_topic',
+      topic: 'traveling solo',
+      challengeFromUserId: 'a5f2d6b0-1111-4a11-9c11-111111111111',
+    );
+
+    expect(sentBody, {
+      'kind': 'free_topic',
+      'topic': 'traveling solo',
+      'challengeFromUserId': 'a5f2d6b0-1111-4a11-9c11-111111111111',
+    });
+  });
+
   // SPEC-02 §6: `activeSessionId` va en el cuerpo top-level, no en `details`.
   test('POST /sessions con una sesión activa: 409 SESSION_ALREADY_ACTIVE con activeSessionId', () async {
     adapter.onPost(

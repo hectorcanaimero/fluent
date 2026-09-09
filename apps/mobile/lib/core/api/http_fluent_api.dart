@@ -146,6 +146,7 @@ class HttpFluentApi implements FluentApi {
     String? topic,
     String? roleplayId,
     String? newsItemId,
+    String? challengeFromUserId,
   }) => _client.guard(() async {
     final res = await _client.dio.post(
       '/sessions',
@@ -154,6 +155,7 @@ class HttpFluentApi implements FluentApi {
         'topic': ?topic,
         'roleplayId': ?roleplayId,
         'newsItemId': ?newsItemId,
+        'challengeFromUserId': ?challengeFromUserId,
       },
     );
     return CreateSessionResult.fromJson(res.data as Map<String, dynamic>);

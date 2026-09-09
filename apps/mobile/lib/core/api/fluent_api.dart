@@ -47,6 +47,9 @@ abstract class FluentApi {
     String? topic,
     String? roleplayId,
     String? newsItemId,
+    /// SPEC-07 §7: solo se manda al aceptar un desafío del grupo; la API la
+    /// guarda en `sessions.challenge_from_user_id` para el bono de XP.
+    String? challengeFromUserId,
   });
   Future<TurnResult> sendTurn({required String sessionId, required String text});
   Future<SessionEndResult> endSession({

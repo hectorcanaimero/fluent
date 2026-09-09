@@ -384,6 +384,11 @@ class FakeApi implements FluentApi {
   /// [getSessionSuggestions] sin tener que simular 7 sesiones reales.
   bool bossPending = false;
 
+  /// Gancho para tests: el `challengeFromUserId` que recibió la última
+  /// llamada a [createSession] (SPEC-07 §7), sin tener que sobreescribir el
+  /// método solo para inspeccionar el argumento.
+  String? lastChallengeFromUserId;
+
   @override
   Future<SessionSuggestions> getSessionSuggestions() async {
     await _delay();
@@ -443,7 +448,9 @@ class FakeApi implements FluentApi {
     String? topic,
     String? roleplayId,
     String? newsItemId,
+    String? challengeFromUserId,
   }) async {
+    lastChallengeFromUserId = challengeFromUserId;
     await _delay();
     if (_activeSessionId != null) {
       throw ApiException(

@@ -91,11 +91,11 @@ describe('ModelsService.getCatalog (GET /models, SPEC-02 §4.2)', () => {
     const catalog = await service.getCatalog('user-1');
 
     expect(Object.keys(catalog.providers).sort()).toEqual(['gemini', 'openrouter']);
-    expect(catalog.providers.gemini.free.length).toBe(0);
-    // Los 3 modelos fijos de Gemini son budget o premium según su precio de salida.
+    // Flash y Flash-Lite tienen free tier en Google AI Studio (RF-2.8); Pro es premium.
+    expect(catalog.providers.gemini.free.length).toBe(2);
     expect(
       catalog.providers.gemini.budget.length + catalog.providers.gemini.premium.length,
-    ).toBe(3);
+    ).toBe(1);
     expect(catalog.providers.openrouter.free.length).toBeGreaterThan(0);
   });
 

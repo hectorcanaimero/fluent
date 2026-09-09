@@ -155,6 +155,7 @@ function createHarness(handlers: Record<string, Handler>) {
 
   const { fetchImpl, calls } = createFakeFetch(handlers);
   const modelPreferences = {
+    upsert: vi.fn(async (_u: string, patch: unknown) => patch),
     find: vi.fn(async () => null),
     deleteIfUsesProvider: vi.fn(async () => true),
   };

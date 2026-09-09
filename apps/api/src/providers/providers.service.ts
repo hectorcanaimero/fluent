@@ -44,6 +44,12 @@ export function parseProvider(value: string): Provider {
  * código del catálogo de i18n). El campo `error` del cuerpo, que es lo que
  * consume la app, sí es siempre el código de SPEC-02 §6.
  */
+/** Modelo gratuito por defecto de cada proveedor (SPEC-03 §2, RF-2.7). */
+const DEFAULT_MODEL_BY_PROVIDER: Record<Provider, string> = {
+  gemini: 'gemini-2.5-flash',
+  openrouter: 'google/gemma-3-27b-it:free',
+};
+
 @Injectable()
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
@@ -126,6 +132,7 @@ export class ProvidersService {
     }
 
     await this.credentialsService.saveApiKey(userId, 'openrouter', apiKey);
+    await this.ensureDefaultPreferences(userId, 'openrouter');
     // Un solo uso: el verifier se borra en cuanto el canje sale bien.
     await this.pkceStore.remove(codeVerifierId);
 
@@ -149,8 +156,29 @@ export class ProvidersService {
     }
 
     await this.credentialsService.saveApiKey(userId, 'gemini', trimmed);
+    await this.ensureDefaultPreferences(userId, 'gemini');
 
     return { provider: 'gemini', status: 'active', lastError: null };
+  }
+
+
+  /**
+   * RF-2.7: "por defecto ambos roles usan el gratuito". Al conectar el primer
+   * proveedor, si el usuario aún no eligió modelos, se le asignan los gratuitos
+   * de ese proveedor para conversar y para el coach. Si ya tenía preferencias
+   * no se tocan.
+   */
+  private async ensureDefaultPreferences(userId: string, provider: Provider): Promise<void> {
+    const existing = await this.modelPreferences.find(userId);
+    if (existing !== null) return;
+    const model = DEFAULT_MODEL_BY_PROVIDER[provider];
+    await this.modelPreferences.upsert(userId, {
+      chat_provider: provider,
+      chat_model: model,
+      brief_provider: provider,
+      brief_model: model,
+    });
+    this.logger.log(`Usuario ${userId}: preferencias de modelo por defecto '${provider}/${model}'`);
   }
 
   /**

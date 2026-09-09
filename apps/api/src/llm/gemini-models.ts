@@ -11,18 +11,15 @@
 import type { CatalogModel, ModelTier } from './catalog.service.js';
 
 /**
- * Misma regla de tiers que `ModelCatalogService` (SPEC-03 §7), duplicada aquí en vez
- * de importada desde `catalog.service.ts` para no crear un ciclo de imports entre
- * ambos módulos (este fichero alimenta a `catalog.service.ts` con `GEMINI_MODELS`).
+ * Los tiers de Gemini son explícitos: los precios son los del tier de pago, pero
+ * Flash y Flash-Lite se ofrecen gratis con cuota en Google AI Studio, que es lo que
+ * usa el grupo (RF-2.8). Pro solo existe en pago.
  */
-function tierFromOutputPrice(pricePerMillionOut: number): ModelTier {
-  if (pricePerMillionOut === 0) return 'free';
-  if (pricePerMillionOut <= 1) return 'budget';
-  return 'premium';
-}
 
 interface GeminiModelRef {
   readonly id: string;
+  /** Tier explícito: Flash y Flash-Lite tienen free tier en Google AI Studio (RF-2.8). */
+  readonly tier: ModelTier;
   readonly name: string;
   readonly pricePerMillionIn: number;
   readonly pricePerMillionOut: number;
@@ -31,18 +28,21 @@ interface GeminiModelRef {
 const GEMINI_MODEL_REFS: readonly GeminiModelRef[] = [
   {
     id: 'gemini-2.5-flash',
+    tier: 'free',
     name: 'Gemini 2.5 Flash',
     pricePerMillionIn: 0.3,
     pricePerMillionOut: 2.5,
   },
   {
     id: 'gemini-2.5-flash-lite',
+    tier: 'free',
     name: 'Gemini 2.5 Flash-Lite',
     pricePerMillionIn: 0.1,
     pricePerMillionOut: 0.4,
   },
   {
     id: 'gemini-2.5-pro',
+    tier: 'premium',
     name: 'Gemini 2.5 Pro',
     pricePerMillionIn: 1.25,
     pricePerMillionOut: 10,
@@ -58,5 +58,5 @@ export const GEMINI_MODELS: readonly CatalogModel[] = GEMINI_MODEL_REFS.map((ref
   contextLength: GEMINI_CONTEXT_LENGTH,
   pricePerMillionIn: ref.pricePerMillionIn,
   pricePerMillionOut: ref.pricePerMillionOut,
-  tier: tierFromOutputPrice(ref.pricePerMillionOut),
+  tier: ref.tier,
 }));

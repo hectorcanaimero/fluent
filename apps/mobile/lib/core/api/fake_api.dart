@@ -7,8 +7,9 @@ import 'models.dart';
 
 /// Implementación de [FluentApi] con datos de ejemplo realistas (María,
 /// streak 12, grupo "Los Fluentes") para construir todas las pantallas sin
-/// depender de la API real. Se activa con `USE_FAKE_API=true` (por defecto
-/// durante el desarrollo del PR-06).
+/// depender de la API real. Se activa con `--dart-define=USE_FAKE_API=true`
+/// (por defecto `false` desde T9: la app usa la API real). Los tests la
+/// siguen usando explícitamente, sin depender de ese define.
 ///
 /// El estado vive en memoria y se reinicia cada vez que se crea una nueva
 /// instancia (cada arranque de la app, o cada test).

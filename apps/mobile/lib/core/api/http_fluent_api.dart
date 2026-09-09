@@ -4,8 +4,7 @@ import 'fluent_api.dart';
 import 'models.dart';
 
 /// Implementación real de [FluentApi] contra `{API_URL}/v1` (SPEC-02 §4).
-/// Se activa cuando `USE_FAKE_API=false`. La conexión de punta a punta y el
-/// pulido de errores quedan para T9, cuando la API esté desplegada.
+/// Es la implementación por defecto desde T9 (`USE_FAKE_API=false`).
 class HttpFluentApi implements FluentApi {
   HttpFluentApi(this._client);
 

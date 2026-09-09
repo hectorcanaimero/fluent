@@ -33,11 +33,13 @@ class Env {
     defaultValue: '',
   );
 
-  /// Cuando es `true` (por defecto durante el desarrollo del PR-06) la app
-  /// usa [FakeApi] en lugar de llamadas HTTP reales. Se apaga en T9.
+  /// Cuando es `true` la app usa [FakeApi] en lugar de llamadas HTTP
+  /// reales. Por defecto `false` desde T9 (PR-06): la app se conecta a la
+  /// API real salvo que se pase explícitamente
+  /// `--dart-define=USE_FAKE_API=true`.
   static const bool useFakeApi = bool.fromEnvironment(
     'USE_FAKE_API',
-    defaultValue: true,
+    defaultValue: false,
   );
 
   /// Esquema del deep link de retorno de PKCE (`fluent://oauth/openrouter`).

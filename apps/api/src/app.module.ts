@@ -19,6 +19,7 @@ import { RateLimitModule } from './rate-limit/rate-limit.module.js';
 import { MemoryModule } from './memory/memory.module.js';
 import { ProgressModule } from './progress/progress.module.js';
 import { SocialModule } from './social/social.module.js';
+import { SessionsModule } from './sessions/sessions.module.js';
 import { QueuesModule } from './jobs/queues.module.js';
 import { AdminModule } from './admin/admin.module.js';
 
@@ -84,6 +85,10 @@ import { AdminModule } from './admin/admin.module.js';
     // docs/specs/pendientes/PR-02.md.
     ProgressModule,
     SocialModule,
+    // Sesión de conversación (PR-04, SPEC-02 §4.3, SPEC-04): `POST /sessions`
+    // en T1; turnos, cierre y sugerencias en T2/T3. Va después de
+    // `SocialModule` (decisión de la sesión líder de PR-04).
+    SessionsModule,
     // Solo la infraestructura de colas de PR-05: la API encola
     // (`JOB_DISPATCHER`) pero no consume. Los procesadores viven en
     // `JobsModule`, que importa el worker (`worker.module.ts`).

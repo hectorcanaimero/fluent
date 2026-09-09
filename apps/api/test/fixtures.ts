@@ -88,10 +88,20 @@ export interface SeedProfileOverrides {
   readonly displayName?: string;
   readonly groupId?: string | null;
   readonly level?: 'A2' | 'B1' | 'B2';
+  readonly locale?: 'es' | 'pt-BR';
   readonly xp?: number;
   readonly streak?: number;
   readonly longestStreak?: number;
   readonly lastSessionDay?: string | null; // ISO date
+  readonly sessionsCount?: number;
+  /**
+   * `profiles.onboarded_at`. Por defecto **ahora**: casi todo endpoint de la
+   * API exige un perfil onboarded (`409 NOT_ONBOARDED`, SPEC-02 §6), así que
+   * el fixture siembra el caso normal. Pasar `null` explícitamente para
+   * sembrar el caso "perfil a medias" (añadido por PR-04/T1, que necesita
+   * probar los dos lados).
+   */
+  readonly onboardedAt?: string | null;
 }
 
 /** Inserta la fila de `profiles` de un usuario ya registrado (mismo `INSERT` mínimo que `ensureProfile`). */
@@ -104,11 +114,15 @@ export async function seedProfile(
     user_id: userId,
     display_name: clampDisplayName(overrides.displayName ?? `Fixture ${userId.slice(0, 8)}`),
     level: overrides.level ?? 'A2',
+    locale: overrides.locale ?? 'es',
     group_id: overrides.groupId ?? null,
     xp: overrides.xp ?? 0,
     streak: overrides.streak ?? 0,
     longest_streak: overrides.longestStreak ?? 0,
     last_session_day: overrides.lastSessionDay ?? null,
+    sessions_count: overrides.sessionsCount ?? 0,
+    onboarded_at:
+      overrides.onboardedAt === undefined ? new Date().toISOString() : overrides.onboardedAt,
   });
 
   if (error) {

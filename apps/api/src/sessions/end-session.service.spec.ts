@@ -1,10 +1,10 @@
 import { ApiException } from '../common/api-error.js';
-import type { CloseSessionArgs, CloseSessionResult } from '../db/rpc.js';
+import type { CloseSessionResult } from '../db/rpc.js';
 import type { Session } from '../db/schema.js';
-import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { EndSessionDto } from './dto/end-session.dto.js';
 import { computeDurationSec, EndSessionService } from './end-session.service.js';
 import type { EndSessionRepository } from './end-session.repository.js';
+import type { SessionCloseParams, SessionCloserService } from './session-closer.service.js';
 import type { TurnsRepository } from './turns.repository.js';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -54,86 +54,68 @@ function fakeTurnsRepository(options: FakeTurnsRepoOptions = {}): TurnsRepositor
   } as unknown as TurnsRepository;
 }
 
-interface FakeEndSessionRepoOptions {
-  readonly closeResult?: CloseSessionResult;
-  readonly correctionsCount?: number;
-  readonly closeSessionImpl?: (args: CloseSessionArgs) => Promise<CloseSessionResult>;
-}
-
-function fakeEndSessionRepository(options: FakeEndSessionRepoOptions = {}) {
-  const calls = {
-    closeSession: [] as CloseSessionArgs[],
-    markBriefDone: [] as Array<{ userId: string; sessionId: string }>,
-    countCorrections: [] as string[],
-  };
-
+function fakeEndSessionRepository(correctionsCount = 2) {
+  const calls = { countCorrections: [] as string[] };
   const repo = {
-    closeSession: async (args: CloseSessionArgs) => {
-      calls.closeSession.push(args);
-      if (options.closeSessionImpl) return options.closeSessionImpl(args);
-      return options.closeResult ?? closeResultFixture();
-    },
-    markBriefDone: async (userId: string, sessionId: string) => {
-      calls.markBriefDone.push({ userId, sessionId });
-    },
     countCorrections: async (sessionId: string) => {
       calls.countCorrections.push(sessionId);
-      return options.correctionsCount ?? 2;
+      return correctionsCount;
     },
   };
-
   return { repo: repo as unknown as EndSessionRepository, calls };
 }
 
-function fakeJobDispatcher() {
-  const enqueued: string[] = [];
-  const dispatcher: JobDispatcher = {
-    enqueueCoachingBrief: async (sessionId: string) => {
-      enqueued.push(sessionId);
+function fakeSessionCloser(closeResult: CloseSessionResult = closeResultFixture()) {
+  const calls: SessionCloseParams[] = [];
+  const closer = {
+    close: async (params: SessionCloseParams) => {
+      calls.push(params);
+      return closeResult;
     },
   };
-  return { dispatcher, enqueued };
+  return { closer: closer as unknown as SessionCloserService, calls };
 }
 
 describe('EndSessionService', () => {
-  it('sesión de otro usuario o inexistente → 403 FORBIDDEN, sin llamar a close_session', async () => {
+  it('sesión de otro usuario o inexistente → 403 FORBIDDEN, sin llamar al closer', async () => {
     const turns = fakeTurnsRepository({ session: null });
-    const { repo, calls } = fakeEndSessionRepository();
-    const { dispatcher } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
+    const { repo } = fakeEndSessionRepository();
+    const { closer, calls } = fakeSessionCloser();
+    const service = new EndSessionService(turns, repo, closer);
 
     await expect(service.endSession(OTHER_USER_ID, SESSION_ID, DTO)).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });
-    expect(calls.closeSession).toHaveLength(0);
+    expect(calls).toHaveLength(0);
   });
 
   it('`:id` que no es un UUID → 403 FORBIDDEN antes de tocar el repositorio', async () => {
     const turns = fakeTurnsRepository();
     const { repo } = fakeEndSessionRepository();
-    const { dispatcher } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
+    const { closer } = fakeSessionCloser();
+    const service = new EndSessionService(turns, repo, closer);
 
     await expect(service.endSession(USER_ID, 'no-es-un-uuid', DTO)).rejects.toBeInstanceOf(
       ApiException,
     );
   });
 
-  it('cierra una sesión activa: llama a close_session con p_turns_count = sessions.turns_count', async () => {
+  it('cierra una sesión activa: delega en el closer con decideBrief=true y turnsCount de la sesión', async () => {
     const session = sessionFixture({ status: 'active', turns_count: 5 });
     const turns = fakeTurnsRepository({ session });
-    const { repo, calls } = fakeEndSessionRepository({
-      closeResult: closeResultFixture({ xp_earned: 90, streak: 4, is_double_day: true, next_is_boss: true }),
-      correctionsCount: 3,
-    });
-    const { dispatcher, enqueued } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
+    const { repo } = fakeEndSessionRepository(3);
+    const { closer, calls } = fakeSessionCloser(
+      closeResultFixture({ xp_earned: 90, streak: 4, is_double_day: true, next_is_boss: true }),
+    );
+    const service = new EndSessionService(turns, repo, closer);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
-    expect(calls.closeSession[0]).toMatchObject({
-      p_session_id: SESSION_ID,
-      p_turns_count: 5,
+    expect(calls[0]).toMatchObject({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      turnsCount: 5,
+      decideBrief: true,
     });
     expect(result.summary).toMatchObject({
       xpEarned: 90,
@@ -143,39 +125,9 @@ describe('EndSessionService', () => {
       nextIsBoss: true,
     });
     expect(result.summary.durationSec).toBeGreaterThanOrEqual(0);
-    // turns_count (5) >= MIN_TURNS_FOR_BRIEF (3): se encola el job.
-    expect(enqueued).toEqual([SESSION_ID]);
   });
 
-  it('turns_count < MIN_TURNS_FOR_BRIEF: no encola el job y marca brief_job_status=done', async () => {
-    const session = sessionFixture({ status: 'active', turns_count: 1 });
-    const turns = fakeTurnsRepository({ session });
-    const { repo, calls } = fakeEndSessionRepository();
-    const { dispatcher, enqueued } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
-
-    await service.endSession(USER_ID, SESSION_ID, DTO);
-
-    expect(enqueued).toEqual([]);
-    expect(calls.markBriefDone).toEqual([{ userId: USER_ID, sessionId: SESSION_ID }]);
-  });
-
-  it('un fallo al encolar (Redis caído) no tumba el cierre: responde igual, log warn', async () => {
-    const session = sessionFixture({ status: 'active', turns_count: 5 });
-    const turns = fakeTurnsRepository({ session });
-    const { repo } = fakeEndSessionRepository();
-    const dispatcher: JobDispatcher = {
-      enqueueCoachingBrief: async () => {
-        throw new Error('Redis caído');
-      },
-    };
-    const service = new EndSessionService(turns, repo, dispatcher);
-
-    const result = await service.endSession(USER_ID, SESSION_ID, DTO);
-    expect(result.summary.xpEarned).toBe(closeResultFixture().xp_earned);
-  });
-
-  it('sesión ya `ended` (idempotente): responde 200 con el resumen ya guardado, sin volver a decidir el brief', async () => {
+  it('sesión ya `ended` (idempotente): delega con decideBrief=false y responde el resumen guardado', async () => {
     const session = sessionFixture({
       status: 'ended',
       ended_at: '2026-09-08T10:20:00.000Z',
@@ -185,18 +137,17 @@ describe('EndSessionService', () => {
       brief_job_status: 'done',
     });
     const turns = fakeTurnsRepository({ session });
-    const { repo, calls } = fakeEndSessionRepository({
-      closeResult: closeResultFixture({ xp_earned: 60, streak: 2, is_double_day: false, next_is_boss: false }),
-    });
-    const { dispatcher, enqueued } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
+    const { repo } = fakeEndSessionRepository();
+    const { closer, calls } = fakeSessionCloser(
+      closeResultFixture({ xp_earned: 60, streak: 2, is_double_day: false, next_is_boss: false }),
+    );
+    const service = new EndSessionService(turns, repo, closer);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
-    // Se sigue llamando a close_session (es idempotente), pero no se toca el brief.
-    expect(calls.closeSession).toHaveLength(1);
-    expect(calls.markBriefDone).toEqual([]);
-    expect(enqueued).toEqual([]);
+    // Se sigue llamando al closer (close_session es idempotente), pero con decideBrief=false.
+    expect(calls).toHaveLength(1);
+    expect(calls[0]?.decideBrief).toBe(false);
     expect(result.summary.xpEarned).toBe(60);
     expect(result.summary.durationSec).toBe(600); // el guardado, no uno recalculado
   });
@@ -205,8 +156,8 @@ describe('EndSessionService', () => {
     const session = sessionFixture({ status: 'abandoned', duration_sec: null });
     const turns = fakeTurnsRepository({ session });
     const { repo } = fakeEndSessionRepository();
-    const { dispatcher } = fakeJobDispatcher();
-    const service = new EndSessionService(turns, repo, dispatcher);
+    const { closer } = fakeSessionCloser();
+    const service = new EndSessionService(turns, repo, closer);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
     expect(result.summary.durationSec).toBe(0);

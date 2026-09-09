@@ -1,15 +1,11 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
-import type { ApiErrorCode } from '../common/api-error.js';
-import { SESSION_HARD_CAP_SEC, MIN_TURNS_FOR_BRIEF } from '../config/product.js';
-import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
+import { Injectable } from '@nestjs/common';
+import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { EndSessionDto } from './dto/end-session.dto.js';
 import { EndSessionRepository } from './end-session.repository.js';
+import { SessionCloserService } from './session-closer.service.js';
 import { findOwnedSessionOrThrow } from './session-ownership.js';
 import type { SessionEndResultDto } from './sessions.types.js';
 import { TurnsRepository } from './turns.repository.js';
-
-const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de cerrar la sesión.';
-const CLOSE_FAILED_MESSAGE = 'No se pudo cerrar la sesión.';
 
 /**
  * `POST /sessions/:id/end` (SPEC-04 §5).
@@ -27,22 +23,16 @@ const CLOSE_FAILED_MESSAGE = 'No se pudo cerrar la sesión.';
  * **El job de `coaching-brief` solo se decide si la sesión pasa de `active` a
  * `ended` en esta llamada** (`wasActive`): una llamada repetida sobre una
  * sesión ya cerrada no debe volver a encolar el job ni a tocar
- * `brief_job_status` (que ya quedó en su valor final la primera vez).
- *
- * **Un fallo al encolar no tumba el cierre** (SPEC-04 §5.3, Redis caído): se
- * registra con `Logger.warn` y la sesión queda `brief_job_status='pending'`
- * (su valor por defecto desde que se creó, migración 3) para que una
- * reentrada futura del propio job o un barrido manual la recojan; no se
- * intenta reintentar el encolado aquí.
+ * `brief_job_status` (que ya quedó en su valor final la primera vez). La RPC
+ * + esa decisión viven en `SessionCloserService` (PR-04/T5), compartido con
+ * `SessionSweeperService` (SPEC-04 §6) para no duplicar la lógica de cierre.
  */
 @Injectable()
 export class EndSessionService {
-  private readonly logger = new Logger(EndSessionService.name);
-
   constructor(
     private readonly turnsRepository: TurnsRepository,
     private readonly repository: EndSessionRepository,
-    @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
+    private readonly closer: SessionCloserService,
   ) {}
 
   async endSession(
@@ -55,29 +45,13 @@ export class EndSessionService {
 
     const durationSec = computeDurationSec(session.started_at);
 
-    const closeResult = await this.repository.closeSession(
-      {
-        p_session_id: session.id,
-        p_duration_sec: durationSec,
-        p_turns_count: session.turns_count,
-      },
-      messageForRpcCode,
-    );
-
-    if (wasActive) {
-      if (session.turns_count >= MIN_TURNS_FOR_BRIEF) {
-        try {
-          await this.jobs.enqueueCoachingBrief(session.id);
-        } catch (error) {
-          this.logger.warn(
-            `No se pudo encolar coaching-brief para la sesión ${session.id}: ` +
-              `${(error as Error).message}`,
-          );
-        }
-      } else {
-        await this.repository.markBriefDone(userId, session.id);
-      }
-    }
+    const closeResult = await this.closer.close({
+      userId,
+      sessionId: session.id,
+      durationSec,
+      turnsCount: session.turns_count,
+      decideBrief: wasActive,
+    });
 
     const correctionsCount = await this.repository.countCorrections(session.id);
 
@@ -102,9 +76,4 @@ export class EndSessionService {
 export function computeDurationSec(startedAtIso: string, now: Date = new Date()): number {
   const elapsedSec = Math.floor((now.getTime() - new Date(startedAtIso).getTime()) / 1000);
   return Math.min(SESSION_HARD_CAP_SEC, Math.max(0, elapsedSec));
-}
-
-/** Mensajes en español fijo (mismo criterio que el resto del módulo, PEND-29/PEND-43 de PR-02). */
-function messageForRpcCode(code: ApiErrorCode): string {
-  return code === 'NOT_ONBOARDED' ? NOT_ONBOARDED_MESSAGE : CLOSE_FAILED_MESSAGE;
 }

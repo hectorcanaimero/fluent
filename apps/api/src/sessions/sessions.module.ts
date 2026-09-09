@@ -5,6 +5,7 @@ import { InsforgeBossRepository } from './boss.repository.js';
 import { RedisBossSkipStore } from './boss-skip.store.js';
 import { EndSessionRepository } from './end-session.repository.js';
 import { EndSessionService } from './end-session.service.js';
+import { SessionCloserService } from './session-closer.service.js';
 import { SessionsController } from './sessions.controller.js';
 import { SessionsHistoryRepository } from './sessions-history.repository.js';
 import { SessionsHistoryService } from './sessions-history.service.js';
@@ -33,7 +34,11 @@ import { TurnsService } from './turns.service.js';
  *   pendiente. `SuggestionsService` (T3) la reutiliza para `bossPending`.
  * - `JOB_DISPATCHER` no se importa: lo provee `QueuesModule`, que es
  *   `@Global()` (PEND-09 de docs/specs/pendientes/PR-05.md), así que
- *   `EndSessionService` lo inyecta directamente con `@Inject(JOB_DISPATCHER)`.
+ *   `SessionCloserService` lo inyecta directamente con
+ *   `@Inject(JOB_DISPATCHER)`. `EndSessionService` (PR-04/T3) ya no llama a
+ *   `close_session` ni decide el brief por su cuenta: delega en
+ *   `SessionCloserService` (PR-04/T5), compartido con `SessionSweeperModule`
+ *   para no duplicar esa lógica (SPEC-04 §6).
  */
 @Module({
   imports: [LlmModule],
@@ -58,6 +63,7 @@ import { TurnsService } from './turns.service.js';
     TurnsRepository,
     TurnsService,
     EndSessionRepository,
+    SessionCloserService,
     EndSessionService,
     SuggestionsRepository,
     SuggestionsService,

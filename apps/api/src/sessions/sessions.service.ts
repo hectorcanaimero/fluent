@@ -12,20 +12,21 @@ import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { ModelPreference } from '../llm/model-resolver.js';
-import {
-  buildTurnMessages,
-  type CallbackFact,
-  type NewsScenario,
-  type RoleplayScenario,
-} from '../llm/prompts/turn.js';
+import { buildTurnMessages, type CallbackFact } from '../llm/prompts/turn.js';
 import { TurnOutput } from '../llm/schemas.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
+import {
+  bossScenario,
+  freeTopicScenario,
+  newsScenario,
+  roleplayScenario,
+  type SessionScenario,
+} from './scenario.js';
 import { openingFor } from './session-openings.js';
 import { NEWS_MAX_AGE_DAYS, SESSION_RANDOM, type SessionRandom } from './sessions.constants.js';
-import { toSessionInfoDto } from './sessions.mapper.js';
+import { roundLatency, toSessionInfoDto } from './sessions.mapper.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { CreateSessionResultDto } from './sessions.types.js';
-import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
 const NOT_ONBOARDED_MESSAGE =
   'Completa tu perfil antes de empezar una sesión de conversación.';
@@ -38,17 +39,6 @@ const NO_BOSS_TOPIC_MESSAGE =
   'No quedan temas de reto disponibles para tu nivel; elige otro tipo de sesión.';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Lo que se resuelve del `kind` antes de tocar la base (SPEC-04 §3.2). */
-interface ResolvedScenario {
-  /** Etiqueta legible que se guarda en `sessions.topic`. */
-  readonly topic: string;
-  /** Bloque de tema en inglés para el prompt (`free_topic` y `boss`). */
-  readonly promptTopic?: string;
-  readonly roleplay?: RoleplayScenario;
-  readonly news?: NewsScenario;
-  readonly newsItemId?: string;
-}
 
 /**
  * `POST /sessions` — apertura de sesión (SPEC-04 §3, RF-3.x y RF-4.4).
@@ -270,7 +260,7 @@ export class SessionsService {
     userId: string,
     dto: CreateSessionDto,
     profile: Profile,
-  ): Promise<ResolvedScenario> {
+  ): Promise<SessionScenario> {
     switch (dto.kind) {
       case 'free_topic':
         return this.resolveFreeTopic(dto.topic);
@@ -283,15 +273,15 @@ export class SessionsService {
     }
   }
 
-  private resolveFreeTopic(topic: string | undefined): ResolvedScenario {
+  private resolveFreeTopic(topic: string | undefined): SessionScenario {
     const trimmed = topic?.trim() ?? '';
     if (trimmed === '') {
       throw validationError('topic', 'topic es obligatorio para kind=free_topic.');
     }
-    return { topic: trimmed, promptTopic: resolveFreeTopicPrompt(trimmed) };
+    return freeTopicScenario(trimmed);
   }
 
-  private resolveRoleplay(roleplayId: string | undefined): ResolvedScenario {
+  private resolveRoleplay(roleplayId: string | undefined): SessionScenario {
     if (!roleplayId) {
       throw validationError('roleplayId', 'roleplayId es obligatorio para kind=roleplay.');
     }
@@ -299,13 +289,10 @@ export class SessionsService {
     if (!roleplay) {
       throw validationError('roleplayId', 'roleplayId no existe en el catálogo de escenarios.');
     }
-    return {
-      topic: roleplay.title_es,
-      roleplay: { role: roleplay.role, situation: roleplay.situation },
-    };
+    return roleplayScenario(roleplay);
   }
 
-  private async resolveNews(newsItemId: string | undefined): Promise<ResolvedScenario> {
+  private async resolveNews(newsItemId: string | undefined): Promise<SessionScenario> {
     if (!newsItemId) {
       throw validationError('newsItemId', 'newsItemId es obligatorio para kind=news.');
     }
@@ -321,14 +308,10 @@ export class SessionsService {
       );
     }
 
-    return {
-      topic: item.title,
-      news: { title: item.title, summary: item.summary ?? '' },
-      newsItemId: item.id,
-    };
+    return newsScenario(item);
   }
 
-  private async resolveBoss(userId: string, profile: Profile): Promise<ResolvedScenario> {
+  private async resolveBoss(userId: string, profile: Profile): Promise<SessionScenario> {
     const topic = await this.boss.pickTopic(userId, profile.level);
     if (topic === null) {
       // docs/specs/pendientes/PR-07.md T3 §4 deja esta decisión a la capa de
@@ -338,7 +321,7 @@ export class SessionsService {
         extra: { details: [{ field: 'kind', reason: NO_BOSS_TOPIC_MESSAGE }] },
       });
     }
-    return { topic: topic.title_es, promptTopic: topic.prompt_en };
+    return bossScenario(topic);
   }
 }
 
@@ -349,11 +332,6 @@ interface OpeningOutcome {
   readonly tokensIn: number | null;
   readonly tokensOut: number | null;
   readonly latencyMs: number | null;
-}
-
-/** `turns.latency_ms` es `int`: se redondea y nunca es negativo. */
-function roundLatency(latencyMs: number | null): number | null {
-  return latencyMs === null ? null : Math.max(0, Math.round(latencyMs));
 }
 
 /** `400 VALIDATION` con `details[]`, tal y como lo formatea PR-02/T3. */

@@ -40,3 +40,33 @@ export const OPENING_TURN_IDX = 0;
 
 /** Número máximo de filas de `sessions` que se leen para el histórico de boss. */
 export const BOSS_TOPIC_ROW_LIMIT = 500;
+
+/**
+ * Lock de turno de SPEC-04 §4: «Concurrencia: lock en Redis
+ * `session:<id>:turn` (5 s)». La clave y el TTL son literalmente los de la
+ * spec; el valor es irrelevante (basta con que exista), así que se escribe
+ * `'1'` igual que en `RedisBossSkipStore`.
+ */
+export const TURN_LOCK_KEY_PREFIX = 'session';
+export const TURN_LOCK_TTL_SECONDS = 5;
+
+/** Clave del lock de turno: `session:<sessionId>:turn` (SPEC-04 §4). */
+export function turnLockKey(sessionId: string): string {
+  return `${TURN_LOCK_KEY_PREFIX}:${sessionId}:turn`;
+}
+
+/**
+ * Ritmo de SPEC-02 §7: «un turno como máximo cada 2 segundos por sesión».
+ * SPEC-04 no le da nombre a la clave; se elige el mismo espacio de nombres que
+ * el lock para que las dos claves de una sesión caduquen juntas y se vean
+ * juntas en Redis. Ver docs/specs/pendientes/PR-04.md.
+ */
+export const TURN_PACE_TTL_SECONDS = 2;
+
+/** Clave de la ventana de ritmo: `session:<sessionId>:pace`. */
+export function turnPaceKey(sessionId: string): string {
+  return `${TURN_LOCK_KEY_PREFIX}:${sessionId}:pace`;
+}
+
+/** Valor que se escribe en las claves que solo importan por existir. */
+export const REDIS_FLAG_VALUE = '1';

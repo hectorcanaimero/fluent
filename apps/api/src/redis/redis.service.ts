@@ -75,6 +75,33 @@ export class RedisService {
   }
 
   /**
+   * Escritura condicional con expiración (`SET key value EX ttlSeconds NX`),
+   * el primitivo de los locks y de las ventanas de ritmo: devuelve `true`
+   * solo si la clave **no existía** y por tanto la escribió esta llamada.
+   *
+   * **Redis caído ⇒ `true` (fail-open).** Rompe la simetría con el resto de
+   * métodos (que devuelven el valor neutro) a propósito, y por el mismo
+   * criterio que ellos: un fallo de caché degrada, no tumba. Los dos usos
+   * previstos son optimizaciones —el lock de turno de SPEC-04 §4 y el ritmo
+   * de 2 s de SPEC-02 §7—, así que devolver `false` con Redis caído
+   * bloquearía **todos** los turnos de **todos** los usuarios mientras dure
+   * la caída, que es mucho peor que perder temporalmente la protección
+   * contra dos turnos simultáneos de la misma sesión. Ver
+   * docs/specs/pendientes/PR-04.md.
+   */
+  async setIfAbsent(key: string, value: string, ttlSeconds: number): Promise<boolean> {
+    try {
+      const reply = await this.cacheClient.set(key, value, 'EX', ttlSeconds, 'NX');
+      return reply === 'OK';
+    } catch (error) {
+      this.logger.warn(
+        `Redis SET NX '${key}' falló: ${(error as Error).message}. Se continúa sin lock (fail-open).`,
+      );
+      return true;
+    }
+  }
+
+  /**
    * Borra una clave. Devuelve `true` si se borró algo, `false` si la clave
    * no existía o si Redis falló.
    */

@@ -7,10 +7,13 @@ import { SessionsController } from './sessions.controller.js';
 import { SESSION_RANDOM } from './sessions.constants.js';
 import { SessionsRepository } from './sessions.repository.js';
 import { SessionsService } from './sessions.service.js';
+import { TurnsRepository } from './turns.repository.js';
+import { TurnsService } from './turns.service.js';
 
 /**
- * Módulo de sesión de conversación (SPEC-02 §4.3, SPEC-04). En PR-04/T1 solo
- * expone `POST /sessions`; T2 y T3 añaden turnos, cierre y sugerencias.
+ * Módulo de sesión de conversación (SPEC-02 §4.3, SPEC-04). Tras PR-04/T2
+ * expone `POST /sessions` y `POST /sessions/:id/turns`; T3 añade cierre,
+ * sugerencias, listado y detalle, y T4 el streaming.
  *
  * - `LlmModule` aporta el `LlmService` ya construido **y** reexporta
  *   `LlmInfraModule` → `CredentialsModule`, de donde sale `CredentialsService`
@@ -41,7 +44,9 @@ import { SessionsService } from './sessions.service.js';
       useValue: () => Math.random(),
     },
     SessionsService,
+    TurnsRepository,
+    TurnsService,
   ],
-  exports: [SessionsService],
+  exports: [SessionsService, TurnsService],
 })
 export class SessionsModule {}

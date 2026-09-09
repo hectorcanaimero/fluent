@@ -1,6 +1,6 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
-import 'package:fluent_mobile/core/errors/api_exception.dart';
+import 'package:fluent_mobile/core/api/turn_stream_event.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/session/data/speech_service.dart';
 import 'package:fluent_mobile/features/session/data/tts_service.dart';
@@ -11,6 +11,30 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+/// Simula un stream que arranca bien (algunos `token`) y se corta antes de
+/// `done` (conexión perdida, o el `error` SSE de PEND-55 de PR-04.md): la
+/// pantalla debe caer al endpoint sin streaming y quedarse con **ese**
+/// `reply`, descartando el texto parcial que ya había pintado.
+class _StreamDropsBeforeDoneApi extends FakeApi {
+  _StreamDropsBeforeDoneApi({super.artificialDelay});
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  }) async* {
+    yield const TurnStreamToken('Partial');
+    yield const TurnStreamToken(' reply...');
+    throw Exception('conexión perdida');
+  }
+
+  @override
+  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+    final base = await super.sendTurn(sessionId: sessionId, text: text);
+    return base.copyWith(reply: 'Full reply from the non-streaming endpoint.');
+  }
+}
 
 /// Garantiza que el turno vuelva con al menos una corrección, sin
 /// depender de la semilla aleatoria de [FakeApi.sendTurn].
@@ -34,7 +58,9 @@ class _AlwaysCorrectingApi extends FakeApi {
   }
 }
 
-/// Siempre falla con LLM_UNAVAILABLE, para probar el diálogo de 3
+/// Simula la cadena de modelos agotada: `POST /sessions/:id/turns` no
+/// lanza `503 LLM_UNAVAILABLE` (ver `turns.service.ts`), responde `200` con
+/// `TurnResult.unavailable: true` siempre, para probar el diálogo de 3
 /// intentos seguidos.
 class _UnavailableApi extends FakeApi {
   _UnavailableApi({super.artificialDelay});
@@ -44,10 +70,11 @@ class _UnavailableApi extends FakeApi {
   @override
   Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
     calls++;
-    throw const ApiException(
-      code: ApiErrorCode.llmUnavailable,
-      message: 'no model responded',
-      statusCode: 503,
+    return const TurnResult(
+      turnIdx: 0,
+      reply: 'Sorry, I lost my train of thought. Could you say that again?',
+      degraded: true,
+      unavailable: true,
     );
   }
 }
@@ -62,7 +89,7 @@ const _delegates = [
 void main() {
   testWidgets('escuchar, editar, enviar, mostrar corrección y reproducir', (tester) async {
     final api = _AlwaysCorrectingApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
     final speech = FakeSpeechService();
     final tts = FakeTtsService();
 
@@ -118,9 +145,47 @@ void main() {
     expect(tts.spokenTexts, isNotEmpty);
   });
 
+  testWidgets(
+    'si el stream se corta antes de done, cae al endpoint completo y descarta el texto parcial',
+    (tester) async {
+      final api = _StreamDropsBeforeDoneApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+      final tts = FakeTtsService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => tts),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello');
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pumpAndSettle();
+
+      // El `done` (acá, el resultado del endpoint completo de caída) es la
+      // fuente de verdad: se descarta "Partial reply..." y se pinta y
+      // reproduce el `reply` del endpoint sin streaming.
+      expect(find.text('Full reply from the non-streaming endpoint.'), findsOneWidget);
+      expect(find.textContaining('Partial'), findsNothing);
+      expect(tts.spokenTexts, ['Full reply from the non-streaming endpoint.']);
+    },
+  );
+
   testWidgets('tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar', (tester) async {
     final api = _UnavailableApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
 
     await tester.pumpWidget(
       ProviderScope(
@@ -138,11 +203,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Modo texto para no depender del micrófono simulado.
-    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
-    await tester.pump();
-
+    // Cada turno degradado se persiste con `200` (no lanza una excepción,
+    // ver `turns.service.ts`), así que la conversación vuelve a `idle` entre
+    // envío y envío: hay que reabrir el modo texto en cada vuelta en vez de
+    // una sola vez al principio.
     for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
       await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello $i');
       await tester.tap(find.byKey(const Key('conversation_send_button')));
       await tester.pumpAndSettle();
@@ -155,7 +222,7 @@ void main() {
 
   testWidgets('el temporizador llega a 0 y dispara /end', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
 
     final router = GoRouter(
       initialLocation: '/session/${created.session.id}',

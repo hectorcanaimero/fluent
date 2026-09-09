@@ -4,6 +4,7 @@ import '../../features/onboarding/data/interests_catalog.dart';
 import '../errors/api_exception.dart';
 import 'fluent_api.dart';
 import 'models.dart';
+import 'turn_stream_event.dart';
 
 /// Implementación de [FluentApi] con datos de ejemplo realistas (María,
 /// streak 12, grupo "Los Fluentes") para construir todas las pantallas sin
@@ -384,6 +385,11 @@ class FakeApi implements FluentApi {
   /// [getSessionSuggestions] sin tener que simular 7 sesiones reales.
   bool bossPending = false;
 
+  /// Gancho para tests: el `challengeFromUserId` que recibió la última
+  /// llamada a [createSession] (SPEC-07 §7), sin tener que sobreescribir el
+  /// método solo para inspeccionar el argumento.
+  String? lastChallengeFromUserId;
+
   @override
   Future<SessionSuggestions> getSessionSuggestions() async {
     await _delay();
@@ -443,7 +449,9 @@ class FakeApi implements FluentApi {
     String? topic,
     String? roleplayId,
     String? newsItemId,
+    String? challengeFromUserId,
   }) async {
+    lastChallengeFromUserId = challengeFromUserId;
     await _delay();
     if (_activeSessionId != null) {
       throw ApiException(
@@ -496,10 +504,13 @@ class FakeApi implements FluentApi {
     if (session == null || session.endedAt != null) {
       _fail(ApiErrorCode.sessionNotActive, 'session is not active', statusCode: 409);
     }
+    // Cada turno (del usuario y del tutor) tiene su propio `idx` secuencial,
+    // igual que la API real (`TurnsService`, SPEC-04 §4 paso 2): el `idx` de
+    // la apertura del tutor es `0`, así que el primer turno del usuario es
+    // `1`, su respuesta `2`, y así.
     _turnCounter++;
-    _sessionTurns[sessionId]!.add(
-      TurnRecord(idx: _turnCounter, role: 'user', text: text),
-    );
+    final userIdx = _turnCounter;
+    _sessionTurns[sessionId]!.add(TurnRecord(idx: userIdx, role: 'user', text: text));
 
     final hasMistake = _random.nextDouble() < 0.5;
     final corrections = <Correction>[];
@@ -517,17 +528,35 @@ class FakeApi implements FluentApi {
 
     final reply =
         "That's interesting! Can you tell me a bit more about why you feel that way?";
-    _sessionTurns[sessionId]!.add(
-      TurnRecord(idx: _turnCounter, role: 'tutor', text: reply),
-    );
+    _turnCounter++;
+    _sessionTurns[sessionId]!.add(TurnRecord(idx: _turnCounter, role: 'tutor', text: reply));
 
     return TurnResult(
-      turnIdx: _turnCounter,
+      turnIdx: userIdx,
       reply: reply,
       corrections: corrections,
       modelUsed: _modelPreference?.chatModel,
       degraded: false,
     );
+  }
+
+  /// Simula el streaming de `POST /sessions/:id/turns/stream` (SPEC-04 §4)
+  /// partiendo el `reply` de [sendTurn] en palabras, con un pequeño retraso
+  /// entre cada una (proporcional a [artificialDelay], cero en los tests que
+  /// lo desactivan) para que la UI tenga algo real que animar.
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  }) async* {
+    final result = await sendTurn(sessionId: sessionId, text: text);
+    final words = result.reply.split(' ');
+    for (var i = 0; i < words.length; i++) {
+      await _delay();
+      yield TurnStreamToken(i == 0 ? words[i] : ' ${words[i]}');
+    }
+    yield TurnStreamCorrections(result.corrections);
+    yield TurnStreamDone(result);
   }
 
   @override
@@ -712,7 +741,7 @@ class FakeApi implements FluentApi {
         fromUserId: 'user-ana',
         displayName: 'Ana',
         topic: 'traveling solo',
-        kind: 'topic',
+        kind: 'free_topic',
         sessionId: 'challenge-travel',
       ),
       ChallengeItem(

@@ -43,13 +43,24 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     );
   }
 
+  /// SPEC-07 §7: al aceptar, la app abre `POST /sessions` con
+  /// `challengeFromUserId` (para el bono de XP al cerrarla). Siempre como
+  /// `free_topic` con el `topic` legible del desafío (PEND-11 de
+  /// `docs/specs/pendientes/PR-04.md`) y no con el `challenge.kind`
+  /// original: `GET /challenges` no expone `roleplayId` ni `newsItemId`, así
+  /// que un desafío de `roleplay`/`news` no se puede reabrir con su `kind`
+  /// real sin esos ids. Ver PEND de `docs/specs/pendientes/PR-06.md`.
   Future<void> _acceptChallenge(ChallengeItem challenge) async {
     if (_startingChallenge) return;
     setState(() => _startingChallenge = true);
     try {
       final result = await ref
           .read(fluentApiProvider)
-          .createSession(kind: 'topic', topic: challenge.topic);
+          .createSession(
+            kind: 'free_topic',
+            topic: challenge.topic,
+            challengeFromUserId: challenge.fromUserId,
+          );
       if (!mounted) return;
       context.push('/session/${result.session.id}');
     } finally {

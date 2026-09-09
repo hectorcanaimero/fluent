@@ -5803,7 +5803,10 @@ as String,
 /// @nodoc
 mixin _$TurnResult {
 
- int get turnIdx; String get reply; List<Correction> get corrections; String? get modelUsed; bool get degraded;
+ int get turnIdx; String get reply; List<Correction> get corrections; String? get modelUsed; bool get degraded;/// Solo `true` cuando la cadena de modelos se agotó (SPEC-03 §6): la API
+/// no manda el campo en el resto de los casos, así que el `false` por
+/// defecto cubre esa ausencia (SPEC-02 §4.3, `docs/specs/SPEC-04-sesion-de-conversacion.md` §4).
+ bool get unavailable;
 /// Create a copy of TurnResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -5817,20 +5820,20 @@ $TurnResultCopyWith<TurnResult> get copyWith => _$TurnResultCopyWithImpl<TurnRes
 @override
 bool operator ==(Object other) {
   final _this = this as TurnResult;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is TurnResult&&(identical(other.turnIdx, _this.turnIdx) || other.turnIdx == _this.turnIdx)&&(identical(other.reply, _this.reply) || other.reply == _this.reply)&&const DeepCollectionEquality().equals(other.corrections, _this.corrections)&&(identical(other.modelUsed, _this.modelUsed) || other.modelUsed == _this.modelUsed)&&(identical(other.degraded, _this.degraded) || other.degraded == _this.degraded));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is TurnResult&&(identical(other.turnIdx, _this.turnIdx) || other.turnIdx == _this.turnIdx)&&(identical(other.reply, _this.reply) || other.reply == _this.reply)&&const DeepCollectionEquality().equals(other.corrections, _this.corrections)&&(identical(other.modelUsed, _this.modelUsed) || other.modelUsed == _this.modelUsed)&&(identical(other.degraded, _this.degraded) || other.degraded == _this.degraded)&&(identical(other.unavailable, _this.unavailable) || other.unavailable == _this.unavailable));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as TurnResult;
-  return Object.hash(runtimeType,_this.turnIdx,_this.reply,const DeepCollectionEquality().hash(_this.corrections),_this.modelUsed,_this.degraded);
+  return Object.hash(runtimeType,_this.turnIdx,_this.reply,const DeepCollectionEquality().hash(_this.corrections),_this.modelUsed,_this.degraded,_this.unavailable);
 }
 
 @override
 String toString() {
   final _this = this as TurnResult;
-  return 'TurnResult(turnIdx: ${_this.turnIdx}, reply: ${_this.reply}, corrections: ${_this.corrections}, modelUsed: ${_this.modelUsed}, degraded: ${_this.degraded})';
+  return 'TurnResult(turnIdx: ${_this.turnIdx}, reply: ${_this.reply}, corrections: ${_this.corrections}, modelUsed: ${_this.modelUsed}, degraded: ${_this.degraded}, unavailable: ${_this.unavailable})';
 }
 
 
@@ -5841,7 +5844,7 @@ abstract mixin class $TurnResultCopyWith<$Res>  {
   factory $TurnResultCopyWith(TurnResult value, $Res Function(TurnResult) _then) = _$TurnResultCopyWithImpl;
 @useResult
 $Res call({
- int turnIdx, String reply, List<Correction> corrections, String? modelUsed, bool degraded
+ int turnIdx, String reply, List<Correction> corrections, String? modelUsed, bool degraded, bool unavailable
 });
 
 
@@ -5858,13 +5861,14 @@ class _$TurnResultCopyWithImpl<$Res>
 
 /// Create a copy of TurnResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? turnIdx = null,Object? reply = null,Object? corrections = null,Object? modelUsed = freezed,Object? degraded = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? turnIdx = null,Object? reply = null,Object? corrections = null,Object? modelUsed = freezed,Object? degraded = null,Object? unavailable = null,}) {
   return _then(TurnResult(
 turnIdx: null == turnIdx ? _self.turnIdx : turnIdx // ignore: cast_nullable_to_non_nullable
 as int,reply: null == reply ? _self.reply : reply // ignore: cast_nullable_to_non_nullable
 as String,corrections: null == corrections ? _self.corrections : corrections // ignore: cast_nullable_to_non_nullable
 as List<Correction>,modelUsed: freezed == modelUsed ? _self.modelUsed : modelUsed // ignore: cast_nullable_to_non_nullable
 as String?,degraded: null == degraded ? _self.degraded : degraded // ignore: cast_nullable_to_non_nullable
+as bool,unavailable: null == unavailable ? _self.unavailable : unavailable // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -5950,10 +5954,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded,  bool unavailable)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _TurnResult() when $default != null:
-return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded);case _:
+return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded,_that.unavailable);case _:
   return orElse();
 
 }
@@ -5971,10 +5975,10 @@ return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded,  bool unavailable)  $default,) {final _that = this;
 switch (_that) {
 case _TurnResult():
-return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded);case _:
+return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded,_that.unavailable);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -5991,10 +5995,10 @@ return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int turnIdx,  String reply,  List<Correction> corrections,  String? modelUsed,  bool degraded,  bool unavailable)?  $default,) {final _that = this;
 switch (_that) {
 case _TurnResult() when $default != null:
-return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded);case _:
+return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_that.degraded,_that.unavailable);case _:
   return null;
 
 }
@@ -6006,7 +6010,7 @@ return $default(_that.turnIdx,_that.reply,_that.corrections,_that.modelUsed,_tha
 @JsonSerializable()
 
 class _TurnResult implements TurnResult {
-  const _TurnResult({required this.turnIdx, required this.reply,  List<Correction> corrections = const <Correction>[], this.modelUsed, this.degraded = false}): _corrections = corrections;
+  const _TurnResult({required this.turnIdx, required this.reply,  List<Correction> corrections = const <Correction>[], this.modelUsed, this.degraded = false, this.unavailable = false}): _corrections = corrections;
   factory _TurnResult.fromJson(Map<String, dynamic> json) => _$TurnResultFromJson(json);
 
 @override final  int turnIdx;
@@ -6020,6 +6024,10 @@ class _TurnResult implements TurnResult {
 
 @override final  String? modelUsed;
 @override@JsonKey() final  bool degraded;
+/// Solo `true` cuando la cadena de modelos se agotó (SPEC-03 §6): la API
+/// no manda el campo en el resto de los casos, así que el `false` por
+/// defecto cubre esa ausencia (SPEC-02 §4.3, `docs/specs/SPEC-04-sesion-de-conversacion.md` §4).
+@override@JsonKey() final  bool unavailable;
 
 /// Create a copy of TurnResult
 /// with the given fields replaced by the non-null parameter values.
@@ -6034,18 +6042,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TurnResult&&(identical(other.turnIdx, turnIdx) || other.turnIdx == turnIdx)&&(identical(other.reply, reply) || other.reply == reply)&&const DeepCollectionEquality().equals(other.corrections, _corrections)&&(identical(other.modelUsed, modelUsed) || other.modelUsed == modelUsed)&&(identical(other.degraded, degraded) || other.degraded == degraded));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _TurnResult&&(identical(other.turnIdx, turnIdx) || other.turnIdx == turnIdx)&&(identical(other.reply, reply) || other.reply == reply)&&const DeepCollectionEquality().equals(other.corrections, _corrections)&&(identical(other.modelUsed, modelUsed) || other.modelUsed == modelUsed)&&(identical(other.degraded, degraded) || other.degraded == degraded)&&(identical(other.unavailable, unavailable) || other.unavailable == unavailable));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,turnIdx,reply,const DeepCollectionEquality().hash(_corrections),modelUsed,degraded);
+    return Object.hash(runtimeType,turnIdx,reply,const DeepCollectionEquality().hash(_corrections),modelUsed,degraded,unavailable);
 }
 
 @override
 String toString() {
-    return 'TurnResult(turnIdx: $turnIdx, reply: $reply, corrections: $corrections, modelUsed: $modelUsed, degraded: $degraded)';
+    return 'TurnResult(turnIdx: $turnIdx, reply: $reply, corrections: $corrections, modelUsed: $modelUsed, degraded: $degraded, unavailable: $unavailable)';
 }
 
 
@@ -6056,7 +6064,7 @@ abstract mixin class _$TurnResultCopyWith<$Res> implements $TurnResultCopyWith<$
   factory _$TurnResultCopyWith(_TurnResult value, $Res Function(_TurnResult) _then) = __$TurnResultCopyWithImpl;
 @override @useResult
 $Res call({
- int turnIdx, String reply, List<Correction> corrections, String? modelUsed, bool degraded
+ int turnIdx, String reply, List<Correction> corrections, String? modelUsed, bool degraded, bool unavailable
 });
 
 
@@ -6073,13 +6081,14 @@ class __$TurnResultCopyWithImpl<$Res>
 
 /// Create a copy of TurnResult
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? turnIdx = null,Object? reply = null,Object? corrections = null,Object? modelUsed = freezed,Object? degraded = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? turnIdx = null,Object? reply = null,Object? corrections = null,Object? modelUsed = freezed,Object? degraded = null,Object? unavailable = null,}) {
   return _then(_TurnResult(
 turnIdx: null == turnIdx ? _self.turnIdx : turnIdx // ignore: cast_nullable_to_non_nullable
 as int,reply: null == reply ? _self.reply : reply // ignore: cast_nullable_to_non_nullable
 as String,corrections: null == corrections ? _self._corrections : corrections // ignore: cast_nullable_to_non_nullable
 as List<Correction>,modelUsed: freezed == modelUsed ? _self.modelUsed : modelUsed // ignore: cast_nullable_to_non_nullable
 as String?,degraded: null == degraded ? _self.degraded : degraded // ignore: cast_nullable_to_non_nullable
+as bool,unavailable: null == unavailable ? _self.unavailable : unavailable // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

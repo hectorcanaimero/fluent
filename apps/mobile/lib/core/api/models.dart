@@ -265,6 +265,10 @@ abstract class TurnResult with _$TurnResult {
     @Default(<Correction>[]) List<Correction> corrections,
     String? modelUsed,
     @Default(false) bool degraded,
+    /// Solo `true` cuando la cadena de modelos se agotó (SPEC-03 §6): la API
+    /// no manda el campo en el resto de los casos, así que el `false` por
+    /// defecto cubre esa ausencia (SPEC-02 §4.3, `docs/specs/SPEC-04-sesion-de-conversacion.md` §4).
+    @Default(false) bool unavailable,
   }) = _TurnResult;
 
   factory TurnResult.fromJson(Map<String, dynamic> json) =>

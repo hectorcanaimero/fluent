@@ -1,4 +1,4 @@
-import type { CorrectionCategory, SessionKind } from '../db/schema.js';
+import type { CorrectionCategory, SessionKind, TurnRole } from '../db/schema.js';
 
 /**
  * Sesión tal y como la ve la app. Nombres de campo exactamente los de
@@ -65,4 +65,75 @@ export interface TurnResultDto {
   readonly degraded: boolean;
   /** Solo presente (y `true`) en la respuesta degradada de SPEC-03 §6. */
   readonly unavailable?: boolean;
+}
+
+/**
+ * `summary` de `POST /sessions/:id/end` (SPEC-04 §5). Nombres exactos de
+ * `apps/mobile/lib/core/api/models.dart::SessionSummary`.
+ */
+export interface SessionSummaryDto {
+  readonly xpEarned: number;
+  readonly streak: number;
+  readonly isDoubleDay: boolean;
+  readonly correctionsCount: number;
+  readonly durationSec: number;
+  readonly nextIsBoss: boolean;
+}
+
+/** Respuesta completa de `POST /sessions/:id/end` (`SessionEndResult` en la app). */
+export interface SessionEndResultDto {
+  readonly summary: SessionSummaryDto;
+}
+
+/**
+ * Elemento de `GET /sessions` (SPEC-02 §4.3). `nextCursor: null` cuando no
+ * hay más páginas (`SessionListResult.nextCursor` es `String?` en la app, que
+ * acepta tanto la ausencia de la clave como `null`).
+ */
+export interface SessionListResultDto {
+  readonly items: readonly SessionInfoDto[];
+  readonly nextCursor: string | null;
+}
+
+/**
+ * Turno tal y como lo ve la app en `GET /sessions/:id`
+ * (`apps/mobile/lib/core/api/models.dart::TurnRecord`). `role` son los
+ * valores del esquema (`'user'`/`'tutor'`, SPEC-01 §2.7): el desajuste con
+ * `conversation_screen.dart` (que compara contra `'assistant'`) lo arregla
+ * PR-06, no este PR — ver docs/specs/pendientes/PR-04.md.
+ */
+export interface TurnRecordDto {
+  readonly idx: number;
+  readonly role: TurnRole;
+  readonly text: string;
+}
+
+/** Respuesta de `GET /sessions/:id` (`SessionDetailResult` en la app). */
+export interface SessionDetailResultDto {
+  readonly session: SessionInfoDto;
+  readonly turns: readonly TurnRecordDto[];
+  readonly corrections: readonly CorrectionDto[];
+}
+
+/** Elemento de `roleplays` en `GET /sessions/suggestions` (`RoleplayOption` en la app). */
+export interface RoleplaySuggestionDto {
+  readonly id: string;
+  readonly title: string;
+}
+
+/** Elemento de `news` en `GET /sessions/suggestions` (`NewsItem` en la app). */
+export interface NewsSuggestionDto {
+  readonly id: string;
+  readonly title: string;
+  readonly source: string;
+  readonly summary?: string;
+  readonly time?: string;
+}
+
+/** Respuesta de `GET /sessions/suggestions` (SPEC-04 §7). */
+export interface SessionSuggestionsDto {
+  readonly topics: readonly string[];
+  readonly roleplays: readonly RoleplaySuggestionDto[];
+  readonly news: readonly NewsSuggestionDto[];
+  readonly bossPending: boolean;
 }

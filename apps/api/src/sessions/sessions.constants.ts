@@ -70,3 +70,67 @@ export function turnPaceKey(sessionId: string): string {
 
 /** Valor que se escribe en las claves que solo importan por existir. */
 export const REDIS_FLAG_VALUE = '1';
+
+// ---------------------------------------------------------------------------
+// PR-04/T3 — Cierre (`POST /sessions/:id/end`, SPEC-04 §5)
+// ---------------------------------------------------------------------------
+
+/**
+ * Límite de filas que lee `EndSessionRepository.countCorrections` para
+ * `SessionSummary.correctionsCount` (SPEC-04 §5). Una sesión no puede superar
+ * unos pocos cientos de turnos ni siquiera en el peor caso (acotada por
+ * `SESSION_HARD_CAP_SEC` y el ritmo de SPEC-02 §7), así que este límite es
+ * una red de seguridad generosa, no un recorte esperado en uso normal —mismo
+ * criterio que los límites de `src/sessions-query/sessions-query.repository.ts`.
+ */
+export const SESSION_END_CORRECTIONS_ROW_LIMIT = 500;
+
+// ---------------------------------------------------------------------------
+// PR-04/T3 — Sugerencias (`GET /sessions/suggestions`, SPEC-04 §7)
+// ---------------------------------------------------------------------------
+
+/** Temas de `TOPICS` que casan con `profiles.interests` (de los 8 totales). */
+export const SUGGESTIONS_TOPICS_MATCHING = 6;
+
+/** Total de temas que devuelve `topics` (6 que casan + 2 fuera de intereses). */
+export const SUGGESTIONS_TOPICS_TOTAL = 8;
+
+/** Escenarios de `roleplays` que devuelve la sugerencia. */
+export const SUGGESTIONS_ROLEPLAYS = 4;
+
+/** Sesiones `roleplay` recientes del usuario que se evitan al sugerir. */
+export const SUGGESTIONS_ROLEPLAYS_RECENT_EXCLUDE = 5;
+
+/** Noticias que devuelve la sugerencia. */
+export const SUGGESTIONS_NEWS = 4;
+
+/** Antigüedad máxima de una noticia sugerida (SPEC-04 §7: «últimos 3 días»). */
+export const SUGGESTIONS_NEWS_MAX_AGE_DAYS = 3;
+
+/**
+ * Límite de filas que lee `SuggestionsRepository.listRecentNews`. Con
+ * ingesta diaria (`rss-ingest`, SPEC-05 §3) y una ventana de 3 días, el total
+ * de candidatas reales es mucho menor; el límite es solo la misma red de
+ * seguridad que el resto de consultas del módulo.
+ */
+export const SUGGESTIONS_NEWS_ROW_LIMIT = 200;
+
+// ---------------------------------------------------------------------------
+// PR-04/T3 — Listado y detalle (`GET /sessions`, `GET /sessions/:id`, SPEC-02 §4.3)
+// ---------------------------------------------------------------------------
+
+/** `limit` por defecto de `GET /sessions` cuando la app no lo manda. */
+export const SESSIONS_LIST_DEFAULT_LIMIT = 20;
+
+/** `limit` máximo aceptado por `GET /sessions`. */
+export const SESSIONS_LIST_MAX_LIMIT = 50;
+
+/**
+ * Filas de `turns` que trae `GET /sessions/:id`. Una sesión no puede superar
+ * unos pocos cientos de turnos (ver `SESSION_END_CORRECTIONS_ROW_LIMIT`); el
+ * límite es una red de seguridad, no un recorte esperado en uso normal.
+ */
+export const SESSION_DETAIL_TURNS_LIMIT = 300;
+
+/** Filas de `corrections` que trae `GET /sessions/:id`. */
+export const SESSION_DETAIL_CORRECTIONS_LIMIT = 200;

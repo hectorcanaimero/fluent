@@ -14,6 +14,7 @@ import { TurnOutput, type Correction as CorrectionOutput } from '../llm/schemas.
 import { RedisService } from '../redis/redis.service.js';
 import type { CreateTurnDto } from './dto/create-turn.dto.js';
 import { rebuildScenario } from './scenario.js';
+import { findOwnedSessionOrThrow } from './session-ownership.js';
 import {
   REDIS_FLAG_VALUE,
   TURN_LOCK_TTL_SECONDS,
@@ -26,7 +27,6 @@ import { SessionsRepository } from './sessions.repository.js';
 import type { CorrectionDto, TurnResultDto } from './sessions.types.js';
 import { TurnsRepository, type InsertCorrectionRow } from './turns.repository.js';
 
-const FORBIDDEN_SESSION_MESSAGE = 'Esa sesión no existe o no te pertenece.';
 const SESSION_NOT_ACTIVE_MESSAGE = 'Esta sesión ya no está activa.';
 const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar otro turno.';
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
@@ -41,9 +41,6 @@ const PROVIDER_NOT_CONNECTED_MESSAGE = 'Conecta un proveedor de IA para seguir l
  * a recortar aquí antes del INSERT.
  */
 const CORRECTION_NOTE_MAX_CHARS = 140;
-
-/** Forma de un UUID v4 tal y como los genera Postgres (`gen_random_uuid()`). */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /** Lo que se persiste en el turno del tutor, venga del modelo o de la degradación. */
 interface TutorOutcome {
@@ -143,22 +140,14 @@ export class TurnsService {
   }
 
   /**
-   * `403 FORBIDDEN` si la sesión no existe o es de otro usuario (mismo
-   * criterio que `MemoryService`, PEND-42 de PR-02: no se distingue una cosa
-   * de la otra para no filtrar qué sesiones existen). `409 SESSION_NOT_ACTIVE`
-   * si ya está `ended` o `abandoned` (SPEC-02 §6).
+   * `403 FORBIDDEN` si la sesión no existe o es de otro usuario, o si el
+   * `:id` ni siquiera tiene forma de UUID (`findOwnedSessionOrThrow`,
+   * compartida con T3 — PEND-42 de PR-02 y ver docs/specs/pendientes/PR-04.md).
+   * `409 SESSION_NOT_ACTIVE` si ya está `ended` o `abandoned` (SPEC-02 §6):
+   * esa comprobación es propia del turno, no la reutiliza `POST .../end`.
    */
   private async findActiveOwnedSession(userId: string, sessionId: string): Promise<Session> {
-    if (!UUID_RE.test(sessionId)) {
-      // Un `:id` que ni siquiera es un UUID haría fallar la consulta en
-      // Postgres (22P02) y saldría como 500: se trata como "no es tuya".
-      throw ApiException.forbidden(FORBIDDEN_SESSION_MESSAGE);
-    }
-
-    const session = await this.turns.findOwnedSession(userId, sessionId);
-    if (session === null) {
-      throw ApiException.forbidden(FORBIDDEN_SESSION_MESSAGE);
-    }
+    const session = await findOwnedSessionOrThrow(this.turns, userId, sessionId);
     if (session.status !== 'active') {
       throw ApiException.of('SESSION_NOT_ACTIVE', SESSION_NOT_ACTIVE_MESSAGE);
     }

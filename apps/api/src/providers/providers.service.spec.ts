@@ -36,6 +36,7 @@ const FAKE_AUTH_CODE = 'FAKE-openrouter-authorization-code';
 const USER_A = '11111111-1111-4111-8111-111111111111';
 const USER_B = '22222222-2222-4222-8222-222222222222';
 const DEFAULT_CALLBACK = 'fluent://oauth/openrouter';
+const API_PUBLIC_URL = 'https://api.test';
 
 interface FetchCall {
   readonly url: string;
@@ -161,7 +162,9 @@ function createHarness(handlers: Record<string, Handler>) {
   };
 
   const service = new ProvidersService(
-    { get: () => DEFAULT_CALLBACK } as unknown as ConfigService<Env, true>,
+    {
+      get: (key: string) => (key === 'API_PUBLIC_URL' ? API_PUBLIC_URL : DEFAULT_CALLBACK),
+    } as unknown as ConfigService<Env, true>,
     credentialsService,
     new PkceStore(redis as unknown as RedisService),
     new ProviderApiClient(fetchImpl),
@@ -212,7 +215,10 @@ describe('ProvidersService', () => {
       const url = new URL(result.authUrl);
       expect(url.origin + url.pathname).toBe('https://openrouter.ai/auth');
       expect(url.searchParams.get('code_challenge_method')).toBe('S256');
-      expect(url.searchParams.get('callback_url')).toBe(DEFAULT_CALLBACK);
+      // OpenRouter vuelve al callback HTTPS de la API, que luego redirige al deep link.
+      expect(url.searchParams.get('callback_url')).toBe(
+        `${API_PUBLIC_URL}/v1/providers/openrouter/callback/${result.codeVerifierId}`,
+      );
       expect(result.codeVerifierId).toMatch(/^[0-9a-f-]{36}$/);
 
       const key = `pkce:openrouter:${result.codeVerifierId}`;
@@ -224,11 +230,15 @@ describe('ProvidersService', () => {
     });
 
     it('falls back to OPENROUTER_OAUTH_CALLBACK when the body has no callbackUrl', async () => {
-      const { service } = createHarness({});
+      const { service, redis } = createHarness({});
 
       const result = await service.startOpenRouterPkce(USER_A);
 
-      expect(new URL(result.authUrl).searchParams.get('callback_url')).toBe(DEFAULT_CALLBACK);
+      // El deep link por defecto queda guardado en el intento para la redirección final.
+      const stored = JSON.parse(redis.store.get(`pkce:openrouter:${result.codeVerifierId}`)!) as {
+        callbackUrl: string;
+      };
+      expect(stored.callbackUrl).toBe(DEFAULT_CALLBACK);
     });
 
     it('rejects a callbackUrl that is not an absolute URL with 400 VALIDATION', async () => {

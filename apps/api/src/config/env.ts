@@ -27,6 +27,8 @@ export const envSchema = z.object({
     z.string().min(1).optional(),
   ),
   OPENROUTER_OAUTH_CALLBACK: z.string().min(1),
+  // URL pública de la API (sin barra final): base del callback HTTPS del PKCE de OpenRouter.
+  API_PUBLIC_URL: z.url().default('https://fluent.usebot.chat'),
   FALLBACK_MODELS: z.string().min(1),
   PROMPT_VERSION: z.coerce.number().int().default(1),
   OWNER_USER_ID: z.uuid(),

@@ -54,6 +54,7 @@ const DEFAULT_MODEL_BY_PROVIDER: Record<Provider, string> = {
 export class ProvidersService {
   private readonly logger = new Logger(ProvidersService.name);
   private readonly defaultCallbackUrl: string;
+  private readonly apiPublicUrl: string;
 
   constructor(
     configService: ConfigService<Env, true>,
@@ -65,6 +66,7 @@ export class ProvidersService {
     this.defaultCallbackUrl = configService.get('OPENROUTER_OAUTH_CALLBACK', {
       infer: true,
     });
+    this.apiPublicUrl = configService.get('API_PUBLIC_URL', { infer: true }).replace(/\/+$/, '');
   }
 
   /**
@@ -90,8 +92,13 @@ export class ProvidersService {
     const codeVerifier = generateCodeVerifier();
     const codeVerifierId = await this.pkceStore.create(userId, requested, codeVerifier);
 
+    // OpenRouter no devuelve de forma fiable a esquemas propios (fluent://):
+    // el navegador vuelve a un callback HTTPS de la API, que canjea el código
+    // y luego redirige al deep link guardado (`requested`).
+    const browserCallback = `${this.apiPublicUrl}/v1/providers/openrouter/callback/${codeVerifierId}`;
+
     return {
-      authUrl: buildOpenRouterAuthUrl(requested, codeChallengeS256(codeVerifier)),
+      authUrl: buildOpenRouterAuthUrl(browserCallback, codeChallengeS256(codeVerifier)),
       codeVerifierId,
     };
   }
@@ -137,6 +144,48 @@ export class ProvidersService {
     await this.pkceStore.remove(codeVerifierId);
 
     return { provider: 'openrouter', status: 'active', lastError: null };
+  }
+
+
+  /**
+   * `GET /providers/openrouter/callback/:id?code=…` (público): lo abre el
+   * navegador del teléfono al volver de OpenRouter. Canjea el código con el
+   * verifier guardado, deja la credencial en el usuario dueño del intento y
+   * devuelve a dónde redirigir (el deep link de la app con `done=1` o con
+   * `error=…`). Nunca lanza: el navegador debe recibir siempre una página.
+   */
+  async completeOpenRouterPkceFromBrowser(
+    codeVerifierId: string,
+    code: string | undefined,
+  ): Promise<{ ok: boolean; redirectTo: string; message: string }> {
+    const entry = await this.pkceStore.find(codeVerifierId);
+    const appCallback = entry?.callbackUrl ?? this.defaultCallbackUrl;
+    const withQuery = (q: string): string => `${appCallback}${appCallback.includes('?') ? '&' : '?'}${q}`;
+
+    if (entry === null || !code) {
+      return {
+        ok: false,
+        redirectTo: withQuery('error=expired'),
+        message: 'El intento de conexión no existe o caducó. Volvé a empezar desde la app.',
+      };
+    }
+
+    const apiKey = await this.providerApi.exchangeOpenRouterCode(code, entry.codeVerifier);
+    await this.pkceStore.remove(codeVerifierId);
+
+    if (apiKey === null) {
+      return {
+        ok: false,
+        redirectTo: withQuery('error=rejected'),
+        message: 'OpenRouter rechazó el código de autorización. Volvé a conectar la cuenta.',
+      };
+    }
+
+    await this.credentialsService.saveApiKey(entry.userId, 'openrouter', apiKey);
+    await this.ensureDefaultPreferences(entry.userId, 'openrouter');
+    this.logger.log(`Usuario ${entry.userId} conectó OpenRouter vía callback del navegador`);
+
+    return { ok: true, redirectTo: withQuery('done=1'), message: 'Cuenta de OpenRouter conectada.' };
   }
 
   /**

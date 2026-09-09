@@ -68,14 +68,25 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             url: pkce.authUrl,
             callbackUrlScheme: Env.oauthCallbackScheme,
           );
-      final code = Uri.parse(callback).queryParameters['code'];
-      if (code == null) {
-        throw const ApiException(
-          code: ApiErrorCode.unknown,
-          message: 'missing authorization code',
+      final params = Uri.parse(callback).queryParameters;
+      if (params['error'] != null) {
+        throw ApiException(
+          code: ApiErrorCode.providerKeyInvalid,
+          message: 'openrouter callback error: ${params['error']}',
         );
       }
-      await api.completeOpenRouterPkce(code: code, codeVerifierId: pkce.codeVerifierId);
+      // Camino normal: la API ya canjeó el código en su callback HTTPS y
+      // devolvió `done=1`. Si llega un `code` (flujo antiguo), se canjea aquí.
+      if (params['done'] != '1') {
+        final code = params['code'];
+        if (code == null) {
+          throw const ApiException(
+            code: ApiErrorCode.unknown,
+            message: 'missing authorization code',
+          );
+        }
+        await api.completeOpenRouterPkce(code: code, codeVerifierId: pkce.codeVerifierId);
+      }
       await ref.read(authControllerProvider.notifier).refresh();
       _reload();
     } catch (_) {

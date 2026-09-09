@@ -13,7 +13,7 @@ void main() {
     dio = Dio(BaseOptions(baseUrl: 'https://insforge.local'));
     adapter = DioAdapter(dio: dio);
     dio.httpClientAdapter = adapter;
-    client = InsforgeAuthClient(dio: dio);
+    client = InsforgeAuthClient(dio: dio, anonKey: 'anon-test-key');
   });
 
   test('login ok devuelve los tokens', () async {
@@ -31,6 +31,85 @@ void main() {
 
     expect(tokens.accessToken, 'access-1');
     expect(tokens.refreshToken, 'refresh-1');
+  });
+
+  test('register envía la anon key como Authorization: Bearer', () async {
+    String? seenAuthHeader;
+    adapter.onPost(
+      '/api/auth/users',
+      (server) => server.replyCallback(200, (options) {
+        seenAuthHeader = options.headers['Authorization'] as String?;
+        return {};
+      }),
+      data: Matchers.any,
+      queryParameters: {'client_type': 'mobile'},
+    );
+    adapter.onPost(
+      '/api/auth/sessions',
+      (server) => server.reply(200, {
+        'accessToken': 'access-1',
+        'refreshToken': 'refresh-1',
+      }),
+      data: Matchers.any,
+      queryParameters: {'client_type': 'mobile'},
+    );
+
+    await client.register(
+      email: 'maria@example.com',
+      password: 'secret123',
+      name: 'Maria',
+    );
+
+    expect(seenAuthHeader, 'Bearer anon-test-key');
+  });
+
+  test('login envía la anon key como Authorization: Bearer', () async {
+    String? seenAuthHeader;
+    adapter.onPost(
+      '/api/auth/sessions',
+      (server) => server.replyCallback(200, (options) {
+        seenAuthHeader = options.headers['Authorization'] as String?;
+        return {'accessToken': 'access-1', 'refreshToken': 'refresh-1'};
+      }),
+      data: Matchers.any,
+      queryParameters: {'client_type': 'mobile'},
+    );
+
+    await client.login(email: 'maria@example.com', password: 'secret123');
+
+    expect(seenAuthHeader, 'Bearer anon-test-key');
+  });
+
+  test('refresh envía la anon key como Authorization: Bearer', () async {
+    String? seenAuthHeader;
+    adapter.onPost(
+      '/api/auth/refresh',
+      (server) => server.replyCallback(200, (options) {
+        seenAuthHeader = options.headers['Authorization'] as String?;
+        return {'accessToken': 'access-2', 'refreshToken': 'refresh-2'};
+      }),
+      data: Matchers.any,
+      queryParameters: {'client_type': 'mobile'},
+    );
+
+    await client.refresh('refresh-1');
+
+    expect(seenAuthHeader, 'Bearer anon-test-key');
+  });
+
+  test('logout envía el bearer del usuario, no la anon key', () async {
+    String? seenAuthHeader;
+    adapter.onPost(
+      '/api/auth/logout',
+      (server) => server.replyCallback(200, (options) {
+        seenAuthHeader = options.headers['Authorization'] as String?;
+        return {};
+      }),
+    );
+
+    await client.logout('user-access-token');
+
+    expect(seenAuthHeader, 'Bearer user-access-token');
   });
 
   test('contraseña incorrecta lanza ApiException unauthenticated', () async {

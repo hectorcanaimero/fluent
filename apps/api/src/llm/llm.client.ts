@@ -11,6 +11,7 @@ import type { ZodType } from 'zod';
 
 import { PROVIDERS, type Provider, type Purpose } from './config.js';
 import { extractFirstJsonObject } from './json.js';
+import { StreamReplyParser } from './stream-reply-parser.js';
 
 export interface LlmMessage {
   readonly role: 'system' | 'user' | 'assistant';
@@ -28,6 +29,14 @@ export interface LlmRequest<T> {
   readonly temperature: number;
   readonly purpose: Purpose;
   readonly timeoutMs: number;
+  /**
+   * Streaming (SPEC-04 §4, RF-3.8). Si viene, la petición se hace con
+   * `stream: true` y se llama con cada *delta* del campo `reply` según llega
+   * (ver `StreamReplyParser`). El resultado, la validación y los errores son
+   * **exactamente** los mismos que sin streaming: `onToken` solo adelanta
+   * texto, nunca cambia lo que devuelve `complete`.
+   */
+  readonly onToken?: (delta: string) => void;
 }
 
 export interface LlmUsage {
@@ -165,6 +174,23 @@ export class LlmClient {
   }
 
   async complete<T>(request: LlmRequest<T>): Promise<LlmResult<T>> {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), request.timeoutMs);
+    try {
+      return await this.send(request, controller);
+    } finally {
+      // El temporizador tiene que cubrir también la lectura del cuerpo: en
+      // streaming la respuesta HTTP llega en cuanto empieza el primer token,
+      // pero la llamada no termina hasta el último trozo, así que
+      // `timeoutMs` (SPEC-03 §2) se aplica a la llamada entera.
+      clearTimeout(timer);
+    }
+  }
+
+  private async send<T>(
+    request: LlmRequest<T>,
+    controller: AbortController,
+  ): Promise<LlmResult<T>> {
     const { provider, model, apiKey, messages, schema, maxTokens, temperature, purpose, timeoutMs } =
       request;
     const config = PROVIDERS[provider];
@@ -181,12 +207,15 @@ export class LlmClient {
     if (config.supportsJsonMode) {
       body.response_format = { type: 'json_object' };
     }
+    // SPEC-04 §4 «Streaming»: el único cambio en la petición es `stream: true`
+    // (no se manda `stream_options`, ver PEND-53).
+    const streaming = request.onToken !== undefined;
+    if (streaming) {
+      body.stream = true;
+    }
 
     // Nunca se registran ni la key ni el contenido de los mensajes.
-    this.logger.debug('llm.request', { provider, model, purpose, messages: messages.length });
-
-    const controller = new AbortController();
-    const timer = setTimeout(() => controller.abort(), timeoutMs);
+    this.logger.debug('llm.request', { provider, model, purpose, streaming, messages: messages.length });
 
     let response: Response;
     try {
@@ -211,8 +240,6 @@ export class LlmClient {
           ? `timeout tras ${timeoutMs} ms`
           : redact(clip(String((error as Error)?.message ?? error)), apiKey),
       );
-    } finally {
-      clearTimeout(timer);
     }
 
     if (!response.ok) {
@@ -230,21 +257,33 @@ export class LlmClient {
       throw new LlmCallError(status, provider, model, latencyMs, response.status, detail);
     }
 
-    let payload: unknown;
-    try {
-      payload = await response.json();
-    } catch {
-      const latencyMs = this.now() - started;
-      throw new LlmCallError('invalid_json', provider, model, latencyMs, response.status, 'cuerpo no es JSON');
+    let content: string;
+    let usage: LlmUsage;
+
+    if (streaming) {
+      // El cuerpo llega troceado: se acumula entero y se valida igual que
+      // abajo. `onToken` solo ha ido adelantando el texto de `reply`.
+      const stream = await this.readStream(request, response, controller, started);
+      content = stream.content;
+      usage = stream.usage;
+    } else {
+      let payload: unknown;
+      try {
+        payload = await response.json();
+      } catch {
+        const latencyMs = this.now() - started;
+        throw new LlmCallError('invalid_json', provider, model, latencyMs, response.status, 'cuerpo no es JSON');
+      }
+
+      usage = readUsage(payload);
+      const choices = (payload as { choices?: unknown }).choices;
+      const first = Array.isArray(choices) ? choices[0] : undefined;
+      content = readContent(
+        typeof first === 'object' && first !== null ? (first as { message?: unknown }).message : undefined,
+      );
     }
 
     const latencyMs = this.now() - started;
-    const usage = readUsage(payload);
-    const choices = (payload as { choices?: unknown }).choices;
-    const first = Array.isArray(choices) ? choices[0] : undefined;
-    const content = readContent(
-      typeof first === 'object' && first !== null ? (first as { message?: unknown }).message : undefined,
-    );
 
     const extracted = extractFirstJsonObject(content);
     if (extracted === null) {
@@ -267,5 +306,183 @@ export class LlmClient {
 
     this.logger.debug('llm.ok', { provider, model, purpose, latencyMs, ...usage });
     return { data: parsed.data, usage, latencyMs, model, provider };
+  }
+
+  /**
+   * Lee el cuerpo SSE de una respuesta con `stream: true` (SPEC-04 §4).
+   *
+   * Devuelve el texto acumulado de `choices[0].delta.content` —que se valida
+   * después **exactamente igual** que en el modo no streaming— y el `usage`
+   * que el proveedor haya mandado (ceros si no manda ninguno, PEND-53).
+   *
+   * Mientras acumula alimenta un `StreamReplyParser` y llama a `onToken` con
+   * cada delta del campo `reply`. Si el parser no reconoce la estructura deja
+   * de emitir y no pasa nada más: el texto completo sigue acumulándose.
+   */
+  private async readStream<T>(
+    request: LlmRequest<T>,
+    response: Response,
+    controller: AbortController,
+    started: number,
+  ): Promise<{ content: string; usage: LlmUsage }> {
+    const { provider, model, purpose, apiKey, timeoutMs, onToken } = request;
+
+    const stream = response.body;
+    if (stream === null) {
+      throw new LlmCallError(
+        'invalid_json',
+        provider,
+        model,
+        this.now() - started,
+        response.status,
+        'respuesta de streaming sin cuerpo',
+      );
+    }
+
+    const parser = new StreamReplyParser();
+    const decoder = new TextDecoder();
+    const reader = stream.getReader();
+
+    let content = '';
+    let usage: LlmUsage = { tokensIn: 0, tokensOut: 0 };
+    /** Resto de la última línea, que puede venir partida entre dos trozos. */
+    let pending = '';
+    /** Líneas `data:` del evento en curso (SSE permite varias por evento). */
+    let dataLines: string[] = [];
+    let finished = false;
+    /**
+     * El destino de los tokens es la respuesta HTTP del endpoint SSE: si el
+     * cliente cuelga, `write` lanza. Se deja de emitir, pero la llamada al
+     * modelo sigue hasta el final para poder persistir el turno.
+     */
+    let sinkBroken = false;
+
+    const emit = (delta: string): void => {
+      if (delta === '' || sinkBroken || onToken === undefined) return;
+      try {
+        onToken(delta);
+      } catch {
+        sinkBroken = true;
+        this.logger.warn('llm.stream_sink_error', { provider, model, purpose });
+      }
+    };
+
+    /** Procesa el `data:` completo de un evento SSE. */
+    const handleData = (data: string): void => {
+      if (data === '') return;
+      if (data === '[DONE]') {
+        finished = true;
+        return;
+      }
+
+      let payload: unknown;
+      try {
+        payload = JSON.parse(data);
+      } catch {
+        // Trozo que no es JSON (o cortado): se ignora. Si con eso el texto
+        // acumulado no llega a ser un objeto válido, la validación de abajo
+        // devuelve `invalid_json`, igual que en el modo no streaming.
+        return;
+      }
+
+      const error = (payload as { error?: unknown }).error;
+      if (error !== undefined && error !== null) {
+        // Algunos proveedores mandan el error dentro del stream, ya con un 200.
+        throw new LlmCallError(
+          'provider_error',
+          provider,
+          model,
+          this.now() - started,
+          response.status,
+          redact(clip(JSON.stringify(error)), apiKey),
+        );
+      }
+
+      const rawUsage = (payload as { usage?: unknown }).usage;
+      if (typeof rawUsage === 'object' && rawUsage !== null) {
+        usage = readUsage(payload);
+      }
+
+      const choices = (payload as { choices?: unknown }).choices;
+      const first = Array.isArray(choices) ? choices[0] : undefined;
+      if (typeof first !== 'object' || first === null) return;
+
+      // `delta` en cada trozo; algunos proveedores mandan además un `message`
+      // completo en el último, que se ignora para no duplicar el texto.
+      const piece = readContent((first as { delta?: unknown }).delta);
+      if (piece === '') return;
+
+      content += piece;
+      emit(parser.push(piece));
+    };
+
+    /** Consume las líneas completas que haya en `pending`. */
+    const consumeLines = (): void => {
+      for (;;) {
+        const newline = pending.indexOf('\n');
+        if (newline === -1) return;
+        const line = pending.slice(0, newline).replace(/\r$/, '');
+        pending = pending.slice(newline + 1);
+
+        if (line === '') {
+          // Línea en blanco: fin del evento.
+          handleData(dataLines.join('\n'));
+          dataLines = [];
+        } else if (line.startsWith(':')) {
+          // Comentario/keep-alive (por ejemplo `: OPENROUTER PROCESSING`).
+          continue;
+        } else if (line.startsWith('data:')) {
+          dataLines.push(line.slice('data:'.length).replace(/^ /, ''));
+        }
+        // El resto de campos SSE (`event:`, `id:`, `retry:`) no se usan.
+
+        if (finished) return;
+      }
+    };
+
+    try {
+      while (!finished) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        pending +=
+          typeof value === 'string' ? value : decoder.decode(value as Uint8Array, { stream: true });
+        consumeLines();
+      }
+
+      if (!finished) {
+        // Cierre sin `[DONE]`: se procesa lo que quede suelto (un stream
+        // cortado dejará el JSON incompleto y acabará en `invalid_json`).
+        pending += decoder.decode();
+        pending += '\n';
+        consumeLines();
+        if (dataLines.length > 0) handleData(dataLines.join('\n'));
+      }
+    } catch (error) {
+      if (error instanceof LlmCallError) throw error;
+      const latencyMs = this.now() - started;
+      const aborted = controller.signal.aborted || (error as { name?: string })?.name === 'AbortError';
+      const status: LlmErrorStatus = aborted ? 'timeout' : 'provider_error';
+      this.logger.warn('llm.stream_error', { provider, model, purpose, status, latencyMs });
+      throw new LlmCallError(
+        status,
+        provider,
+        model,
+        latencyMs,
+        response.status,
+        aborted
+          ? `timeout tras ${timeoutMs} ms`
+          : redact(clip(String((error as Error)?.message ?? error)), apiKey),
+      );
+    } finally {
+      try {
+        await reader.cancel();
+      } catch {
+        // Cerrar el lector nunca puede tapar el error real de la llamada.
+      }
+    }
+
+    emit(parser.end());
+
+    return { content, usage };
   }
 }

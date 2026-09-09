@@ -84,6 +84,16 @@ export interface LlmServiceRequest<T> {
   readonly temperature?: number;
   readonly timeoutMs?: number;
   readonly maxAttempts?: number;
+  /**
+   * Streaming (SPEC-04 §4, RF-3.8): se pasa tal cual al cliente, que pide
+   * `stream: true` y llama con cada delta del campo `reply`.
+   *
+   * Ojo con la cadena de fallback: si un intento emite tokens y luego falla
+   * (por ejemplo `invalid_json`), el intento siguiente vuelve a emitir desde
+   * el principio. Por eso el endpoint SSE manda el `TurnResult` completo en el
+   * evento `done` y la app lo trata como la fuente de verdad (PEND-56).
+   */
+  readonly onToken?: (delta: string) => void;
 }
 
 export interface LlmServiceResult<T> {
@@ -149,6 +159,7 @@ export class LlmService {
           temperature: request.temperature ?? defaults.temperature,
           purpose: request.purpose,
           timeoutMs: request.timeoutMs ?? defaults.timeoutMs,
+          onToken: request.onToken,
         });
 
         attempts.push({

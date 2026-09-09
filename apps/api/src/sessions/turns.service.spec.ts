@@ -173,16 +173,31 @@ interface FakeLlmOptions {
   readonly error?: Error;
 }
 
-type FakeLlm = LlmService & { readonly calls: Array<{ messages: readonly LlmMessage[] }> };
+interface FakeLlmCall {
+  readonly messages: readonly LlmMessage[];
+  /** `onToken` que recibió el servicio: solo lo manda el endpoint SSE (T4). */
+  readonly onToken?: (delta: string) => void;
+}
+
+type FakeLlm = LlmService & { readonly calls: FakeLlmCall[] };
 
 function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
-  const calls: Array<{ messages: readonly LlmMessage[] }> = [];
+  const calls: FakeLlmCall[] = [];
   return {
     calls,
-    complete: async (request: { messages: readonly LlmMessage[] }) => {
-      calls.push({ messages: request.messages });
+    complete: async (request: {
+      messages: readonly LlmMessage[];
+      onToken?: (delta: string) => void;
+    }) => {
+      calls.push({ messages: request.messages, onToken: request.onToken });
       if (options.error) throw options.error;
       if (options.unavailable) throw new LlmUnavailableError([]);
+      // Con `onToken` (endpoint SSE) el proveedor va emitiendo el `reply`.
+      const reply = options.reply ?? 'Nice! Where did you go?';
+      if (request.onToken) {
+        request.onToken(reply.slice(0, 5));
+        request.onToken(reply.slice(5));
+      }
       return {
         data: {
           reply: options.reply ?? 'Nice! Where did you go?',
@@ -624,5 +639,91 @@ describe('TurnsService.addTurn · degradación (SPEC-03 §6, RF-2.5)', () => {
 
     expect(turns.updates).toEqual([{ turnsCount: 3, chatModelUsed: null }]);
     expect(turns.deleted).toHaveLength(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Streaming (SPEC-04 §4, RF-3.8) — PR-04/T4
+// ---------------------------------------------------------------------------
+
+describe('TurnsService.addTurn · `onToken` (endpoint SSE)', () => {
+  const CORRECTIONS = [
+    {
+      original: 'I go to gym yesterday',
+      corrected: 'I went to the gym yesterday',
+      category: 'past_simple',
+      note: 'Usa el pasado simple.',
+    },
+  ];
+
+  it('sin `onToken` la llamada al modelo no pide streaming', async () => {
+    const { service, llm } = buildService();
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' });
+
+    expect(llm.calls[0]?.onToken).toBeUndefined();
+  });
+
+  it('con `onToken` se pasa tal cual a `LlmService` y llegan los deltas', async () => {
+    const { service, llm } = buildService({ reply: 'Nice! Where did you go?' });
+    const tokens: string[] = [];
+
+    const result = await service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' }, (delta) =>
+      tokens.push(delta),
+    );
+
+    expect(llm.calls[0]?.onToken).toBeInstanceOf(Function);
+    expect(tokens.join('')).toBe('Nice! Where did you go?');
+    expect(result.reply).toBe('Nice! Where did you go?');
+  });
+
+  it('persiste exactamente lo mismo que el endpoint no streaming', async () => {
+    const plain = buildService({ corrections: CORRECTIONS });
+    const streamed = buildService({ corrections: CORRECTIONS });
+
+    const plainResult = await plain.service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' });
+    const streamedResult = await streamed.service.addTurn(
+      USER_ID,
+      SESSION_ID,
+      { text: 'Hi' },
+      () => {},
+    );
+
+    expect(streamedResult).toEqual(plainResult);
+    expect(streamed.turns.inserted).toEqual(plain.turns.inserted);
+    expect(streamed.turns.corrections).toEqual(plain.turns.corrections);
+    expect(streamed.turns.updates).toEqual(plain.turns.updates);
+  });
+
+  it('la degradación de SPEC-03 §6 no emite ningún token (el endpoint manda el `reply` fijo entero)', async () => {
+    const { service } = buildService({ unavailable: true });
+    const tokens: string[] = [];
+
+    const result = await service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' }, (delta) =>
+      tokens.push(delta),
+    );
+
+    expect(tokens).toHaveLength(0);
+    expect(result).toMatchObject({ reply: DEGRADED_REPLY, degraded: true, unavailable: true });
+  });
+
+  it('el lock y el ritmo se aplican igual en streaming', async () => {
+    const redis = fakeRedis([turnLockKey(SESSION_ID)]);
+    const { service } = buildService({ redis });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' }, () => {}),
+    ).rejects.toMatchObject({ code: 'SESSION_NOT_ACTIVE' });
+  });
+
+  it('un texto en blanco falla antes de emitir nada, también en streaming', async () => {
+    const { service, llm } = buildService();
+    const tokens: string[] = [];
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: '   ' }, (delta) => tokens.push(delta)),
+    ).rejects.toMatchObject({ code: 'VALIDATION' });
+    expect(tokens).toHaveLength(0);
+    expect(llm.calls).toHaveLength(0);
   });
 });

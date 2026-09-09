@@ -1,6 +1,7 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, Res } from '@nestjs/common';
+import { ApiBearerAuth, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { Throttle } from '@nestjs/throttler';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { TURNS_THROTTLE } from '../rate-limit/rate-limit.constants.js';
 import { CreateSessionDto } from './dto/create-session.dto.js';
@@ -19,6 +20,7 @@ import type {
   TurnResultDto,
 } from './sessions.types.js';
 import { SuggestionsService } from './suggestions.service.js';
+import { runTurnStream } from './turn-stream.js';
 import { TurnsService } from './turns.service.js';
 
 /**
@@ -33,7 +35,9 @@ import { TurnsService } from './turns.service.js';
  * `POST /sessions/:id/turns` responde `200` explícito, porque no crea un
  * recurso que la app pueda direccionar y `apps/mobile` espera un cuerpo
  * `TurnResult`. `POST /sessions/:id/end` también responde `200` explícito
- * por el mismo motivo (SPEC-04 §5). El streaming llega en T4.
+ * por el mismo motivo (SPEC-04 §5). `POST /sessions/:id/turns/stream` (T4) no
+ * lleva `@HttpCode` porque no devuelve un cuerpo JSON: escribe la respuesta a
+ * mano con `@Res()` (`200 text/event-stream`, ver `turn-stream.ts`).
  *
  * **Orden de rutas (T3):** `GET sessions/suggestions` se declara **antes**
  * que `GET sessions/:id`: Nest/Express resuelve por orden de registro, y con
@@ -79,6 +83,43 @@ export class SessionsController {
     @Body() dto: CreateTurnDto,
   ): Promise<TurnResultDto> {
     return this.turnsService.addTurn(userId, sessionId, dto);
+  }
+
+  /**
+   * `POST /sessions/:id/turns/stream` (SPEC-04 §4, «Streaming (RF-3.8, P1)»).
+   *
+   * El mismo turno que `POST /sessions/:id/turns` —mismo servicio, mismas
+   * validaciones, misma persistencia y el mismo `@Throttle(TURNS_THROTTLE)`—
+   * pero pidiendo `stream: true` al proveedor y reenviando el texto por SSE.
+   * Lo único propio es cómo se escribe la respuesta, y eso vive en
+   * `runTurnStream` (ahí está documentado el formato de cada evento).
+   *
+   * **`@Res()` sin `passthrough`**: con `passthrough: true` Nest seguiría
+   * gestionando la respuesta y serializaría el valor devuelto por el handler,
+   * que es justo lo que no se quiere en un stream (hay que escribir y vaciar
+   * el búfer a mano, evento a evento). Como contrapartida, este handler es el
+   * responsable de terminar la respuesta: `runTurnStream` siempre llama a
+   * `end()`, salvo cuando propaga la excepción antes del primer token, en cuyo
+   * caso responde el filtro global con el JSON de SPEC-02 §6.
+   *
+   * `@HttpCode(200)` porque Nest aplica su `201` por defecto de `@Post`
+   * también con `@Res()`, y un stream de eventos no crea ningún recurso (los
+   * errores previos al primer token siguen saliendo con su propio status: el
+   * filtro global escribe el suyo antes de que se envíe nada).
+   */
+  @Throttle(TURNS_THROTTLE)
+  @Post('sessions/:id/turns/stream')
+  @HttpCode(200)
+  @ApiProduces('text/event-stream')
+  addTurnStream(
+    @CurrentUser('id') userId: string,
+    @Param('id') sessionId: string,
+    @Body() dto: CreateTurnDto,
+    @Res() res: Response,
+  ): Promise<void> {
+    return runTurnStream(res, (onToken) =>
+      this.turnsService.addTurn(userId, sessionId, dto, onToken),
+    );
   }
 
   /** `POST /sessions/:id/end` (SPEC-02 §4.3, SPEC-04 §5). `200` explícito, ver cabecera. */

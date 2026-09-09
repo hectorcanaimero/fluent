@@ -107,6 +107,22 @@ function createRedisDouble() {
 
 interface LlmCallRecord {
   readonly messages: readonly LlmMessage[];
+  /** ¿La llamada pidió streaming? Solo lo hace `POST .../turns/stream` (T4). */
+  readonly streamed: boolean;
+}
+
+/** Eventos SSE de una respuesta de `POST /sessions/:id/turns/stream`. */
+function parseSse(text: string): Array<{ event: string; data: Record<string, unknown> }> {
+  return text
+    .split('\n\n')
+    .filter((block) => block.trim() !== '')
+    .map((block) => {
+      const [eventLine = '', dataLine = ''] = block.split('\n');
+      return {
+        event: eventLine.replace(/^event: /, ''),
+        data: JSON.parse(dataLine.replace(/^data: /, '')) as Record<string, unknown>,
+      };
+    });
 }
 
 maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
@@ -130,17 +146,26 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
 
   /** Doble de `LlmService` que nunca sale a la red (regla 6 del diseño). */
   const fakeLlm = {
-    complete: async (req: { messages: readonly LlmMessage[] }) => {
-      llmCalls.push({ messages: req.messages });
+    complete: async (req: {
+      messages: readonly LlmMessage[];
+      onToken?: (delta: string) => void;
+    }) => {
+      llmCalls.push({ messages: req.messages, streamed: req.onToken !== undefined });
       if (llmUnavailable) {
         throw new LlmUnavailableError([]);
       }
       // La apertura manda el mensaje fijo de SPEC-04 §3.4; los turnos, el
       // texto del aprendiz.
       const isOpening = llmCalls.length === 1;
+      const reply = isOpening ? OPENING_TEXT : TURN_REPLY;
+      // Con `onToken` (endpoint SSE) el proveedor va soltando el `reply`.
+      if (req.onToken) {
+        req.onToken(reply.slice(0, 6));
+        req.onToken(reply.slice(6));
+      }
       return {
         data: {
-          reply: isOpening ? OPENING_TEXT : TURN_REPLY,
+          reply,
           corrections: isOpening ? [] : llmCorrections,
         },
         modelUsed: FAKE_MODEL,
@@ -188,6 +213,13 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
   function postTurn(user: E2eTestUser, sessionId: string, text: string) {
     return request(app.getHttpServer())
       .post(`/v1/sessions/${sessionId}/turns`)
+      .set(authHeader(user.accessToken))
+      .send({ text });
+  }
+
+  function postTurnStream(user: E2eTestUser, sessionId: string, text: string) {
+    return request(app.getHttpServer())
+      .post(`/v1/sessions/${sessionId}/turns/stream`)
       .set(authHeader(user.accessToken))
       .send({ text });
   }
@@ -459,5 +491,110 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
 
     const throttled = await postTurn(user, missingSessionId, 'Hola').expect(429);
     expect(throttled.body).toMatchObject({ error: 'RATE_LIMITED', statusCode: 429 });
+  }, 60_000);
+
+  // -------------------------------------------------------------------------
+  // Streaming (SPEC-04 §4, RF-3.8) — PR-04/T4
+  // -------------------------------------------------------------------------
+
+  it('POST /v1/sessions/:id/turns/stream emite `token`* → `corrections` → `done` y persiste igual que el endpoint normal', async () => {
+    const user = await newReadyUser('T sse ok');
+    const sessionId = await openSession(user);
+
+    llmCorrections = [
+      {
+        original: 'I go to Rome',
+        corrected: 'I went to Rome',
+        category: 'past_simple',
+        note: 'Usa el pasado simple para algo que ya terminó.',
+      },
+    ];
+
+    const response = await postTurnStream(user, sessionId, 'I go to Rome last week').expect(200);
+
+    expect(response.headers['content-type']).toContain('text/event-stream');
+    expect(response.headers['cache-control']).toContain('no-cache');
+    expect(response.headers['x-accel-buffering']).toBe('no');
+    // La llamada al modelo sí pidió streaming.
+    expect(llmCalls.at(-1)!.streamed).toBe(true);
+
+    const events = parseSse(response.text);
+    expect(events.map((event) => event.event)).toEqual([
+      'token',
+      'token',
+      'corrections',
+      'done',
+    ]);
+    expect(
+      events
+        .filter((event) => event.event === 'token')
+        .map((event) => event.data.text as string)
+        .join(''),
+    ).toBe(TURN_REPLY);
+    expect(events[2]!.data.corrections).toEqual([
+      {
+        original: 'I go to Rome',
+        corrected: 'I went to Rome',
+        category: 'past_simple',
+        note: 'Usa el pasado simple para algo que ya terminó.',
+      },
+    ]);
+    // El `done` es el mismo cuerpo que devuelve `POST .../turns`.
+    expect(events[3]!.data).toMatchObject({
+      turnIdx: 1,
+      reply: TURN_REPLY,
+      modelUsed: FAKE_MODEL,
+      degraded: false,
+    });
+
+    const turns = await readTurns(sessionId);
+    expect(turns).toHaveLength(3);
+    expect(turns[1]).toMatchObject({ idx: 1, role: 'user', text: 'I go to Rome last week' });
+    expect(turns[2]).toMatchObject({ idx: 2, role: 'tutor', text: TURN_REPLY, model: FAKE_MODEL });
+
+    const session = await readSession(sessionId);
+    expect(session.turns_count).toBe(1);
+    expect(session.chat_model_used).toBe(FAKE_MODEL);
+
+    const { data: corrections } = await admin.database
+      .from('corrections')
+      .select('*')
+      .eq('session_id', sessionId);
+    expect(corrections).toHaveLength(1);
+    expect((corrections as Array<{ turn_idx: number }>)[0]!.turn_idx).toBe(1);
+  }, 60_000);
+
+  it('un error antes de emitir sale como JSON de SPEC-02 §6, no como SSE', async () => {
+    const owner = await newReadyUser('T sse owner');
+    const intruder = await newReadyUser('T sse intruder');
+    const sessionId = await openSession(owner);
+
+    const response = await postTurnStream(intruder, sessionId, 'Hola').expect(403);
+
+    expect(response.headers['content-type']).toContain('application/json');
+    expect(response.body).toMatchObject({ error: 'FORBIDDEN', statusCode: 403 });
+  }, 60_000);
+
+  it('cadena agotada en streaming: el `reply` fijo llega como un único `token` y `done` marca `unavailable`', async () => {
+    const user = await newReadyUser('T sse degraded');
+    const sessionId = await openSession(user);
+
+    llmUnavailable = true;
+    const response = await postTurnStream(user, sessionId, 'A table for two, please').expect(200);
+
+    const events = parseSse(response.text);
+    expect(events.map((event) => event.event)).toEqual(['token', 'corrections', 'done']);
+    expect(events[0]!.data).toEqual({ text: DEGRADED_REPLY });
+    expect(events[1]!.data).toEqual({ corrections: [] });
+    expect(events[2]!.data).toMatchObject({
+      reply: DEGRADED_REPLY,
+      corrections: [],
+      modelUsed: null,
+      degraded: true,
+      unavailable: true,
+    });
+
+    const turns = await readTurns(sessionId);
+    expect(turns[2]).toMatchObject({ idx: 2, role: 'tutor', text: DEGRADED_REPLY, model: null });
   }, 60_000);
 });

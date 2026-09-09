@@ -20,7 +20,8 @@ import { TurnsService } from './turns.service.js';
  * Módulo de sesión de conversación (SPEC-02 §4.3, SPEC-04). Tras PR-04/T3
  * expone `POST /sessions`, `POST /sessions/:id/turns`, `POST
  * /sessions/:id/end`, `GET /sessions/suggestions`, `GET /sessions` y `GET
- * /sessions/:id`; T4 añade el streaming.
+ * /sessions/:id`, y tras T4 también `POST /sessions/:id/turns/stream` (mismo
+ * `TurnsService`, respuesta SSE de `turn-stream.ts`).
  *
  * - `LlmModule` aporta el `LlmService` ya construido **y** reexporta
  *   `LlmInfraModule` → `CredentialsModule`, de donde sale `CredentialsService`

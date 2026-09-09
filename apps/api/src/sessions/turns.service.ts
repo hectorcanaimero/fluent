@@ -61,6 +61,14 @@ interface TutorOutcome {
  * ritmo → turno del usuario → historial → modelo → turno del tutor,
  * correcciones y contadores.
  *
+ * **`POST /sessions/:id/turns/stream` (T4) usa este mismo servicio**: la
+ * única diferencia con el endpoint no streaming es el `onToken` opcional de
+ * `addTurn`, que se pasa hasta `LlmService.complete` para pedir `stream: true`
+ * al proveedor, y la forma de escribir la respuesta HTTP (eso vive en
+ * `turn-stream.ts`, no aquí). Todo lo demás —validación, lock, ritmo,
+ * historial, prompt, persistencia, correcciones, contadores y degradación—
+ * es literalmente el mismo código.
+ *
  * **Por qué el lock va antes que el ritmo** (decisión documentada en
  * docs/specs/pendientes/PR-04.md): dos turnos verdaderamente simultáneos
  * tienen que distinguirse de un cliente que va demasiado rápido. Si la
@@ -88,6 +96,7 @@ export class TurnsService {
     userId: string,
     sessionId: string,
     dto: CreateTurnDto,
+    onToken?: (delta: string) => void,
   ): Promise<TurnResultDto> {
     const text = dto.text.trim();
     if (text === '') {
@@ -125,7 +134,7 @@ export class TurnsService {
         throw ApiException.of('RATE_LIMITED', TOO_FAST_MESSAGE);
       }
 
-      const result = await this.runTurn(userId, session, text);
+      const result = await this.runTurn(userId, session, text, onToken);
 
       // La ventana se reinicia al **terminar** el turno: así los 2 s se
       // cuentan desde que el aprendiz tuvo la respuesta delante, no desde que
@@ -159,6 +168,7 @@ export class TurnsService {
     userId: string,
     session: Session,
     text: string,
+    onToken?: (delta: string) => void,
   ): Promise<TurnResultDto> {
     const profile = await this.sessions.findProfile(userId);
     if (profile === null || profile.onboarded_at === null) {
@@ -195,7 +205,15 @@ export class TurnsService {
 
     let outcome: TutorOutcome;
     try {
-      outcome = await this.completeTurn(userId, session, profile, history, text, credentials);
+      outcome = await this.completeTurn(
+        userId,
+        session,
+        profile,
+        history,
+        text,
+        credentials,
+        onToken,
+      );
     } catch (error) {
       // Fallo inesperado (no "cadena agotada"): no dejamos un turno del
       // aprendiz sin respuesta en el transcript, que descuadraría el
@@ -219,6 +237,7 @@ export class TurnsService {
     history: readonly HistoryTurn[],
     text: string,
     credentials: readonly ActiveCredential[],
+    onToken?: (delta: string) => void,
   ): Promise<TutorOutcome> {
     // Escenario reconstruido desde la fila de `sessions` y el catálogo, para
     // que el tutor siga con el mismo rol/noticia/reto con el que abrió.
@@ -265,6 +284,9 @@ export class TurnsService {
         credentials,
         preference: await this.findPreference(userId),
         promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
+        // Solo lo manda el endpoint SSE (T4): sin `onToken` la llamada es
+        // exactamente la de siempre, sin `stream: true`.
+        onToken,
       });
 
       return {

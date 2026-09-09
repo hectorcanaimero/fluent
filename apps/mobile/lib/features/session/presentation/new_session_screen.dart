@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -117,8 +119,18 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
                 topics: suggestions.topics,
                 freeTopicController: _freeTopicController,
                 starting: _starting,
-                onTopic: (topic) => _start(kind: 'topic', topic: topic),
-                onSurpriseMe: () => _start(kind: 'topic'),
+                onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
+                // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
+                // que "Surprise me" elige uno al azar de las sugerencias en
+                // vez de mandar la petición sin tema (eso siempre daría
+                // `400 VALIDATION`).
+                onSurpriseMe:
+                    suggestions.topics.isEmpty
+                        ? null
+                        : () => _start(
+                          kind: 'free_topic',
+                          topic: suggestions.topics[Random().nextInt(suggestions.topics.length)],
+                        ),
               ),
               _RoleplayTab(
                 roleplays: suggestions.roleplays,
@@ -151,7 +163,7 @@ class _TopicsTab extends StatelessWidget {
   final TextEditingController freeTopicController;
   final bool starting;
   final ValueChanged<String> onTopic;
-  final VoidCallback onSurpriseMe;
+  final VoidCallback? onSurpriseMe;
 
   @override
   Widget build(BuildContext context) {

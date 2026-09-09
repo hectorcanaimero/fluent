@@ -1,6 +1,5 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
-import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/session/data/speech_service.dart';
 import 'package:fluent_mobile/features/session/data/tts_service.dart';
@@ -34,7 +33,9 @@ class _AlwaysCorrectingApi extends FakeApi {
   }
 }
 
-/// Siempre falla con LLM_UNAVAILABLE, para probar el diálogo de 3
+/// Simula la cadena de modelos agotada: `POST /sessions/:id/turns` no
+/// lanza `503 LLM_UNAVAILABLE` (ver `turns.service.ts`), responde `200` con
+/// `TurnResult.unavailable: true` siempre, para probar el diálogo de 3
 /// intentos seguidos.
 class _UnavailableApi extends FakeApi {
   _UnavailableApi({super.artificialDelay});
@@ -44,10 +45,11 @@ class _UnavailableApi extends FakeApi {
   @override
   Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
     calls++;
-    throw const ApiException(
-      code: ApiErrorCode.llmUnavailable,
-      message: 'no model responded',
-      statusCode: 503,
+    return const TurnResult(
+      turnIdx: 0,
+      reply: 'Sorry, I lost my train of thought. Could you say that again?',
+      degraded: true,
+      unavailable: true,
     );
   }
 }
@@ -62,7 +64,7 @@ const _delegates = [
 void main() {
   testWidgets('escuchar, editar, enviar, mostrar corrección y reproducir', (tester) async {
     final api = _AlwaysCorrectingApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
     final speech = FakeSpeechService();
     final tts = FakeTtsService();
 
@@ -120,7 +122,7 @@ void main() {
 
   testWidgets('tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar', (tester) async {
     final api = _UnavailableApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
 
     await tester.pumpWidget(
       ProviderScope(
@@ -138,11 +140,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    // Modo texto para no depender del micrófono simulado.
-    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
-    await tester.pump();
-
+    // Cada turno degradado se persiste con `200` (no lanza una excepción,
+    // ver `turns.service.ts`), así que la conversación vuelve a `idle` entre
+    // envío y envío: hay que reabrir el modo texto en cada vuelta en vez de
+    // una sola vez al principio.
     for (var i = 0; i < 3; i++) {
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
       await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello $i');
       await tester.tap(find.byKey(const Key('conversation_send_button')));
       await tester.pumpAndSettle();
@@ -155,7 +159,7 @@ void main() {
 
   testWidgets('el temporizador llega a 0 y dispara /end', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
 
     final router = GoRouter(
       initialLocation: '/session/${created.session.id}',

@@ -68,12 +68,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     });
   }
 
-  Future<void> _startSession({String? topic}) async {
+  /// [kind] es siempre el `kind` real de `POST /sessions` (SPEC-04 §3.2):
+  /// `'boss'` para el botón de reto y `'free_topic'` (con [topic]) para un
+  /// tema rápido de la Home.
+  Future<void> _startSession({required String kind, String? topic}) async {
     final l10n = AppLocalizations.of(context);
     try {
-      final result = await ref
-          .read(fluentApiProvider)
-          .createSession(kind: topic != null ? 'topic' : 'roleplay', topic: topic);
+      final result = await ref.read(fluentApiProvider).createSession(kind: kind, topic: topic);
       if (!mounted) return;
       context.push('/session/${result.session.id}');
     } catch (_) {
@@ -124,7 +125,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   _PrimaryCta(
                     data: data,
                     onPractice: () => context.push('/session/new'),
-                    onBoss: () => _startSession(topic: null),
+                    onBoss: () => _startSession(kind: 'boss'),
                   ),
                   const SizedBox(height: AppSpacing.sm),
                   Text(
@@ -141,7 +142,10 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     _GroupCard(data: data),
                   ],
                   const SizedBox(height: AppSpacing.xl),
-                  _QuickTopics(data: data, onTopic: (topic) => _startSession(topic: topic)),
+                  _QuickTopics(
+                    data: data,
+                    onTopic: (topic) => _startSession(kind: 'free_topic', topic: topic),
+                  ),
                 ],
               ),
             );

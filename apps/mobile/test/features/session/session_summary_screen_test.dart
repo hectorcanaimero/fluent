@@ -11,7 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   testWidgets('muestra XP, streak, duración y el aviso de boss battle', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'topic', topic: 'Travel');
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
     const summary = SessionSummary(
       xpEarned: 85,
       streak: 13,

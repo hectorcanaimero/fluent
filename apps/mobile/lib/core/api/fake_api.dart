@@ -496,10 +496,13 @@ class FakeApi implements FluentApi {
     if (session == null || session.endedAt != null) {
       _fail(ApiErrorCode.sessionNotActive, 'session is not active', statusCode: 409);
     }
+    // Cada turno (del usuario y del tutor) tiene su propio `idx` secuencial,
+    // igual que la API real (`TurnsService`, SPEC-04 §4 paso 2): el `idx` de
+    // la apertura del tutor es `0`, así que el primer turno del usuario es
+    // `1`, su respuesta `2`, y así.
     _turnCounter++;
-    _sessionTurns[sessionId]!.add(
-      TurnRecord(idx: _turnCounter, role: 'user', text: text),
-    );
+    final userIdx = _turnCounter;
+    _sessionTurns[sessionId]!.add(TurnRecord(idx: userIdx, role: 'user', text: text));
 
     final hasMistake = _random.nextDouble() < 0.5;
     final corrections = <Correction>[];
@@ -517,12 +520,11 @@ class FakeApi implements FluentApi {
 
     final reply =
         "That's interesting! Can you tell me a bit more about why you feel that way?";
-    _sessionTurns[sessionId]!.add(
-      TurnRecord(idx: _turnCounter, role: 'tutor', text: reply),
-    );
+    _turnCounter++;
+    _sessionTurns[sessionId]!.add(TurnRecord(idx: _turnCounter, role: 'tutor', text: reply));
 
     return TurnResult(
-      turnIdx: _turnCounter,
+      turnIdx: userIdx,
       reply: reply,
       corrections: corrections,
       modelUsed: _modelPreference?.chatModel,
@@ -712,7 +714,7 @@ class FakeApi implements FluentApi {
         fromUserId: 'user-ana',
         displayName: 'Ana',
         topic: 'traveling solo',
-        kind: 'topic',
+        kind: 'free_topic',
         sessionId: 'challenge-travel',
       ),
       ChallengeItem(

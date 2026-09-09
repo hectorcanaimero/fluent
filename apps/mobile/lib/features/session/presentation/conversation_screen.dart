@@ -252,6 +252,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     });
   }
 
+  /// `POST /sessions/:id/turns` **nunca** devuelve `503 LLM_UNAVAILABLE`
+  /// (SPEC-04 §4 paso 4 y `apps/api/src/sessions/turns.service.ts`): si se
+  /// agota la cadena de modelos, la API responde igual `200` con
+  /// `TurnResult.unavailable: true` y un texto de disculpa fijo
+  /// (`DEGRADED_REPLY`), para que la conversación siga. Por eso el aviso de
+  /// "3 intentos seguidos" mira `result.unavailable`, no una excepción; el
+  /// catch de abajo queda solo para errores reales (403/409/429/400 o de
+  /// red). Ver PEND de `docs/specs/pendientes/PR-06.md`.
   Future<void> _send() async {
     final l10n = AppLocalizations.of(context);
     final text = _draftController.text.trim();
@@ -264,7 +272,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       final result = await ref
           .read(fluentApiProvider)
           .sendTurn(sessionId: widget.sessionId, text: text);
-      _unavailableCount = 0;
+      _unavailableCount = result.unavailable ? _unavailableCount + 1 : 0;
       if (!mounted) return;
       setState(() {
         _messages.add(ChatMessage(role: 'user', text: text, corrections: result.corrections));
@@ -277,18 +285,16 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       _scrollToBottom();
       await _tts.speak(result.reply);
       if (!mounted) return;
+      if (result.unavailable && _unavailableCount >= 3) {
+        setState(() => _state = ConvState.idle);
+        await _showUnavailableDialog();
+        return;
+      }
       setState(() => _state = ConvState.idle);
       if (_pendingTimerEnd) {
         await _endSession(reason: 'timer');
       }
-    } on ApiException catch (e) {
-      if (e.code == ApiErrorCode.llmUnavailable) {
-        _unavailableCount++;
-        if (_unavailableCount >= 3) {
-          await _showUnavailableDialog();
-          return;
-        }
-      }
+    } on ApiException catch (_) {
       if (!mounted) return;
       setState(() {
         _state = ConvState.reviewing;

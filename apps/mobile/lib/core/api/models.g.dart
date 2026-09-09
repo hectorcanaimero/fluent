@@ -362,6 +362,7 @@ _TurnResult _$TurnResultFromJson(Map<String, dynamic> json) => _TurnResult(
       const <Correction>[],
   modelUsed: json['modelUsed'] as String?,
   degraded: json['degraded'] as bool? ?? false,
+  unavailable: json['unavailable'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
@@ -371,6 +372,7 @@ Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
       'corrections': instance.corrections,
       'modelUsed': instance.modelUsed,
       'degraded': instance.degraded,
+      'unavailable': instance.unavailable,
     };
 
 _SessionSummary _$SessionSummaryFromJson(Map<String, dynamic> json) =>

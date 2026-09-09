@@ -70,6 +70,7 @@ abstract class MeResponse with _$MeResponse {
     required bool onboarded,
     String? activeSessionId,
     @Default(<String>[]) List<String> interestsCatalog,
+    @Default(<String>[]) List<String> pendingActions,
   }) = _MeResponse;
 
   factory MeResponse.fromJson(Map<String, dynamic> json) =>

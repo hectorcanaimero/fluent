@@ -1,10 +1,10 @@
+import '../errors/api_exception.dart';
 import '../http/api_client.dart';
 import 'fluent_api.dart';
 import 'models.dart';
 
 /// Implementación real de [FluentApi] contra `{API_URL}/v1` (SPEC-02 §4).
-/// Se activa cuando `USE_FAKE_API=false`. La conexión de punta a punta y el
-/// pulido de errores quedan para T9, cuando la API esté desplegada.
+/// Es la implementación por defecto desde T9 (`USE_FAKE_API=false`).
 class HttpFluentApi implements FluentApi {
   HttpFluentApi(this._client);
 
@@ -258,16 +258,18 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<WeeklySummaryResult?> getWeeklySummary({String? week}) => _client.guard(() async {
+  Future<WeeklySummaryResult?> getWeeklySummary({String? week}) async {
     try {
-      final res = await _client.dio.get(
-        '/weekly-summary',
-        queryParameters: {'week': ?week},
-      );
-      return WeeklySummaryResult.fromJson(res.data as Map<String, dynamic>);
-    } on Exception catch (e) {
-      if (e.toString().contains('NOT_READY')) return null;
+      return await _client.guard(() async {
+        final res = await _client.dio.get(
+          '/weekly-summary',
+          queryParameters: {'week': ?week},
+        );
+        return WeeklySummaryResult.fromJson(res.data as Map<String, dynamic>);
+      });
+    } on ApiException catch (e) {
+      if (e.code == ApiErrorCode.notReady) return null;
       rethrow;
     }
-  });
+  }
 }

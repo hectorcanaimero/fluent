@@ -88,7 +88,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
       await ref.read(authControllerProvider.notifier).refresh();
       if (!mounted) return;
       final me = ref.read(authControllerProvider).me;
-      final hasProvider = me?.providers.any((p) => p.status == 'connected') ?? false;
+      final hasProvider = me?.providers.any((p) => p.status == 'active') ?? false;
       context.go(hasProvider ? '/' : '/providers');
     } catch (_) {
       setState(() => _errorMessage = l10n.onboardingErrorGeneric);

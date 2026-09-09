@@ -18,6 +18,8 @@ enum ApiErrorCode {
   llmUnavailable,
   rateLimited,
   notReady,
+  notFound,
+  internal,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {
@@ -54,6 +56,10 @@ enum ApiErrorCode {
         return ApiErrorCode.rateLimited;
       case 'NOT_READY':
         return ApiErrorCode.notReady;
+      case 'NOT_FOUND':
+        return ApiErrorCode.notFound;
+      case 'INTERNAL':
+        return ApiErrorCode.internal;
       default:
         return ApiErrorCode.unknown;
     }
@@ -68,12 +74,18 @@ class ApiException implements Exception {
     required this.message,
     this.statusCode,
     this.details,
+    this.activeSessionId,
   });
 
   final ApiErrorCode code;
   final String message;
   final int? statusCode;
   final List<Map<String, dynamic>>? details;
+
+  /// Presente solo en `SESSION_ALREADY_ACTIVE` (SPEC-02 §6): la API lo
+  /// agrega como campo extra junto a `error`/`message`/`statusCode`, no
+  /// dentro de `details`.
+  final String? activeSessionId;
 
   @override
   String toString() => 'ApiException($code, $statusCode): $message';

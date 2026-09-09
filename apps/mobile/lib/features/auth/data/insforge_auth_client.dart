@@ -10,8 +10,9 @@ import '../../../core/storage/token_store.dart';
 /// de auth. También implementa [TokenRefresher] para que `ApiClient` pueda
 /// refrescar el token de la API de Fluent.
 class InsforgeAuthClient implements TokenRefresher {
-  InsforgeAuthClient({Dio? dio, String? baseUrl})
-    : dio =
+  InsforgeAuthClient({Dio? dio, String? baseUrl, String? anonKey})
+    : anonKey = anonKey ?? Env.insforgeAnonKey,
+      dio =
           dio ??
           Dio(
             BaseOptions(
@@ -23,7 +24,14 @@ class InsforgeAuthClient implements TokenRefresher {
 
   final Dio dio;
 
+  /// `INSFORGE_ANON_KEY` (SPEC-06 §6). Va como `Authorization: Bearer` en
+  /// toda llamada de auth sin sesión todavía (alta, login, refresh).
+  final String anonKey;
+
   static const _clientTypeQuery = {'client_type': 'mobile'};
+
+  Options get _anonAuthOptions =>
+      Options(headers: {'Authorization': 'Bearer $anonKey'});
 
   Future<AuthTokens> register({
     required String email,
@@ -34,6 +42,7 @@ class InsforgeAuthClient implements TokenRefresher {
       await dio.post(
         '/api/auth/users',
         queryParameters: _clientTypeQuery,
+        options: _anonAuthOptions,
         data: {'email': email, 'password': password, 'name': name},
       );
     } on DioException catch (e) {
@@ -50,6 +59,7 @@ class InsforgeAuthClient implements TokenRefresher {
       final res = await dio.post(
         '/api/auth/sessions',
         queryParameters: _clientTypeQuery,
+        options: _anonAuthOptions,
         data: {'method': 'password', 'email': email, 'password': password},
       );
       return _tokensFromResponse(res.data as Map<String, dynamic>);
@@ -64,6 +74,7 @@ class InsforgeAuthClient implements TokenRefresher {
       final res = await dio.post(
         '/api/auth/refresh',
         queryParameters: _clientTypeQuery,
+        options: _anonAuthOptions,
         data: {'refreshToken': refreshToken},
       );
       return _tokensFromResponse(

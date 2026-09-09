@@ -49,3 +49,7 @@ app.*.map.json
 
 # gen-l10n
 untranslated.txt
+
+# Variables reales de --dart-define-from-file (SPEC-06 §6): lleva la anon
+# key de InsForge. Ver defines.example.json y README.md.
+defines.json

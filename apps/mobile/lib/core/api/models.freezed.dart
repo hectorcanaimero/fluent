@@ -1144,7 +1144,7 @@ as String?,
 /// @nodoc
 mixin _$MeResponse {
 
- Profile get profile; GroupInfo? get group; List<ProviderInfo> get providers; ModelPreference? get modelPreference; bool get onboarded; String? get activeSessionId; List<String> get interestsCatalog;
+ Profile get profile; GroupInfo? get group; List<ProviderInfo> get providers; ModelPreference? get modelPreference; bool get onboarded; String? get activeSessionId; List<String> get interestsCatalog; List<String> get pendingActions;
 /// Create a copy of MeResponse
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1158,20 +1158,20 @@ $MeResponseCopyWith<MeResponse> get copyWith => _$MeResponseCopyWithImpl<MeRespo
 @override
 bool operator ==(Object other) {
   final _this = this as MeResponse;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is MeResponse&&(identical(other.profile, _this.profile) || other.profile == _this.profile)&&(identical(other.group, _this.group) || other.group == _this.group)&&const DeepCollectionEquality().equals(other.providers, _this.providers)&&(identical(other.modelPreference, _this.modelPreference) || other.modelPreference == _this.modelPreference)&&(identical(other.onboarded, _this.onboarded) || other.onboarded == _this.onboarded)&&(identical(other.activeSessionId, _this.activeSessionId) || other.activeSessionId == _this.activeSessionId)&&const DeepCollectionEquality().equals(other.interestsCatalog, _this.interestsCatalog));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is MeResponse&&(identical(other.profile, _this.profile) || other.profile == _this.profile)&&(identical(other.group, _this.group) || other.group == _this.group)&&const DeepCollectionEquality().equals(other.providers, _this.providers)&&(identical(other.modelPreference, _this.modelPreference) || other.modelPreference == _this.modelPreference)&&(identical(other.onboarded, _this.onboarded) || other.onboarded == _this.onboarded)&&(identical(other.activeSessionId, _this.activeSessionId) || other.activeSessionId == _this.activeSessionId)&&const DeepCollectionEquality().equals(other.interestsCatalog, _this.interestsCatalog)&&const DeepCollectionEquality().equals(other.pendingActions, _this.pendingActions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as MeResponse;
-  return Object.hash(runtimeType,_this.profile,_this.group,const DeepCollectionEquality().hash(_this.providers),_this.modelPreference,_this.onboarded,_this.activeSessionId,const DeepCollectionEquality().hash(_this.interestsCatalog));
+  return Object.hash(runtimeType,_this.profile,_this.group,const DeepCollectionEquality().hash(_this.providers),_this.modelPreference,_this.onboarded,_this.activeSessionId,const DeepCollectionEquality().hash(_this.interestsCatalog),const DeepCollectionEquality().hash(_this.pendingActions));
 }
 
 @override
 String toString() {
   final _this = this as MeResponse;
-  return 'MeResponse(profile: ${_this.profile}, group: ${_this.group}, providers: ${_this.providers}, modelPreference: ${_this.modelPreference}, onboarded: ${_this.onboarded}, activeSessionId: ${_this.activeSessionId}, interestsCatalog: ${_this.interestsCatalog})';
+  return 'MeResponse(profile: ${_this.profile}, group: ${_this.group}, providers: ${_this.providers}, modelPreference: ${_this.modelPreference}, onboarded: ${_this.onboarded}, activeSessionId: ${_this.activeSessionId}, interestsCatalog: ${_this.interestsCatalog}, pendingActions: ${_this.pendingActions})';
 }
 
 
@@ -1182,7 +1182,7 @@ abstract mixin class $MeResponseCopyWith<$Res>  {
   factory $MeResponseCopyWith(MeResponse value, $Res Function(MeResponse) _then) = _$MeResponseCopyWithImpl;
 @useResult
 $Res call({
- Profile profile, GroupInfo? group, List<ProviderInfo> providers, ModelPreference? modelPreference, bool onboarded, String? activeSessionId, List<String> interestsCatalog
+ Profile profile, GroupInfo? group, List<ProviderInfo> providers, ModelPreference? modelPreference, bool onboarded, String? activeSessionId, List<String> interestsCatalog, List<String> pendingActions
 });
 
 
@@ -1199,7 +1199,7 @@ class _$MeResponseCopyWithImpl<$Res>
 
 /// Create a copy of MeResponse
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? profile = null,Object? group = freezed,Object? providers = null,Object? modelPreference = freezed,Object? onboarded = null,Object? activeSessionId = freezed,Object? interestsCatalog = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? profile = null,Object? group = freezed,Object? providers = null,Object? modelPreference = freezed,Object? onboarded = null,Object? activeSessionId = freezed,Object? interestsCatalog = null,Object? pendingActions = null,}) {
   return _then(MeResponse(
 profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
 as Profile,group: freezed == group ? _self.group : group // ignore: cast_nullable_to_non_nullable
@@ -1208,6 +1208,7 @@ as List<ProviderInfo>,modelPreference: freezed == modelPreference ? _self.modelP
 as ModelPreference?,onboarded: null == onboarded ? _self.onboarded : onboarded // ignore: cast_nullable_to_non_nullable
 as bool,activeSessionId: freezed == activeSessionId ? _self.activeSessionId : activeSessionId // ignore: cast_nullable_to_non_nullable
 as String?,interestsCatalog: null == interestsCatalog ? _self.interestsCatalog : interestsCatalog // ignore: cast_nullable_to_non_nullable
+as List<String>,pendingActions: null == pendingActions ? _self.pendingActions : pendingActions // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }
@@ -1326,10 +1327,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog,  List<String> pendingActions)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _MeResponse() when $default != null:
-return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog);case _:
+return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog,_that.pendingActions);case _:
   return orElse();
 
 }
@@ -1347,10 +1348,10 @@ return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog,  List<String> pendingActions)  $default,) {final _that = this;
 switch (_that) {
 case _MeResponse():
-return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog);case _:
+return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog,_that.pendingActions);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -1367,10 +1368,10 @@ return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( Profile profile,  GroupInfo? group,  List<ProviderInfo> providers,  ModelPreference? modelPreference,  bool onboarded,  String? activeSessionId,  List<String> interestsCatalog,  List<String> pendingActions)?  $default,) {final _that = this;
 switch (_that) {
 case _MeResponse() when $default != null:
-return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog);case _:
+return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,_that.onboarded,_that.activeSessionId,_that.interestsCatalog,_that.pendingActions);case _:
   return null;
 
 }
@@ -1382,7 +1383,7 @@ return $default(_that.profile,_that.group,_that.providers,_that.modelPreference,
 @JsonSerializable()
 
 class _MeResponse implements MeResponse {
-  const _MeResponse({required this.profile, this.group,  List<ProviderInfo> providers = const <ProviderInfo>[], this.modelPreference, required this.onboarded, this.activeSessionId,  List<String> interestsCatalog = const <String>[]}): _providers = providers,_interestsCatalog = interestsCatalog;
+  const _MeResponse({required this.profile, this.group,  List<ProviderInfo> providers = const <ProviderInfo>[], this.modelPreference, required this.onboarded, this.activeSessionId,  List<String> interestsCatalog = const <String>[],  List<String> pendingActions = const <String>[]}): _providers = providers,_interestsCatalog = interestsCatalog,_pendingActions = pendingActions;
   factory _MeResponse.fromJson(Map<String, dynamic> json) => _$MeResponseFromJson(json);
 
 @override final  Profile profile;
@@ -1404,6 +1405,13 @@ class _MeResponse implements MeResponse {
   return EqualUnmodifiableListView(_interestsCatalog);
 }
 
+ final  List<String> _pendingActions;
+@override@JsonKey() List<String> get pendingActions {
+  if (_pendingActions is EqualUnmodifiableListView) return _pendingActions;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_pendingActions);
+}
+
 
 /// Create a copy of MeResponse
 /// with the given fields replaced by the non-null parameter values.
@@ -1418,18 +1426,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MeResponse&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.group, group) || other.group == group)&&const DeepCollectionEquality().equals(other.providers, _providers)&&(identical(other.modelPreference, modelPreference) || other.modelPreference == modelPreference)&&(identical(other.onboarded, onboarded) || other.onboarded == onboarded)&&(identical(other.activeSessionId, activeSessionId) || other.activeSessionId == activeSessionId)&&const DeepCollectionEquality().equals(other.interestsCatalog, _interestsCatalog));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _MeResponse&&(identical(other.profile, profile) || other.profile == profile)&&(identical(other.group, group) || other.group == group)&&const DeepCollectionEquality().equals(other.providers, _providers)&&(identical(other.modelPreference, modelPreference) || other.modelPreference == modelPreference)&&(identical(other.onboarded, onboarded) || other.onboarded == onboarded)&&(identical(other.activeSessionId, activeSessionId) || other.activeSessionId == activeSessionId)&&const DeepCollectionEquality().equals(other.interestsCatalog, _interestsCatalog)&&const DeepCollectionEquality().equals(other.pendingActions, _pendingActions));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,profile,group,const DeepCollectionEquality().hash(_providers),modelPreference,onboarded,activeSessionId,const DeepCollectionEquality().hash(_interestsCatalog));
+    return Object.hash(runtimeType,profile,group,const DeepCollectionEquality().hash(_providers),modelPreference,onboarded,activeSessionId,const DeepCollectionEquality().hash(_interestsCatalog),const DeepCollectionEquality().hash(_pendingActions));
 }
 
 @override
 String toString() {
-    return 'MeResponse(profile: $profile, group: $group, providers: $providers, modelPreference: $modelPreference, onboarded: $onboarded, activeSessionId: $activeSessionId, interestsCatalog: $interestsCatalog)';
+    return 'MeResponse(profile: $profile, group: $group, providers: $providers, modelPreference: $modelPreference, onboarded: $onboarded, activeSessionId: $activeSessionId, interestsCatalog: $interestsCatalog, pendingActions: $pendingActions)';
 }
 
 
@@ -1440,7 +1448,7 @@ abstract mixin class _$MeResponseCopyWith<$Res> implements $MeResponseCopyWith<$
   factory _$MeResponseCopyWith(_MeResponse value, $Res Function(_MeResponse) _then) = __$MeResponseCopyWithImpl;
 @override @useResult
 $Res call({
- Profile profile, GroupInfo? group, List<ProviderInfo> providers, ModelPreference? modelPreference, bool onboarded, String? activeSessionId, List<String> interestsCatalog
+ Profile profile, GroupInfo? group, List<ProviderInfo> providers, ModelPreference? modelPreference, bool onboarded, String? activeSessionId, List<String> interestsCatalog, List<String> pendingActions
 });
 
 
@@ -1457,7 +1465,7 @@ class __$MeResponseCopyWithImpl<$Res>
 
 /// Create a copy of MeResponse
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? profile = null,Object? group = freezed,Object? providers = null,Object? modelPreference = freezed,Object? onboarded = null,Object? activeSessionId = freezed,Object? interestsCatalog = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? profile = null,Object? group = freezed,Object? providers = null,Object? modelPreference = freezed,Object? onboarded = null,Object? activeSessionId = freezed,Object? interestsCatalog = null,Object? pendingActions = null,}) {
   return _then(_MeResponse(
 profile: null == profile ? _self.profile : profile // ignore: cast_nullable_to_non_nullable
 as Profile,group: freezed == group ? _self.group : group // ignore: cast_nullable_to_non_nullable
@@ -1466,6 +1474,7 @@ as List<ProviderInfo>,modelPreference: freezed == modelPreference ? _self.modelP
 as ModelPreference?,onboarded: null == onboarded ? _self.onboarded : onboarded // ignore: cast_nullable_to_non_nullable
 as bool,activeSessionId: freezed == activeSessionId ? _self.activeSessionId : activeSessionId // ignore: cast_nullable_to_non_nullable
 as String?,interestsCatalog: null == interestsCatalog ? _self._interestsCatalog : interestsCatalog // ignore: cast_nullable_to_non_nullable
+as List<String>,pendingActions: null == pendingActions ? _self._pendingActions : pendingActions // ignore: cast_nullable_to_non_nullable
 as List<String>,
   ));
 }

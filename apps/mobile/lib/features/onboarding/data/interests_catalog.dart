@@ -1,31 +1,30 @@
-/// Copia local del catálogo de intereses, usada mientras `GET /me` no
-/// devuelva `interestsCatalog` (SPEC-02 §4.1 lo agrega en PR-02/T2) o si la
-/// respuesta llega vacía. Los primeros 8 coinciden con los chips del diseño
-/// de Pen ("03 Onboarding · Interests"); el resto completa el catálogo de
-/// 24 mencionado en docs/design/README.md.
+/// Copia local del catálogo de intereses, usada solo como red de seguridad
+/// si `GET /me` devolviera `interestsCatalog` vacío. Mismos 24 ids, en el
+/// mismo orden, que `apps/api/src/content/interests.json`
+/// (`INTERESTS_CATALOG_IDS` de `ProfilesService.getMe`, SPEC-02 §4.1).
 const List<String> kFallbackInterests = [
-  'travel',
-  'business',
-  'tech',
-  'sports',
-  'movies',
-  'food',
-  'daily_life',
-  'news',
+  'technology',
+  'videogames',
+  'movies-series',
   'music',
-  'gaming',
-  'fitness',
-  'books',
-  'art',
-  'science',
+  'sports',
+  'football',
+  'travel',
   'cooking',
-  'photography',
+  'health-fitness',
+  'science',
+  'space',
+  'business-entrepreneurship',
+  'personal-finance',
+  'artificial-intelligence',
+  'cars-motor',
   'fashion',
-  'cars',
-  'nature',
-  'politics',
+  'photography',
+  'art-design',
+  'books-literature',
   'history',
-  'health',
-  'finance',
-  'pets',
+  'nature-animals',
+  'environment',
+  'education-career',
+  'family-relationships',
 ];

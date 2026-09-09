@@ -71,7 +71,7 @@ void main() {
     // Estamos en el paso de intereses: seleccionamos solo 2.
     await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
     await tester.pumpAndSettle();
-    await tester.tap(find.byKey(const Key('onboarding_interest_tech')));
+    await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
     await tester.pumpAndSettle();
 
     final finishButton = tester.widget<ElevatedButton>(
@@ -80,7 +80,7 @@ void main() {
     expect(finishButton.onPressed, isNull);
 
     // Con un tercer interés, el botón se habilita.
-    await tester.tap(find.byKey(const Key('onboarding_interest_movies')));
+    await tester.tap(find.byKey(const Key('onboarding_interest_movies-series')));
     await tester.pumpAndSettle();
     final enabledButton = tester.widget<ElevatedButton>(
       find.byKey(const Key('onboarding_continue_button')),
@@ -95,8 +95,8 @@ void main() {
     await _goThroughNameAndLevel(tester);
 
     await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
-    await tester.tap(find.byKey(const Key('onboarding_interest_tech')));
-    await tester.tap(find.byKey(const Key('onboarding_interest_movies')));
+    await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
+    await tester.tap(find.byKey(const Key('onboarding_interest_movies-series')));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('onboarding_continue_button')));

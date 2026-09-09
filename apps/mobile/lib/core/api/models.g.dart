@@ -95,6 +95,11 @@ _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  pendingActions:
+      (json['pendingActions'] as List<dynamic>?)
+          ?.map((e) => e as String)
+          .toList() ??
+      const <String>[],
 );
 
 Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
@@ -106,6 +111,7 @@ Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
       'onboarded': instance.onboarded,
       'activeSessionId': instance.activeSessionId,
       'interestsCatalog': instance.interestsCatalog,
+      'pendingActions': instance.pendingActions,
     };
 
 _GroupMember _$GroupMemberFromJson(Map<String, dynamic> json) => _GroupMember(

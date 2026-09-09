@@ -40,7 +40,7 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
     final catalog = await api.getModels();
     final statuses = <String, ProviderStatusResult>{};
     for (final p in me.providers) {
-      if (p.status == 'connected') {
+      if (p.status == 'active') {
         statuses[p.provider] = await api.getProviderStatus(p.provider);
       }
     }
@@ -315,7 +315,7 @@ class _ProviderCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final statusText = info?.status ?? 'not_connected';
-    final isConnected = statusText == 'connected';
+    final isConnected = statusText == 'active';
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -349,7 +349,7 @@ class _ProviderCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             switch (statusText) {
-              'connected' => l10n.providersStatusConnected,
+              'active' => l10n.providersStatusConnected,
               'error' => l10n.providersStatusError,
               _ => l10n.providersStatusNotConnected,
             },

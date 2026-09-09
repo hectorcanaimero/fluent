@@ -102,3 +102,34 @@ Pásale un código de la tabla de arriba. En la app: "Crear cuenta" con su email
 ## 8. Qué quiero saber de tu prueba
 
 Anota, aunque sea en dos líneas cada uno: cuánto tardó el tutor en responder, si las correcciones tenían sentido, si el reconocimiento de voz entendió tu acento, y qué pantalla te resultó confusa. Con eso ajusto prompts, modelos y UI.
+
+## 9. Checklist de la prueba manual en dispositivo (pendiente de ejecutar)
+
+`flutter analyze` y `flutter test` corren en el VPS y ya están en verde, pero no reemplazan una
+prueba en un teléfono real: no hay emulador ni dispositivo conectado en el VPS, así que nadie
+ejecutó todavía lo siguiente. Ningún resultado de esta lista está verificado — la marca cada
+casilla el operador, en su Mac y su teléfono, siguiendo los pasos de las secciones 4 y 5.
+
+- [ ] **Reconocimiento de voz (STT, SPEC-06 §5).** En `/session/:id`, mantener presionado el botón
+  de micrófono y hablar en inglés con acento hispano. Verificar: aparece transcripción parcial
+  mientras se habla; al soltar, el texto final queda editable con botones "Enviar" y "Repetir"; si
+  el teléfono no tiene el paquete de reconocimiento `en_US` instalado, la app lo indica y ofrece el
+  modo texto en vez de trabarse.
+- [ ] **Texto a voz (TTS, SPEC-06 §5).** Tras un turno del tutor, tocar el botón de repetir audio
+  con cada velocidad (0.8x, 1x, 1.2x). Verificar: se escucha con voz en inglés; al tocar el
+  micrófono para responder, el audio del tutor se corta al instante (ducking, no se solapan).
+- [ ] **PKCE de OpenRouter (SPEC-06 §7).** En `/providers`, tocar "Conectar" en la tarjeta de
+  OpenRouter. Verificar: abre el navegador externo (no un WebView embebido); tras iniciar sesión en
+  OpenRouter, vuelve solo a la app por el deep link `fluent://oauth/openrouter` (sin que el usuario
+  copie ni pegue nada); la tarjeta pasa a "Conectado" sin recargar la app a mano.
+- [ ] **Notificaciones locales (SPEC-06 §8).** En `/settings`, configurar los dos recordatorios
+  diarios. Verificar: llegan a la hora configurada aunque la app esté cerrada; si ya se completaron
+  dos sesiones ese día, el recordatorio de esa franja no llega (SPEC-06 §8: "canceladas el día en
+  que ya se hicieron dos sesiones").
+- [ ] **Sesión real de punta a punta (criterio de aceptación de T9).** Una sesión completa de 10
+  minutos con al menos una corrección mostrada en el resumen y un hecho nuevo en "Lo que recuerdo
+  de vos" (sección 5, pasos 5 y 7) con dos usuarios reales (el owner y un invitado con uno de los
+  códigos de la sección 6).
+
+Reportar en un párrafo por casilla (o "no lo pude probar, esto pasó" si algo falla) usando el
+formato de la sección 8.

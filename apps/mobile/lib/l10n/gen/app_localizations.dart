@@ -422,53 +422,23 @@ abstract class AppLocalizations {
   /// **'Ver más'**
   String get onboardingInterestsSeeMore;
 
-  /// No description provided for @interestTravel.
-  ///
-  /// In es, this message translates to:
-  /// **'Viajes'**
-  String get interestTravel;
-
-  /// No description provided for @interestBusiness.
-  ///
-  /// In es, this message translates to:
-  /// **'Negocios'**
-  String get interestBusiness;
-
-  /// No description provided for @interestTech.
+  /// No description provided for @interestTechnology.
   ///
   /// In es, this message translates to:
   /// **'Tecnología'**
-  String get interestTech;
+  String get interestTechnology;
 
-  /// No description provided for @interestSports.
+  /// No description provided for @interestVideogames.
   ///
   /// In es, this message translates to:
-  /// **'Deportes'**
-  String get interestSports;
+  /// **'Videojuegos'**
+  String get interestVideogames;
 
-  /// No description provided for @interestMovies.
+  /// No description provided for @interestMoviesSeries.
   ///
   /// In es, this message translates to:
-  /// **'Películas'**
-  String get interestMovies;
-
-  /// No description provided for @interestFood.
-  ///
-  /// In es, this message translates to:
-  /// **'Comida'**
-  String get interestFood;
-
-  /// No description provided for @interestDailyLife.
-  ///
-  /// In es, this message translates to:
-  /// **'Vida diaria'**
-  String get interestDailyLife;
-
-  /// No description provided for @interestNews.
-  ///
-  /// In es, this message translates to:
-  /// **'Noticias'**
-  String get interestNews;
+  /// **'Cine y series'**
+  String get interestMoviesSeries;
 
   /// No description provided for @interestMusic.
   ///
@@ -476,29 +446,35 @@ abstract class AppLocalizations {
   /// **'Música'**
   String get interestMusic;
 
-  /// No description provided for @interestGaming.
+  /// No description provided for @interestSports.
   ///
   /// In es, this message translates to:
-  /// **'Videojuegos'**
-  String get interestGaming;
+  /// **'Deportes'**
+  String get interestSports;
 
-  /// No description provided for @interestFitness.
+  /// No description provided for @interestFootball.
   ///
   /// In es, this message translates to:
-  /// **'Fitness'**
-  String get interestFitness;
+  /// **'Fútbol'**
+  String get interestFootball;
 
-  /// No description provided for @interestBooks.
+  /// No description provided for @interestTravel.
   ///
   /// In es, this message translates to:
-  /// **'Libros'**
-  String get interestBooks;
+  /// **'Viajes'**
+  String get interestTravel;
 
-  /// No description provided for @interestArt.
+  /// No description provided for @interestCooking.
   ///
   /// In es, this message translates to:
-  /// **'Arte'**
-  String get interestArt;
+  /// **'Comida y cocina'**
+  String get interestCooking;
+
+  /// No description provided for @interestHealthFitness.
+  ///
+  /// In es, this message translates to:
+  /// **'Salud y fitness'**
+  String get interestHealthFitness;
 
   /// No description provided for @interestScience.
   ///
@@ -506,17 +482,35 @@ abstract class AppLocalizations {
   /// **'Ciencia'**
   String get interestScience;
 
-  /// No description provided for @interestCooking.
+  /// No description provided for @interestSpace.
   ///
   /// In es, this message translates to:
-  /// **'Cocina'**
-  String get interestCooking;
+  /// **'Espacio'**
+  String get interestSpace;
 
-  /// No description provided for @interestPhotography.
+  /// No description provided for @interestBusinessEntrepreneurship.
   ///
   /// In es, this message translates to:
-  /// **'Fotografía'**
-  String get interestPhotography;
+  /// **'Negocios y emprendimiento'**
+  String get interestBusinessEntrepreneurship;
+
+  /// No description provided for @interestPersonalFinance.
+  ///
+  /// In es, this message translates to:
+  /// **'Finanzas personales'**
+  String get interestPersonalFinance;
+
+  /// No description provided for @interestArtificialIntelligence.
+  ///
+  /// In es, this message translates to:
+  /// **'Inteligencia artificial'**
+  String get interestArtificialIntelligence;
+
+  /// No description provided for @interestCarsMotor.
+  ///
+  /// In es, this message translates to:
+  /// **'Coches y motor'**
+  String get interestCarsMotor;
 
   /// No description provided for @interestFashion.
   ///
@@ -524,23 +518,23 @@ abstract class AppLocalizations {
   /// **'Moda'**
   String get interestFashion;
 
-  /// No description provided for @interestCars.
+  /// No description provided for @interestPhotography.
   ///
   /// In es, this message translates to:
-  /// **'Autos'**
-  String get interestCars;
+  /// **'Fotografía'**
+  String get interestPhotography;
 
-  /// No description provided for @interestNature.
+  /// No description provided for @interestArtDesign.
   ///
   /// In es, this message translates to:
-  /// **'Naturaleza'**
-  String get interestNature;
+  /// **'Arte y diseño'**
+  String get interestArtDesign;
 
-  /// No description provided for @interestPolitics.
+  /// No description provided for @interestBooksLiterature.
   ///
   /// In es, this message translates to:
-  /// **'Política'**
-  String get interestPolitics;
+  /// **'Libros y literatura'**
+  String get interestBooksLiterature;
 
   /// No description provided for @interestHistory.
   ///
@@ -548,23 +542,29 @@ abstract class AppLocalizations {
   /// **'Historia'**
   String get interestHistory;
 
-  /// No description provided for @interestHealth.
+  /// No description provided for @interestNatureAnimals.
   ///
   /// In es, this message translates to:
-  /// **'Salud'**
-  String get interestHealth;
+  /// **'Naturaleza y animales'**
+  String get interestNatureAnimals;
 
-  /// No description provided for @interestFinance.
+  /// No description provided for @interestEnvironment.
   ///
   /// In es, this message translates to:
-  /// **'Finanzas'**
-  String get interestFinance;
+  /// **'Medio ambiente'**
+  String get interestEnvironment;
 
-  /// No description provided for @interestPets.
+  /// No description provided for @interestEducationCareer.
   ///
   /// In es, this message translates to:
-  /// **'Mascotas'**
-  String get interestPets;
+  /// **'Educación y carrera'**
+  String get interestEducationCareer;
+
+  /// No description provided for @interestFamilyRelationships.
+  ///
+  /// In es, this message translates to:
+  /// **'Vida familiar y relaciones'**
+  String get interestFamilyRelationships;
 
   /// No description provided for @providersTitle.
   ///
@@ -841,6 +841,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectar'**
   String get homeNoProviderAction;
+
+  /// No description provided for @homePendingActionWeeklySummaryCredential.
+  ///
+  /// In es, this message translates to:
+  /// **'El resumen semanal del grupo no se pudo generar: conectá un proveedor para que siga funcionando.'**
+  String get homePendingActionWeeklySummaryCredential;
+
+  /// No description provided for @homePendingActionAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisar'**
+  String get homePendingActionAction;
 
   /// No description provided for @homeQuickTopicsTitle.
   ///

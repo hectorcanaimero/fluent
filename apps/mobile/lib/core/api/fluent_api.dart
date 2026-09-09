@@ -3,7 +3,7 @@ import 'models.dart';
 /// Contrato de la API de Fluent (SPEC-02 §4). Todas las pantallas dependen
 /// de esta interfaz, nunca de una implementación concreta. `FakeApi` la
 /// implementa con datos de ejemplo para construir la UI; `HttpFluentApi` la
-/// implementa contra la API real (se activa al apagar `USE_FAKE_API` en T9).
+/// implementa contra la API real (por defecto desde T9, `USE_FAKE_API=false`).
 abstract class FluentApi {
   // 4.1 Cuenta y grupo
   Future<MeResponse> getMe();

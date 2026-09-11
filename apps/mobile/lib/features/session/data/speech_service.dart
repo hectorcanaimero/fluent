@@ -179,8 +179,11 @@ class FakeSpeechService implements SpeechService {
     _listening = false;
   }
 
+  bool cancelCalled = false;
+
   @override
   Future<void> cancel() async {
+    cancelCalled = true;
     _listening = false;
   }
 

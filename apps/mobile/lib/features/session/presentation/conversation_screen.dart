@@ -38,7 +38,8 @@ class ConversationScreen extends ConsumerStatefulWidget {
   ConsumerState<ConversationScreen> createState() => _ConversationScreenState();
 }
 
-class _ConversationScreenState extends ConsumerState<ConversationScreen> {
+class _ConversationScreenState extends ConsumerState<ConversationScreen>
+    with WidgetsBindingObserver {
   ConvState _state = ConvState.idle;
   final List<ChatMessage> _messages = [];
   final _draftController = TextEditingController();
@@ -89,18 +90,46 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   @override
   void initState() {
     super.initState();
+    WidgetsBinding.instance.addObserver(this);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
     _timer?.cancel();
     _draftController.dispose();
     _scrollController.dispose();
     _speech.cancel();
+    // MAL-07: sin esto, minimizar la app durante `speaking` dejaba al tutor
+    // sonando en segundo plano indefinidamente.
+    _tts.stop();
     _remainingSecondsNotifier.dispose();
     _liveText.dispose();
     super.dispose();
+  }
+
+  /// MAL-07: sin observar el ciclo de vida, minimizar la app (o el pop-up
+  /// de una llamada entrante) dejaba el timer corriendo en segundo plano —
+  /// al volver, el cronómetro ya había avanzado sin que la sesión hubiera
+  /// "pasado" realmente — y el STT/TTS seguían activos sin que nadie los
+  /// viera ni escuchara.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        _timer?.cancel();
+        _speech.cancel();
+        _tts.stop();
+      case AppLifecycleState.resumed:
+        if (!_loading && !_bootError && _remainingSeconds > 0) {
+          _startTimer();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -611,65 +640,75 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_sessionTopic ?? ''),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Center(
-              child: ValueListenableBuilder<int>(
-                valueListenable: _remainingSecondsNotifier,
-                builder: (context, seconds, _) => Text(
-                  _formatTime(seconds),
-                  key: const Key('conversation_timer'),
+    return PopScope<Object?>(
+      // MAL-07: el back de Android abandonaba la sesión activa sin avisar;
+      // ahora reutiliza el mismo diálogo de confirmación que el botón de
+      // cerrar del AppBar.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _confirmEndByUser();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_sessionTopic ?? ''),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Center(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _remainingSecondsNotifier,
+                  builder: (context, seconds, _) => Text(
+                    _formatTime(seconds),
+                    key: const Key('conversation_timer'),
+                  ),
                 ),
               ),
             ),
-          ),
-          IconButton(
-            key: const Key('conversation_end_button'),
-            icon: const Icon(Icons.close),
-            onPressed: _confirmEndByUser,
-            tooltip: l10n.conversationEndButton,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              key: const Key('conversation_message_list'),
-              controller: _scrollController,
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return message.isAssistant
-                    ? _AssistantBubble(
-                        message: message,
-                        rate: _ttsRate,
-                        onSetRate: _setRate,
-                        onReplay: () => _replay(message.text),
-                        liveText: index == _liveIndex ? _liveText : null,
-                      )
-                    : _UserBubble(message: message);
-              },
+            IconButton(
+              key: const Key('conversation_end_button'),
+              icon: const Icon(Icons.close),
+              onPressed: _confirmEndByUser,
+              tooltip: l10n.conversationEndButton,
             ),
-          ),
-          _BottomControls(
-            state: _state,
-            partialText: _partialText,
-            draftController: _draftController,
-            errorMessage: _errorMessage,
-            onMicTap: _state == ConvState.listening
-                ? _stopListening
-                : _startListening,
-            onSend: _send,
-            onRetry: _retry,
-            onTextMode: _enterTextMode,
-          ),
-        ],
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                key: const Key('conversation_message_list'),
+                controller: _scrollController,
+                padding: const EdgeInsets.all(AppSpacing.screenPad),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return message.isAssistant
+                      ? _AssistantBubble(
+                          message: message,
+                          rate: _ttsRate,
+                          onSetRate: _setRate,
+                          onReplay: () => _replay(message.text),
+                          liveText: index == _liveIndex ? _liveText : null,
+                        )
+                      : _UserBubble(message: message);
+                },
+              ),
+            ),
+            _BottomControls(
+              state: _state,
+              partialText: _partialText,
+              draftController: _draftController,
+              errorMessage: _errorMessage,
+              onMicTap: _state == ConvState.listening
+                  ? _stopListening
+                  : _startListening,
+              onSend: _send,
+              onRetry: _retry,
+              onTextMode: _enterTextMode,
+            ),
+          ],
+        ),
       ),
     );
   }

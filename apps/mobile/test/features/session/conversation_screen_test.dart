@@ -511,6 +511,7 @@ void main() {
     WidgetTester tester, {
     required FakeApi api,
     required FakeSpeechService speech,
+    FakeTtsService? tts,
   }) async {
     final created = await api.createSession(
       kind: 'free_topic',
@@ -521,7 +522,7 @@ void main() {
         overrides: [
           fluentApiProvider.overrideWith((ref) => api),
           speechServiceProvider.overrideWith((ref) => speech),
-          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ttsServiceProvider.overrideWith((ref) => tts ?? FakeTtsService()),
         ],
         child: MaterialApp(
           localizationsDelegates: _delegates,
@@ -634,6 +635,110 @@ void main() {
         find.text(l10n.conversationMicPermissionDeniedTitle),
         findsNothing,
       );
+    },
+  );
+
+  testWidgets(
+    'MAL-07: minimizar la app (paused) cancela el STT y para el TTS',
+    (tester) async {
+      final speech = FakeSpeechService();
+      final tts = FakeTtsService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+        tts: tts,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      expect(speech.isListening, isTrue);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+
+      expect(speech.cancelCalled, isTrue);
+      expect(tts.stopCalled, isTrue);
+    },
+  );
+
+  testWidgets('MAL-07: volver (resumed) reanuda el timer', (tester) async {
+    final speech = FakeSpeechService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: speech,
+    );
+
+    await tester.pump(const Duration(seconds: 1));
+    final beforePause = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    // Mientras está pausada, el timer no debería seguir corriendo.
+    await tester.pump(const Duration(seconds: 3));
+    final duringPause = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+    expect(duringPause, beforePause);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 1));
+    final afterResume = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+    expect(afterResume, isNot(duringPause));
+  });
+
+  testWidgets(
+    'MAL-07: el back del sistema pide confirmar en vez de abandonar la sesión',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      final router = GoRouter(
+        initialLocation: '/session/${created.session.id}',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Text('HOME_SCREEN'),
+          ),
+          GoRoute(
+            path: '/session/:id',
+            builder: (context, state) =>
+                ConversationScreen(sessionId: state.pathParameters['id']!),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).first,
+      );
+      unawaited(navigator.maybePop());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.conversationEndConfirmTitle), findsOneWidget);
+      expect(find.text('HOME_SCREEN'), findsNothing);
     },
   );
 }

@@ -17,14 +17,17 @@ void main() {
     service = FlutterTtsService(tts: tts);
   });
 
-  test('mapea el multiplicador de la UI a la mitad para flutter_tts (MAL-06)', () async {
-    await service.setSpeechRate(1.0);
-    verify(() => tts.setSpeechRate(0.5)).called(1);
+  test(
+    'mapea el multiplicador de la UI a la mitad para flutter_tts (MAL-06)',
+    () async {
+      await service.setSpeechRate(1.0);
+      verify(() => tts.setSpeechRate(0.5)).called(1);
 
-    await service.setSpeechRate(0.8);
-    verify(() => tts.setSpeechRate(0.4)).called(1);
+      await service.setSpeechRate(0.8);
+      verify(() => tts.setSpeechRate(0.4)).called(1);
 
-    await service.setSpeechRate(1.2);
-    verify(() => tts.setSpeechRate(0.6)).called(1);
-  });
+      await service.setSpeechRate(1.2);
+      verify(() => tts.setSpeechRate(0.6)).called(1);
+    },
+  );
 }

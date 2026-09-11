@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/home_data.dart';
 
@@ -107,61 +108,58 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: FutureBuilder<HomeData>(
           future: _future,
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              if (snapshot.hasError) {
-                return Center(child: Text(l10n.homeLoadError));
-              }
-              return const Center(child: CircularProgressIndicator());
-            }
-            final data = snapshot.data!;
-            return RefreshIndicator(
-              onRefresh: () async {
-                _reload();
-                await _future;
-              },
-              child: ListView(
-                padding: const EdgeInsets.all(AppSpacing.screenPad),
-                children: [
-                  _HeaderRow(data: data),
-                  const SizedBox(height: AppSpacing.lg),
-                  _StreakCard(data: data),
-                  const SizedBox(height: AppSpacing.lg),
-                  _LevelCard(data: data),
-                  const SizedBox(height: AppSpacing.xl),
-                  if (!data.hasActiveProvider) ...[
-                    _NoProviderBanner(),
+            return AsyncBody<HomeData>(
+              snapshot: snapshot,
+              onRetry: _reload,
+              builder: (data) => RefreshIndicator(
+                onRefresh: () async {
+                  _reload();
+                  await _future;
+                },
+                child: ListView(
+                  padding: const EdgeInsets.all(AppSpacing.screenPad),
+                  children: [
+                    _HeaderRow(data: data),
                     const SizedBox(height: AppSpacing.lg),
-                  ],
-                  if (data.hasWeeklySummaryCredentialPending) ...[
-                    _PendingActionBanner(),
+                    _StreakCard(data: data),
                     const SizedBox(height: AppSpacing.lg),
+                    _LevelCard(data: data),
+                    const SizedBox(height: AppSpacing.xl),
+                    if (!data.hasActiveProvider) ...[
+                      _NoProviderBanner(),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    if (data.hasWeeklySummaryCredentialPending) ...[
+                      _PendingActionBanner(),
+                      const SizedBox(height: AppSpacing.lg),
+                    ],
+                    _PrimaryCta(
+                      data: data,
+                      onPractice: () => context.push('/session/new'),
+                      onBoss: () => _startSession(kind: 'boss'),
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    Text(
+                      l10n.homeSessionsTodayStatus(data.sessionsToday),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                    if (data.pendingFactsCount > 0) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      _PendingFactsCard(count: data.pendingFactsCount),
+                    ],
+                    if (data.group != null) ...[
+                      const SizedBox(height: AppSpacing.lg),
+                      _GroupCard(data: data),
+                    ],
+                    const SizedBox(height: AppSpacing.xl),
+                    _QuickTopics(
+                      data: data,
+                      onTopic: (topic) =>
+                          _startSession(kind: 'free_topic', topic: topic),
+                    ),
                   ],
-                  _PrimaryCta(
-                    data: data,
-                    onPractice: () => context.push('/session/new'),
-                    onBoss: () => _startSession(kind: 'boss'),
-                  ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    l10n.homeSessionsTodayStatus(data.sessionsToday),
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                  if (data.pendingFactsCount > 0) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _PendingFactsCard(count: data.pendingFactsCount),
-                  ],
-                  if (data.group != null) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    _GroupCard(data: data),
-                  ],
-                  const SizedBox(height: AppSpacing.xl),
-                  _QuickTopics(
-                    data: data,
-                    onTopic: (topic) =>
-                        _startSession(kind: 'free_topic', topic: topic),
-                  ),
-                ],
+                ),
               ),
             );
           },

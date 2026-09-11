@@ -44,12 +44,17 @@ void main() {
     expect(find.text('valor: 7'), findsOneWidget);
   });
 
-  testWidgets('con error muestra el mensaje y Reintentar llama a onRetry', (tester) async {
+  testWidgets('con error muestra el mensaje y Reintentar llama a onRetry', (
+    tester,
+  ) async {
     var retried = false;
     await tester.pumpWidget(
       _wrap(
         AsyncBody<int>(
-          snapshot: AsyncSnapshot<int>.withError(ConnectionState.done, Exception('boom')),
+          snapshot: AsyncSnapshot<int>.withError(
+            ConnectionState.done,
+            Exception('boom'),
+          ),
           builder: (data) => Text('$data'),
           onRetry: () => retried = true,
         ),

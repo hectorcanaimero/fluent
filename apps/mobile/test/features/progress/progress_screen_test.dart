@@ -47,7 +47,9 @@ void main() {
     expect(find.text(progress.correctionsTrend.first.category), findsOneWidget);
   });
 
-  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (tester) async {
+  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (
+    tester,
+  ) async {
     final api = _ThrowingOnceApi();
     await tester.pumpWidget(
       ProviderScope(

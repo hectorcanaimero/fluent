@@ -12,6 +12,7 @@ import '../features/session/data/tts_service.dart';
 import 'api/fake_api.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
+import 'api/models.dart';
 import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
@@ -118,7 +119,7 @@ final timezoneProvider = FutureProvider<String>((ref) async {
 /// invalida al conectar/desconectar un proveedor (`ProvidersScreen`).
 final canPracticeProvider = FutureProvider<bool>((ref) async {
   final me = await ref.watch(fluentApiProvider).getMe();
-  return me.providers.any((p) => p.status == 'active');
+  return me.hasActiveProvider;
 });
 
 final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(

@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 class _ThrowingOnceApi extends FakeApi {
   _ThrowingOnceApi() : super(artificialDelay: Duration.zero);
@@ -21,8 +22,26 @@ class _ThrowingOnceApi extends FakeApi {
   }
 }
 
+/// OpenRouter arranca sin conectar, para probar el resguardo de MAL-13.
+class _NoActiveProviderApi extends FakeApi {
+  _NoActiveProviderApi() : super(artificialDelay: Duration.zero);
+
+  @override
+  Future<MeResponse> getMe() async {
+    final me = await super.getMe();
+    return me.copyWith(
+      providers: [
+        for (final p in me.providers)
+          ProviderInfo(provider: p.provider, status: 'not_connected'),
+      ],
+    );
+  }
+}
+
 void main() {
-  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (tester) async {
+  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (
+    tester,
+  ) async {
     final api = _ThrowingOnceApi();
     await tester.pumpWidget(
       ProviderScope(
@@ -51,6 +70,49 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
-    expect(find.byKey(const Key('session_new_surprise_me_button')), findsOneWidget);
+    expect(
+      find.byKey(const Key('session_new_surprise_me_button')),
+      findsOneWidget,
+    );
   });
+
+  testWidgets(
+    'MAL-13: sin proveedor activo, redirige a Proveedores aunque se llegue sin pasar por el gate de Home',
+    (tester) async {
+      final router = GoRouter(
+        initialLocation: '/session/new',
+        routes: [
+          GoRoute(
+            path: '/session/new',
+            builder: (context, state) => const NewSessionScreen(),
+          ),
+          GoRoute(
+            path: '/providers',
+            builder: (context, state) => const Text('PROVIDERS_SCREEN'),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => _NoActiveProviderApi()),
+            micPrimerShownProvider.overrideWith((ref) => true),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PROVIDERS_SCREEN'), findsOneWidget);
+    },
+  );
 }

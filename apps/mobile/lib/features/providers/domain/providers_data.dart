@@ -29,5 +29,5 @@ class ProvidersData {
 
   /// MAL-11: con al menos un proveedor activo, la pantalla deja de ser un
   /// callejón sin salida y muestra un CTA para volver a practicar.
-  bool get hasActiveProvider => me.providers.any((p) => p.status == 'active');
+  bool get hasActiveProvider => me.hasActiveProvider;
 }

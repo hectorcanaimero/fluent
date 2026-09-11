@@ -41,7 +41,9 @@ Future<void> _pumpMemory(WidgetTester tester, FakeApi api) async {
 }
 
 void main() {
-  testWidgets('confirmar un hecho pendiente lo mueve a "Lo que recuerdo"', (tester) async {
+  testWidgets('confirmar un hecho pendiente lo mueve a "Lo que recuerdo"', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
     await _pumpMemory(tester, api);
 
@@ -60,20 +62,25 @@ void main() {
     expect(memory.facts.pending.map((f) => f.id), isNot(contains('fact-1')));
   });
 
-  testWidgets('descartar un hecho pendiente lo saca de la lista sin confirmarlo', (tester) async {
-    final api = FakeApi(artificialDelay: Duration.zero);
-    await _pumpMemory(tester, api);
+  testWidgets(
+    'descartar un hecho pendiente lo saca de la lista sin confirmarlo',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await _pumpMemory(tester, api);
 
-    await tester.tap(find.byKey(const Key('pending_fact_dismiss_fact-2')));
-    await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('pending_fact_dismiss_fact-2')));
+      await tester.pumpAndSettle();
 
-    expect(find.byKey(const Key('pending_fact_fact-2')), findsNothing);
-    final memory = await api.getMemory();
-    expect(
-      memory.facts.confirmed.map((f) => f.id).followedBy(memory.facts.pending.map((f) => f.id)),
-      isNot(contains('fact-2')),
-    );
-  });
+      expect(find.byKey(const Key('pending_fact_fact-2')), findsNothing);
+      final memory = await api.getMemory();
+      expect(
+        memory.facts.confirmed
+            .map((f) => f.id)
+            .followedBy(memory.facts.pending.map((f) => f.id)),
+        isNot(contains('fact-2')),
+      );
+    },
+  );
 
   testWidgets('olvidar todo requiere dos confirmaciones', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
@@ -125,7 +132,9 @@ void main() {
     expect(memory.facts.confirmed, isNotEmpty);
   });
 
-  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (tester) async {
+  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (
+    tester,
+  ) async {
     final api = _ThrowingOnceApi();
     await _pumpMemory(tester, api);
 

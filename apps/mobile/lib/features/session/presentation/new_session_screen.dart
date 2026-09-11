@@ -30,11 +30,30 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
     _loadSuggestions();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMicPrimer());
+    WidgetsBinding.instance.addPostFrameCallback((_) => _guardCanPractice());
   }
 
   void _loadSuggestions() {
     _future = ref.read(fluentApiProvider).getSessionSuggestions();
+  }
+
+  /// MAL-13: último resguardo por si se llega acá sin proveedor activo por
+  /// un camino que no pasa por el gate de `HomeScreen`/`HomeShell` (por
+  /// ejemplo el "Saltar" del boss o "Ver todo" de temas rápidos, que
+  /// navegan directo con `context.push('/session/new')`): sin esto,
+  /// cualquier tema fallaría igual al crear la sesión, con un error
+  /// genérico y sin salida.
+  Future<void> _guardCanPractice() async {
+    final canPractice = await ref.read(canPracticeProvider.future);
+    if (!mounted) return;
+    if (!canPractice) {
+      final l10n = AppLocalizations.of(context);
+      context.go('/providers');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
+      return;
+    }
+    await _maybeShowMicPrimer();
   }
 
   /// SPEC-06 §5: la primera vez que se entra acá se explica para qué se

@@ -28,12 +28,15 @@ class _ThrowingSecondGetMeApi extends FakeApi {
 }
 
 void main() {
-  testWidgets('muestra el perfil y cerrar sesión limpia el estado de auth', (tester) async {
+  testWidgets('muestra el perfil y cerrar sesión limpia el estado de auth', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
     final container = ProviderContainer(
       overrides: [
         tokenStoreProvider.overrideWithValue(
-          InMemoryTokenStore()..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+          InMemoryTokenStore()
+            ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
         ),
         fluentApiProvider.overrideWith((ref) => api),
       ],
@@ -68,48 +71,53 @@ void main() {
     await tester.tap(find.byKey(const Key('settings_logout_button')));
     await tester.pumpAndSettle();
 
-    expect(container.read(authControllerProvider).status, AuthStatus.unauthenticated);
+    expect(
+      container.read(authControllerProvider).status,
+      AuthStatus.unauthenticated,
+    );
   });
 
-  testWidgets('si falla la carga del perfil muestra Reintentar y recupera al tocarlo', (
-    tester,
-  ) async {
-    final api = _ThrowingSecondGetMeApi();
-    final container = ProviderContainer(
-      overrides: [
-        tokenStoreProvider.overrideWithValue(
-          InMemoryTokenStore()..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+  testWidgets(
+    'si falla la carga del perfil muestra Reintentar y recupera al tocarlo',
+    (tester) async {
+      final api = _ThrowingSecondGetMeApi();
+      final container = ProviderContainer(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(
+            InMemoryTokenStore()
+              ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+          ),
+          fluentApiProvider.overrideWith((ref) => api),
+        ],
+      );
+      addTearDown(container.dispose);
+      await container.read(authControllerProvider.notifier).bootstrap();
+
+      await tester.pumpWidget(
+        UncontrolledProviderScope(
+          container: container,
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SettingsScreen(),
+          ),
         ),
-        fluentApiProvider.overrideWith((ref) => api),
-      ],
-    );
-    addTearDown(container.dispose);
-    await container.read(authControllerProvider.notifier).bootstrap();
+      );
+      await tester.pumpAndSettle();
 
-    await tester.pumpWidget(
-      UncontrolledProviderScope(
-        container: container,
-        child: const MaterialApp(
-          localizationsDelegates: [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: SettingsScreen(),
-        ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
 
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pumpAndSettle();
 
-    await tester.tap(find.text(l10n.commonRetry));
-    await tester.pumpAndSettle();
-
-    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
-    expect(find.text('María'), findsOneWidget);
-  });
+      expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+      expect(find.text('María'), findsOneWidget);
+    },
+  );
 }

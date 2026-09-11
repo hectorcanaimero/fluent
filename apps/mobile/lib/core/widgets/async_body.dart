@@ -7,7 +7,12 @@ import '../../l10n/gen/app_localizations.dart';
 /// (MAL-09): sin esto, un error deja la pantalla girando para siempre en
 /// vez de mostrar algo accionable.
 class AsyncBody<T> extends StatelessWidget {
-  const AsyncBody({super.key, required this.snapshot, required this.builder, required this.onRetry});
+  const AsyncBody({
+    super.key,
+    required this.snapshot,
+    required this.builder,
+    required this.onRetry,
+  });
 
   final AsyncSnapshot<T> snapshot;
   final Widget Function(T data) builder;

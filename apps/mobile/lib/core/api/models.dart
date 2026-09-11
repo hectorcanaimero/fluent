@@ -77,6 +77,13 @@ abstract class MeResponse with _$MeResponse {
       _$MeResponseFromJson(json);
 }
 
+/// MAL-13: única definición de "hay un proveedor conectado", para que
+/// `HomeData`, `ProvidersData` y `canPracticeProvider` (core/providers.dart)
+/// no la reimplementen cada uno por su cuenta y puedan desincronizarse.
+extension MeResponseProviders on MeResponse {
+  bool get hasActiveProvider => providers.any((p) => p.status == 'active');
+}
+
 @freezed
 abstract class GroupMember with _$GroupMember {
   const factory GroupMember({

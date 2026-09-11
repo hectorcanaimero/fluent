@@ -24,7 +24,9 @@ class _ThrowingOnceApi extends FakeApi {
 }
 
 void main() {
-  testWidgets('compartir invoca share_plus con el texto del resumen semanal', (tester) async {
+  testWidgets('compartir invoca share_plus con el texto del resumen semanal', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
     final share = FakeShareService();
 
@@ -64,7 +66,9 @@ void main() {
     expect(share.shared, [expectedSummary!.text]);
   });
 
-  testWidgets('muestra el leaderboard con medalla para el primer puesto', (tester) async {
+  testWidgets('muestra el leaderboard con medalla para el primer puesto', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
     await tester.pumpWidget(
       ProviderScope(
@@ -87,12 +91,17 @@ void main() {
     expect(find.byIcon(Icons.emoji_events), findsOneWidget);
   });
 
-  testWidgets('aceptar un desafío crea una sesión con ese tema', (tester) async {
+  testWidgets('aceptar un desafío crea una sesión con ese tema', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
     final router = GoRouter(
       initialLocation: '/group',
       routes: [
-        GoRoute(path: '/group', builder: (context, state) => const GroupScreen()),
+        GoRoute(
+          path: '/group',
+          builder: (context, state) => const GroupScreen(),
+        ),
         GoRoute(
           path: '/session/:id',
           builder: (context, state) => const Text('CONVERSATION_SCREEN'),
@@ -127,7 +136,9 @@ void main() {
     expect(api.lastChallengeFromUserId, 'user-ana');
   });
 
-  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (tester) async {
+  testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (
+    tester,
+  ) async {
     final api = _ThrowingOnceApi();
     await tester.pumpWidget(
       ProviderScope(

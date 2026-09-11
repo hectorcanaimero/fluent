@@ -28,7 +28,7 @@ class HomeData {
   /// así que acá solo se cuenta el total del día.
   final int sessionsToday;
 
-  bool get hasActiveProvider => me.providers.any((p) => p.status == 'active');
+  bool get hasActiveProvider => me.hasActiveProvider;
 
   /// MAL-13: única fuente de verdad de "se puede empezar una sesión ahora"
   /// para el CTA de Home, los chips de temas rápidos y la pestaña

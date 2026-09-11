@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/interests_catalog.dart';
 import '../domain/interest_labels.dart';
@@ -141,6 +142,10 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             ),
             _ => _InterestsStep(
               loadCatalog: _loadCatalog,
+              // MAL-09: si `_loadCatalog` falló (`_catalog` sigue null),
+              // reintentar es simplemente volver a pedir el build: la
+              // próxima llamada a `loadCatalog()` reintenta el `getMe()`.
+              onRetry: () => setState(() {}),
               selected: _selectedInterests,
               showAll: _showAllInterests,
               onShowAll: () => setState(() => _showAllInterests = true),
@@ -332,6 +337,7 @@ class _LevelCard extends StatelessWidget {
 class _InterestsStep extends StatelessWidget {
   const _InterestsStep({
     required this.loadCatalog,
+    required this.onRetry,
     required this.selected,
     required this.showAll,
     required this.onShowAll,
@@ -339,6 +345,7 @@ class _InterestsStep extends StatelessWidget {
   });
 
   final Future<List<String>> Function() loadCatalog;
+  final VoidCallback onRetry;
   final Set<String> selected;
   final bool showAll;
   final VoidCallback onShowAll;
@@ -350,54 +357,56 @@ class _InterestsStep extends StatelessWidget {
     return FutureBuilder<List<String>>(
       future: loadCatalog(),
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Center(child: CircularProgressIndicator());
-        }
-        final catalog = snapshot.data!;
-        final visible = showAll
-            ? catalog
-            : catalog.take(_kInitialInterestsShown).toList();
-        return ListView(
-          children: [
-            const SizedBox(height: AppSpacing.xl),
-            Text(
-              l10n.onboardingInterestsHeadline,
-              style: Theme.of(context).textTheme.headlineMedium,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              l10n.onboardingInterestsSubtitle,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Text(
-              l10n.onboardingInterestsSelectedCount(selected.length),
-              style: Theme.of(context).textTheme.bodySmall
-                  ?.copyWith(color: AppColors.primary),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            Wrap(
-              spacing: AppSpacing.sm,
-              runSpacing: AppSpacing.sm,
+        return AsyncBody<List<String>>(
+          snapshot: snapshot,
+          onRetry: onRetry,
+          builder: (catalog) {
+            final visible = showAll
+                ? catalog
+                : catalog.take(_kInitialInterestsShown).toList();
+            return ListView(
               children: [
-                for (final id in visible)
-                  _InterestChip(
-                    key: Key('onboarding_interest_$id'),
-                    label: interestLabel(l10n, id),
-                    isSelected: selected.contains(id),
-                    onTap: () => onToggle(id),
+                const SizedBox(height: AppSpacing.xl),
+                Text(
+                  l10n.onboardingInterestsHeadline,
+                  style: Theme.of(context).textTheme.headlineMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.onboardingInterestsSubtitle,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.onboardingInterestsSelectedCount(selected.length),
+                  style: Theme.of(context).textTheme.bodySmall
+                      ?.copyWith(color: AppColors.primary),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Wrap(
+                  spacing: AppSpacing.sm,
+                  runSpacing: AppSpacing.sm,
+                  children: [
+                    for (final id in visible)
+                      _InterestChip(
+                        key: Key('onboarding_interest_$id'),
+                        label: interestLabel(l10n, id),
+                        isSelected: selected.contains(id),
+                        onTap: () => onToggle(id),
+                      ),
+                  ],
+                ),
+                if (!showAll && catalog.length > _kInitialInterestsShown) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  TextButton(
+                    key: const Key('onboarding_show_more_interests'),
+                    onPressed: onShowAll,
+                    child: Text(l10n.onboardingInterestsSeeMore),
                   ),
+                ],
               ],
-            ),
-            if (!showAll && catalog.length > _kInitialInterestsShown) ...[
-              const SizedBox(height: AppSpacing.md),
-              TextButton(
-                key: const Key('onboarding_show_more_interests'),
-                onPressed: onShowAll,
-                child: Text(l10n.onboardingInterestsSeeMore),
-              ),
-            ],
-          ],
+            );
+          },
         );
       },
     );

@@ -7,7 +7,7 @@ Estado: borrador v0.1 · Cubre: RF-1.x, RF-2.1, RF-2.3, RF-2.6, RF-3.x, RF-4.2, 
 | Pieza | Elección | Motivo |
 |---|---|---|
 | Flutter | 3.47 estable, Dart 3 | ya instalado en el VPS |
-| Estado | Riverpod 3 (`flutter_riverpod`, `riverpod_annotation`) | providers tipados, fácil de testear |
+| Estado | Riverpod 2 (`flutter_riverpod` 2.x, sin `riverpod_annotation` ni codegen) | providers a mano; las pantallas usan `FutureProvider`/`StateNotifier` y, donde el estado es local, `setState`. Decidido en el P1 (MEJ-22): migrar a Riverpod 3 con codegen no aporta hoy y costaría reescribir las pantallas |
 | Navegación | `go_router` | rutas declarativas y deep links para el callback de PKCE |
 | HTTP | `dio` con interceptores | refresh automático de token, logs |
 | Modelos | `freezed` + `json_serializable` | DTOs inmutables |

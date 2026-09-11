@@ -11,11 +11,16 @@ abstract final class AppColors {
   static const primarySoft = Color(0xFFDDF3EF);
   static const accent = Color(0xFFF0813B);
   static const accentSoft = Color(0xFFFDEBDC);
+  /// Texto en color acento sobre `bg`/`surface` (5.1:1); `accent` puro no
+  /// llega a AA como texto (2.5:1) y queda para rellenos e iconos (MEJ-01).
+  static const accentText = Color(0xFFA9500F);
   static const gold = Color(0xFFF4B63F);
   static const goldSoft = Color(0xFFFDF1D6);
+  /// Texto sobre `goldSoft` o `bg` (5.2:1); `gold` solo como relleno (MEJ-01).
+  static const goldText = Color(0xFF8A5B00);
   static const textPrimary = Color(0xFF1C2024);
-  static const textSecondary = Color(0xFF6F7680);
-  static const textMuted = Color(0xFFA3A9B2);
+  static const textSecondary = Color(0xFF5C636C); // 5.7:1 sobre bg (MEJ-01)
+  static const textMuted = Color(0xFF767D86); // 3.9:1 sobre bg: solo metadatos, nunca cuerpo (MEJ-01)
   static const border = Color(0xFFECE7DF);
   static const locked = Color(0xFFF1EEE9);
   static const success = Color(0xFF2FA36B);
@@ -136,7 +141,9 @@ class AppTheme {
       ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.primary,
+          // `primaryDark`: blanco sobre `primary` da 3.4:1, insuficiente para
+          // el texto de 16 px del botón; sobre `primaryDark` da 5.0:1 (MEJ-01).
+          backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
           minimumSize: const Size(double.infinity, 56),
           shape: RoundedRectangleBorder(

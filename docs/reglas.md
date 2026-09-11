@@ -4,18 +4,19 @@ Bienvenido al grupo. Aquí practicamos idiomas como si fuera un juego: ganando X
 
 ## Cómo se gana XP
 
-Cada vez que cierras una sesión de conversación válida (al menos 3 minutos y 2 turnos de diálogo), ganas XP. Los puntos se suman así:
+Cada vez que cerrás una sesión de conversación válida (al menos 3 minutos y 2 turnos de diálogo), ganás XP. Los puntos se suman así:
 
 - **XP base**: 50 puntos por sesión.
-- **Bono por duración**: 6 puntos por cada minuto entre el minuto 6 y el 10 completos (máximo 30 puntos extra si llegas a los 10 minutos).
+- **Bono de bienvenida**: 20 XP al completar tu perfil, una sola vez.
+- **Bono por duración**: 6 puntos por cada minuto entre el minuto 6 y el 10 completos (máximo 30 puntos extra si llegás a los 10 minutos).
   - 3 a 5 minutos → 0 puntos extra
   - 6 minutos → 6 puntos extra
   - 7 minutos → 12 puntos extra
   - ...hasta 10 minutos → 30 puntos extra
-- **Bono segunda sesión del día**: si cierras una segunda sesión válida el mismo día, ganas 25 XP extra. La tercera también cuenta; la cuarta no da XP (pero podés seguir practicando).
-- **Bono de desafío**: si aceptas el desafío de un compañero y practicas su tema, sumas 15 XP extra.
-- **Bono de racha**: cada vez que llegas a 7, 14, 21 días (y más) de racha sin interrupciones, ganas 40 XP extra.
-- **Boss battle**: cada 7 sesiones (la 7ª, 14ª, 21ª...), el tutor te ofrece un tema fuera de tu zona de confort (economía, filosofía, ciencia, historia, ética de la IA, etc.). Si la aceptas, el XP se **duplica** (base y bono de duración se multiplican por 2). Si la rechazas, sin penalización; se te vuelve a ofrecer después.
+- **Bono segunda sesión del día**: si cerrás una segunda sesión válida el mismo día, ganás 25 XP extra. La tercera también cuenta; la cuarta no da XP (pero podés seguir practicando).
+- **Bono de desafío**: si aceptás el desafío de un compañero y practicás su tema, sumás 15 XP extra.
+- **Bono de racha**: cada vez que llegás a 7, 14, 21 días (y más) de racha sin interrupciones, ganás 40 XP extra.
+- **Boss battle**: cada 7 sesiones (la 7ª, 14ª, 21ª...), el tutor te ofrece un tema fuera de tu zona de confort (economía, filosofía, ciencia, historia, ética de la IA, etc.). Si la aceptás, el XP se **duplica** (base y bono de duración se multiplican por 2). Si la rechazás, sin penalización; se te vuelve a ofrecer después.
 
 **Resumen:** Una sesión de 10 minutos sin bonificadores da 80 XP (50 base + 30 duración). Una boss battle de 10 minutos da 160 XP. Una segunda sesión de 10 minutos el mismo día da 105 XP (50 base + 30 duración + 25 segundo día).
 
@@ -33,7 +34,7 @@ A medida que acumulas XP, subes de nivel. No cambian tu experiencia, solo te mue
 
 ## Tu racha diaria
 
-Cada día que practicas al menos una sesión válida, sumas un día a tu racha. Es tu contador de consistencia. Si te salteás un día, la racha se reinicia... a menos que uses tu **día de gracia**.
+Cada día que practicás al menos una sesión válida, sumás un día a tu racha. Es tu contador de consistencia. Si te salteás un día, la racha se reinicia... a menos que uses tu **día de gracia**.
 
 ## Tu día de gracia
 
@@ -46,7 +47,7 @@ En la sección "Desafíos", podés ver qué temas practicaron tus compañeros ú
 - Vos no debés haber practicado ese tema en los últimos 14 días.
 - Un desafío por compañero por semana (no puedes aceptar el mismo reto dos veces en 7 días).
 - La lista te muestra como máximo 3 desafíos disponibles a la vez.
-- Si aceptas y cierras la sesión, ganas 15 XP extra además de los normales.
+- Si aceptás y cerrás la sesión, ganás 15 XP extra además de los normales.
 
 ## El ranking semanal
 
@@ -82,7 +83,7 @@ Para mantener tu privacidad, tus compañeros **solo ven**:
 
 Para ganar XP y sumar racha, una sesión debe:
 - Durar **al menos 3 minutos**.
-- Tener **al menos 2 turnos** de conversación (vos escribes, el tutor responde, vos escribes de nuevo).
+- Tener **al menos 2 turnos** de conversación (vos escribís, el tutor responde, vos escribís de nuevo).
 
 Las sesiones más cortas o con menos interacción no suman nada, pero podés seguir practicando sin límite.
 

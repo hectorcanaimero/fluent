@@ -46,7 +46,7 @@ class InsforgeAuthClient implements TokenRefresher {
         data: {'email': email, 'password': password, 'name': name},
       );
     } on DioException catch (e) {
-      throw _mapError(e);
+      throw _mapError(e, registering: true);
     }
     return login(email: email, password: password);
   }
@@ -109,8 +109,17 @@ class InsforgeAuthClient implements TokenRefresher {
     );
   }
 
-  ApiException _mapError(DioException e) {
+  ApiException _mapError(DioException e, {bool registering = false}) {
     final statusCode = e.response?.statusCode;
+    // En el alta, un 400/409/422 es un dato inválido (email ya registrado,
+    // contraseña corta), no credenciales incorrectas (MEJ-06).
+    if (registering && (statusCode == 400 || statusCode == 409 || statusCode == 422)) {
+      return ApiException(
+        code: ApiErrorCode.validation,
+        message: 'invalid registration data',
+        statusCode: statusCode,
+      );
+    }
     if (statusCode == 401 || statusCode == 400) {
       return ApiException(
         code: ApiErrorCode.unauthenticated,

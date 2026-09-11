@@ -80,8 +80,16 @@ USER node
 #
 # El límite de memoria (1 GB API / 768 MB worker) se configura en Coolify
 # (T6), no aquí.
-HEALTHCHECK --interval=30s --timeout=3s --start-period=10s --retries=3 \
-  CMD if [ "$FLUENT_PROCESS" = "worker" ]; then pgrep -f "dist/worker.js" >/dev/null || exit 1; else wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/v1/health" || exit 1; fi
+# La API responde al liveness (`/v1/health`), que da 200 mientras el proceso
+# conteste aunque Redis o InsForge estén caídos: reiniciar el contenedor no
+# arregla un fallo que es de otro. La readiness (`/v1/health/ready`), que sí
+# exige ambas dependencias, la usa quien decida mandar tráfico, no Docker.
+#
+# El worker no expone HTTP: comprueba su latido en Redis (MEJ-27). Antes solo
+# miraba que el proceso existiera, lo que daba por sano a un worker con las
+# colas caídas o el bucle bloqueado.
+HEALTHCHECK --interval=30s --timeout=5s --start-period=20s --retries=3 \
+  CMD if [ "$FLUENT_PROCESS" = "worker" ]; then node dist/worker-health.js || exit 1; else wget --no-verbose --tries=1 --spider "http://localhost:${PORT:-3000}/v1/health" || exit 1; fi
 
 # Comando por defecto: la API. El worker sobrescribe este comando en
 # Coolify con `node dist/worker.js` (SPEC-08 §1).

@@ -63,6 +63,17 @@ export const PURPOSE_DEFAULTS: Readonly<Record<Purpose, PurposeDefaults>> = Obje
 /** SPEC-03 §2: máximo de intentos por llamada. */
 export const MAX_ATTEMPTS = 3;
 
+/**
+ * Intentos para un turno de conversación (MAL-23).
+ *
+ * Menos que el resto a propósito: el aprendiz está esperando delante de la
+ * pantalla, y tres intentos de 25 s son 75 s de silencio antes de rendirse.
+ * Con dos, el peor caso baja a 50 s y la apertura degradada aparece antes.
+ * El brief y el resumen semanal corren en el worker, sin nadie esperando, y
+ * se quedan en `MAX_ATTEMPTS`.
+ */
+export const TURN_MAX_ATTEMPTS = 2;
+
 export interface FallbackModel {
   readonly provider: Provider;
   readonly model: string;

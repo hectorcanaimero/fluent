@@ -67,6 +67,9 @@ function makeRepository(state: RepoState) {
     markSessionRunning: vi.fn(async () => {
       state.briefJobStatus = 'running';
     }),
+    markSessionFailed: vi.fn(async () => {
+      state.briefJobStatus = 'failed';
+    }),
     loadTurns: vi.fn(async () => [
       { role: 'user' as const, text: 'I go to the beach yesterday' },
       { role: 'tutor' as const, text: 'Nice! You mean "I went to the beach".' },
@@ -259,5 +262,23 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const request = (llm.complete as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
     expect(request.credentials).toEqual([]);
+  });
+});
+
+describe('CoachingBriefService.markFailed (MAL-20)', () => {
+  it('deja la sesión en `failed` en vez de `running` para siempre', async () => {
+    const state = baseState();
+    const repository = makeRepository(state);
+    const service = new CoachingBriefService(
+      repository as unknown as CoachingBriefRepository,
+      makeCipher(),
+      makeLlm(),
+      makeConfig(),
+    );
+
+    await service.markFailed(SESSION_ID);
+
+    expect(repository.markSessionFailed).toHaveBeenCalledWith(SESSION_ID);
+    expect(state.briefJobStatus).toBe('failed');
   });
 });

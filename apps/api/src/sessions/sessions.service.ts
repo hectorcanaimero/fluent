@@ -25,6 +25,7 @@ import {
 import { openingFor } from './session-openings.js';
 import { NEWS_MAX_AGE_DAYS, SESSION_RANDOM, type SessionRandom } from './sessions.constants.js';
 import { roundLatency, toSessionInfoDto } from './sessions.mapper.js';
+import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { ChallengesService } from '../social/challenges.service.js';
 import type { ChallengesResultDto } from '../social/social.types.js';
 import { SessionsRepository } from './sessions.repository.js';
@@ -43,6 +44,13 @@ const CHALLENGE_NOT_AVAILABLE_MESSAGE =
   'Ese desafío ya no está disponible; elige otro o empieza una sesión normal.';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+
+/**
+ * Antigüedad máxima de una sesión para reintentar su brief fallido (MAL-20).
+ * Pasados unos días sus notas ya no valen gran cosa y reintentarlas solo
+ * gasta tokens del aprendiz.
+ */
+const FAILED_BRIEF_MAX_AGE_DAYS = 3;
 
 /**
  * `POST /sessions` — apertura de sesión (SPEC-04 §3, RF-3.x y RF-4.4).
@@ -68,6 +76,7 @@ export class SessionsService {
     private readonly llm: LlmService,
     private readonly boss: BossService,
     private readonly challenges: ChallengesService,
+    @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
     private readonly configService: ConfigService<Env, true>,
     @Inject(SESSION_RANDOM) private readonly random: SessionRandom,
   ) {}
@@ -104,6 +113,11 @@ export class SessionsService {
     // 4.c El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
     // otra cosa, se registra el rechazo de hoy (SPEC-04 §3.2, SPEC-07 §4).
     await this.recordBossSkipIfDeclined(userId, dto.kind, profile);
+
+    // 4.d Recuperación del brief fallido (MAL-20). Se hace al abrir la sesión
+    // siguiente porque es el momento en que el brief vuelve a hacer falta, y
+    // sin bloquear: si el reencolado falla, la sesión se abre igual.
+    void this.retryFailedBrief(userId);
 
     // 5. Callback (RF-4.4, SPEC-04 §3.3). Se elige **antes** de la llamada al
     // LLM porque el hecho va dentro del prompt (`opening_rule` de SPEC-03
@@ -262,6 +276,38 @@ export class SessionsService {
 
     if (pending) {
       await this.boss.recordSkip(userId);
+    }
+  }
+
+  /**
+   * Reencola el `coaching-brief` de la última sesión cuyo job agotó los
+   * reintentos, si es reciente (MAL-20).
+   *
+   * Sin esto, un brief que fallaba se quedaba marcado y nadie volvía a
+   * intentarlo: las sesiones siguientes arrancaban sin notas de coaching y en
+   * silencio, que es el peor tipo de degradación —el aprendiz no nota nada,
+   * simplemente el tutor deja de acordarse de él.
+   *
+   * Es idempotente por `jobId = sessionId` (`BullJobDispatcher`), así que dos
+   * aperturas seguidas no duplican el job. Nunca lanza: abrir una sesión no
+   * puede fallar porque la cola esté caída.
+   */
+  private async retryFailedBrief(userId: string): Promise<void> {
+    try {
+      const sessionId = await this.repository.findRecentFailedBriefSessionId(
+        userId,
+        FAILED_BRIEF_MAX_AGE_DAYS,
+      );
+      if (sessionId === null) return;
+
+      await this.jobs.enqueueCoachingBrief(sessionId);
+      this.logger.log(
+        `Brief fallido de la sesión ${sessionId} reencolado al abrir una sesión nueva`,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo reencolar el brief fallido de ${userId}: ${(error as Error).message}`,
+      );
     }
   }
 

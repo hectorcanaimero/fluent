@@ -4,6 +4,25 @@ import type { ExecutionContext } from '@nestjs/common';
 import { ApiException } from '../common/api-error.js';
 import type { AuthenticatedRequest } from '../auth/auth.types.js';
 
+/** Cabecera que escribe Cloudflare con la IP real del cliente. */
+export const CLIENT_IP_HEADER = 'cf-connecting-ip';
+
+/**
+ * IP del cliente para el rate limit (MEJ-30): `CF-Connecting-IP` si
+ * Cloudflare la puso, si no la `request.ip` que resuelve Express con
+ * `trust proxy`. Exportada para poder probarla sin montar un guard entero.
+ */
+export function clientIpOf(req: Record<string, unknown>): string | undefined {
+  const headers = req.headers as Record<string, string | string[] | undefined> | undefined;
+  const forwarded = headers?.[CLIENT_IP_HEADER];
+  const value = Array.isArray(forwarded) ? forwarded[0] : forwarded;
+  const trimmed = value?.trim();
+  if (trimmed) {
+    return trimmed;
+  }
+  return typeof req.ip === 'string' ? req.ip : undefined;
+}
+
 /**
  * `ThrottlerGuard` con clave por usuario (SPEC-02 §7).
  *
@@ -28,7 +47,17 @@ import type { AuthenticatedRequest } from '../auth/auth.types.js';
  *    `user-throttler.guard.spec.ts` que comprueba que dos usuarios
  *    distintos tienen presupuestos de rate limit independientes.
  *
- * 2. `throwThrottlingException`: el `ThrottlerException` por defecto de la
+ * 2. Cuando no hay usuario, la IP sale de `CF-Connecting-IP` si existe y de
+ *    `request.ip` si no (MEJ-30). Detrás de Cloudflare y Traefik, `req.ip`
+ *    sin `trust proxy` es la del proxy: **todo** el tráfico anónimo
+ *    compartiría un solo cubo de rate limit, así que un cliente cualquiera
+ *    podía dejar sin cuota a los demás. `main.ts` activa `trust proxy` para
+ *    que Express lea `X-Forwarded-For`; `CF-Connecting-IP` tiene prioridad
+ *    porque Cloudflare la reescribe él y no es falsificable desde fuera,
+ *    mientras que `X-Forwarded-For` puede traer lo que el cliente quiera
+ *    delante de la cadena.
+ *
+ * 3. `throwThrottlingException`: el `ThrottlerException` por defecto de la
  *    librería produce `{ statusCode: 429, message: 'ThrottlerException: Too
  *    Many Requests' }`, que no es el contrato de SPEC-02 §6. Se sustituye
  *    por `ApiException.of('RATE_LIMITED', …)`, que el filtro global de
@@ -38,7 +67,7 @@ import type { AuthenticatedRequest } from '../auth/auth.types.js';
 export class UserThrottlerGuard extends ThrottlerGuard {
   protected override async getTracker(req: Record<string, unknown>): Promise<string> {
     const request = req as unknown as AuthenticatedRequest;
-    return request.user?.id ?? request.ip ?? 'unknown';
+    return request.user?.id ?? clientIpOf(req) ?? 'unknown';
   }
 
   protected override async throwThrottlingException(

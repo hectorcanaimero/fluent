@@ -163,6 +163,8 @@ maybeDescribe('Progreso, leaderboard, desafíos y resumen semanal (e2e, InsForge
         expect(response.body.longestStreak).toBe(10);
         expect(response.body.level).toEqual({ name: 'Storyteller', min: 1500, next: 3500 });
         expect(response.body.sessionsThisWeek).toBe(2);
+        // MAL-27: el comodín de racha de la semana en curso.
+        expect(['available', 'used']).toContain(response.body.grace);
 
         const articles = response.body.correctionsTrend.find(
           (t: { category: string }) => t.category === 'articles',
@@ -191,6 +193,7 @@ maybeDescribe('Progreso, leaderboard, desafíos y resumen semanal (e2e, InsForge
         longestStreak: 0,
         sessionsThisWeek: 0,
         correctionsTrend: [],
+        grace: 'available',
       });
     });
   });

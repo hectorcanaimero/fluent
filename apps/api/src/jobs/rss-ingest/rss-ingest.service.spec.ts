@@ -83,12 +83,14 @@ function makeService(overrides: {
   fetchImpl: typeof fetch;
   repository: RssIngestRepository;
   now?: () => Date;
+  maxBytes?: number;
 }) {
   return new RssIngestService({
     repository: overrides.repository,
     feeds: overrides.feeds ?? [FEED_A, FEED_B],
     interests: TEST_INTERESTS,
     fetchImpl: overrides.fetchImpl,
+    maxBytes: overrides.maxBytes,
     now: overrides.now ?? (() => new Date('2026-09-08T06:00:00.000Z')),
   });
 }
@@ -244,5 +246,49 @@ describe('RssIngestService', () => {
     expect(rows.has('https://example.com/old-2')).toBe(false);
     expect(rows.has('https://example.com/recent')).toBe(true);
     expect(result.itemsDeleted).toBe(2);
+  });
+
+  it('aborta un feed que pasa del tope de bytes y lo cuenta como fallo (MEJ-36)', async () => {
+    const { repository, upsertItems } = makeRepository();
+    const huge = `<rss><channel>${'<!-- relleno -->'.repeat(4000)}</channel></rss>`;
+    const fetchImpl = fakeFetch({ [FEED_A_URL]: huge });
+    const service = makeService({
+      feeds: [FEED_A],
+      fetchImpl,
+      repository,
+      maxBytes: 1024,
+    });
+
+    const result = await service.run();
+
+    expect(result.feedsOk).toBe(0);
+    expect(result.feedsFailed).toBe(1);
+    expect(result.failures[0]!.error).toContain('supera el máximo de 1024 bytes');
+    // Nada que guardar: el feed no llegó a parsearse.
+    expect(upsertItems).not.toHaveBeenCalled();
+  });
+
+  it('un feed por debajo del tope se procesa con normalidad (MEJ-36)', async () => {
+    const { repository } = makeRepository();
+    const fetchImpl = fakeFetch({ [FEED_A_URL]: FEED_A_XML });
+    const service = makeService({
+      feeds: [FEED_A],
+      fetchImpl,
+      repository,
+      maxBytes: 1024 * 1024,
+    });
+
+    const result = await service.run();
+
+    expect(result.feedsOk).toBe(1);
+    expect(result.feedsFailed).toBe(0);
+  });
+
+  it('todos los feeds de producción usan https (MEJ-36)', async () => {
+    const { FEEDS } = await import('../../content/index.js');
+
+    for (const feed of FEEDS) {
+      expect(feed.url.startsWith('https://'), `${feed.name}: ${feed.url}`).toBe(true);
+    }
   });
 });

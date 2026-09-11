@@ -36,7 +36,7 @@ Secretos solo en Coolify. `apps/api/.env.example` lista todas con comentario y s
 
 ## 3. Dockerfile de la API
 
-Multi-stage: `node:24-alpine` → `pnpm install --frozen-lockfile` → `pnpm build` → imagen final con `dist/` y `node_modules` de producción, usuario no root, `HEALTHCHECK` a `/v1/health`. Límite de memoria en Coolify: 1 GB para la API, 768 MB para el worker.
+Multi-stage: `node:24-alpine` → `pnpm install --frozen-lockfile` → `pnpm build` → imagen final con `dist/` y `node_modules` de producción, usuario no root, `HEALTHCHECK` a `/v1/health` (la API) o al latido de Redis (el worker). Límite de memoria en Coolify: 1 GB para la API, 768 MB para el worker.
 
 ## 4. Coolify
 
@@ -66,7 +66,10 @@ Estado 2026-09-08: proyecto `fluent` creado por el operador (id `cca888af-daa6-4
 ## 7. Observabilidad
 
 - Logs JSON con `pino` en API y worker; Coolify los muestra y rota.
-- `GET /v1/health` comprueba Redis (`PING`) e InsForge (`GET /api/health`).
+- `GET /v1/health` (**liveness**) comprueba Redis (`PING`) e InsForge (`GET /api/health`) y los reporta en `redis.ok`/`insforge.ok`, pero devuelve `ok: true` y `200` mientras el proceso conteste: reiniciar la API porque Redis no responde solo añade un corte de servicio a un fallo que es de otro. Es el que mira el `HEALTHCHECK` del contenedor.
+- `GET /v1/health/ready` (**readiness**) tiene el mismo cuerpo pero `ok` solo es cierto con ambas dependencias arriba, y responde `503` cuando no. Es el que debe mirar quien decida si mandar tráfico.
+- Las dos cachean el resultado 5 s y comparten la comprobación en vuelo: Coolify pregunta cada pocos segundos y sin eso el propio healthcheck es una fuente constante de carga.
+- El worker no expone HTTP: escribe un latido en Redis (`worker:heartbeat`, TTL 90 s, refrescado cada 30 s) y su `HEALTHCHECK` lo lee con `node dist/worker-health.js`. Antes solo comprobaba que el proceso existiera, lo que daba por sano a un worker con las colas caídas o el bucle bloqueado.
 - Métricas de producto en `/v1/admin/metrics` (SPEC-02 §4.6).
 - Alertas: el owner recibe un correo si `health` falla, vía el monitor de Coolify (Sentinel) apuntando al endpoint.
 

@@ -2,6 +2,17 @@ import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.js';
 
+/**
+ * Tope de cada llamada HTTP a InsForge (MEJ-27).
+ *
+ * `fetch` no trae timeout propio: sin esto, una conexión que se queda colgada
+ * bloquea el `AuthGuard` —y por tanto cualquier petición autenticada— hasta
+ * que el sistema operativo se rinda, que son minutos. Todos estos métodos ya
+ * devuelven un valor de reserva ante un fallo, así que abortar antes solo
+ * adelanta el camino que ya existía.
+ */
+const INSFORGE_TIMEOUT_MS = 5_000;
+
 export type CurrentSessionResult =
   | { ok: true; userId: string }
   | { ok: false };
@@ -53,6 +64,7 @@ export class InsforgeHttp {
           headers: {
             Authorization: `Bearer ${accessToken}`,
           },
+          signal: AbortSignal.timeout(INSFORGE_TIMEOUT_MS),
         },
       );
 
@@ -98,6 +110,7 @@ export class InsforgeHttp {
           headers: {
             Authorization: `Bearer ${this.apiKey}`,
           },
+          signal: AbortSignal.timeout(INSFORGE_TIMEOUT_MS),
         },
       );
 
@@ -139,6 +152,7 @@ export class InsforgeHttp {
     try {
       const response = await fetch(`${this.baseUrl}/api/health`, {
         method: 'GET',
+        signal: AbortSignal.timeout(INSFORGE_TIMEOUT_MS),
       });
       return response.ok;
     } catch {

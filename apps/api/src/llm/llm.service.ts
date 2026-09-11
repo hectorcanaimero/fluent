@@ -94,6 +94,17 @@ export interface LlmServiceRequest<T> {
    * evento `done` y la app lo trata como la fuente de verdad (PEND-56).
    */
   readonly onToken?: (delta: string) => void;
+
+  /**
+   * Se llama **antes** de reintentar con otro modelo, y solo si el intento
+   * anterior ya había emitido algún token (MAL-22).
+   *
+   * Sin esto, el texto del intento fallido y el del siguiente se concatenaban
+   * en la burbuja del aprendiz: veía media frase de un modelo pegada a la
+   * respuesta completa de otro. El endpoint SSE lo serializa como
+   * `event: reset` y la app vacía la burbuja viva.
+   */
+  readonly onReset?: () => void;
 }
 
 export interface LlmServiceResult<T> {
@@ -141,12 +152,32 @@ export class LlmService {
     const attempts: LlmAttempt[] = [];
     const bannedProviders = new Set<Provider>();
 
+    /**
+     * ¿El intento anterior llegó a emitir algo? Si no, no hay nada que
+     * vaciar y el `reset` solo sería ruido (MAL-22).
+     */
+    let emittedTokens = false;
+
     for (const candidate of candidates) {
       if (attempts.length >= maxAttempts) break;
       // SPEC-03 §2: tras un 401/403/402 no se reintenta con ese proveedor.
       if (bannedProviders.has(candidate.provider)) continue;
 
       const attempt = attempts.length + 1;
+
+      if (emittedTokens) {
+        // Reintento tras un intento que ya había pintado texto: la app tiene
+        // que tirar lo que lleve antes de que empiece a llegar lo nuevo.
+        request.onReset?.();
+        emittedTokens = false;
+      }
+
+      const onToken = request.onToken
+        ? (delta: string): void => {
+            emittedTokens = true;
+            request.onToken?.(delta);
+          }
+        : undefined;
 
       try {
         const result = await this.client.complete({
@@ -159,7 +190,7 @@ export class LlmService {
           temperature: request.temperature ?? defaults.temperature,
           purpose: request.purpose,
           timeoutMs: request.timeoutMs ?? defaults.timeoutMs,
-          onToken: request.onToken,
+          onToken,
         });
 
         attempts.push({

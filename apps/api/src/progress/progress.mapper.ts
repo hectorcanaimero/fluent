@@ -15,9 +15,11 @@ import type { CorrectionTrendItem, ProgressResultDto } from './progress.types.js
  *   se ordena: SPEC-02 §4.5 no fija el orden, así que se mantiene el criterio
  *   que ya traía PR-02/T7 (más correcciones primero; a igualdad, alfabético
  *   por categoría, para que sea determinista en los tests).
- * - `grace`: se calcula en `src/game/` pero **no** se expone. Ni SPEC-02 §4.5
- *   ni `ProgressResult` de la app tienen ese campo; añadirlo sería inventar
- *   contrato. Ver docs/specs/pendientes/PR-02.md PEND-71.
+ * - `grace`: `'available' | 'used'` según `profiles.grace_used_week` frente al
+ *   lunes de la semana ISO en curso. El cálculo ya vivía en `src/game/` pero
+ *   no se exponía (PEND-71); MAL-27 lo saca, porque la app no tenía forma de
+ *   explicar por qué una racha sobrevivió a un día sin sesión ni de avisar de
+ *   que el comodín de esta semana ya se gastó.
  */
 export function toProgressResultDto(summary: ProgressSummary): ProgressResultDto {
   const correctionsTrend: CorrectionTrendItem[] = summary.correctionsTrend
@@ -39,5 +41,6 @@ export function toProgressResultDto(summary: ProgressSummary): ProgressResultDto
     longestStreak: summary.longestStreak,
     sessionsThisWeek: summary.sessionsThisWeek,
     correctionsTrend,
+    grace: summary.grace,
   };
 }

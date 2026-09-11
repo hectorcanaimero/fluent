@@ -302,5 +302,7 @@
   "correctionCategoryPhrasalVerb": "Verbo frasal",
   "correctionCategoryConditional": "Condicional",
   "correctionCategoryModal": "Verbo modal",
-  "correctionCategoryOther": "Outro"
+  "correctionCategoryOther": "Outro",
+  "summaryLevelUpBanner": "Você subiu de nível! Agora você é {level}.",
+  "summaryShareStreakButton": "Compartilhar sua sequência"
 }

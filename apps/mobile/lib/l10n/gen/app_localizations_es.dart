@@ -1010,4 +1010,12 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get correctionCategoryOther => 'Otro';
+
+  @override
+  String summaryLevelUpBanner(String level) {
+    return '¡Subiste de nivel! Ahora sos $level.';
+  }
+
+  @override
+  String get summaryShareStreakButton => 'Compartir tu racha';
 }

@@ -8,6 +8,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/group_data.dart';
 
@@ -99,6 +100,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           builder: (context, snapshot) {
             return AsyncBody<GroupScreenData>(
               snapshot: snapshot,
+              skeleton: (context) => const _GroupSkeleton(),
               onRetry: () => setState(() {
                 _future = _load();
               }),
@@ -205,6 +207,27 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// MEJ-02: forma aproximada del leaderboard (título + filas) mientras carga.
+class _GroupSkeleton extends StatelessWidget {
+  const _GroupSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(width: 160, height: 24),
+        SizedBox(height: AppSpacing.md),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

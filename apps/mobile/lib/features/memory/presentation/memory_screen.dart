@@ -7,6 +7,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
@@ -202,6 +203,7 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
             return AsyncBody<MemoryResult>(
               snapshot: snapshot,
               onRetry: _reload,
+              skeleton: (context) => const _MemorySkeleton(),
               builder: (data) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
@@ -298,6 +300,30 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// MEJ-02: forma aproximada (dos secciones de hechos) mientras carga.
+class _MemorySkeleton extends StatelessWidget {
+  const _MemorySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(width: 140, height: 20),
+        SizedBox(height: AppSpacing.sm),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonBox(width: 160, height: 20),
+        SizedBox(height: AppSpacing.sm),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

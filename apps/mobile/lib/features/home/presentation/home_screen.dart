@@ -7,6 +7,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/home_data.dart';
 
@@ -91,6 +92,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: AsyncBody<HomeData>(
           snapshot: snapshot,
           onRetry: _reload,
+          skeleton: (context) => const _HomeSkeleton(),
           builder: (data) => RefreshIndicator(
             onRefresh: () async {
               _reload();
@@ -145,6 +147,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// MEJ-02: forma aproximada de la pantalla (saludo + racha + nivel +
+/// temas rápidos) mientras `homeDataProvider` resuelve sus ~5 llamadas en
+/// paralelo, en vez de un spinner sin relación con lo que va a aparecer.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        Row(
+          children: [
+            Expanded(child: SkeletonBox(height: 28)),
+            SizedBox(width: AppSpacing.md),
+            SkeletonBox(width: 44, height: 44, borderRadius: 999),
+          ],
+        ),
+        SizedBox(height: AppSpacing.lg),
+        SkeletonBox(height: 88, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.md),
+        SkeletonBox(height: 96, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonBox(width: 160, height: 20),
+        SizedBox(height: AppSpacing.md),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

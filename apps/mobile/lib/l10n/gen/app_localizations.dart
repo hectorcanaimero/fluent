@@ -1915,6 +1915,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Otro'**
   String get correctionCategoryOther;
+
+  /// No description provided for @summaryLevelUpBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Subiste de nivel! Ahora sos {level}.'**
+  String summaryLevelUpBanner(String level);
+
+  /// No description provided for @summaryShareStreakButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir tu racha'**
+  String get summaryShareStreakButton;
 }
 
 class _AppLocalizationsDelegate

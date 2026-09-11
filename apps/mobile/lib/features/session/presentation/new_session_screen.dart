@@ -10,6 +10,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// Selector de nueva sesión (SPEC-06 §4.2): Temas, Roleplay, Noticias.
@@ -149,6 +150,7 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
           return AsyncBody<SessionSuggestions>(
             snapshot: snapshot,
             onRetry: () => setState(_loadSuggestions),
+            skeleton: (context) => const _NewSessionSkeleton(),
             builder: (suggestions) => TabBarView(
               controller: _tabController,
               children: [
@@ -186,6 +188,28 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
           );
         },
       ),
+    );
+  }
+}
+
+/// MEJ-02: forma aproximada de la grilla de tarjetas de tema mientras carga.
+class _NewSessionSkeleton extends StatelessWidget {
+  const _NewSessionSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return GridView.count(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      crossAxisCount: 2,
+      mainAxisSpacing: AppSpacing.md,
+      crossAxisSpacing: AppSpacing.md,
+      childAspectRatio: 1.4,
+      children: const [
+        SkeletonBox(height: 90, borderRadius: AppRadius.lg),
+        SkeletonBox(height: 90, borderRadius: AppRadius.lg),
+        SkeletonBox(height: 90, borderRadius: AppRadius.lg),
+        SkeletonBox(height: 90, borderRadius: AppRadius.lg),
+      ],
     );
   }
 }

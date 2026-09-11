@@ -389,5 +389,12 @@
   "correctionCategoryPhrasalVerb": "Verbo frasal",
   "correctionCategoryConditional": "Condicional",
   "correctionCategoryModal": "Verbo modal",
-  "correctionCategoryOther": "Otro"
+  "correctionCategoryOther": "Otro",
+  "summaryLevelUpBanner": "¡Subiste de nivel! Ahora sos {level}.",
+  "@summaryLevelUpBanner": {
+    "placeholders": {
+      "level": {"type": "String"}
+    }
+  },
+  "summaryShareStreakButton": "Compartir tu racha"
 }

@@ -9,7 +9,12 @@ import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper
 import { ProfilesRepository } from './profiles.repository.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { XP_PROFILE_COMPLETED } from '../config/product.js';
-import type { MeDto, UpdateProfileResultDto } from './profiles.types.js';
+import type { Profile } from '../db/schema.js';
+import type {
+  MeDto,
+  ProviderInfoDto,
+  UpdateProfileResultDto,
+} from './profiles.types.js';
 
 /** Catálogo de ids de interés, calculado una sola vez (SPEC-02 §4.1). */
 const INTERESTS_CATALOG_IDS = INTERESTS.map((interest) => interest.id);
@@ -65,6 +70,7 @@ export class ProfilesService {
       interestsCatalog: INTERESTS_CATALOG_IDS,
       pendingActions,
       sessionsToday,
+      courtesySessionAvailable: await this.isCourtesyAvailable(profile, providers),
     };
   }
 
@@ -107,6 +113,34 @@ export class ProfilesService {
       xp: toProfileDto(updated).xp + xpAwarded,
       xpAwarded,
     };
+  }
+
+  /**
+   * ¿Le queda al usuario la sesión de cortesía de MAL-24?
+   *
+   * Se comprueba también que el owner tenga credencial activa: ofrecer una
+   * cortesía que va a fallar al abrir la sesión es peor que no ofrecerla.
+   * Usa `listStatuses`, que no descifra ninguna key.
+   */
+  private async isCourtesyAvailable(
+    profile: Profile,
+    providers: ProviderInfoDto[],
+  ): Promise<boolean> {
+    if (profile.courtesy_session_used_at !== null || profile.group_id === null) {
+      return false;
+    }
+    if (providers.some((provider) => provider.status === 'active')) {
+      return false;
+    }
+
+    const group = await this.groupsRepository.findById(profile.group_id);
+    const ownerId = group?.owner_id ?? null;
+    if (ownerId === null || ownerId === profile.user_id) {
+      return false;
+    }
+
+    const ownerProviders = await this.credentialsRepository.listStatuses(ownerId);
+    return ownerProviders.some((provider) => provider.status === 'active');
   }
 
   async deleteAccountData(userId: string): Promise<void> {

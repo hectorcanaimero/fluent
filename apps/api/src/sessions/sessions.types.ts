@@ -14,6 +14,13 @@ export interface SessionInfoDto {
   readonly endedAt: string | null;
   readonly xpEarned: number;
   readonly modelUsed: string | null;
+  /**
+   * `true` si esta sesión corre con la credencial del owner del grupo
+   * (MAL-24). La app lo usa para explicar de quién es la key y para pedir
+   * conectar una propia al terminar. Ausente en las sesiones ya guardadas
+   * antes de MAL-24, así que la app debe tratarlo como `false` si falta.
+   */
+  readonly courtesy?: boolean;
 }
 
 /**

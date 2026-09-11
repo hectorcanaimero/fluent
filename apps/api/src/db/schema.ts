@@ -118,6 +118,8 @@ export interface Profile {
   longest_streak: number;
   last_session_day: string | null; // ISO 8601 date (PostgREST serializa date como string)
   grace_used_week: string | null; // ISO 8601 date
+  /** MAL-24: cuándo gastó su sesión de cortesía; `null` si aún le queda. */
+  courtesy_session_used_at: string | null; // ISO 8601 timestamp
   sessions_count: number;
   onboarded_at: string | null; // ISO 8601 timestamp (PostgREST serializa timestamptz como string)
   created_at: string; // ISO 8601 timestamp

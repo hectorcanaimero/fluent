@@ -11,7 +11,7 @@ import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import type { ModelPreference } from '../llm/model-resolver.js';
+import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
 import { buildTurnMessages, type CallbackFact } from '../llm/prompts/turn.js';
 import { TurnOutput } from '../llm/schemas.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
@@ -96,8 +96,12 @@ export class SessionsService {
       });
     }
 
-    // 3. Credencial activa de algún proveedor (SPEC-04 §3.1, SPEC-03 §2).
-    const credentials = await this.credentials.listActive(userId);
+    // 3. Credencial activa de algún proveedor (SPEC-04 §3.1, SPEC-03 §2), o
+    // la sesión de cortesía si el usuario todavía no conectó ninguna (MAL-24).
+    const own = await this.credentials.listActive(userId);
+    const courtesy = own.length === 0 ? await this.resolveCourtesy(userId, profile) : null;
+    const credentials = own.length > 0 ? own : (courtesy?.credentials ?? []);
+
     if (credentials.length === 0) {
       throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
     }
@@ -148,6 +152,16 @@ export class SessionsService {
     // §2.14: la fila de auditoría referencia la sesión). Lo que solo se sabe
     // después (`chat_model_used`, `callback_fact_id`) se escribe en un UPDATE
     // posterior. Ver docs/specs/pendientes/PR-04.md.
+    // Se marca **antes** de crear la sesión: si el marcado falla porque otra
+    // apertura simultánea se la llevó, esta no debe abrirse con la key del
+    // owner. Es la misma razón por la que el UPDATE lleva `is(null)`.
+    if (courtesy !== null) {
+      const claimed = await this.repository.markCourtesySessionUsed(userId);
+      if (!claimed) {
+        throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
+      }
+    }
+
     const session = await this.repository.createSession({
       userId,
       kind: dto.kind,
@@ -156,7 +170,11 @@ export class SessionsService {
       challengeFromUserId: dto.challengeFromUserId ?? null,
     });
 
-    const preference = await this.findPreference(userId);
+    // En una sesión de cortesía **no** se aplica la preferencia de modelo: sin
+    // ella, `ModelResolver` solo ofrece la cadena de `FALLBACK_MODELS`, que es
+    // la gratuita. La key es del owner del grupo y no se le puede gastar
+    // dinero en modelos de pago (MAL-24).
+    const preference = courtesy === null ? await this.findPreference(userId) : null;
 
     let opening: OpeningOutcome;
     let callbackUsed = false;
@@ -224,7 +242,7 @@ export class SessionsService {
     });
 
     return {
-      session: toSessionInfoDto(updated ?? session),
+      session: toSessionInfoDto(updated ?? session, { courtesy: courtesy !== null }),
       opening: { text: opening.text, callbackUsed },
     };
   }
@@ -277,6 +295,37 @@ export class SessionsService {
     if (pending) {
       await this.boss.recordSkip(userId);
     }
+  }
+
+  /**
+   * Credencial prestada para la sesión de cortesía (MAL-24), o `null` si no
+   * corresponde.
+   *
+   * Solo se ofrece si el usuario no ha gastado la suya, tiene grupo, el grupo
+   * tiene owner, el owner no es él mismo y el owner tiene alguna credencial
+   * activa. La infraestructura de usar la key del owner ya existía para el
+   * resumen semanal (SPEC-05 §4); esto la reutiliza.
+   */
+  private async resolveCourtesy(
+    userId: string,
+    profile: Profile,
+  ): Promise<{ credentials: readonly ActiveCredential[] } | null> {
+    if (profile.courtesy_session_used_at !== null || profile.group_id === null) {
+      return null;
+    }
+
+    const ownerId = await this.repository.findGroupOwnerId(profile.group_id);
+    if (ownerId === null || ownerId === userId) {
+      return null;
+    }
+
+    const credentials = await this.credentials.listActive(ownerId);
+    if (credentials.length === 0) {
+      return null;
+    }
+
+    this.logger.log(`Sesión de cortesía para ${userId} con la credencial de ${ownerId}`);
+    return { credentials };
   }
 
   /**

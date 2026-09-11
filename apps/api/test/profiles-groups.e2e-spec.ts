@@ -171,6 +171,10 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
       expect(meResponse.body.pendingActions).toEqual([]);
       // Usuario recién creado: ninguna sesión cerrada hoy.
       expect(meResponse.body.sessionsToday).toBe(0);
+      // MAL-24: el owner del grupo de prueba no tiene credencial activa, así
+      // que no hay cortesía que ofrecer.
+      // DEPENDE de la migración `sesion-de-cortesia`, todavía sin aplicar.
+      expect(meResponse.body.courtesySessionAvailable).toBe(false);
 
       // MEJ-14: el perfil se completó en el PUT de arriba, así que ahí se
       // concedieron los 20 XP y ya están en `/me`.

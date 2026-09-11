@@ -294,3 +294,75 @@ describe('ProfilesService.updateProfile · XP por perfil completado (MEJ-14)', (
     expect(result.xp).toBe(20);
   });
 });
+
+describe('ProfilesService.getMe · courtesySessionAvailable (MAL-24)', () => {
+  const ownerId = 'owner-1';
+
+  function activeStatuses() {
+    return [
+      { provider: 'openrouter', status: 'active', connectedAt: null },
+      { provider: 'gemini', status: 'not_connected', connectedAt: null },
+    ];
+  }
+
+  function noStatuses() {
+    return [
+      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
+      { provider: 'gemini', status: 'not_connected', connectedAt: null },
+    ];
+  }
+
+  it('es true si no tiene credencial, no la gastó y el owner sí tiene', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository, groupsRepository } = createService(profile, {
+      id: 'group-1',
+      name: 'G',
+      owner_id: ownerId,
+      group_streak: 0,
+    });
+    credentialsRepository.listStatuses
+      .mockResolvedValueOnce(noStatuses())
+      .mockResolvedValueOnce(activeStatuses());
+    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(true);
+  });
+
+  it('es false si el usuario ya tiene credencial propia', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(activeStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false si ya la gastó', async () => {
+    const profile = makeProfile({
+      group_id: 'group-1',
+      courtesy_session_used_at: '2026-09-01T10:00:00.000Z',
+    });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false si el owner tampoco tiene credencial activa', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository, groupsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
+
+    // Ofrecer una cortesía que va a fallar al abrir la sesión es peor que no
+    // ofrecerla.
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false sin grupo', async () => {
+    const profile = makeProfile({ group_id: null, courtesy_session_used_at: null });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+});

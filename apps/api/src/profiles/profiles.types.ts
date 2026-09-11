@@ -64,6 +64,15 @@ export interface MeDto {
    * completas para contar hasta dos, en cada arranque.
    */
   sessionsToday: number;
+  /**
+   * `true` si el usuario puede abrir una sesión de cortesía con la credencial
+   * del owner de su grupo (MAL-24): no ha gastado la suya, no tiene credencial
+   * propia y el owner sí tiene una activa.
+   *
+   * Home lo usa para no bloquear el CTA de practicar antes de que el usuario
+   * haya visto para qué sirve conectar un proveedor.
+   */
+  courtesySessionAvailable: boolean;
 }
 
 /**

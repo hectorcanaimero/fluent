@@ -13,7 +13,10 @@ import type { CorrectionDto, SessionInfoDto } from './sessions.types.js';
  * app no los conoce y `challenge_from_user_id`/`callback_fact_id` son datos
  * internos (SPEC-07 §9: en rutas de grupo solo se ven `topic` y `kind`).
  */
-export function toSessionInfoDto(row: Session): SessionInfoDto {
+export function toSessionInfoDto(
+  row: Session,
+  options: { courtesy?: boolean } = {},
+): SessionInfoDto {
   return {
     id: row.id,
     kind: row.kind,
@@ -22,6 +25,9 @@ export function toSessionInfoDto(row: Session): SessionInfoDto {
     endedAt: row.ended_at,
     xpEarned: row.xp_earned,
     modelUsed: row.chat_model_used,
+    // Solo se incluye cuando es cierto: así las respuestas de siempre no
+    // cambian de forma (MAL-24).
+    ...(options.courtesy === true ? { courtesy: true } : {}),
   };
 }
 

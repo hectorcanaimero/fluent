@@ -57,6 +57,8 @@ Concurrencia: lock en Redis `session:<id>:turn` (5 s). Segundo turno simultáneo
 ### Streaming (RF-3.8, P1)
 `POST /sessions/:id/turns/stream` hace lo mismo pero con `stream: true` al proveedor y reenvía tokens por SSE. Como la salida es JSON, la API acumula, detecta el valor de `reply` con un parser incremental y emite `token` solo para ese campo; al terminar emite `corrections` y `done`. Si el parser falla, cae al modo no streaming de forma transparente para la app.
 
+Si la cadena de fallback (SPEC-03 §2) cambia de modelo **después** de haber emitido texto, la API manda `event: reset` con `data: {}` antes de que empiece a llegar lo nuevo, y la app vacía la burbuja viva. Sin ese aviso, el texto del intento fallido y el del siguiente se concatenaban y el aprendiz veía media frase de un modelo pegada a la respuesta completa de otro. Solo se emite si ya había salido algún token: si el intento falló sin emitir nada, no hay nada que vaciar.
+
 ## 5. Cierre (`POST /sessions/:id/end`)
 
 1. `duration_sec = now - started_at`, acotado a `SESSION_HARD_CAP_SEC`.

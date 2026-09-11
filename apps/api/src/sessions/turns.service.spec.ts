@@ -179,6 +179,8 @@ interface FakeLlmCall {
   readonly messages: readonly LlmMessage[];
   /** `onToken` que recibió el servicio: solo lo manda el endpoint SSE (T4). */
   readonly onToken?: (delta: string) => void;
+  /** `onReset` que recibió el servicio (MAL-22). */
+  readonly onReset?: () => void;
   /** Intentos pedidos; el turno usa `TURN_MAX_ATTEMPTS` (MAL-23). */
   readonly maxAttempts?: number;
 }
@@ -192,11 +194,13 @@ function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
     complete: async (request: {
       messages: readonly LlmMessage[];
       onToken?: (delta: string) => void;
+      onReset?: () => void;
       maxAttempts?: number;
     }) => {
       calls.push({
         messages: request.messages,
         onToken: request.onToken,
+        onReset: request.onReset,
         maxAttempts: request.maxAttempts,
       });
       if (options.error) throw options.error;
@@ -861,5 +865,27 @@ describe('TurnsService.addTurn · tope diario de turnos (MAL-23)', () => {
     await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
 
     expect(llm.calls[0]!.maxAttempts).toBe(TURN_MAX_ATTEMPTS);
+  });
+});
+
+describe('TurnsService.addTurn · cableado del reset (MAL-22)', () => {
+  it('pasa el onReset del endpoint SSE hasta LlmService', async () => {
+    const { service, llm } = buildService({});
+    const onReset = (): void => {};
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }, () => {}, onReset);
+
+    // Las dos puntas (llm.service y turn-stream) estaban probadas por
+    // separado, pero el parámetro se perdía en el camino: este test cubre el
+    // cableado entero.
+    expect(llm.calls[0]!.onReset).toBe(onReset);
+  });
+
+  it('sin streaming no hay onReset', async () => {
+    const { service, llm } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(llm.calls[0]!.onReset).toBeUndefined();
   });
 });

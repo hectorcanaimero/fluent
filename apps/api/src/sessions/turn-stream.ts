@@ -50,6 +50,12 @@ import type { TurnResultDto } from './sessions.types.js';
 /** Nombres de los eventos SSE (SPEC-04 §4 más `error`, ver PEND-55). */
 export const TURN_STREAM_EVENTS = Object.freeze({
   token: 'token',
+  /**
+   * La cadena de fallback pasó a otro modelo tras haber emitido texto
+   * (MAL-22): todo lo recibido hasta aquí es de un intento que falló y hay
+   * que tirarlo. `data` va vacío (`{}`).
+   */
+  reset: 'reset',
   corrections: 'corrections',
   done: 'done',
   error: 'error',
@@ -87,7 +93,10 @@ export interface SseResponse {
 /** Ejecuta el turno y escribe su resultado como SSE. */
 export async function runTurnStream(
   res: SseResponse,
-  runTurn: (onToken: (delta: string) => void) => Promise<TurnResultDto>,
+  runTurn: (
+    onToken: (delta: string) => void,
+    onReset: () => void,
+  ) => Promise<TurnResultDto>,
 ): Promise<void> {
   let headersSent = false;
 
@@ -112,9 +121,18 @@ export async function runTurnStream(
     send(TURN_STREAM_EVENTS.token, { text: delta });
   };
 
+  /**
+   * Solo tiene sentido si ya se emitió algo: si no hay cabeceras todavía,
+   * tampoco hay burbuja que vaciar en la app.
+   */
+  const onReset = (): void => {
+    if (!headersSent) return;
+    send(TURN_STREAM_EVENTS.reset, {});
+  };
+
   let result: TurnResultDto;
   try {
-    result = await runTurn(onToken);
+    result = await runTurn(onToken, onReset);
   } catch (error) {
     if (!headersSent) {
       // Todavía no se ha escrito nada: el filtro global responde con el JSON

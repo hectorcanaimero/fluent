@@ -105,6 +105,7 @@ export class TurnsService {
     sessionId: string,
     dto: CreateTurnDto,
     onToken?: (delta: string) => void,
+    onReset?: () => void,
   ): Promise<TurnResultDto> {
     const text = dto.text.trim();
     if (text === '') {
@@ -142,7 +143,7 @@ export class TurnsService {
         throw ApiException.of('RATE_LIMITED', TOO_FAST_MESSAGE);
       }
 
-      const result = await this.runTurn(userId, session, text, onToken);
+      const result = await this.runTurn(userId, session, text, onToken, onReset);
 
       // La ventana se reinicia al **terminar** el turno: así los 2 s se
       // cuentan desde que el aprendiz tuvo la respuesta delante, no desde que
@@ -211,6 +212,7 @@ export class TurnsService {
     session: Session,
     text: string,
     onToken?: (delta: string) => void,
+    onReset?: () => void,
   ): Promise<TurnResultDto> {
     const profile = await this.sessions.findProfile(userId);
     if (profile === null || profile.onboarded_at === null) {
@@ -260,6 +262,7 @@ export class TurnsService {
         text,
         credentials,
         onToken,
+        onReset,
       );
     } catch (error) {
       // Fallo inesperado (no "cadena agotada"): no dejamos un turno del
@@ -285,6 +288,7 @@ export class TurnsService {
     text: string,
     credentials: readonly ActiveCredential[],
     onToken?: (delta: string) => void,
+    onReset?: () => void,
   ): Promise<TutorOutcome> {
     // Escenario reconstruido desde la fila de `sessions` y el catálogo, para
     // que el tutor siga con el mismo rol/noticia/reto con el que abrió.
@@ -337,6 +341,9 @@ export class TurnsService {
         // Solo lo manda el endpoint SSE (T4): sin `onToken` la llamada es
         // exactamente la de siempre, sin `stream: true`.
         onToken,
+        // Aviso de que la cadena de fallback cambió de modelo tras haber
+        // emitido texto, para que la app vacíe la burbuja (MAL-22).
+        onReset,
       });
 
       return {

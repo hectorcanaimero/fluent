@@ -44,15 +44,31 @@ function memoryBus(): LlmEventBus & { events: CredentialErrorEvent[] } {
   return { events, emit: (_name, payload) => void events.push(payload) };
 }
 
-/** Cliente falso que va consumiendo respuestas o errores en orden. */
-function scriptedClient(script: Array<LlmResult<typeof REPLY> | LlmCallError>) {
+/**
+ * Cliente falso que va consumiendo respuestas o errores en orden.
+ *
+ * `emitBeforeEach` deja que cada intento emita texto por `onToken` antes de
+ * resolverse o fallar, que es lo que hace falta para probar el `reset` de
+ * MAL-22: el problema solo aparece cuando el intento fallido ya pintó algo.
+ */
+function scriptedClient(
+  script: Array<LlmResult<typeof REPLY> | LlmCallError>,
+  emitBeforeEach: readonly string[] = [],
+) {
   const calls: Array<{ provider: string; model: string; apiKey: string }> = [];
   let index = 0;
   return {
     calls,
     client: {
-      complete: (async (request: { provider: string; model: string; apiKey: string }) => {
+      complete: (async (request: {
+        provider: string;
+        model: string;
+        apiKey: string;
+        onToken?: (delta: string) => void;
+      }) => {
         calls.push({ provider: request.provider, model: request.model, apiKey: request.apiKey });
+        const emit = emitBeforeEach[index];
+        if (emit !== undefined && request.onToken) request.onToken(emit);
         const next = script[index++];
         if (next === undefined) throw new Error('el cliente falso se quedó sin guion');
         if (next instanceof LlmCallError) throw next;
@@ -64,9 +80,13 @@ function scriptedClient(script: Array<LlmResult<typeof REPLY> | LlmCallError>) {
 
 function service(
   script: Array<LlmResult<typeof REPLY> | LlmCallError>,
-  extra: { sink?: LlmCallSink; events?: LlmEventBus } = {},
+  extra: {
+    sink?: LlmCallSink;
+    events?: LlmEventBus;
+    emitBeforeEach?: readonly string[];
+  } = {},
 ) {
-  const { client, calls } = scriptedClient(script);
+  const { client, calls } = scriptedClient(script, extra.emitBeforeEach);
   return {
     calls,
     service: new LlmService({
@@ -264,5 +284,74 @@ describe('LlmService.complete', () => {
       { provider: 'gemini', model: 'gemini-2.5-flash', apiKey: 'gem-key' },
       { provider: 'openrouter', model: 'google/gemma-3-27b-it:free', apiKey: 'or-key' },
     ]);
+  });
+});
+
+describe('LlmService.complete · reset al cambiar de modelo (MAL-22)', () => {
+  it('avisa antes de reintentar si el intento fallido ya emitió texto', async () => {
+    const { service: svc } = service(
+      [new LlmCallError('invalid_json', 'openrouter', 'm1', 400), okResult('gemini-2.5-flash', 'gemini')],
+      { emitBeforeEach: ['Nice! What', 'Great! How'] },
+    );
+
+    const tokens: string[] = [];
+    const events: string[] = [];
+
+    await svc.complete({
+      ...request(),
+      onToken: (delta) => {
+        tokens.push(delta);
+        events.push(`token:${delta}`);
+      },
+      onReset: () => events.push('reset'),
+    });
+
+    // Sin el aviso, la app pegaba el texto del intento fallido al del bueno.
+    expect(events).toEqual(['token:Nice! What', 'reset', 'token:Great! How']);
+  });
+
+  it('no avisa si el intento fallido no llegó a emitir nada', async () => {
+    const { service: svc } = service(
+      [new LlmCallError('timeout', 'openrouter', 'm1', 408), okResult('gemini-2.5-flash', 'gemini')],
+      { emitBeforeEach: [] },
+    );
+
+    let resets = 0;
+    await svc.complete({
+      ...request(),
+      onToken: () => {},
+      onReset: () => {
+        resets += 1;
+      },
+    });
+
+    expect(resets).toBe(0);
+  });
+
+  it('no avisa cuando el primer intento va bien', async () => {
+    const { service: svc } = service([okResult('gemini-2.5-flash', 'gemini')], { emitBeforeEach: ['Hello'] });
+
+    let resets = 0;
+    await svc.complete({
+      ...request(),
+      onToken: () => {},
+      onReset: () => {
+        resets += 1;
+      },
+    });
+
+    expect(resets).toBe(0);
+  });
+
+  it('sin streaming no se avisa nunca, aunque haya fallback', async () => {
+    const { service: svc } = service([
+      new LlmCallError('invalid_json', 'openrouter', 'm1', 400),
+      okResult('gemini-2.5-flash', 'gemini'),
+    ]);
+
+    let resets = 0;
+    await svc.complete({ ...request(), onReset: () => { resets += 1; } });
+
+    expect(resets).toBe(0);
   });
 });

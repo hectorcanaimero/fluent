@@ -68,7 +68,9 @@ export type XpEventKind =
   | 'double_day'
   | 'boss'
   | 'challenge'
-  | 'streak_7';
+  | 'streak_7'
+  /** MEJ-14: una sola vez por usuario, sin `session_id`. */
+  | 'profile_completed';
 
 /** Propósito de una llamada a LLM (SPEC-01 §2.14) */
 export type LlmCallPurpose = 'turn' | 'brief' | 'weekly';

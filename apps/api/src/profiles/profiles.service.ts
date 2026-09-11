@@ -8,7 +8,8 @@ import { PendingActionsService } from './pending-actions.service.js';
 import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper.js';
 import { ProfilesRepository } from './profiles.repository.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
-import type { MeDto, ProfileDto } from './profiles.types.js';
+import { XP_PROFILE_COMPLETED } from '../config/product.js';
+import type { MeDto, UpdateProfileResultDto } from './profiles.types.js';
 
 /** Catálogo de ids de interés, calculado una sola vez (SPEC-02 §4.1). */
 const INTERESTS_CATALOG_IDS = INTERESTS.map((interest) => interest.id);
@@ -73,7 +74,10 @@ export class ProfilesService {
    * campos del DTO, ya validados) **y** el usuario ya tiene grupo. Una vez
    * puesto, no se vuelve a tocar (no hay forma de "des-onboardearse").
    */
-  async updateProfile(userId: string, dto: UpdateProfileDto): Promise<ProfileDto> {
+  async updateProfile(
+    userId: string,
+    dto: UpdateProfileDto,
+  ): Promise<UpdateProfileResultDto> {
     const current = await this.profilesRepository.ensureProfile(userId);
 
     const shouldMarkOnboarded = current.group_id !== null && current.onboarded_at === null;
@@ -87,7 +91,22 @@ export class ProfilesService {
       ...(shouldMarkOnboarded ? { onboarded_at: new Date().toISOString() } : {}),
     });
 
-    return toProfileDto(updated);
+    // MEJ-14: 20 XP la primera vez que el perfil queda completo, para que la
+    // barra de nivel no arranque en cero. La idempotencia la garantiza la
+    // base (índice único parcial), así que aquí basta con pedirlo cuando toca
+    // y creerse lo que devuelva.
+    const xpAwarded = shouldMarkOnboarded
+      ? await this.profilesRepository.awardProfileCompleted(userId, XP_PROFILE_COMPLETED)
+      : 0;
+
+    return {
+      // El XP recién concedido no está en la fila que devolvió el UPDATE,
+      // porque lo suma la RPC después; se añade aquí para no obligar a la app
+      // a recargar `/me` solo para ver su propia recompensa.
+      ...toProfileDto(updated),
+      xp: toProfileDto(updated).xp + xpAwarded,
+      xpAwarded,
+    };
   }
 
   async deleteAccountData(userId: string): Promise<void> {

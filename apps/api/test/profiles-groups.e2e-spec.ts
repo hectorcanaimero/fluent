@@ -143,7 +143,7 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
         interests: VALID_INTERESTS,
         timezone: 'America/Sao_Paulo',
         locale: 'es',
-        xp: 0,
+        xp: 20, // MEJ-14: concedidos al completar el perfil.
         streak: 0,
         lastSessionDay: null,
       });
@@ -161,7 +161,7 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
         interests: VALID_INTERESTS,
         timezone: 'America/Sao_Paulo',
         locale: 'es',
-        xp: 0,
+        xp: 20, // MEJ-14: concedidos al completar el perfil.
         streak: 0,
         lastSessionDay: null,
       });
@@ -171,6 +171,12 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
       expect(meResponse.body.pendingActions).toEqual([]);
       // Usuario recién creado: ninguna sesión cerrada hoy.
       expect(meResponse.body.sessionsToday).toBe(0);
+
+      // MEJ-14: el perfil se completó en el PUT de arriba, así que ahí se
+      // concedieron los 20 XP y ya están en `/me`.
+      // DEPENDE de la migración `xp-perfil-completado`, todavía sin aplicar.
+      expect(putResponse.body.xpAwarded).toBe(20);
+      expect(meResponse.body.profile.xp).toBe(20);
     },
     30_000,
   );

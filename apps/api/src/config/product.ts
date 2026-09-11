@@ -57,6 +57,14 @@ export const XP_CHALLENGE_BONUS = 15;
 /** Bono de XP al llegar a un múltiplo de 7 días de streak. */
 export const XP_STREAK_7_BONUS = 40;
 
+/**
+ * XP la primera (y única) vez que el usuario completa su perfil (MEJ-14).
+ *
+ * Es *endowed progress*: entrar a Home con algo ya ganado sostiene mejor la
+ * activación que una barra de nivel en cero.
+ */
+export const XP_PROFILE_COMPLETED = 20;
+
 /** Sesiones válidas por día que dan XP; la siguiente no da XP. */
 export const MAX_VALID_SESSIONS_PER_DAY = 3;
 

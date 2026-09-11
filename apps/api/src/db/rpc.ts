@@ -183,4 +183,6 @@ export const RPC = {
   weeklyLeaderboard: 'weekly_leaderboard',
   applyStreakGrace: 'apply_streak_grace',
   updateGroupStreaks: 'update_group_streaks',
+  /** MEJ-14: 20 XP idempotentes al completar el perfil. */
+  awardProfileCompleted: 'award_profile_completed',
 } as const;

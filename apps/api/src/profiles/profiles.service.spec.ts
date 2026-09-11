@@ -58,6 +58,7 @@ function createService(
     })),
     getModelPreference: vi.fn().mockResolvedValue(null),
     getActiveSessionId: vi.fn().mockResolvedValue(null),
+    awardProfileCompleted: vi.fn().mockResolvedValue(20),
     purgeAppData: vi.fn().mockResolvedValue(undefined),
   };
 
@@ -217,5 +218,79 @@ describe('ProfilesService.getMe · sessionsToday', () => {
     const { service } = createService(makeProfile(), null, [], 0);
 
     expect((await service.getMe('user-1')).sessionsToday).toBe(0);
+  });
+});
+
+describe('ProfilesService.updateProfile · XP por perfil completado (MEJ-14)', () => {
+  it('concede el XP la primera vez que el perfil queda completo', async () => {
+    const profile = makeProfile({ group_id: 'group-1', onboarded_at: null, xp: 0 });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).toHaveBeenCalledWith('user-1', 20);
+    expect(result.xpAwarded).toBe(20);
+    // El XP recién concedido viaja en la respuesta: la app no tiene que
+    // recargar `/me` solo para ver su propia recompensa.
+    expect(result.xp).toBe(20);
+  });
+
+  it('no lo pide si el perfil ya estaba onboarded', async () => {
+    const profile = makeProfile({
+      group_id: 'group-1',
+      onboarded_at: '2026-09-01T10:00:00.000Z',
+    });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).not.toHaveBeenCalled();
+    expect(result.xpAwarded).toBe(0);
+  });
+
+  it('no lo pide si todavía no hay grupo: el perfil no está completo', async () => {
+    const profile = makeProfile({ group_id: null, onboarded_at: null });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).not.toHaveBeenCalled();
+    expect(result.xpAwarded).toBe(0);
+  });
+
+  it('si la base dice que ya estaba concedido, xpAwarded es 0', async () => {
+    const profile = makeProfile({ group_id: 'group-1', onboarded_at: null, xp: 20 });
+    const { service, profilesRepository } = createService(profile);
+    profilesRepository.awardProfileCompleted.mockResolvedValue(0);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    // La idempotencia la decide la base, no esta capa: aquí solo se refleja.
+    expect(result.xpAwarded).toBe(0);
+    expect(result.xp).toBe(20);
   });
 });

@@ -66,6 +66,19 @@ export interface MeDto {
   sessionsToday: number;
 }
 
+/**
+ * Respuesta de `PUT /me/profile`. Es el `ProfileDto` de siempre más
+ * `xpAwarded` (MEJ-14): cuántos XP se concedieron en **esta** llamada, 0 si
+ * el perfil ya estaba completo.
+ *
+ * Campo añadido al mismo nivel y no dentro de un envoltorio nuevo para no
+ * romper a las versiones de la app que parsean `ProfileDto` directamente:
+ * ignoran lo que no conocen (mismo criterio que `MeDto.pendingActions`).
+ */
+export interface UpdateProfileResultDto extends ProfileDto {
+  xpAwarded: number;
+}
+
 /** Elemento de `members[]` en `GET /group` (RF-6.5, SPEC-07 §9). */
 export interface GroupMemberDto {
   userId: string;

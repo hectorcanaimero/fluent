@@ -4,6 +4,7 @@ import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { InsforgeHttp } from '../insforge/insforge.http.js';
 import { TABLES, type Level, type Locale, type Profile } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
+import { RPC } from '../db/rpc.js';
 
 /**
  * Nivel inicial de un perfil creado por `ensureProfile` (docs/specs/pendientes/PR-02.md):
@@ -176,6 +177,25 @@ export class ProfilesRepository {
   }
 
   /** Id de la sesión `active` del usuario, o `null` (`GET /me`, SPEC-06 §3). */
+  /**
+   * RPC `award_profile_completed` (MEJ-14): suma el XP y registra el evento
+   * en una sola transacción, una única vez por usuario. Devuelve cuánto
+   * concedió, o 0 si ya estaba concedido.
+   *
+   * La idempotencia vive en la base (índice único parcial sobre
+   * `xp_events`), no en un SELECT previo desde aquí: dos peticiones
+   * simultáneas al terminar el onboarding no pueden cobrarlo dos veces.
+   */
+  async awardProfileCompleted(userId: string, amount: number): Promise<number> {
+    const result = await this.admin.database.rpc(RPC.awardProfileCompleted, {
+      p_user_id: userId,
+      p_amount: amount,
+    });
+
+    const awarded = unwrapInsforge<number>(result);
+    return typeof awarded === 'number' ? awarded : 0;
+  }
+
   async getActiveSessionId(userId: string): Promise<string | null> {
     const result = await this.admin.database
       .from(TABLES.sessions)

@@ -17,7 +17,12 @@ import {
   type E2eTestUser,
   type InsforgeE2eCredentials,
 } from './insforge-e2e.js';
-import { seedProfile } from './fixtures.js';
+import {
+  seedGroupWithMembers,
+  seedProfile,
+  seedSession,
+  type SeededMember,
+} from './fixtures.js';
 
 /**
  * e2e de PR-04/T1 (`POST /sessions`, SPEC-04 §3) contra la rama real de
@@ -205,6 +210,56 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
     return response;
   }
 
+  /**
+   * Grupo de 3 con un desafío real para el primero (MAL-19): el `challenger`
+   * cerró una sesión con XP hace 1 día —así aparece en `GET /challenges`— y el
+   * `bystander` no tiene ninguna, así que nombrarlo debe dar 422.
+   *
+   * El `requester` necesita además credencial de proveedor para poder abrir
+   * sesión; `seedGroupWithMembers` solo siembra perfiles.
+   */
+  async function seedChallenge(namePrefix: string): Promise<{
+    requester: E2eTestUser;
+    challenger: E2eTestUser;
+    bystander: E2eTestUser;
+    topic: string;
+  }> {
+    const group = await seedGroupWithMembers(admin, credentials!, {
+      memberCount: 3,
+      namePrefix,
+    });
+    const [requester, challenger, bystander] = group.members as [
+      SeededMember,
+      SeededMember,
+      SeededMember,
+    ];
+    for (const member of group.members) {
+      seededUserIds.push(member.user.id);
+    }
+
+    await app
+      .get(CredentialsService)
+      .saveApiKey(requester.user.id, 'openrouter', 'clave-falsa');
+
+    const topic = `Desafio ${randomUUID().slice(0, 8)}`;
+    seededSessionIds.push(
+      await seedSession(admin, {
+        userId: challenger.user.id,
+        topic,
+        kind: 'free_topic',
+        xpEarned: 60,
+        endedDaysAgo: 1,
+      }),
+    );
+
+    return {
+      requester: requester.user,
+      challenger: challenger.user,
+      bystander: bystander.user,
+      topic,
+    };
+  }
+
   beforeAll(async () => {
     admin = createE2eAdminClient(credentials!);
 
@@ -366,6 +421,46 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       statusCode: 409,
     });
   }, 60_000);
+
+  it('challengeFromUserId de un desafío realmente ofrecido → 201 y se persiste (MAL-19)', async () => {
+    const { requester, challenger, topic } = await seedChallenge('S chal ok');
+
+    const response = await openSession(requester, {
+      kind: 'free_topic',
+      topic,
+      challengeFromUserId: challenger.id,
+    });
+
+    const row = await readSession(response.body.session.id);
+    expect(row.challenge_from_user_id).toBe(challenger.id);
+  }, 90_000);
+
+  it('challengeFromUserId de un compañero sin desafío → 422 CHALLENGE_NOT_AVAILABLE (MAL-19)', async () => {
+    const { requester, bystander, topic } = await seedChallenge('S chal no');
+
+    const response = await openSession(
+      requester,
+      { kind: 'free_topic', topic, challengeFromUserId: bystander.id },
+      422,
+    );
+
+    expect(response.body).toMatchObject({
+      error: 'CHALLENGE_NOT_AVAILABLE',
+      statusCode: 422,
+    });
+  }, 90_000);
+
+  it('challengeFromUserId correcto pero con otro tema → 422 (MAL-19)', async () => {
+    const { requester, challenger } = await seedChallenge('S chal tema');
+
+    const response = await openSession(
+      requester,
+      { kind: 'free_topic', topic: 'Un tema distinto', challengeFromUserId: challenger.id },
+      422,
+    );
+
+    expect(response.body).toMatchObject({ error: 'CHALLENGE_NOT_AVAILABLE' });
+  }, 90_000);
 
   it('perfil sin onboarded_at → 409 NOT_ONBOARDED', async () => {
     const user = await newReadyUser('S noonb', { onboarded: false });

@@ -13,6 +13,8 @@ import { isoDateString } from '../game/iso-week.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { LlmMessage } from '../llm/llm.client.js';
 import { OPENING_USER_MESSAGE } from '../llm/prompts/turn.js';
+import type { ChallengesService } from '../social/challenges.service.js';
+import type { ChallengesResultDto } from '../social/social.types.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
 import { SESSION_OPENINGS } from './session-openings.js';
 import { SessionsService } from './sessions.service.js';
@@ -240,6 +242,25 @@ function fakeBoss(options: { usedTopicIds?: string[]; skippedDays?: string[] } =
   return { service: new BossService(repo, store), recordSkipCalls };
 }
 
+/**
+ * `ChallengesService` de mentira para MAL-19: devuelve los desafíos que se le
+ * pasen y anota a quién se le preguntó. Por defecto, ninguno — así los tests
+ * que no mandan `challengeFromUserId` no se ven afectados.
+ */
+function fakeChallenges(
+  options: { items?: ChallengesResultDto['items']; error?: unknown } = {},
+) {
+  const calls: string[] = [];
+  const service = {
+    listChallenges: async (userId: string): Promise<ChallengesResultDto> => {
+      calls.push(userId);
+      if (options.error) throw options.error;
+      return { items: options.items ?? [] };
+    },
+  };
+  return { service: service as unknown as ChallengesService, calls };
+}
+
 const configService = { get: () => 3 } as unknown as ConfigService<never, true>;
 
 interface BuildOptions extends FakeRepoOptions {
@@ -247,21 +268,24 @@ interface BuildOptions extends FakeRepoOptions {
   readonly random?: number;
   readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
   readonly boss?: ReturnType<typeof fakeBoss>;
+  readonly challenges?: ReturnType<typeof fakeChallenges>;
 }
 
 function buildService(options: BuildOptions = {}) {
   const repository = fakeRepository(options);
   const llm = options.llm ?? fakeLlm();
   const boss = options.boss ?? fakeBoss();
+  const challenges = options.challenges ?? fakeChallenges();
   const service = new SessionsService(
     repository,
     fakeCredentials(options.credentialProviders),
     llm,
     boss.service,
+    challenges.service,
     configService as never,
     () => options.random ?? 0.99,
   );
-  return { service, repository, llm, boss };
+  return { service, repository, llm, boss, challenges };
 }
 
 function systemPromptOf(llm: FakeLlm): string {
@@ -430,6 +454,123 @@ describe('SessionsService.openSession · los cuatro kind (SPEC-04 §3.2)', () =>
     await expect(service.openSession(USER_ID, { kind: 'boss' })).rejects.toMatchObject({
       code: 'VALIDATION',
     });
+  });
+});
+
+const CHALLENGER_ID = '22222222-2222-4222-8222-222222222222';
+
+/** Candidato tal y como lo devuelve `GET /challenges` (SPEC-02 §4.5). */
+function challengeFixture(
+  overrides: Partial<ChallengesResultDto['items'][number]> = {},
+): ChallengesResultDto['items'][number] {
+  return {
+    fromUserId: CHALLENGER_ID,
+    displayName: 'Ana',
+    topic: 'Viajes',
+    kind: 'free_topic',
+    sessionId: '33333333-3333-4333-8333-333333333333',
+    ...overrides,
+  };
+}
+
+describe('SessionsService.openSession · validación del desafío (SPEC-07 §7, MAL-19)', () => {
+  it('acepta el desafío que GET /challenges ofrece y lo persiste', async () => {
+    const challenges = fakeChallenges({ items: [challengeFixture()] });
+    const { service, repository } = buildService({ challenges });
+
+    await service.openSession(USER_ID, {
+      kind: 'free_topic',
+      topic: 'Viajes',
+      challengeFromUserId: CHALLENGER_ID,
+    });
+
+    expect(challenges.calls).toEqual([USER_ID]);
+    expect(repository.created).toEqual([
+      expect.objectContaining({ challengeFromUserId: CHALLENGER_ID }),
+    ]);
+  });
+
+  it('rechaza un challengeFromUserId que no está en la lista', async () => {
+    const challenges = fakeChallenges({ items: [challengeFixture()] });
+    const { service, repository } = buildService({ challenges });
+
+    await expect(
+      service.openSession(USER_ID, {
+        kind: 'free_topic',
+        topic: 'Viajes',
+        challengeFromUserId: '44444444-4444-4444-8444-444444444444',
+      }),
+    ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
+
+    expect(repository.created).toEqual([]);
+  });
+
+  it('rechaza el desafío correcto con otro tema', async () => {
+    const challenges = fakeChallenges({ items: [challengeFixture({ topic: 'Cocina' })] });
+    const { service } = buildService({ challenges });
+
+    await expect(
+      service.openSession(USER_ID, {
+        kind: 'free_topic',
+        topic: 'Viajes',
+        challengeFromUserId: CHALLENGER_ID,
+      }),
+    ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
+  });
+
+  it('rechaza el desafío correcto con otro kind', async () => {
+    const challenges = fakeChallenges({
+      items: [challengeFixture({ kind: 'roleplay', topic: 'Viajes' })],
+    });
+    const { service } = buildService({ challenges });
+
+    await expect(
+      service.openSession(USER_ID, {
+        kind: 'free_topic',
+        topic: 'Viajes',
+        challengeFromUserId: CHALLENGER_ID,
+      }),
+    ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
+  });
+
+  it('traduce el NOT_ONBOARDED de un usuario sin grupo al mismo 422', async () => {
+    const challenges = fakeChallenges({
+      error: new ApiException('NOT_ONBOARDED', 'Sin grupo.'),
+    });
+    const { service } = buildService({ challenges });
+
+    await expect(
+      service.openSession(USER_ID, {
+        kind: 'free_topic',
+        topic: 'Viajes',
+        challengeFromUserId: CHALLENGER_ID,
+      }),
+    ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
+  });
+
+  it('propaga cualquier otro error de la lista de desafíos', async () => {
+    const challenges = fakeChallenges({ error: new Error('InsForge caído') });
+    const { service } = buildService({ challenges });
+
+    await expect(
+      service.openSession(USER_ID, {
+        kind: 'free_topic',
+        topic: 'Viajes',
+        challengeFromUserId: CHALLENGER_ID,
+      }),
+    ).rejects.toThrow('InsForge caído');
+  });
+
+  it('sin challengeFromUserId no consulta la lista de desafíos', async () => {
+    const challenges = fakeChallenges();
+    const { service, repository } = buildService({ challenges });
+
+    await service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' });
+
+    expect(challenges.calls).toEqual([]);
+    expect(repository.created).toEqual([
+      expect.objectContaining({ challengeFromUserId: null }),
+    ]);
   });
 });
 

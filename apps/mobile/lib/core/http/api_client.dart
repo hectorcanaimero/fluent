@@ -41,6 +41,28 @@ class ApiClient {
           final alreadyRetried =
               error.requestOptions.extra['fluent_retried'] == true;
           if (isUnauthorized && !alreadyRetried) {
+            // Si el bearer con el que salió esta petición ya no es el
+            // vigente, otra petición refrescó mientras esta viajaba: no hace
+            // falta refrescar otra vez, basta con reintentar con el nuevo
+            // (MEJ-19). Antes, N peticiones en vuelo con el token vencido
+            // provocaban que todas esperaran un refresco —y, si el lock se
+            // soltaba entre medias, alguna disparaba uno redundante que
+            // invalidaba el token recién emitido.
+            final current = await _tokenStore.read();
+            final sentWith = error.requestOptions.headers['Authorization'];
+            if (current != null && sentWith != 'Bearer ${current.accessToken}') {
+              final options = error.requestOptions;
+              options.extra['fluent_retried'] = true;
+              options.headers['Authorization'] = 'Bearer ${current.accessToken}';
+              try {
+                handler.resolve(await this.dio.fetch(options));
+                return;
+              } on DioException catch (retryError) {
+                handler.next(retryError);
+                return;
+              }
+            }
+
             final refreshed = await _refreshOnce();
             if (refreshed != null) {
               final options = error.requestOptions;
@@ -101,13 +123,23 @@ class ApiClient {
     });
   }
 
+  /// Nunca lanza (MEJ-19): cualquier excepción del refresco —una
+  /// `PlatformException` del keychain, un fallo de red, un JSON inesperado—
+  /// se traduce a `null`, que el interceptor ya trata como «sesión
+  /// expirada». Antes, una excepción aquí escapaba del `onError` y llegaba a
+  /// la pantalla como un error sin forma, distinto en cada caso y sin
+  /// limpiar los tokens ni avisar a `AuthController`.
   Future<AuthTokens?> _doRefresh() async {
-    final current = await _tokenStore.read();
-    if (current == null) return null;
-    final refreshed = await _tokenRefresher.refresh(current.refreshToken);
-    if (refreshed == null) return null;
-    await _tokenStore.write(refreshed);
-    return refreshed;
+    try {
+      final current = await _tokenStore.read();
+      if (current == null) return null;
+      final refreshed = await _tokenRefresher.refresh(current.refreshToken);
+      if (refreshed == null) return null;
+      await _tokenStore.write(refreshed);
+      return refreshed;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// Ejecuta [body] y traduce cualquier [DioException] con cuerpo

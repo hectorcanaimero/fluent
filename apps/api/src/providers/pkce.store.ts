@@ -23,6 +23,12 @@ export interface PkceEntry {
   readonly callbackUrl: string;
   readonly codeVerifier: string;
   readonly createdAt: string;
+  /**
+   * `code` de OpenRouter, escrito por el callback público del navegador
+   * (`attachCode`). Ausente hasta que el usuario vuelve de autorizar; el
+   * canje lo hace después `POST /pkce/complete`, ya autenticado (MAL-18).
+   */
+  readonly code?: string;
 }
 
 /**
@@ -77,6 +83,7 @@ export class PkceStore {
           callbackUrl: parsed.callbackUrl,
           codeVerifier: parsed.codeVerifier,
           createdAt: parsed.createdAt ?? new Date(0).toISOString(),
+          ...(typeof parsed.code === 'string' ? { code: parsed.code } : {}),
         };
       }
     } catch {
@@ -85,6 +92,35 @@ export class PkceStore {
 
     this.logger.warn(`Intento de PKCE con un valor ilegible en Redis; se descarta.`);
     return null;
+  }
+
+  /**
+   * Guarda el `code` que OpenRouter devolvió al navegador, en la misma
+   * entrada que el `code_verifier` (MAL-18): el callback público no canjea
+   * nada, solo deja el código a la espera de que su dueño llame a
+   * `POST /pkce/complete` con el bearer.
+   *
+   * Conserva el vencimiento original en vez de reiniciar el TTL: la ventana
+   * de 10 minutos se cuenta desde `start`, así que volver del navegador no
+   * puede alargarla. Si ya venció, no escribe nada y devuelve `null`.
+   */
+  async attachCode(codeVerifierId: string, code: string): Promise<PkceEntry | null> {
+    const entry = await this.find(codeVerifierId);
+    if (entry === null) {
+      return null;
+    }
+
+    const elapsedSeconds = Math.floor((Date.now() - Date.parse(entry.createdAt)) / 1000);
+    const remaining = PKCE_TTL_SECONDS - (Number.isFinite(elapsedSeconds) ? elapsedSeconds : 0);
+    if (remaining <= 0) {
+      await this.remove(codeVerifierId);
+      return null;
+    }
+
+    const updated: PkceEntry = { ...entry, code };
+    await this.redis.set(pkceKey(codeVerifierId), JSON.stringify(updated), remaining);
+
+    return updated;
   }
 
   /** Borra el intento: un `code_verifier` es de un solo uso. */

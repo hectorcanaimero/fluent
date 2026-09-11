@@ -82,10 +82,10 @@ export class ProvidersService {
   ): Promise<PkceStartDtoResponse> {
     const requested = callbackUrl?.trim() || this.defaultCallbackUrl;
 
-    if (!isValidCallbackUrl(requested)) {
+    if (!isValidCallbackUrl(requested, this.defaultCallbackUrl)) {
       throw ApiException.of(
         'VALIDATION',
-        'callbackUrl debe ser una URL absoluta con esquema (por ejemplo fluent://oauth/openrouter).',
+        'callbackUrl solo puede ser el deep link de la app (fluent://…) o el callback configurado.',
       );
     }
 
@@ -93,8 +93,9 @@ export class ProvidersService {
     const codeVerifierId = await this.pkceStore.create(userId, requested, codeVerifier);
 
     // OpenRouter no devuelve de forma fiable a esquemas propios (fluent://):
-    // el navegador vuelve a un callback HTTPS de la API, que canjea el código
-    // y luego redirige al deep link guardado (`requested`).
+    // el navegador vuelve a un callback HTTPS de la API, que guarda el código
+    // y redirige al deep link guardado (`requested`); el canje lo hace después
+    // la app con `POST /pkce/complete` (MAL-18).
     const browserCallback = `${this.apiPublicUrl}/v1/providers/openrouter/callback/${codeVerifierId}`;
 
     return {
@@ -104,29 +105,52 @@ export class ProvidersService {
   }
 
   /**
-   * `POST /providers/openrouter/pkce/complete` (SPEC-02 §4.2).
+   * `POST /providers/openrouter/pkce/complete` (SPEC-02 §4.2, MAL-18).
+   *
+   * **Este** es el único sitio donde se canjea el `code` y se escribe la
+   * credencial, y exige bearer: el callback del navegador es público y solo
+   * deja el `code` guardado (`completeOpenRouterPkceFromBrowser`). Así, quien
+   * termina el flujo es siempre el dueño del intento, no quien consiga que el
+   * navegador visite una URL.
    *
    * Un `codeVerifierId` inexistente, caducado o de otro usuario responde
-   * exactamente el mismo `400 VALIDATION` (docs/specs/pendientes/PR-02.md):
-   * distinguirlos convertiría el endpoint en un oráculo de ids ajenos y no le
-   * sirve de nada a la app, que en los tres casos tiene que reiniciar el
-   * flujo desde `start`.
+   * exactamente el mismo `403 FORBIDDEN`: distinguirlos convertiría el
+   * endpoint en un oráculo de ids ajenos y no le sirve de nada a la app, que
+   * en los tres casos tiene que reiniciar el flujo desde `start`.
+   *
+   * `code` en el cuerpo es el flujo antiguo (la app recibía el código por
+   * deep link). Se mantiene por compatibilidad, pero el guardado por el
+   * callback tiene prioridad: es el que llegó por el canal de confianza.
    */
   async completeOpenRouterPkce(
     userId: string,
-    code: string,
     codeVerifierId: string,
+    code?: string,
   ): Promise<ProviderStatusDto> {
     const entry = await this.pkceStore.find(codeVerifierId);
 
     if (entry === null || entry.userId !== userId) {
       throw ApiException.of(
-        'VALIDATION',
+        'FORBIDDEN',
         'El intento de conexión con OpenRouter no existe o caducó. Volvé a empezar desde la app.',
       );
     }
 
-    const apiKey = await this.providerApi.exchangeOpenRouterCode(code, entry.codeVerifier);
+    const authorizationCode = entry.code ?? code?.trim();
+
+    if (!authorizationCode) {
+      // El dueño del intento llamó antes de volver del navegador: no es un
+      // error de permisos, hay que esperar (o reiniciar) el flujo.
+      throw ApiException.of(
+        'VALIDATION',
+        'Todavía no llegó la autorización de OpenRouter. Terminá el flujo en el navegador y probá de nuevo.',
+      );
+    }
+
+    const apiKey = await this.providerApi.exchangeOpenRouterCode(
+      authorizationCode,
+      entry.codeVerifier,
+    );
 
     if (apiKey === null) {
       // Un `code` solo se puede canjear una vez: aunque el canje falle, el
@@ -149,16 +173,25 @@ export class ProvidersService {
 
   /**
    * `GET /providers/openrouter/callback/:id?code=…` (público): lo abre el
-   * navegador del teléfono al volver de OpenRouter. Canjea el código con el
-   * verifier guardado, deja la credencial en el usuario dueño del intento y
-   * devuelve a dónde redirigir (el deep link de la app con `done=1` o con
-   * `error=…`). Nunca lanza: el navegador debe recibir siempre una página.
+   * navegador del teléfono al volver de OpenRouter.
+   *
+   * **Solo guarda el `code`** junto al `code_verifier` y devuelve a dónde
+   * redirigir (el deep link de la app con `done=1` o con `error=…`). No
+   * canjea nada ni escribe ninguna credencial: esta ruta es pública, así que
+   * antes bastaba con que un atacante consiguiera que el navegador de la
+   * víctima —o el suyo propio con un `code` de su cuenta— visitara esta URL
+   * para escribir una credencial en la cuenta que abrió el flujo (CSRF de
+   * MAL-18). El canje lo hace ahora `POST /pkce/complete`, autenticado.
+   *
+   * Nunca lanza: el navegador debe recibir siempre una página.
    */
   async completeOpenRouterPkceFromBrowser(
     codeVerifierId: string,
     code: string | undefined,
   ): Promise<{ ok: boolean; redirectTo: string; message: string }> {
     const entry = await this.pkceStore.find(codeVerifierId);
+    // El destino sale de la entrada guardada en `start`, nunca de la query:
+    // `callbackUrl` ya pasó por `isValidCallbackUrl` al crearse el intento.
     const appCallback = entry?.callbackUrl ?? this.defaultCallbackUrl;
     const withQuery = (q: string): string => `${appCallback}${appCallback.includes('?') ? '&' : '?'}${q}`;
 
@@ -170,20 +203,17 @@ export class ProvidersService {
       };
     }
 
-    const apiKey = await this.providerApi.exchangeOpenRouterCode(code, entry.codeVerifier);
-    await this.pkceStore.remove(codeVerifierId);
+    const stored = await this.pkceStore.attachCode(codeVerifierId, code);
 
-    if (apiKey === null) {
+    if (stored === null) {
       return {
         ok: false,
-        redirectTo: withQuery('error=rejected'),
-        message: 'OpenRouter rechazó el código de autorización. Volvé a conectar la cuenta.',
+        redirectTo: withQuery('error=expired'),
+        message: 'El intento de conexión no existe o caducó. Volvé a empezar desde la app.',
       };
     }
 
-    await this.credentialsService.saveApiKey(entry.userId, 'openrouter', apiKey);
-    await this.ensureDefaultPreferences(entry.userId, 'openrouter');
-    this.logger.log(`Usuario ${entry.userId} conectó OpenRouter vía callback del navegador`);
+    this.logger.log(`Intento de PKCE ${codeVerifierId}: código recibido, pendiente de canje`);
 
     return { ok: true, redirectTo: withQuery('done=1'), message: 'Cuenta de OpenRouter conectada.' };
   }

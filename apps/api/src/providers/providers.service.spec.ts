@@ -174,6 +174,13 @@ function createHarness(handlers: Record<string, Handler>) {
   return { service, redis, credentialsRepository, credentialsService, calls, modelPreferences };
 }
 
+/** Handlers de `fetch` con el canje de OpenRouter respondiendo una key válida. */
+function openRouterExchangeOk() {
+  return {
+    [OPENROUTER_KEYS_URL]: () => jsonResponse({ key: FAKE_OPENROUTER_KEY }),
+  };
+}
+
 /** El `code_challenge` que viajó en el `authUrl` que devolvió `start`. */
 function challengeOf(authUrl: string): string {
   return new URL(authUrl).searchParams.get('code_challenge') ?? '';
@@ -251,12 +258,6 @@ describe('ProvidersService', () => {
   });
 
   describe('POST /providers/openrouter/pkce/complete', () => {
-    function openRouterExchangeOk() {
-      return {
-        [OPENROUTER_KEYS_URL]: () => jsonResponse({ key: FAKE_OPENROUTER_KEY }),
-      };
-    }
-
     it('completes the PKCE flow: exchanges the code and stores the key encrypted', async () => {
       const harness = createHarness(openRouterExchangeOk());
       const { service, calls, credentialsRepository, credentialsService } = harness;
@@ -264,8 +265,8 @@ describe('ProvidersService', () => {
       const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
       const status = await service.completeOpenRouterPkce(
         USER_A,
-        FAKE_AUTH_CODE,
         started.codeVerifierId,
+        FAKE_AUTH_CODE,
       );
 
       expect(status).toEqual({ provider: 'openrouter', status: 'active', lastError: null });
@@ -295,24 +296,24 @@ describe('ProvidersService', () => {
       const { service, redis } = createHarness(openRouterExchangeOk());
 
       const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
-      await service.completeOpenRouterPkce(USER_A, FAKE_AUTH_CODE, started.codeVerifierId);
+      await service.completeOpenRouterPkce(USER_A, started.codeVerifierId, FAKE_AUTH_CODE);
 
       expect(redis.store.size).toBe(0);
       await expect(
-        service.completeOpenRouterPkce(USER_A, FAKE_AUTH_CODE, started.codeVerifierId),
-      ).rejects.toMatchObject({ code: 'VALIDATION' });
+        service.completeOpenRouterPkce(USER_A, started.codeVerifierId, FAKE_AUTH_CODE),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
 
-    it('answers a controlled 400 (not a 500) for an unknown or expired codeVerifierId', async () => {
+    it('answers a controlled 403 (not a 500) for an unknown or expired codeVerifierId', async () => {
       const { service, calls } = createHarness(openRouterExchangeOk());
 
       const error = await service
-        .completeOpenRouterPkce(USER_A, FAKE_AUTH_CODE, '44444444-4444-4444-8444-444444444444')
+        .completeOpenRouterPkce(USER_A, '44444444-4444-4444-8444-444444444444', FAKE_AUTH_CODE)
         .catch((caught: unknown) => caught);
 
       expect(error).toBeInstanceOf(ApiException);
-      expect((error as ApiException).code).toBe('VALIDATION');
-      expect((error as ApiException).getStatus()).toBe(400);
+      expect((error as ApiException).code).toBe('FORBIDDEN');
+      expect((error as ApiException).getStatus()).toBe(403);
       // Ni siquiera se llamó a OpenRouter.
       expect(calls).toHaveLength(0);
     });
@@ -323,8 +324,8 @@ describe('ProvidersService', () => {
       const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
 
       await expect(
-        service.completeOpenRouterPkce(USER_B, FAKE_AUTH_CODE, started.codeVerifierId),
-      ).rejects.toMatchObject({ code: 'VALIDATION' });
+        service.completeOpenRouterPkce(USER_B, started.codeVerifierId, FAKE_AUTH_CODE),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
       expect(calls).toHaveLength(0);
     });
 
@@ -336,7 +337,7 @@ describe('ProvidersService', () => {
       const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
 
       await expect(
-        service.completeOpenRouterPkce(USER_A, FAKE_AUTH_CODE, started.codeVerifierId),
+        service.completeOpenRouterPkce(USER_A, started.codeVerifierId, FAKE_AUTH_CODE),
       ).rejects.toMatchObject({ code: 'PROVIDER_KEY_INVALID' });
       expect(credentialsRepository.rows.size).toBe(0);
     });
@@ -349,9 +350,131 @@ describe('ProvidersService', () => {
       const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
 
       await expect(
-        service.completeOpenRouterPkce(USER_A, FAKE_AUTH_CODE, started.codeVerifierId),
+        service.completeOpenRouterPkce(USER_A, started.codeVerifierId, FAKE_AUTH_CODE),
       ).rejects.toMatchObject({ code: 'PROVIDER_KEY_INVALID' });
       expect(credentialsRepository.rows.size).toBe(0);
+    });
+  });
+
+  describe('GET /providers/openrouter/callback/:id · solo guarda el code (MAL-18)', () => {
+    it('no canjea nada ni escribe credencial: solo deja el code en Redis', async () => {
+      const { service, calls, credentialsRepository, redis } = createHarness(
+        openRouterExchangeOk(),
+      );
+
+      const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
+      const result = await service.completeOpenRouterPkceFromBrowser(
+        started.codeVerifierId,
+        FAKE_AUTH_CODE,
+      );
+
+      expect(result).toMatchObject({ ok: true, redirectTo: `${DEFAULT_CALLBACK}?done=1` });
+      // Ni una llamada a OpenRouter, ni una fila de credencial.
+      expect(calls).toHaveLength(0);
+      expect(credentialsRepository.rows.size).toBe(0);
+      // El intento sigue vivo, ahora con el código guardado.
+      expect(redis.store.size).toBe(1);
+      const entry = JSON.parse([...redis.store.values()][0] as string) as { code?: string };
+      expect(entry.code).toBe(FAKE_AUTH_CODE);
+    });
+
+    it('sin code redirige con error=expired y no toca la entrada', async () => {
+      const { service, redis } = createHarness(openRouterExchangeOk());
+
+      const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
+      const result = await service.completeOpenRouterPkceFromBrowser(
+        started.codeVerifierId,
+        undefined,
+      );
+
+      expect(result).toMatchObject({ ok: false, redirectTo: `${DEFAULT_CALLBACK}?error=expired` });
+      const entry = JSON.parse([...redis.store.values()][0] as string) as { code?: string };
+      expect(entry.code).toBeUndefined();
+    });
+
+    it('con un id desconocido redirige al callback por defecto con error=expired', async () => {
+      const { service } = createHarness(openRouterExchangeOk());
+
+      const result = await service.completeOpenRouterPkceFromBrowser(
+        '44444444-4444-4444-8444-444444444444',
+        FAKE_AUTH_CODE,
+      );
+
+      expect(result).toMatchObject({ ok: false, redirectTo: `${DEFAULT_CALLBACK}?error=expired` });
+    });
+  });
+
+  describe('POST /pkce/complete tras el callback (MAL-18)', () => {
+    /** Flujo nuevo completo: start → callback guarda el code → complete canjea. */
+    async function startAndReturnFromBrowser(
+      service: ProvidersService,
+      userId = USER_A,
+    ): Promise<string> {
+      const started = await service.startOpenRouterPkce(userId, DEFAULT_CALLBACK);
+      await service.completeOpenRouterPkceFromBrowser(started.codeVerifierId, FAKE_AUTH_CODE);
+      return started.codeVerifierId;
+    }
+
+    it('el dueño canjea el code guardado sin mandarlo en el cuerpo', async () => {
+      const harness = createHarness(openRouterExchangeOk());
+      const { service, calls, credentialsService } = harness;
+
+      const codeVerifierId = await startAndReturnFromBrowser(service);
+      const status = await service.completeOpenRouterPkce(USER_A, codeVerifierId);
+
+      expect(status).toEqual({ provider: 'openrouter', status: 'active', lastError: null });
+      const exchange = calls.find((call) => call.url === OPENROUTER_KEYS_URL)!;
+      expect((exchange.body as { code: string }).code).toBe(FAKE_AUTH_CODE);
+      await expect(credentialsService.listActive(USER_A)).resolves.toEqual([
+        { provider: 'openrouter', apiKey: FAKE_OPENROUTER_KEY },
+      ]);
+    });
+
+    it('el code guardado gana al que venga en el cuerpo', async () => {
+      const { service, calls } = createHarness(openRouterExchangeOk());
+
+      const codeVerifierId = await startAndReturnFromBrowser(service);
+      await service.completeOpenRouterPkce(USER_A, codeVerifierId, 'CODE-DEL-ATACANTE');
+
+      const exchange = calls.find((call) => call.url === OPENROUTER_KEYS_URL)!;
+      expect((exchange.body as { code: string }).code).toBe(FAKE_AUTH_CODE);
+    });
+
+    it('otro usuario no puede canjear el intento ajeno ni con el code guardado', async () => {
+      const { service, calls, credentialsRepository } = createHarness(openRouterExchangeOk());
+
+      const codeVerifierId = await startAndReturnFromBrowser(service);
+
+      await expect(
+        service.completeOpenRouterPkce(USER_B, codeVerifierId),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      expect(calls).toHaveLength(0);
+      expect(credentialsRepository.rows.size).toBe(0);
+    });
+
+    it('sin code guardado ni en el cuerpo responde 400 VALIDATION, no 403', async () => {
+      const { service, calls } = createHarness(openRouterExchangeOk());
+
+      const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
+
+      const error = await service
+        .completeOpenRouterPkce(USER_A, started.codeVerifierId)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(ApiException);
+      expect((error as ApiException).code).toBe('VALIDATION');
+      expect(calls).toHaveLength(0);
+    });
+
+    it('una entrada caducada entre el callback y el complete responde 403', async () => {
+      const { service, redis } = createHarness(openRouterExchangeOk());
+
+      const codeVerifierId = await startAndReturnFromBrowser(service);
+      redis.store.clear();
+
+      await expect(
+        service.completeOpenRouterPkce(USER_A, codeVerifierId),
+      ).rejects.toMatchObject({ code: 'FORBIDDEN' });
     });
   });
 

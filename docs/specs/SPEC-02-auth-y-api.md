@@ -39,7 +39,10 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 | Método y ruta | Cuerpo | Respuesta | Notas |
 |---|---|---|---|
 | POST `/providers/openrouter/pkce/start` | `{ callbackUrl }` | `{ authUrl, codeVerifierId }` | la API genera y guarda el `code_verifier` en Redis 10 min; la app abre `authUrl` |
-| POST `/providers/openrouter/pkce/complete` | `{ code, codeVerifierId }` | `{ provider: 'openrouter', status }` | la API canjea el código en `https://openrouter.ai/api/v1/auth/keys` y cifra la key |
+| POST `/providers/openrouter/pkce/complete` | `{ codeVerifierId }` | `{ provider: 'openrouter', status }` | la API canjea el código en `https://openrouter.ai/api/v1/auth/keys` y cifra la key |
+| GET `/providers/openrouter/callback/:id?code=…` | — (público) | HTML que redirige al deep link | **solo guarda** el `code` junto al `code_verifier` |
+
+**Flujo PKCE (§4.2).** `start` acepta como `callbackUrl` únicamente el deep link de la app (`fluent://…`) o el valor de `OPENROUTER_OAUTH_CALLBACK`; cualquier otra URL es `400 VALIDATION` (si no, la API sería un redirector abierto). OpenRouter devuelve el navegador al callback HTTPS público, que **no canjea nada**: guarda el `code` en la entrada de Redis del intento —conservando su vencimiento original— y redirige a `fluent://oauth/openrouter?done=1` (o `?error=…`). El canje y la escritura de la credencial ocurren solo en `pkce/complete`, que exige bearer y comprueba que el intento es de quien llama; si no existe, caducó o es de otro usuario responde el mismo `403 FORBIDDEN`. `code` en el cuerpo de `complete` se sigue aceptando por compatibilidad, pero el guardado por el callback tiene prioridad.
 | POST `/providers/gemini` | `{ apiKey }` | `{ provider: 'gemini', status }` | la API valida con una llamada a `/models` antes de guardar; error `PROVIDER_KEY_INVALID` |
 | DELETE `/providers/:provider` | | `204` | borra la credencial y resetea preferencias que la usaban |
 | GET `/providers/:provider/status` | | `{ status, lastError, credits? }` | para OpenRouter consulta `GET /api/v1/credits` y devuelve `{ total, used }` (RF-2.3) |

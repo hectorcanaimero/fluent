@@ -23,11 +23,8 @@ const VERIFIER_BYTES = 32;
 /** Longitud máxima razonable de un `callbackUrl` (deep link de la app). */
 export const MAX_CALLBACK_URL_LENGTH = 2048;
 
-/**
- * Esquemas que nunca son un callback legítimo: son vectores de ejecución en
- * un navegador o lectores de disco, no destinos de un deep link.
- */
-const FORBIDDEN_CALLBACK_SCHEMES = new Set(['javascript:', 'data:', 'file:', 'vbscript:']);
+/** Esquema propio de la app (SPEC-06 §7). */
+export const APP_CALLBACK_SCHEME = 'fluent:';
 
 /** `code_verifier` aleatorio en base64url (43 caracteres). */
 export function generateCodeVerifier(): string {
@@ -40,27 +37,45 @@ export function codeChallengeS256(verifier: string): string {
 }
 
 /**
- * ¿Es `value` un callback aceptable? Se admite cualquier URL absoluta con
- * esquema (incluidos los deep links de la app, `fluent://oauth/openrouter`,
- * SPEC-06 §7) salvo los esquemas peligrosos. No se restringe a un host
- * concreto: el callback lo elige la app y OpenRouter solo lo usa para
- * devolver el `code`, que sin el `code_verifier` (que se queda en Redis) no
- * sirve para nada.
+ * ¿Es `value` un callback aceptable? **Lista blanca**: solo el deep link de
+ * la app (`fluent://…`) o exactamente el callback configurado en
+ * `OPENROUTER_OAUTH_CALLBACK` (`configuredCallback`).
+ *
+ * Antes se admitía cualquier URL absoluta que no usara un esquema peligroso,
+ * y ese valor acaba siendo el destino al que el callback HTTPS público
+ * redirige el navegador: cualquiera podía convertir un dominio de la API en
+ * un redirector abierto hacia su propio sitio (MAL-18). Que el `code` no
+ * sirva sin el `code_verifier` no arregla la redirección abierta en sí.
+ *
+ * La comparación con el configurado es sobre la URL normalizada por `URL`,
+ * para que una barra final o un puerto por defecto no cambien el resultado.
  */
-export function isValidCallbackUrl(value: string): boolean {
+export function isValidCallbackUrl(value: string, configuredCallback: string): boolean {
+  const parsed = parseCallbackUrl(value);
+  if (parsed === null) {
+    return false;
+  }
+
+  if (parsed.protocol.toLowerCase() === APP_CALLBACK_SCHEME) {
+    return true;
+  }
+
+  const configured = parseCallbackUrl(configuredCallback);
+  return configured !== null && parsed.href === configured.href;
+}
+
+/** `URL` de un callback sintácticamente aceptable, o `null`. */
+function parseCallbackUrl(value: string): URL | null {
   const trimmed = value.trim();
   if (trimmed === '' || trimmed.length > MAX_CALLBACK_URL_LENGTH || /\s/.test(trimmed)) {
-    return false;
+    return null;
   }
 
-  let parsed: URL;
   try {
-    parsed = new URL(trimmed);
+    return new URL(trimmed);
   } catch {
-    return false;
+    return null;
   }
-
-  return !FORBIDDEN_CALLBACK_SCHEMES.has(parsed.protocol.toLowerCase());
 }
 
 /**

@@ -36,7 +36,7 @@ export class ProvidersController {
     @CurrentUser('id') userId: string,
     @Body() dto: PkceCompleteDto,
   ): Promise<ProviderStatusDto> {
-    return this.providersService.completeOpenRouterPkce(userId, dto.code, dto.codeVerifierId);
+    return this.providersService.completeOpenRouterPkce(userId, dto.codeVerifierId, dto.code);
   }
 
 
@@ -44,6 +44,9 @@ export class ProvidersController {
    * Retorno del navegador tras autorizar en OpenRouter (SPEC-06 §7). Público:
    * el navegador externo no tiene el bearer de la app. Responde una página
    * mínima que redirige al deep link `fluent://oauth/openrouter`.
+   *
+   * Solo **guarda** el `code` (MAL-18): el canje y la escritura de la
+   * credencial ocurren en `POST /pkce/complete`, que sí exige bearer.
    */
   @Public()
   @Get('openrouter/callback/:id')

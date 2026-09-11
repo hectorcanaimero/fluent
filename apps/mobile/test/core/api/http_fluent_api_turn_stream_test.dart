@@ -75,6 +75,35 @@ void main() {
     },
   );
 
+  // MEJ-18: el estándar SSE permite varias líneas `data:` seguidas para un
+  // mismo evento, unidas con `\n` — un proxy o el propio Node puede partir
+  // un JSON largo así. Concatenarlas sin separador corrompe el JSON.
+  test('POST /sessions/:id/turns/stream une líneas `data:` multilínea con \\n', () async {
+    const sse =
+        'event: done\n'
+        'data: {"turnIdx":1,"reply":"Nice one",\n'
+        'data: "corrections":[],"modelUsed":"openrouter/gpt-4o-mini",\n'
+        'data: "degraded":false}\n\n';
+
+    adapter.onPost(
+      '/sessions/session-1/turns/stream',
+      (server) => server.reply(
+        200,
+        sse,
+        headers: {
+          Headers.contentTypeHeader: ['text/event-stream'],
+        },
+      ),
+      data: Matchers.any,
+    );
+
+    final events = await api.sendTurnStream(sessionId: 'session-1', text: 'hi').toList();
+
+    expect(events, hasLength(1));
+    final done = events[0] as TurnStreamDone;
+    expect(done.result.reply, 'Nice one');
+  });
+
   // SPEC-03 §6 / PEND-57 de PR-04.md: si no se emitió ningún token, el
   // `reply` degradado llega igual como un único `token` antes de `done`.
   test('POST /sessions/:id/turns/stream degradado: un solo token con el reply completo', () async {

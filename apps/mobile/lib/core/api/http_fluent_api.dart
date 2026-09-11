@@ -231,6 +231,11 @@ class HttpFluentApi implements FluentApi {
         continue;
       }
       if (line.startsWith('data:')) {
+        // SSE (WHATWG): varias líneas `data:` seguidas para un mismo evento
+        // se unen con `\n`, no se concatenan a lo bruto — si no, un JSON
+        // partido en dos líneas por el proxy/servidor rompe el parseo
+        // (MEJ-18) y el turno cae al modo completo, duplicándose.
+        if (dataBuffer.isNotEmpty) dataBuffer.write('\n');
         dataBuffer.write(line.substring('data:'.length).trim());
         continue;
       }

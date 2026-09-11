@@ -169,6 +169,8 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
       expect(Array.isArray(meResponse.body.interestsCatalog)).toBe(true);
       expect(meResponse.body.interestsCatalog.length).toBeGreaterThan(0);
       expect(meResponse.body.pendingActions).toEqual([]);
+      // Usuario recién creado: ninguna sesión cerrada hoy.
+      expect(meResponse.body.sessionsToday).toBe(0);
     },
     30_000,
   );

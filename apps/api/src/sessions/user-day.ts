@@ -66,6 +66,21 @@ export function secondsUntilUserMidnight(
   return Math.max(1, 24 * 3600 - elapsed);
 }
 
+/**
+ * Instante UTC en el que empezó el día natural del usuario.
+ *
+ * Se calcula restando el tiempo transcurrido hoy en su zona, por el mismo
+ * motivo que [secondsUntilUserMidnight]: así no hay que resolver el desfase
+ * UTC ni tratar los cambios de horario de verano a mano.
+ */
+export function startOfUserDay(
+  timeZone: string | null | undefined,
+  at: Date = new Date(),
+): Date {
+  const elapsedSeconds = 24 * 3600 - secondsUntilUserMidnight(timeZone, at);
+  return new Date(at.getTime() - elapsedSeconds * 1000);
+}
+
 /** Clave del contador diario de turnos de un usuario. */
 export function turnsDayKey(userId: string, day: string): string {
   return `turns:day:${userId}:${day}`;

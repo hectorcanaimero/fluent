@@ -8,6 +8,7 @@ import type { ProfilesRepository } from './profiles.repository.js';
 import type { GroupsRepository } from '../groups/groups.repository.js';
 import type { Profile } from '../db/schema.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
+import type { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
@@ -47,6 +48,7 @@ function createService(
   profile: Profile,
   group: unknown = null,
   pendingActions: string[] = [],
+  sessionsToday = 0,
 ) {
   const profilesRepository = {
     ensureProfile: vi.fn().mockResolvedValue(profile),
@@ -76,15 +78,21 @@ function createService(
     listFor: vi.fn().mockResolvedValue(pendingActions),
   };
 
+  const sessionsQuery = {
+    countValidSessionsSince: vi.fn().mockResolvedValue(sessionsToday),
+  };
+
   const service = new ProfilesService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
     credentialsRepository as unknown as CredentialsRepository,
     pendingActionsService as unknown as PendingActionsService,
+    sessionsQuery as unknown as SessionsQueryRepository,
   );
 
   return {
     service,
+    sessionsQuery,
     profilesRepository,
     groupsRepository,
     credentialsRepository,
@@ -184,5 +192,30 @@ describe('ProfilesService.getMe', () => {
     const me = await service.getMe('user-1');
 
     expect(me.pendingActions).toEqual(['WEEKLY_SUMMARY_NEEDS_CREDENTIAL']);
+  });
+});
+
+describe('ProfilesService.getMe · sessionsToday', () => {
+  it('cuenta las sesiones válidas de hoy en la zona del usuario', async () => {
+    const profile = makeProfile({ timezone: 'Asia/Tokyo' });
+    const { service, sessionsQuery } = createService(profile, null, [], 2);
+
+    const me = await service.getMe('user-1');
+
+    expect(me.sessionsToday).toBe(2);
+
+    // El corte es el comienzo del día **del usuario**: en Tokio, a las 02:00
+    // UTC ya es por la tarde, así que `since` tiene que quedar por detrás.
+    const since = new Date(
+      (sessionsQuery.countValidSessionsSince.mock.calls[0] as [string, string])[1],
+    );
+    expect(since.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(Date.now() - since.getTime()).toBeLessThan(24 * 60 * 60 * 1000);
+  });
+
+  it('devuelve 0 cuando el usuario no cerró ninguna hoy', async () => {
+    const { service } = createService(makeProfile(), null, [], 0);
+
+    expect((await service.getMe('user-1')).sessionsToday).toBe(0);
   });
 });

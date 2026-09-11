@@ -54,6 +54,16 @@ export interface MeDto {
    * ignora campos que no conoce, así que añadirlo ahora no rompe nada.
    */
   pendingActions: string[];
+  /**
+   * Sesiones válidas (`ended` con XP) que el usuario cerró **hoy**, en su
+   * propia zona horaria.
+   *
+   * Home lo necesita para el bono de día doble (SPEC-07 §2: se aplica cuando
+   * `sesiones_validas_hoy == 1`) y para su checklist. Antes lo deducía
+   * pidiendo `GET /sessions?limit=20` y filtrando en el cliente: veinte filas
+   * completas para contar hasta dos, en cada arranque.
+   */
+  sessionsToday: number;
 }
 
 /** Elemento de `members[]` en `GET /group` (RF-6.5, SPEC-07 §9). */

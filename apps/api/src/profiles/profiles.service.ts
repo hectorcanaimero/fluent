@@ -2,6 +2,8 @@ import { Injectable } from '@nestjs/common';
 import { INTERESTS } from '../content/index.js';
 import { CredentialsRepository } from '../credentials/credentials.repository.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
+import { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
+import { startOfUserDay } from '../sessions/user-day.js';
 import { PendingActionsService } from './pending-actions.service.js';
 import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper.js';
 import { ProfilesRepository } from './profiles.repository.js';
@@ -25,19 +27,32 @@ export class ProfilesService {
     // `pendingActions` (SPEC-02 §4.1): hoy solo el aviso que deja el job
     // `weekly-summary` de PR-05 en Redis (PEND-76).
     private readonly pendingActions: PendingActionsService,
+    // `sessionsToday`: el mismo repositorio que usan progreso y social.
+    private readonly sessionsQuery: SessionsQueryRepository,
   ) {}
 
   async getMe(userId: string): Promise<MeDto> {
     const profile = await this.profilesRepository.ensureProfile(userId);
 
-    const [group, providers, modelPreference, activeSessionId, pendingActions] =
-      await Promise.all([
-        profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
-        this.credentialsRepository.listStatuses(userId),
-        this.profilesRepository.getModelPreference(userId),
-        this.profilesRepository.getActiveSessionId(userId),
-        this.pendingActions.listFor(userId),
-      ]);
+    // El día arranca en la zona del usuario, no en UTC: si no, a alguien en
+    // Buenos Aires se le reiniciaría el contador a las 21:00 de su tarde.
+    const since = startOfUserDay(profile.timezone).toISOString();
+
+    const [
+      group,
+      providers,
+      modelPreference,
+      activeSessionId,
+      pendingActions,
+      sessionsToday,
+    ] = await Promise.all([
+      profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
+      this.credentialsRepository.listStatuses(userId),
+      this.profilesRepository.getModelPreference(userId),
+      this.profilesRepository.getActiveSessionId(userId),
+      this.pendingActions.listFor(userId),
+      this.sessionsQuery.countValidSessionsSince(userId, since),
+    ]);
 
     return {
       profile: toProfileDto(profile),
@@ -48,6 +63,7 @@ export class ProfilesService {
       activeSessionId,
       interestsCatalog: INTERESTS_CATALOG_IDS,
       pendingActions,
+      sessionsToday,
     };
   }
 

@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/group_data.dart';
 
@@ -29,7 +30,10 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   Future<GroupScreenData> _load() async {
     final api = ref.read(fluentApiProvider);
-    final results = await Future.wait([api.getLeaderboard(), api.getChallenges()]);
+    final results = await Future.wait([
+      api.getLeaderboard(),
+      api.getChallenges(),
+    ]);
     WeeklySummaryResult? weeklySummary;
     try {
       weeklySummary = await api.getWeeklySummary();
@@ -81,88 +85,110 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         child: FutureBuilder<GroupScreenData>(
           future: _future,
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final data = snapshot.data!;
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
-              children: [
-                Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        l10n.groupLeaderboardTitle,
-                        style: Theme.of(context).textTheme.titleMedium,
+            return AsyncBody<GroupScreenData>(
+              snapshot: snapshot,
+              onRetry: () => setState(() {
+                _future = _load();
+              }),
+              builder: (data) => ListView(
+                padding: const EdgeInsets.all(AppSpacing.screenPad),
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: Text(
+                          l10n.groupLeaderboardTitle,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
                       ),
-                    ),
-                    Row(
-                      children: [
-                        const Icon(Icons.local_fire_department, color: AppColors.accent, size: 18),
-                        const SizedBox(width: 4),
-                        Text(l10n.groupStreak(data.leaderboard.groupStreak)),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                for (var i = 0; i < data.leaderboard.rows.length; i++)
-                  _LeaderboardRowTile(key: Key('leaderboard_row_$i'), rank: i + 1, row: data.leaderboard.rows[i]),
-                const SizedBox(height: AppSpacing.xl),
-                if (data.challenges.isNotEmpty) ...[
-                  Text(l10n.groupChallengesTitle, style: Theme.of(context).textTheme.titleMedium),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.local_fire_department,
+                            color: AppColors.accent,
+                            size: 18,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(l10n.groupStreak(data.leaderboard.groupStreak)),
+                        ],
+                      ),
+                    ],
+                  ),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final challenge in data.challenges)
+                  for (var i = 0; i < data.leaderboard.rows.length; i++)
+                    _LeaderboardRowTile(
+                      key: Key('leaderboard_row_$i'),
+                      rank: i + 1,
+                      row: data.leaderboard.rows[i],
+                    ),
+                  const SizedBox(height: AppSpacing.xl),
+                  if (data.challenges.isNotEmpty) ...[
+                    Text(
+                      l10n.groupChallengesTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final challenge in data.challenges)
+                      Container(
+                        key: Key('challenge_${challenge.sessionId}'),
+                        margin: const EdgeInsets.only(bottom: AppSpacing.sm),
+                        padding: const EdgeInsets.all(AppSpacing.md),
+                        decoration: BoxDecoration(
+                          color: AppColors.primarySoft,
+                          borderRadius: BorderRadius.circular(AppRadius.md),
+                        ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                l10n.groupChallengeText(
+                                  challenge.displayName,
+                                  challenge.topic,
+                                ),
+                              ),
+                            ),
+                            TextButton(
+                              onPressed: _startingChallenge
+                                  ? null
+                                  : () => _acceptChallenge(challenge),
+                              child: Text(l10n.groupChallengeAccept),
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
+                  if (data.weeklySummary != null) ...[
+                    Text(
+                      l10n.groupWeeklySummaryTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
                     Container(
-                      key: Key('challenge_${challenge.sessionId}'),
-                      margin: const EdgeInsets.only(bottom: AppSpacing.sm),
                       padding: const EdgeInsets.all(AppSpacing.md),
                       decoration: BoxDecoration(
-                        color: AppColors.primarySoft,
+                        color: AppColors.surface,
                         borderRadius: BorderRadius.circular(AppRadius.md),
+                        border: Border.all(color: AppColors.border),
                       ),
-                      child: Row(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          Expanded(
-                            child: Text(
-                              l10n.groupChallengeText(challenge.displayName, challenge.topic),
-                            ),
-                          ),
-                          TextButton(
-                            onPressed: _startingChallenge ? null : () => _acceptChallenge(challenge),
-                            child: Text(l10n.groupChallengeAccept),
+                          Text(data.weeklySummary!.text),
+                          const SizedBox(height: AppSpacing.md),
+                          ElevatedButton.icon(
+                            key: const Key('group_share_button'),
+                            onPressed: () =>
+                                _shareWeeklySummary(data.weeklySummary!.text),
+                            icon: const Icon(Icons.share),
+                            label: Text(l10n.groupShareButton),
                           ),
                         ],
                       ),
                     ),
-                  const SizedBox(height: AppSpacing.xl),
+                  ],
                 ],
-                if (data.weeklySummary != null) ...[
-                  Text(l10n.groupWeeklySummaryTitle, style: Theme.of(context).textTheme.titleMedium),
-                  const SizedBox(height: AppSpacing.sm),
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.md),
-                    decoration: BoxDecoration(
-                      color: AppColors.surface,
-                      borderRadius: BorderRadius.circular(AppRadius.md),
-                      border: Border.all(color: AppColors.border),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        Text(data.weeklySummary!.text),
-                        const SizedBox(height: AppSpacing.md),
-                        ElevatedButton.icon(
-                          key: const Key('group_share_button'),
-                          onPressed: () => _shareWeeklySummary(data.weeklySummary!.text),
-                          icon: const Icon(Icons.share),
-                          label: Text(l10n.groupShareButton),
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              ],
+              ),
             );
           },
         ),
@@ -185,10 +211,13 @@ class _LeaderboardRowTile extends StatelessWidget {
         children: [
           SizedBox(
             width: 28,
-            child:
-                rank == 1
-                    ? const Icon(Icons.emoji_events, color: AppColors.gold, size: 20)
-                    : Text('$rank', textAlign: TextAlign.center),
+            child: rank == 1
+                ? const Icon(
+                    Icons.emoji_events,
+                    color: AppColors.gold,
+                    size: 20,
+                  )
+                : Text('$rank', textAlign: TextAlign.center),
           ),
           Expanded(child: Text(row.displayName)),
           Text('${row.xpWeek} XP'),

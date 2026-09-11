@@ -140,6 +140,24 @@ abstract class AppLocalizations {
   /// **'Muy pronto'**
   String get comingSoonTitle;
 
+  /// No description provided for @commonLoadErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar esto'**
+  String get commonLoadErrorTitle;
+
+  /// No description provided for @commonLoadErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá tu conexión e intentá de nuevo.'**
+  String get commonLoadErrorBody;
+
+  /// No description provided for @commonRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get commonRetry;
+
   /// No description provided for @formFieldRequired.
   ///
   /// In es, this message translates to:
@@ -1087,6 +1105,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos enviar tu mensaje. Probá de nuevo.'**
   String get conversationSendErrorGeneric;
+
+  /// No description provided for @conversationBootErrorBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get conversationBootErrorBack;
 
   /// No description provided for @conversationMicUnavailableTitle.
   ///

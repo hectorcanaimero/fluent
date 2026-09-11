@@ -42,6 +42,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   final _scrollController = ScrollController();
 
   bool _loading = true;
+  bool _bootError = false;
   String? _sessionTopic;
   String _partialText = '';
   double _ttsRate = 1.0;
@@ -79,28 +80,40 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Future<void> _bootstrap() async {
-    final api = ref.read(fluentApiProvider);
-    final speech = _speech;
-    final tts = _tts;
-
-    await tts.setLanguage('en-US');
-    _micAvailable = await speech.initialize();
-    if (_micAvailable) {
-      _micHasEnUsLocale = await speech.hasLocale('en_US');
-    }
-
-    final detail = await api.getSession(widget.sessionId);
-    if (!mounted) return;
     setState(() {
-      _sessionTopic = detail.session.topic;
-      _messages.addAll(
-        detail.turns.map(
-          (t) => ChatMessage(role: t.role == 'user' ? 'user' : 'assistant', text: t.text),
-        ),
-      );
-      _loading = false;
+      _loading = true;
+      _bootError = false;
     });
-    _startTimer();
+    try {
+      final api = ref.read(fluentApiProvider);
+      final speech = _speech;
+      final tts = _tts;
+
+      await tts.setLanguage('en-US');
+      _micAvailable = await speech.initialize();
+      if (_micAvailable) {
+        _micHasEnUsLocale = await speech.hasLocale('en_US');
+      }
+
+      final detail = await api.getSession(widget.sessionId);
+      if (!mounted) return;
+      setState(() {
+        _sessionTopic = detail.session.topic;
+        _messages.addAll(
+          detail.turns.map(
+            (t) => ChatMessage(role: t.role == 'user' ? 'user' : 'assistant', text: t.text),
+          ),
+        );
+        _loading = false;
+      });
+      _startTimer();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _bootError = true;
+      });
+    }
   }
 
   void _startTimer() {
@@ -447,6 +460,44 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_bootError) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.commonLoadErrorTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.commonLoadErrorBody,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton(
+                  key: const Key('conversation_boot_error_retry'),
+                  onPressed: _bootstrap,
+                  child: Text(l10n.commonRetry),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  key: const Key('conversation_boot_error_back'),
+                  onPressed: () => context.go('/'),
+                  child: Text(l10n.conversationBootErrorBack),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(

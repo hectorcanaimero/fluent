@@ -31,6 +31,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get comingSoonTitle => 'Muy pronto';
 
   @override
+  String get commonLoadErrorTitle => 'No pudimos cargar esto';
+
+  @override
+  String get commonLoadErrorBody => 'Revisá tu conexión e intentá de nuevo.';
+
+  @override
+  String get commonRetry => 'Reintentar';
+
+  @override
   String get formFieldRequired => 'Este campo es obligatorio.';
 
   @override
@@ -557,6 +566,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get conversationSendErrorGeneric =>
       'No pudimos enviar tu mensaje. Probá de nuevo.';
+
+  @override
+  String get conversationBootErrorBack => 'Volver';
 
   @override
   String get conversationMicUnavailableTitle => 'No hay reconocimiento de voz';

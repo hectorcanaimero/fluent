@@ -1,13 +1,15 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// Contenedor con la Tab Bar Home · Practicar · Grupo · Progreso
 /// (docs/design/README.md). "Practicar" no tiene contenido propio: abre el
 /// flujo de nueva sesión. El perfil y los ajustes se abren desde el avatar
 /// en la cabecera de Home, no desde esta barra.
-class HomeShell extends StatelessWidget {
+class HomeShell extends ConsumerWidget {
   const HomeShell({super.key, required this.child});
 
   final Widget child;
@@ -21,7 +23,7 @@ class HomeShell extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
     final l10n = AppLocalizations.of(context);
     final location = GoRouterState.of(context).matchedLocation;
     final currentIndex = _indexForLocation(location);
@@ -32,6 +34,18 @@ class HomeShell extends StatelessWidget {
         selectedIndex: currentIndex,
         onDestinationSelected: (index) {
           if (index == 1) {
+            // MAL-13: sin proveedor activo, "Practicar" manda a conectar
+            // uno en vez de abrir el selector de temas (que igual fallaría
+            // al intentar crear la sesión).
+            final canPractice =
+                ref.read(canPracticeProvider).valueOrNull ?? true;
+            if (!canPractice) {
+              context.go('/providers');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text(l10n.homeNeedProviderHint)),
+              );
+              return;
+            }
             context.push(_tabPaths[1]);
             return;
           }

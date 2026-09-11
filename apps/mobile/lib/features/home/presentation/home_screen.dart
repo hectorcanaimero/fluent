@@ -43,14 +43,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
     final group = me.group != null ? results[4] as GroupResponse : null;
 
     final today = DateTime.now();
-    final sessionsToday =
-        sessions.items.where((s) {
-          final started = DateTime.tryParse(s.startedAt);
-          return started != null &&
-              started.year == today.year &&
-              started.month == today.month &&
-              started.day == today.day;
-        }).length;
+    final sessionsToday = sessions.items.where((s) {
+      final started = DateTime.tryParse(s.startedAt);
+      return started != null &&
+          started.year == today.year &&
+          started.month == today.month &&
+          started.day == today.day;
+    }).length;
 
     return HomeData(
       me: me,
@@ -63,6 +62,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 
   void _reload() {
+    ref.invalidate(canPracticeProvider);
     setState(() {
       _future = _load();
     });
@@ -71,17 +71,31 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// [kind] es siempre el `kind` real de `POST /sessions` (SPEC-04 §3.2):
   /// `'boss'` para el botón de reto y `'free_topic'` (con [topic]) para un
   /// tema rápido de la Home.
+  ///
+  /// MAL-13: si no hay proveedor activo, manda a conectar uno en vez de
+  /// intentar crear la sesión (que siempre fallaría con un snackbar
+  /// genérico). El CTA principal ya se deshabilita en ese caso, pero los
+  /// chips de temas rápidos pasan por acá también.
   Future<void> _startSession({required String kind, String? topic}) async {
     final l10n = AppLocalizations.of(context);
+    final data = await _future;
+    if (!mounted) return;
+    if (!data.canPractice) {
+      context.push('/providers');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
+      return;
+    }
     try {
-      final result = await ref.read(fluentApiProvider).createSession(kind: kind, topic: topic);
+      final result = await ref
+          .read(fluentApiProvider)
+          .createSession(kind: kind, topic: topic);
       if (!mounted) return;
       context.push('/session/${result.session.id}');
     } catch (_) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.homeLoadError)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.homeLoadError)));
     }
   }
 
@@ -144,7 +158,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                   const SizedBox(height: AppSpacing.xl),
                   _QuickTopics(
                     data: data,
-                    onTopic: (topic) => _startSession(kind: 'free_topic', topic: topic),
+                    onTopic: (topic) =>
+                        _startSession(kind: 'free_topic', topic: topic),
                   ),
                 ],
               ),
@@ -165,17 +180,19 @@ class _HeaderRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final hour = DateTime.now().hour;
-    final greeting =
-        hour < 12
-            ? l10n.homeGreetingMorning(data.displayName)
-            : hour < 19
-            ? l10n.homeGreetingAfternoon(data.displayName)
-            : l10n.homeGreetingEvening(data.displayName);
+    final greeting = hour < 12
+        ? l10n.homeGreetingMorning(data.displayName)
+        : hour < 19
+        ? l10n.homeGreetingAfternoon(data.displayName)
+        : l10n.homeGreetingEvening(data.displayName);
 
     return Row(
       children: [
         Expanded(
-          child: Text(greeting, style: Theme.of(context).textTheme.headlineMedium),
+          child: Text(
+            greeting,
+            style: Theme.of(context).textTheme.headlineMedium,
+          ),
         ),
         InkWell(
           key: const Key('home_avatar_button'),
@@ -185,8 +202,13 @@ class _HeaderRow extends StatelessWidget {
             radius: 22,
             backgroundColor: AppColors.primarySoft,
             child: Text(
-              data.displayName.isNotEmpty ? data.displayName[0].toUpperCase() : '?',
-              style: const TextStyle(fontWeight: FontWeight.w700, color: AppColors.primaryDark),
+              data.displayName.isNotEmpty
+                  ? data.displayName[0].toUpperCase()
+                  : '?',
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: AppColors.primaryDark,
+              ),
             ),
           ),
         ),
@@ -212,7 +234,11 @@ class _StreakCard extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.local_fire_department, color: AppColors.accent, size: 32),
+          const Icon(
+            Icons.local_fire_department,
+            color: AppColors.accent,
+            size: 32,
+          ),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Column(
@@ -223,7 +249,10 @@ class _StreakCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 if (streak > 0)
-                  Text(l10n.homeGraceDayAvailable, style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    l10n.homeGraceDayAvailable,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
               ],
             ),
           ),
@@ -244,8 +273,9 @@ class _LevelCard extends StatelessWidget {
     final level = data.progress.level;
     final min = level.min;
     final next = level.next ?? (min + 1);
-    final progressValue =
-        next > min ? ((data.progress.xp - min) / (next - min)).clamp(0.0, 1.0) : 1.0;
+    final progressValue = next > min
+        ? ((data.progress.xp - min) / (next - min)).clamp(0.0, 1.0)
+        : 1.0;
     final remaining = (next - data.progress.xp).clamp(0, next);
 
     return Container(
@@ -270,7 +300,10 @@ class _LevelCard extends StatelessWidget {
             ),
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(l10n.homeXpToNextLevel(remaining), style: Theme.of(context).textTheme.bodySmall),
+          Text(
+            l10n.homeXpToNextLevel(remaining),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
         ],
       ),
     );
@@ -293,7 +326,10 @@ class _NoProviderBanner extends StatelessWidget {
           const Icon(Icons.warning_amber_rounded, color: AppColors.gold),
           const SizedBox(width: AppSpacing.md),
           Expanded(
-            child: Text(l10n.homeNoProviderBanner, style: Theme.of(context).textTheme.bodyMedium),
+            child: Text(
+              l10n.homeNoProviderBanner,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
           ),
           TextButton(
             onPressed: () => context.push('/providers'),
@@ -337,7 +373,11 @@ class _PendingActionBanner extends StatelessWidget {
 }
 
 class _PrimaryCta extends StatelessWidget {
-  const _PrimaryCta({required this.data, required this.onPractice, required this.onBoss});
+  const _PrimaryCta({
+    required this.data,
+    required this.onPractice,
+    required this.onBoss,
+  });
 
   final HomeData data;
   final VoidCallback onPractice;
@@ -346,7 +386,7 @@ class _PrimaryCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final blocked = !data.hasActiveProvider;
+    final blocked = !data.canPractice;
     if (data.suggestions.bossPending) {
       return Column(
         children: [
@@ -406,7 +446,8 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final members = [...data.group!.members]..sort((a, b) => b.xp.compareTo(a.xp));
+    final members = [...data.group!.members]
+      ..sort((a, b) => b.xp.compareTo(a.xp));
     final top3 = members.take(3).toList();
 
     return Container(

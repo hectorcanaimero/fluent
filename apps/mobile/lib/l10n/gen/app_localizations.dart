@@ -770,6 +770,12 @@ abstract class AppLocalizations {
   /// **'Conectá este proveedor para usarlo'**
   String get providersModelProviderDisabledHint;
 
+  /// No description provided for @homeNeedProviderHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectá un proveedor para poder practicar'**
+  String get homeNeedProviderHint;
+
   /// No description provided for @homeGreetingMorning.
   ///
   /// In es, this message translates to:

@@ -368,6 +368,9 @@ class AppLocalizationsPt extends AppLocalizations {
       'Conecte esse provedor para usá-lo';
 
   @override
+  String get homeNeedProviderHint => 'Conecte um provedor para poder praticar';
+
+  @override
   String homeGreetingMorning(String name) {
     return 'Bom dia, $name';
   }

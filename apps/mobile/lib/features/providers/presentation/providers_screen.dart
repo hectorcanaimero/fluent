@@ -49,6 +49,9 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
   }
 
   void _reload() {
+    // MAL-13: mantiene fresco el `canPracticeProvider` que consulta la
+    // pestaña Practicar de Home al conectar/desconectar un proveedor.
+    ref.invalidate(canPracticeProvider);
     setState(() {
       _future = _load();
     });

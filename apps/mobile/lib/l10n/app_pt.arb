@@ -112,6 +112,7 @@
   "providersModelEstimateFree": "Grátis",
   "providersModelEstimatePaid": "≈ {amount} USD por sessão",
   "providersModelProviderDisabledHint": "Conecte esse provedor para usá-lo",
+  "homeNeedProviderHint": "Conecte um provedor para poder praticar",
   "homeGreetingMorning": "Bom dia, {name}",
   "homeGreetingAfternoon": "Boa tarde, {name}",
   "homeGreetingEvening": "Boa noite, {name}",

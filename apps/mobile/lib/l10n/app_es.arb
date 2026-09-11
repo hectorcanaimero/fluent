@@ -127,6 +127,7 @@
     }
   },
   "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo",
+  "homeNeedProviderHint": "Conectá un proveedor para poder practicar",
   "homeGreetingMorning": "Buen día, {name}",
   "@homeGreetingMorning": {
     "placeholders": {

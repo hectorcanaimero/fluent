@@ -98,10 +98,21 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
   return FlutterLocalNotificationsReminderService();
 });
 
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
-      return AuthController(
-        tokenStore: ref.watch(tokenStoreProvider),
-        api: ref.watch(fluentApiProvider),
-      );
-    });
+/// MAL-13: si se puede empezar una sesión ahora mismo (hay al menos un
+/// proveedor activo). Fuente única para el CTA de Home, sus chips de
+/// temas rápidos y la pestaña Practicar de `HomeShell`, que antes lo
+/// derivaban cada uno por su cuenta y quedaban inconsistentes. Se
+/// invalida al conectar/desconectar un proveedor (`ProvidersScreen`).
+final canPracticeProvider = FutureProvider<bool>((ref) async {
+  final me = await ref.watch(fluentApiProvider).getMe();
+  return me.providers.any((p) => p.status == 'active');
+});
+
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      tokenStore: ref.watch(tokenStoreProvider),
+      api: ref.watch(fluentApiProvider),
+    );
+  },
+);

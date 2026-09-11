@@ -320,6 +320,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         _state = ConvState.speaking;
       });
       _scrollToBottom();
+      await _tts.setSpeechRate(_ttsRate);
       await _tts.speak(result.reply);
       if (!mounted) return;
       if (result.unavailable && _unavailableCount >= 3) {

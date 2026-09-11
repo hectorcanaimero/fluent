@@ -113,7 +113,7 @@ abstract class AppLocalizations {
   /// No description provided for @tabHome.
   ///
   /// In es, this message translates to:
-  /// **'Home'**
+  /// **'Inicio'**
   String get tabHome;
 
   /// No description provided for @tabPractice.
@@ -311,19 +311,19 @@ abstract class AppLocalizations {
   /// No description provided for @loginBenefit1.
   ///
   /// In es, this message translates to:
-  /// **'Conversaciones reales con un tutor de IA'**
+  /// **'Un tutor que se acuerda de vos: de tu trabajo, tu viaje, tu entrevista'**
   String get loginBenefit1;
 
   /// No description provided for @loginBenefit2.
   ///
   /// In es, this message translates to:
-  /// **'Hablá de las noticias de hoy, a tu manera'**
+  /// **'Practicá con tus amigos, no con extraños: ranking y desafíos del grupo'**
   String get loginBenefit2;
 
   /// No description provided for @loginBenefit3.
   ///
   /// In es, this message translates to:
-  /// **'Construí una racha que se sostiene'**
+  /// **'10 minutos, dos veces al día, con tu propia cuenta de IA gratis'**
   String get loginBenefit3;
 
   /// No description provided for @loginGetStartedButton.
@@ -463,6 +463,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Continuar sin grupo por ahora'**
   String get registerInvitationContinueButton;
+
+  /// No description provided for @loginEmailInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá un email válido.'**
+  String get loginEmailInvalid;
+
+  /// No description provided for @loginShowPassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Mostrar contraseña'**
+  String get loginShowPassword;
+
+  /// No description provided for @loginHidePassword.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocultar contraseña'**
+  String get loginHidePassword;
+
+  /// No description provided for @registerErrorInvalidData.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.'**
+  String get registerErrorInvalidData;
+
+  /// No description provided for @notFoundTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa pantalla no existe'**
+  String get notFoundTitle;
+
+  /// No description provided for @notFoundBody.
+  ///
+  /// In es, this message translates to:
+  /// **'El enlace que abriste no lleva a ningún lado.'**
+  String get notFoundBody;
+
+  /// No description provided for @notFoundGoHome.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir al inicio'**
+  String get notFoundGoHome;
 
   /// No description provided for @onboardingContinueButton.
   ///
@@ -659,7 +701,7 @@ abstract class AppLocalizations {
   /// No description provided for @interestCarsMotor.
   ///
   /// In es, this message translates to:
-  /// **'Coches y motor'**
+  /// **'Autos y motor'**
   String get interestCarsMotor;
 
   /// No description provided for @interestFashion.

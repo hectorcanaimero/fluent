@@ -1,11 +1,13 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import 'theme.dart';
+
+import '../l10n/gen/app_localizations.dart';
+
 import '../core/api/models.dart';
 import '../core/providers.dart';
-import '../core/widgets/placeholder_screen.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/auth/presentation/login_screen.dart';
 import '../features/auth/presentation/register_screen.dart';
@@ -147,6 +149,42 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
     ],
-    errorBuilder: (context, state) => const PlaceholderScreen(title: 'Fluent'),
+    errorBuilder: (context, state) => const _NotFoundScreen(),
   );
 });
+
+/// Ruta desconocida (MEJ-11): antes era un `PlaceholderScreen` sin salida.
+class _NotFoundScreen extends StatelessWidget {
+  const _NotFoundScreen();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Scaffold(
+      body: SafeArea(
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.screenPad),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Text(
+                l10n.notFoundTitle,
+                style: Theme.of(context).textTheme.headlineSmall,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              Text(l10n.notFoundBody, textAlign: TextAlign.center),
+              const SizedBox(height: AppSpacing.xl),
+              ElevatedButton(
+                key: const Key('not_found_go_home'),
+                onPressed: () => context.go('/'),
+                child: Text(l10n.notFoundGoHome),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}

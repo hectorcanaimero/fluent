@@ -7,6 +7,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../core/storage/token_store.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../domain/email_validator.dart';
 
 /// Registro con código de invitación (SPEC-06 §3 y §6). Primero crea la
 /// cuenta en InsForge y hace login; recién después intenta canjear el
@@ -31,6 +32,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
   final _codeController = TextEditingController();
 
   bool _submitting = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   /// No nulo cuando la cuenta ya se creó pero el código todavía no se
@@ -67,8 +69,15 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       await ref.read(tokenStoreProvider).write(tokens);
       setState(() => _pendingTokens = tokens);
       await _redeemCode(tokens);
-    } on ApiException catch (_) {
-      setState(() => _errorMessage = l10n.registerErrorGeneric);
+    } on ApiException catch (e) {
+      // 400/409/422 de InsForge: email ya registrado o contraseña corta (MEJ-06).
+      setState(
+        () => _errorMessage = e.code == ApiErrorCode.validation
+            ? l10n.registerErrorInvalidData
+            : l10n.registerErrorGeneric,
+      );
+    } catch (_) {
+      if (mounted) setState(() => _errorMessage = l10n.registerErrorGeneric);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -129,6 +138,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           TextFormField(
             key: const Key('register_name_field'),
             controller: _nameController,
+            autofillHints: const [AutofillHints.name],
+            textInputAction: TextInputAction.next,
+            textCapitalization: TextCapitalization.words,
             decoration: InputDecoration(labelText: l10n.registerNameLabel),
             validator:
                 (v) => (v == null || v.trim().isEmpty) ? l10n.formFieldRequired : null,
@@ -138,16 +150,38 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             key: const Key('register_email_field'),
             controller: _emailController,
             keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+            textInputAction: TextInputAction.next,
+            autocorrect: false,
             decoration: InputDecoration(labelText: l10n.registerEmailLabel),
-            validator:
-                (v) => (v == null || v.trim().isEmpty) ? l10n.formFieldRequired : null,
+            validator: (v) {
+              if (v == null || v.trim().isEmpty) return l10n.formFieldRequired;
+              return isValidEmail(v) ? null : l10n.loginEmailInvalid;
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           TextFormField(
             key: const Key('register_password_field'),
             controller: _passwordController,
-            obscureText: true,
-            decoration: InputDecoration(labelText: l10n.registerPasswordLabel),
+            obscureText: _obscurePassword,
+            autofillHints: const [AutofillHints.newPassword],
+            textInputAction: TextInputAction.next,
+            decoration: InputDecoration(
+              labelText: l10n.registerPasswordLabel,
+              suffixIcon: IconButton(
+                key: const Key('register_toggle_password'),
+                tooltip: _obscurePassword
+                    ? l10n.loginShowPassword
+                    : l10n.loginHidePassword,
+                icon: Icon(
+                  _obscurePassword
+                      ? Icons.visibility_outlined
+                      : Icons.visibility_off_outlined,
+                ),
+                onPressed: () =>
+                    setState(() => _obscurePassword = !_obscurePassword),
+              ),
+            ),
             validator:
                 (v) => (v == null || v.isEmpty) ? l10n.formFieldRequired : null,
           ),
@@ -156,6 +190,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             key: const Key('register_code_field'),
             controller: _codeController,
             textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
             decoration: InputDecoration(labelText: l10n.registerInvitationCodeLabel),
             validator:
                 (v) => (v == null || v.trim().isEmpty) ? l10n.formFieldRequired : null,
@@ -201,6 +236,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             key: const Key('register_retry_code_field'),
             controller: _codeController,
             textCapitalization: TextCapitalization.characters,
+            textInputAction: TextInputAction.done,
             decoration: InputDecoration(labelText: l10n.registerInvitationCodeLabel),
             validator:
                 (v) => (v == null || v.trim().isEmpty) ? l10n.formFieldRequired : null,

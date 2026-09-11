@@ -125,13 +125,16 @@ class AppLocalizationsPt extends AppLocalizations {
       'Fluent é seu coach pessoal de conversação. Duas sessões curtas por dia, sobre temas que você realmente gosta.';
 
   @override
-  String get loginBenefit1 => 'Conversas reais com um tutor de IA';
+  String get loginBenefit1 =>
+      'Um tutor que lembra de você: do seu trabalho, da sua viagem, da sua entrevista';
 
   @override
-  String get loginBenefit2 => 'Fale sobre as notícias de hoje, do seu jeito';
+  String get loginBenefit2 =>
+      'Pratique com seus amigos, não com estranhos: ranking e desafios do grupo';
 
   @override
-  String get loginBenefit3 => 'Construa uma sequência que realmente se mantém';
+  String get loginBenefit3 =>
+      '10 minutos, duas vezes por dia, com sua própria conta de IA grátis';
 
   @override
   String get loginGetStartedButton => 'Criar conta';
@@ -209,6 +212,28 @@ class AppLocalizationsPt extends AppLocalizations {
       'Continuar sem grupo por enquanto';
 
   @override
+  String get loginEmailInvalid => 'Digite um e-mail válido.';
+
+  @override
+  String get loginShowPassword => 'Mostrar senha';
+
+  @override
+  String get loginHidePassword => 'Ocultar senha';
+
+  @override
+  String get registerErrorInvalidData =>
+      'Confira o e-mail e a senha: pode ser que esse e-mail já esteja cadastrado ou que a senha seja curta demais.';
+
+  @override
+  String get notFoundTitle => 'Essa tela não existe';
+
+  @override
+  String get notFoundBody => 'O link que você abriu não leva a lugar nenhum.';
+
+  @override
+  String get notFoundGoHome => 'Ir para o início';
+
+  @override
   String get onboardingContinueButton => 'Continuar';
 
   @override
@@ -274,7 +299,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interestTechnology => 'Tecnologia';
 
   @override
-  String get interestVideogames => 'Videojogos';
+  String get interestVideogames => 'Videogames';
 
   @override
   String get interestMoviesSeries => 'Cinema e séries';

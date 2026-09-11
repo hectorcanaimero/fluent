@@ -16,7 +16,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get splashLoading => 'Cargando…';
 
   @override
-  String get tabHome => 'Home';
+  String get tabHome => 'Inicio';
 
   @override
   String get tabPractice => 'Practicar';
@@ -124,13 +124,16 @@ class AppLocalizationsEs extends AppLocalizations {
       'Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.';
 
   @override
-  String get loginBenefit1 => 'Conversaciones reales con un tutor de IA';
+  String get loginBenefit1 =>
+      'Un tutor que se acuerda de vos: de tu trabajo, tu viaje, tu entrevista';
 
   @override
-  String get loginBenefit2 => 'Hablá de las noticias de hoy, a tu manera';
+  String get loginBenefit2 =>
+      'Practicá con tus amigos, no con extraños: ranking y desafíos del grupo';
 
   @override
-  String get loginBenefit3 => 'Construí una racha que se sostiene';
+  String get loginBenefit3 =>
+      '10 minutos, dos veces al día, con tu propia cuenta de IA gratis';
 
   @override
   String get loginGetStartedButton => 'Crear cuenta';
@@ -206,6 +209,28 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get registerInvitationContinueButton =>
       'Continuar sin grupo por ahora';
+
+  @override
+  String get loginEmailInvalid => 'Ingresá un email válido.';
+
+  @override
+  String get loginShowPassword => 'Mostrar contraseña';
+
+  @override
+  String get loginHidePassword => 'Ocultar contraseña';
+
+  @override
+  String get registerErrorInvalidData =>
+      'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.';
+
+  @override
+  String get notFoundTitle => 'Esa pantalla no existe';
+
+  @override
+  String get notFoundBody => 'El enlace que abriste no lleva a ningún lado.';
+
+  @override
+  String get notFoundGoHome => 'Ir al inicio';
 
   @override
   String get onboardingContinueButton => 'Continuar';
@@ -312,7 +337,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interestArtificialIntelligence => 'Inteligencia artificial';
 
   @override
-  String get interestCarsMotor => 'Coches y motor';
+  String get interestCarsMotor => 'Autos y motor';
 
   @override
   String get interestFashion => 'Moda';

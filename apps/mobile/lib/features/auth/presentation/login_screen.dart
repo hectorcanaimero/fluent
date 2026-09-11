@@ -6,6 +6,7 @@ import '../../../app/theme.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../domain/email_validator.dart';
 
 /// Pantalla de bienvenida (Pen "01 Onboarding · Welcome") con el formulario
 /// de login agregado en T2. El CTA primario lleva a `/register` (la app es
@@ -25,6 +26,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   bool _showForm = false;
   bool _submitting = false;
+  bool _obscurePassword = true;
   String? _errorMessage;
 
   @override
@@ -56,6 +58,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 ? l10n.loginErrorInvalidCredentials
                 : l10n.loginErrorGeneric;
       });
+    } catch (_) {
+      // Fallo de red o del keystore fuera del mapeo a ApiException (MEJ-06):
+      // antes el spinner desaparecía sin mensaje.
+      if (mounted) setState(() => _errorMessage = l10n.loginErrorGeneric);
     } finally {
       if (mounted) setState(() => _submitting = false);
     }
@@ -114,19 +120,42 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                         key: const Key('login_email_field'),
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
+                        autofillHints: const [AutofillHints.email],
+                        textInputAction: TextInputAction.next,
+                        autocorrect: false,
                         decoration: InputDecoration(labelText: l10n.loginEmailLabel),
-                        validator:
-                            (value) =>
-                                (value == null || value.trim().isEmpty)
-                                    ? l10n.formFieldRequired
-                                    : null,
+                        validator: (value) {
+                          if (value == null || value.trim().isEmpty) {
+                            return l10n.formFieldRequired;
+                          }
+                          return isValidEmail(value) ? null : l10n.loginEmailInvalid;
+                        },
                       ),
                       const SizedBox(height: AppSpacing.md),
                       TextFormField(
                         key: const Key('login_password_field'),
                         controller: _passwordController,
-                        obscureText: true,
-                        decoration: InputDecoration(labelText: l10n.loginPasswordLabel),
+                        obscureText: _obscurePassword,
+                        autofillHints: const [AutofillHints.password],
+                        textInputAction: TextInputAction.done,
+                        onFieldSubmitted: (_) => _submitting ? null : _submit(),
+                        decoration: InputDecoration(
+                          labelText: l10n.loginPasswordLabel,
+                          suffixIcon: IconButton(
+                            key: const Key('login_toggle_password'),
+                            tooltip: _obscurePassword
+                                ? l10n.loginShowPassword
+                                : l10n.loginHidePassword,
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                        ),
                         validator:
                             (value) =>
                                 (value == null || value.isEmpty)

@@ -938,11 +938,17 @@ abstract class AppLocalizations {
   /// **'{count} días de racha'**
   String homeStreakDays(int count);
 
-  /// No description provided for @homeGraceDayAvailable.
+  /// No description provided for @streakGraceAvailable.
   ///
   /// In es, this message translates to:
   /// **'Día de gracia disponible esta semana'**
-  String get homeGraceDayAvailable;
+  String get streakGraceAvailable;
+
+  /// No description provided for @streakGraceUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Gracia usada esta semana: hoy no hay red'**
+  String get streakGraceUsed;
 
   /// No description provided for @homeXpToNextLevel.
   ///
@@ -1165,6 +1171,42 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Escuchando…'**
   String get conversationListeningHint;
+
+  /// No description provided for @conversationListeningSecondsLeft.
+  ///
+  /// In es, this message translates to:
+  /// **'{seconds}s'**
+  String conversationListeningSecondsLeft(int seconds);
+
+  /// No description provided for @conversationThinkingHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pensando…'**
+  String get conversationThinkingHint;
+
+  /// No description provided for @conversationSpeakingHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Hablando…'**
+  String get conversationSpeakingHint;
+
+  /// No description provided for @conversationStopButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Parar'**
+  String get conversationStopButton;
+
+  /// No description provided for @conversationMicButtonSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Micrófono, tocá para hablar'**
+  String get conversationMicButtonSemantics;
+
+  /// No description provided for @conversationMicButtonListeningSemantics.
+  ///
+  /// In es, this message translates to:
+  /// **'Escuchando, tocá para terminar'**
+  String get conversationMicButtonListeningSemantics;
 
   /// No description provided for @conversationEditableHint.
   ///

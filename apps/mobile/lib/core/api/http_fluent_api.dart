@@ -317,6 +317,8 @@ class HttpFluentApi implements FluentApi {
             statusCode: body['statusCode'] as int?,
           ),
         );
+      case 'reset':
+        return const TurnStreamReset();
       default:
         return null;
     }

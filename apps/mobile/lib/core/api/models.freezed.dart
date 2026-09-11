@@ -9536,7 +9536,10 @@ as int,
 /// @nodoc
 mixin _$ProgressResult {
 
- int get xp; LevelInfo get level; int get streak; int get longestStreak; int get sessionsThisWeek; List<CorrectionTrendItem> get correctionsTrend;
+ int get xp; LevelInfo get level; int get streak; int get longestStreak; int get sessionsThisWeek; List<CorrectionTrendItem> get correctionsTrend;/// MAL-27: `"available"` o `"used"` (semana ISO del usuario). La API
+/// todavía no lo manda (lo agrega Opus en esta misma ola) — `null`
+/// cubre esa ausencia; la UI no debe mostrar nada en ese caso.
+ String? get grace;
 /// Create a copy of ProgressResult
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -9550,20 +9553,20 @@ $ProgressResultCopyWith<ProgressResult> get copyWith => _$ProgressResultCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as ProgressResult;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProgressResult&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.level, _this.level) || other.level == _this.level)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.longestStreak, _this.longestStreak) || other.longestStreak == _this.longestStreak)&&(identical(other.sessionsThisWeek, _this.sessionsThisWeek) || other.sessionsThisWeek == _this.sessionsThisWeek)&&const DeepCollectionEquality().equals(other.correctionsTrend, _this.correctionsTrend));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ProgressResult&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.level, _this.level) || other.level == _this.level)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.longestStreak, _this.longestStreak) || other.longestStreak == _this.longestStreak)&&(identical(other.sessionsThisWeek, _this.sessionsThisWeek) || other.sessionsThisWeek == _this.sessionsThisWeek)&&const DeepCollectionEquality().equals(other.correctionsTrend, _this.correctionsTrend)&&(identical(other.grace, _this.grace) || other.grace == _this.grace));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ProgressResult;
-  return Object.hash(runtimeType,_this.xp,_this.level,_this.streak,_this.longestStreak,_this.sessionsThisWeek,const DeepCollectionEquality().hash(_this.correctionsTrend));
+  return Object.hash(runtimeType,_this.xp,_this.level,_this.streak,_this.longestStreak,_this.sessionsThisWeek,const DeepCollectionEquality().hash(_this.correctionsTrend),_this.grace);
 }
 
 @override
 String toString() {
   final _this = this as ProgressResult;
-  return 'ProgressResult(xp: ${_this.xp}, level: ${_this.level}, streak: ${_this.streak}, longestStreak: ${_this.longestStreak}, sessionsThisWeek: ${_this.sessionsThisWeek}, correctionsTrend: ${_this.correctionsTrend})';
+  return 'ProgressResult(xp: ${_this.xp}, level: ${_this.level}, streak: ${_this.streak}, longestStreak: ${_this.longestStreak}, sessionsThisWeek: ${_this.sessionsThisWeek}, correctionsTrend: ${_this.correctionsTrend}, grace: ${_this.grace})';
 }
 
 
@@ -9574,7 +9577,7 @@ abstract mixin class $ProgressResultCopyWith<$Res>  {
   factory $ProgressResultCopyWith(ProgressResult value, $Res Function(ProgressResult) _then) = _$ProgressResultCopyWithImpl;
 @useResult
 $Res call({
- int xp, LevelInfo level, int streak, int longestStreak, int sessionsThisWeek, List<CorrectionTrendItem> correctionsTrend
+ int xp, LevelInfo level, int streak, int longestStreak, int sessionsThisWeek, List<CorrectionTrendItem> correctionsTrend, String? grace
 });
 
 
@@ -9591,7 +9594,7 @@ class _$ProgressResultCopyWithImpl<$Res>
 
 /// Create a copy of ProgressResult
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? xp = null,Object? level = null,Object? streak = null,Object? longestStreak = null,Object? sessionsThisWeek = null,Object? correctionsTrend = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? xp = null,Object? level = null,Object? streak = null,Object? longestStreak = null,Object? sessionsThisWeek = null,Object? correctionsTrend = null,Object? grace = freezed,}) {
   return _then(ProgressResult(
 xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -9599,7 +9602,8 @@ as LevelInfo,streak: null == streak ? _self.streak : streak // ignore: cast_null
 as int,longestStreak: null == longestStreak ? _self.longestStreak : longestStreak // ignore: cast_nullable_to_non_nullable
 as int,sessionsThisWeek: null == sessionsThisWeek ? _self.sessionsThisWeek : sessionsThisWeek // ignore: cast_nullable_to_non_nullable
 as int,correctionsTrend: null == correctionsTrend ? _self.correctionsTrend : correctionsTrend // ignore: cast_nullable_to_non_nullable
-as List<CorrectionTrendItem>,
+as List<CorrectionTrendItem>,grace: freezed == grace ? _self.grace : grace // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 /// Create a copy of ProgressResult
@@ -9693,10 +9697,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend,  String? grace)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ProgressResult() when $default != null:
-return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend);case _:
+return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend,_that.grace);case _:
   return orElse();
 
 }
@@ -9714,10 +9718,10 @@ return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sess
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend,  String? grace)  $default,) {final _that = this;
 switch (_that) {
 case _ProgressResult():
-return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend);case _:
+return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend,_that.grace);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -9734,10 +9738,10 @@ return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sess
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int xp,  LevelInfo level,  int streak,  int longestStreak,  int sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend,  String? grace)?  $default,) {final _that = this;
 switch (_that) {
 case _ProgressResult() when $default != null:
-return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend);case _:
+return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sessionsThisWeek,_that.correctionsTrend,_that.grace);case _:
   return null;
 
 }
@@ -9749,7 +9753,7 @@ return $default(_that.xp,_that.level,_that.streak,_that.longestStreak,_that.sess
 @JsonSerializable()
 
 class _ProgressResult implements ProgressResult {
-  const _ProgressResult({required this.xp, required this.level, required this.streak, required this.longestStreak, required this.sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend = const <CorrectionTrendItem>[]}): _correctionsTrend = correctionsTrend;
+  const _ProgressResult({required this.xp, required this.level, required this.streak, required this.longestStreak, required this.sessionsThisWeek,  List<CorrectionTrendItem> correctionsTrend = const <CorrectionTrendItem>[], this.grace}): _correctionsTrend = correctionsTrend;
   factory _ProgressResult.fromJson(Map<String, dynamic> json) => _$ProgressResultFromJson(json);
 
 @override final  int xp;
@@ -9764,6 +9768,10 @@ class _ProgressResult implements ProgressResult {
   return EqualUnmodifiableListView(_correctionsTrend);
 }
 
+/// MAL-27: `"available"` o `"used"` (semana ISO del usuario). La API
+/// todavía no lo manda (lo agrega Opus en esta misma ola) — `null`
+/// cubre esa ausencia; la UI no debe mostrar nada en ese caso.
+@override final  String? grace;
 
 /// Create a copy of ProgressResult
 /// with the given fields replaced by the non-null parameter values.
@@ -9778,18 +9786,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProgressResult&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.level, level) || other.level == level)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.longestStreak, longestStreak) || other.longestStreak == longestStreak)&&(identical(other.sessionsThisWeek, sessionsThisWeek) || other.sessionsThisWeek == sessionsThisWeek)&&const DeepCollectionEquality().equals(other.correctionsTrend, _correctionsTrend));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ProgressResult&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.level, level) || other.level == level)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.longestStreak, longestStreak) || other.longestStreak == longestStreak)&&(identical(other.sessionsThisWeek, sessionsThisWeek) || other.sessionsThisWeek == sessionsThisWeek)&&const DeepCollectionEquality().equals(other.correctionsTrend, _correctionsTrend)&&(identical(other.grace, grace) || other.grace == grace));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,xp,level,streak,longestStreak,sessionsThisWeek,const DeepCollectionEquality().hash(_correctionsTrend));
+    return Object.hash(runtimeType,xp,level,streak,longestStreak,sessionsThisWeek,const DeepCollectionEquality().hash(_correctionsTrend),grace);
 }
 
 @override
 String toString() {
-    return 'ProgressResult(xp: $xp, level: $level, streak: $streak, longestStreak: $longestStreak, sessionsThisWeek: $sessionsThisWeek, correctionsTrend: $correctionsTrend)';
+    return 'ProgressResult(xp: $xp, level: $level, streak: $streak, longestStreak: $longestStreak, sessionsThisWeek: $sessionsThisWeek, correctionsTrend: $correctionsTrend, grace: $grace)';
 }
 
 
@@ -9800,7 +9808,7 @@ abstract mixin class _$ProgressResultCopyWith<$Res> implements $ProgressResultCo
   factory _$ProgressResultCopyWith(_ProgressResult value, $Res Function(_ProgressResult) _then) = __$ProgressResultCopyWithImpl;
 @override @useResult
 $Res call({
- int xp, LevelInfo level, int streak, int longestStreak, int sessionsThisWeek, List<CorrectionTrendItem> correctionsTrend
+ int xp, LevelInfo level, int streak, int longestStreak, int sessionsThisWeek, List<CorrectionTrendItem> correctionsTrend, String? grace
 });
 
 
@@ -9817,7 +9825,7 @@ class __$ProgressResultCopyWithImpl<$Res>
 
 /// Create a copy of ProgressResult
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? xp = null,Object? level = null,Object? streak = null,Object? longestStreak = null,Object? sessionsThisWeek = null,Object? correctionsTrend = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? xp = null,Object? level = null,Object? streak = null,Object? longestStreak = null,Object? sessionsThisWeek = null,Object? correctionsTrend = null,Object? grace = freezed,}) {
   return _then(_ProgressResult(
 xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -9825,7 +9833,8 @@ as LevelInfo,streak: null == streak ? _self.streak : streak // ignore: cast_null
 as int,longestStreak: null == longestStreak ? _self.longestStreak : longestStreak // ignore: cast_nullable_to_non_nullable
 as int,sessionsThisWeek: null == sessionsThisWeek ? _self.sessionsThisWeek : sessionsThisWeek // ignore: cast_nullable_to_non_nullable
 as int,correctionsTrend: null == correctionsTrend ? _self._correctionsTrend : correctionsTrend // ignore: cast_nullable_to_non_nullable
-as List<CorrectionTrendItem>,
+as List<CorrectionTrendItem>,grace: freezed == grace ? _self.grace : grace // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

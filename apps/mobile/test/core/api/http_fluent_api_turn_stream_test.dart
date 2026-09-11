@@ -137,6 +137,42 @@ void main() {
     expect(done.result.unavailable, isTrue);
   });
 
+  // MAL-22: la API manda `event: reset` (`llm.service.ts`, fallback en
+  // streaming) antes de reintentar el turno con otro modelo. El payload
+  // (`{}`) no lleva datos — es solo la señal de "descartá lo acumulado".
+  test('POST /sessions/:id/turns/stream parsea el evento reset', () async {
+    const sse =
+        'event: token\n'
+        'data: {"text":"Partial"}\n\n'
+        'event: reset\n'
+        'data: {}\n\n'
+        'event: token\n'
+        'data: {"text":"Final"}\n\n'
+        'event: done\n'
+        'data: {"turnIdx":1,"reply":"Final","corrections":[],'
+        '"modelUsed":"openrouter/gpt-4o-mini","degraded":false}\n\n';
+
+    adapter.onPost(
+      '/sessions/session-1/turns/stream',
+      (server) => server.reply(
+        200,
+        sse,
+        headers: {
+          Headers.contentTypeHeader: ['text/event-stream'],
+        },
+      ),
+      data: Matchers.any,
+    );
+
+    final events = await api.sendTurnStream(sessionId: 'session-1', text: 'hi').toList();
+
+    expect(events, hasLength(4));
+    expect(events[0], isA<TurnStreamToken>());
+    expect(events[1], isA<TurnStreamReset>());
+    expect(events[2], isA<TurnStreamToken>());
+    expect(events[3], isA<TurnStreamDone>());
+  });
+
   // PEND-55 de PR-04.md: un error antes del primer evento sale como
   // respuesta JSON normal (SPEC-02 §6), no como evento SSE.
   test(

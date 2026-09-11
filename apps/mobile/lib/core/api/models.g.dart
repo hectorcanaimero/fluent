@@ -572,6 +572,7 @@ _ProgressResult _$ProgressResultFromJson(Map<String, dynamic> json) =>
               )
               .toList() ??
           const <CorrectionTrendItem>[],
+      grace: json['grace'] as String?,
     );
 
 Map<String, dynamic> _$ProgressResultToJson(_ProgressResult instance) =>
@@ -582,6 +583,7 @@ Map<String, dynamic> _$ProgressResultToJson(_ProgressResult instance) =>
       'longestStreak': instance.longestStreak,
       'sessionsThisWeek': instance.sessionsThisWeek,
       'correctionsTrend': instance.correctionsTrend,
+      'grace': instance.grace,
     };
 
 _LeaderboardRow _$LeaderboardRowFromJson(Map<String, dynamic> json) =>

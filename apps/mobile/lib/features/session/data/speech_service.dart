@@ -31,10 +31,14 @@ abstract class SpeechService {
   /// `notListening` sin resultado final) y [onError] los errores del motor
   /// (`error.errorMsg`, por ejemplo `error_no_match` o
   /// `error_speech_timeout`).
+  /// MEJ-04: nivel de volumen del micrófono mientras escucha (típicamente
+  /// entre -2 y 10, no normalizado — ver `speech_to_text`), para pintar un
+  /// anillo/barras de "te estamos escuchando" en vez de un ícono estático.
   Future<void> listen({
     required void Function(String text, bool isFinal) onResult,
     void Function()? onDoneWithoutResult,
     void Function(String errorCode)? onError,
+    void Function(double level)? onSoundLevelChange,
     String localeId = 'en_US',
   });
 
@@ -86,6 +90,7 @@ class SpeechToTextService implements SpeechService {
     required void Function(String text, bool isFinal) onResult,
     void Function()? onDoneWithoutResult,
     void Function(String errorCode)? onError,
+    void Function(double level)? onSoundLevelChange,
     String localeId = 'en_US',
   }) async {
     _onResult = onResult;
@@ -98,6 +103,7 @@ class SpeechToTextService implements SpeechService {
           if (result.finalResult) _finalResultReceived = true;
           _onResult?.call(result.recognizedWords, result.finalResult);
         },
+        onSoundLevelChange: onSoundLevelChange,
         listenOptions: stt.SpeechListenOptions(
           listenMode: stt.ListenMode.dictation,
           partialResults: true,
@@ -144,6 +150,7 @@ class FakeSpeechService implements SpeechService {
   void Function(String text, bool isFinal)? _onResult;
   void Function()? _onDoneWithoutResult;
   void Function(String errorCode)? _onError;
+  void Function(double level)? _onSoundLevelChange;
   bool _listening = false;
   String _lastPartial = '';
 
@@ -162,11 +169,13 @@ class FakeSpeechService implements SpeechService {
     required void Function(String text, bool isFinal) onResult,
     void Function()? onDoneWithoutResult,
     void Function(String errorCode)? onError,
+    void Function(double level)? onSoundLevelChange,
     String localeId = 'en_US',
   }) async {
     _onResult = onResult;
     _onDoneWithoutResult = onDoneWithoutResult;
     _onError = onError;
+    _onSoundLevelChange = onSoundLevelChange;
     _listening = true;
     _lastPartial = '';
   }
@@ -210,4 +219,8 @@ class FakeSpeechService implements SpeechService {
     _listening = false;
     _onError?.call(errorCode);
   }
+
+  /// Helper de test (MEJ-04): simula un cambio en el nivel de volumen del
+  /// micrófono, como lo haría `onSoundLevelChange` de `speech_to_text`.
+  void emitSoundLevel(double level) => _onSoundLevelChange?.call(level);
 }

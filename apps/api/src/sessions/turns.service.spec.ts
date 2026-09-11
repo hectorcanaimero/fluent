@@ -90,14 +90,37 @@ interface FakeSessionsRepoOptions {
   readonly preference?: { provider: 'openrouter' | 'gemini'; model: string } | null;
 }
 
-function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): SessionsRepository {
+type FakeSessionsRepo = SessionsRepository & { readonly callCounts: Map<string, number> };
+
+function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): FakeSessionsRepo {
+  const callCounts = new Map<string, number>();
+  const count = (name: string): void => {
+    callCounts.set(name, (callCounts.get(name) ?? 0) + 1);
+  };
+
   return {
-    findProfile: async () => (options.profile === undefined ? profileFixture() : options.profile),
-    findNewsItem: async () => options.newsItem ?? null,
-    findBriefText: async () => options.brief ?? null,
-    listConfirmedFacts: async () => options.facts ?? [],
-    findChatModelPreference: async () => options.preference ?? null,
-  } as unknown as SessionsRepository;
+    callCounts,
+    findProfile: async () => {
+      count('findProfile');
+      return options.profile === undefined ? profileFixture() : options.profile;
+    },
+    findNewsItem: async () => {
+      count('findNewsItem');
+      return options.newsItem ?? null;
+    },
+    findBriefText: async () => {
+      count('findBriefText');
+      return options.brief ?? null;
+    },
+    listConfirmedFacts: async () => {
+      count('listConfirmedFacts');
+      return options.facts ?? [];
+    },
+    findChatModelPreference: async () => {
+      count('findChatModelPreference');
+      return options.preference ?? null;
+    },
+  } as unknown as FakeSessionsRepo;
 }
 
 interface FakeTurnsRepoOptions {
@@ -887,5 +910,67 @@ describe('TurnsService.addTurn · cableado del reset (MAL-22)', () => {
     await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
 
     expect(llm.calls[0]!.onReset).toBeUndefined();
+  });
+});
+
+describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
+  it('no cambia el número de lecturas al repositorio', async () => {
+    const { service, sessions } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // Paralelizar no puede convertirse en pedir las cosas dos veces.
+    expect(Object.fromEntries(sessions.callCounts)).toEqual({
+      findProfile: 1,
+      findBriefText: 1,
+      listConfirmedFacts: 1,
+      findChatModelPreference: 1,
+    });
+  });
+
+  it('con una sesión de noticias también lee la noticia una sola vez', async () => {
+    const { service, sessions } = buildService({
+      session: sessionFixture({ kind: 'news', news_item_id: 'news-1' }),
+      newsItem: {
+        id: 'news-1',
+        title: 'Solar power',
+        summary: 'Solar beat coal.',
+      } as never,
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(sessions.callCounts.get('findNewsItem')).toBe(1);
+  });
+
+  it('el turno del usuario se sigue insertando después de leer el historial', async () => {
+    const { service, turns } = buildService({ history: historyFixture(3) });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // El historial son los turnos 0..2, así que el del usuario es el 3: si se
+    // hubiera insertado antes de leerlo, el índice saldría mal y el turno
+    // aparecería duplicado dentro de `history`.
+    expect(turns.inserted[0]).toMatchObject({ idx: 3, role: 'user', text: 'hola' });
+  });
+
+  it('un perfil sin onboarding sigue ganando al resto de validaciones', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({ profile: null, redis, turnsDailyCap: 5 });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
+    ).rejects.toMatchObject({ code: 'NOT_ONBOARDED' });
+
+    // Y no consume cupo diario: el orden de validación no cambió.
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('sin credenciales sigue dando PROVIDER_NOT_CONNECTED', async () => {
+    const { service } = buildService({ credentialProviders: [] });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
   });
 });

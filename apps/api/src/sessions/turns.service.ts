@@ -214,7 +214,25 @@ export class TurnsService {
     onToken?: (delta: string) => void,
     onReset?: () => void,
   ): Promise<TurnResultDto> {
-    const profile = await this.sessions.findProfile(userId);
+    // Contexto del turno en paralelo (MEJ-24). Eran tres viajes a InsForge en
+    // fila —perfil, credenciales, historial— sin ninguna dependencia entre
+    // ellos, y el aprendiz esperaba la suma de las tres latencias antes de
+    // que siquiera empezara la llamada al modelo.
+    //
+    // El **orden de validación** se conserva tal cual (perfil → tope →
+    // credenciales): lo único que cambia es cuándo se lanzan las consultas,
+    // no qué error gana ni qué se escribe. En particular el tope diario sigue
+    // sin consumirse para un perfil sin onboarding.
+    //
+    // El historial se lee **antes** de insertar el turno del usuario, porque
+    // ese va aparte como `userMessage` y no dentro de `history`: por eso la
+    // inserción sigue siendo secuencial y posterior.
+    const [profile, credentials, history] = await Promise.all([
+      this.sessions.findProfile(userId),
+      this.credentials.listActive(userId),
+      this.turns.listRecentTurns(session.id, HISTORY_TURNS),
+    ]);
+
     if (profile === null || profile.onboarded_at === null) {
       throw ApiException.of('NOT_ONBOARDED', NOT_ONBOARDED_MESSAGE);
     }
@@ -224,19 +242,12 @@ export class TurnsService {
     // se gasta un céntimo de la key del aprendiz.
     await this.requireDailyTurnsBudget(userId, profile);
 
-    const credentials = await this.credentials.listActive(userId);
     if (credentials.length === 0) {
       // El usuario borró la credencial con la sesión abierta: sin ninguna
       // key no hay cadena de fallback que agotar, así que no es una
       // degradación (SPEC-03 §6) sino el mismo error que al abrir.
       throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
     }
-
-    // 3. Historial: los últimos `HISTORY_TURNS` turnos por `idx`, en orden
-    // cronológico (SPEC-04 §4 paso 3). Se lee **antes** de insertar el turno
-    // del usuario, porque ese va aparte como `userMessage`, no dentro de
-    // `history` (`buildTurnMessages` ya lo añade al final).
-    const history = await this.turns.listRecentTurns(session.id, HISTORY_TURNS);
 
     // La apertura del tutor es `idx = 0`; cada turno toma el último + 1. Con
     // la sesión sin ningún turno (imposible hoy: la apertura siempre inserta
@@ -292,10 +303,18 @@ export class TurnsService {
   ): Promise<TutorOutcome> {
     // Escenario reconstruido desde la fila de `sessions` y el catálogo, para
     // que el tutor siga con el mismo rol/noticia/reto con el que abrió.
-    const newsItem =
+    // Lo que falta para el prompt, también en paralelo (MEJ-24): noticia,
+    // brief, hechos y preferencia de modelo son cuatro lecturas
+    // independientes entre sí.
+    const [newsItem, brief, facts, preference] = await Promise.all([
       session.news_item_id === null
-        ? null
-        : await this.sessions.findNewsItem(session.news_item_id);
+        ? Promise.resolve(null)
+        : this.sessions.findNewsItem(session.news_item_id),
+      this.sessions.findBriefText(userId),
+      this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
+      this.findPreference(userId),
+    ]);
+
     const scenario = rebuildScenario(session, newsItem);
     if (scenario.fallback) {
       this.logger.warn(
@@ -303,11 +322,6 @@ export class TurnsService {
           'se continúa con el bloque free_topic y el topic guardado.',
       );
     }
-
-    const [brief, facts] = await Promise.all([
-      this.sessions.findBriefText(userId),
-      this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
-    ]);
 
     const messages = buildTurnMessages({
       locale: profile.locale,
@@ -333,7 +347,7 @@ export class TurnsService {
         messages,
         schema: TurnOutput,
         credentials,
-        preference: await this.findPreference(userId),
+        preference,
         promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
         // Dos intentos y no tres (MAL-23): el aprendiz está esperando delante
         // de la pantalla y 3 × 25 s son 75 s de silencio antes de rendirse.

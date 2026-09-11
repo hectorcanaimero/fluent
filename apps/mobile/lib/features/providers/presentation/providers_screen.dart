@@ -15,6 +15,18 @@ import '../domain/providers_data.dart';
 
 const _kGeminiHelpUrl = 'https://aistudio.google.com/apikey';
 
+/// MEJ-11: `providerId` es un identificador técnico ('openrouter',
+/// 'gemini'); antes de esto se mostraba tal cual en mayúsculas
+/// ('OPENROUTER') en vez del nombre de marca que ya usan el resto de las
+/// tarjetas de esta misma pantalla.
+String providerDisplayName(String providerId, AppLocalizations l10n) {
+  return switch (providerId) {
+    'openrouter' => l10n.providersOpenRouterTitle,
+    'gemini' => l10n.providersGeminiTitle,
+    _ => providerId.toUpperCase(),
+  };
+}
+
 /// Proveedores y modelos (SPEC-06 §4.6, RF-2.x). Tarjetas de estado para
 /// OpenRouter (PKCE) y Gemini (API key pegada), y selectores de modelo por
 /// rol (conversación / coach) agrupados en Gratis, Económico y Premium.
@@ -570,6 +582,7 @@ class _ModelSummaryTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     final model = _findModel();
     return InkWell(
       onTap: onTap,
@@ -585,7 +598,7 @@ class _ModelSummaryTile extends StatelessWidget {
           children: [
             Expanded(
               child: Text(
-                model?.name ?? modelId ?? '—',
+                model?.name ?? modelId ?? l10n.commonEmptyValue,
                 style: Theme.of(context).textTheme.bodyMedium,
               ),
             ),
@@ -668,7 +681,7 @@ class _ProviderModelGroup extends StatelessWidget {
             bottom: AppSpacing.xs,
           ),
           child: Text(
-            providerId.toUpperCase(),
+            providerDisplayName(providerId, l10n),
             style: Theme.of(context).textTheme.labelSmall,
           ),
         ),

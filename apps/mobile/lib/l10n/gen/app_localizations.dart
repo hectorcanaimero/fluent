@@ -1813,6 +1813,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Hecho borrado.'**
   String get memoryFactDeleted;
+
+  /// No description provided for @commonXpAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} XP'**
+  String commonXpAmount(int amount);
+
+  /// No description provided for @commonEmptyValue.
+  ///
+  /// In es, this message translates to:
+  /// **'—'**
+  String get commonEmptyValue;
+
+  /// No description provided for @summaryXpDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'+{amount}'**
+  String summaryXpDelta(int amount);
+
+  /// No description provided for @correctionCategoryPastSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasado simple'**
+  String get correctionCategoryPastSimple;
+
+  /// No description provided for @correctionCategoryPresentPerfect.
+  ///
+  /// In es, this message translates to:
+  /// **'Presente perfecto'**
+  String get correctionCategoryPresentPerfect;
+
+  /// No description provided for @correctionCategoryArticles.
+  ///
+  /// In es, this message translates to:
+  /// **'Artículos'**
+  String get correctionCategoryArticles;
+
+  /// No description provided for @correctionCategoryPrepositions.
+  ///
+  /// In es, this message translates to:
+  /// **'Preposiciones'**
+  String get correctionCategoryPrepositions;
+
+  /// No description provided for @correctionCategoryWordOrder.
+  ///
+  /// In es, this message translates to:
+  /// **'Orden de las palabras'**
+  String get correctionCategoryWordOrder;
+
+  /// No description provided for @correctionCategorySubjectVerb.
+  ///
+  /// In es, this message translates to:
+  /// **'Concordancia sujeto-verbo'**
+  String get correctionCategorySubjectVerb;
+
+  /// No description provided for @correctionCategoryPlurals.
+  ///
+  /// In es, this message translates to:
+  /// **'Plurales'**
+  String get correctionCategoryPlurals;
+
+  /// No description provided for @correctionCategoryVocabulary.
+  ///
+  /// In es, this message translates to:
+  /// **'Vocabulario'**
+  String get correctionCategoryVocabulary;
+
+  /// No description provided for @correctionCategoryPronunciationHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronunciación'**
+  String get correctionCategoryPronunciationHint;
+
+  /// No description provided for @correctionCategoryFalseFriend.
+  ///
+  /// In es, this message translates to:
+  /// **'Falso amigo'**
+  String get correctionCategoryFalseFriend;
+
+  /// No description provided for @correctionCategoryPhrasalVerb.
+  ///
+  /// In es, this message translates to:
+  /// **'Verbo frasal'**
+  String get correctionCategoryPhrasalVerb;
+
+  /// No description provided for @correctionCategoryConditional.
+  ///
+  /// In es, this message translates to:
+  /// **'Condicional'**
+  String get correctionCategoryConditional;
+
+  /// No description provided for @correctionCategoryModal.
+  ///
+  /// In es, this message translates to:
+  /// **'Verbo modal'**
+  String get correctionCategoryModal;
+
+  /// No description provided for @correctionCategoryOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get correctionCategoryOther;
 }
 
 class _AppLocalizationsDelegate

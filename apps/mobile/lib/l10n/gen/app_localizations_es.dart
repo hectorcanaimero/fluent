@@ -955,4 +955,59 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get memoryFactDeleted => 'Hecho borrado.';
+
+  @override
+  String commonXpAmount(int amount) {
+    return '$amount XP';
+  }
+
+  @override
+  String get commonEmptyValue => '—';
+
+  @override
+  String summaryXpDelta(int amount) {
+    return '+$amount';
+  }
+
+  @override
+  String get correctionCategoryPastSimple => 'Pasado simple';
+
+  @override
+  String get correctionCategoryPresentPerfect => 'Presente perfecto';
+
+  @override
+  String get correctionCategoryArticles => 'Artículos';
+
+  @override
+  String get correctionCategoryPrepositions => 'Preposiciones';
+
+  @override
+  String get correctionCategoryWordOrder => 'Orden de las palabras';
+
+  @override
+  String get correctionCategorySubjectVerb => 'Concordancia sujeto-verbo';
+
+  @override
+  String get correctionCategoryPlurals => 'Plurales';
+
+  @override
+  String get correctionCategoryVocabulary => 'Vocabulario';
+
+  @override
+  String get correctionCategoryPronunciationHint => 'Pronunciación';
+
+  @override
+  String get correctionCategoryFalseFriend => 'Falso amigo';
+
+  @override
+  String get correctionCategoryPhrasalVerb => 'Verbo frasal';
+
+  @override
+  String get correctionCategoryConditional => 'Condicional';
+
+  @override
+  String get correctionCategoryModal => 'Verbo modal';
+
+  @override
+  String get correctionCategoryOther => 'Otro';
 }

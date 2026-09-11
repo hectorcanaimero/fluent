@@ -172,20 +172,24 @@ class _HeaderRow extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
         ),
-        InkWell(
-          key: const Key('home_avatar_button'),
-          onTap: () => context.push('/settings'),
-          borderRadius: BorderRadius.circular(999),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primarySoft,
-            child: Text(
-              data.displayName.isNotEmpty
-                  ? data.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryDark,
+        Semantics(
+          button: true,
+          label: l10n.settingsTitle,
+          child: InkWell(
+            key: const Key('home_avatar_button'),
+            onTap: () => context.push('/settings'),
+            borderRadius: BorderRadius.circular(999),
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primarySoft,
+              child: Text(
+                data.displayName.isNotEmpty
+                    ? data.displayName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
               ),
             ),
           ),
@@ -471,7 +475,7 @@ class _GroupCard extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: Text(row.displayName)),
-                  Text('${row.xpWeek} XP'),
+                  Text(l10n.commonXpAmount(row.xpWeek)),
                 ],
               ),
             ),
@@ -527,10 +531,14 @@ class _QuickTopics extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           children: [
             for (final topic in topics)
-              ActionChip(
-                label: Text(topic),
-                backgroundColor: AppColors.primarySoft,
-                onPressed: starting ? null : () => onTopic(topic),
+              Semantics(
+                button: true,
+                label: topic,
+                child: ActionChip(
+                  label: Text(topic),
+                  backgroundColor: AppColors.primarySoft,
+                  onPressed: starting ? null : () => onTopic(topic),
+                ),
               ),
           ],
         ),

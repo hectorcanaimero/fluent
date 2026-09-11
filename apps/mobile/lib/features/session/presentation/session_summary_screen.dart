@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../domain/correction_labels.dart';
 
 /// Resumen de sesión (SPEC-06 §4.4). El XP/streak/duración vienen del
 /// `POST /sessions/:id/end` que ya se llamó desde la conversación (se pasa
@@ -175,7 +176,8 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                     valueBuilder: (context) => TweenAnimationBuilder<int>(
                       tween: IntTween(begin: 0, end: summary.xpEarned),
                       duration: const Duration(milliseconds: 800),
-                      builder: (context, value, _) => Text('+$value'),
+                      builder: (context, value, _) =>
+                          Text(l10n.summaryXpDelta(value)),
                     ),
                   ),
                   _StatColumn(
@@ -253,7 +255,11 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                           ),
                           child: Row(
                             children: [
-                              Expanded(child: Text(entry.key)),
+                              Expanded(
+                                child: Text(
+                                  correctionCategoryLabel(l10n, entry.key),
+                                ),
+                              ),
                               Text('${entry.value}'),
                             ],
                           ),

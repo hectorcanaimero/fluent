@@ -217,6 +217,7 @@ class _LeaderboardRowTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
@@ -232,7 +233,7 @@ class _LeaderboardRowTile extends StatelessWidget {
                 : Text('$rank', textAlign: TextAlign.center),
           ),
           Expanded(child: Text(row.displayName)),
-          Text('${row.xpWeek} XP'),
+          Text(l10n.commonXpAmount(row.xpWeek)),
         ],
       ),
     );

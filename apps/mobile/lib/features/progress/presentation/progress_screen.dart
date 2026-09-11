@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../features/session/domain/correction_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// Progreso (SPEC-06 §9 del diseño): XP, nivel, streaks y tendencia de
@@ -93,7 +94,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         ),
                         child: Row(
                           children: [
-                            Expanded(child: Text(item.category)),
+                            Expanded(
+                              child: Text(
+                                correctionCategoryLabel(l10n, item.category),
+                              ),
+                            ),
                             Text(
                               l10n.progressCorrectionsTrendCounts(
                                 item.count7d,

@@ -362,5 +362,32 @@
   "settingsInvitationSubmit": "Unirme al grupo",
   "settingsInvitationSuccess": "¡Listo! Ya sos parte del grupo.",
   "commonUndo": "Deshacer",
-  "memoryFactDeleted": "Hecho borrado."
+  "memoryFactDeleted": "Hecho borrado.",
+  "commonXpAmount": "{amount} XP",
+  "@commonXpAmount": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "commonEmptyValue": "—",
+  "summaryXpDelta": "+{amount}",
+  "@summaryXpDelta": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "correctionCategoryPastSimple": "Pasado simple",
+  "correctionCategoryPresentPerfect": "Presente perfecto",
+  "correctionCategoryArticles": "Artículos",
+  "correctionCategoryPrepositions": "Preposiciones",
+  "correctionCategoryWordOrder": "Orden de las palabras",
+  "correctionCategorySubjectVerb": "Concordancia sujeto-verbo",
+  "correctionCategoryPlurals": "Plurales",
+  "correctionCategoryVocabulary": "Vocabulario",
+  "correctionCategoryPronunciationHint": "Pronunciación",
+  "correctionCategoryFalseFriend": "Falso amigo",
+  "correctionCategoryPhrasalVerb": "Verbo frasal",
+  "correctionCategoryConditional": "Condicional",
+  "correctionCategoryModal": "Verbo modal",
+  "correctionCategoryOther": "Otro"
 }

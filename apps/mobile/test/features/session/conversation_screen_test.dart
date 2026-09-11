@@ -506,4 +506,134 @@ void main() {
 
     await api.closeStream();
   });
+
+  Future<void> pumpConversation(
+    WidgetTester tester, {
+    required FakeApi api,
+    required FakeSpeechService speech,
+  }) async {
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => speech),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'MAL-05: si el motor termina solo sin resultado final, pasa a revisar con el parcial',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      speech.emit('partial text', isFinal: false);
+      await tester.pump();
+
+      speech.emitDoneWithoutResult();
+      await tester.pump();
+
+      final draftField = tester.widget<TextField>(
+        find.byKey(const Key('conversation_draft_field')),
+      );
+      expect(draftField.controller!.text, 'partial text');
+      expect(find.byKey(const Key('conversation_send_button')), findsOneWidget);
+      expect(speech.isListening, isFalse);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: un error del motor sin coincidencia vuelve a idle con un aviso',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      speech.emitError('error_no_match');
+      await tester.pump();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationSttErrorNoMatch), findsOneWidget);
+      expect(speech.isListening, isFalse);
+      // Vuelve a idle: el botón de mic sigue ahí para reintentar.
+      expect(find.byKey(const Key('conversation_mic_button')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: sin permiso de micrófono ofrece abrir Ajustes, distinto del diálogo de locale ausente',
+    (tester) async {
+      final speech = FakeSpeechService(
+        available: false,
+        permissionGranted: false,
+      );
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedTitle),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedOpenSettings),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.conversationMicUnavailableTitle), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: sin STT pero con permiso concedido, muestra el diálogo genérico de siempre',
+    (tester) async {
+      final speech = FakeSpeechService(
+        available: false,
+        permissionGranted: true,
+      );
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationMicUnavailableTitle), findsOneWidget);
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedTitle),
+        findsNothing,
+      );
+    },
+  );
 }

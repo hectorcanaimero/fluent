@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
@@ -75,6 +76,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   bool _micAvailable = true;
   bool _micHasEnUsLocale = true;
 
+  /// MAL-05: si `initialize()` falló, distingue "el usuario denegó el
+  /// permiso" (se ofrece abrir Ajustes) de "el dispositivo no tiene
+  /// reconocimiento de voz en absoluto" (diálogo genérico, ya existente).
+  bool _micPermissionDenied = false;
+
   // Se leen una sola vez: son `Provider` simples (sin `watch`), y así
   // `dispose()` puede usarlos sin tocar `ref` después de desmontar.
   late final SpeechService _speech = ref.read(speechServiceProvider);
@@ -111,6 +117,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       _micAvailable = await speech.initialize();
       if (_micAvailable) {
         _micHasEnUsLocale = await speech.hasLocale('en_US');
+      } else {
+        _micPermissionDenied = !(await speech.hasPermission);
       }
 
       final detail = await api.getSession(widget.sessionId);
@@ -224,7 +232,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Future<void> _startListening() async {
-    if (!_micAvailable || !_micHasEnUsLocale) {
+    if (!_micAvailable) {
+      if (_micPermissionDenied) {
+        await _showMicPermissionDeniedDialog();
+      } else {
+        await _showMicUnavailableDialog();
+      }
+      return;
+    }
+    if (!_micHasEnUsLocale) {
       await _showMicUnavailableDialog();
       return;
     }
@@ -245,11 +261,62 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           }
         });
       },
+      // MAL-05: el motor puede terminar solo sin `isFinal` (45 s, una
+      // llamada entrante) — se pasa a revisar con lo que ya se transcribió
+      // en vez de dejar el mic "escuchando" para siempre.
+      onDoneWithoutResult: () {
+        if (!mounted) return;
+        setState(() {
+          _draftController.text = _partialText;
+          _state = ConvState.reviewing;
+        });
+      },
+      // MAL-05: un error del motor (sin coincidencia, timeout) vuelve a
+      // `idle` con un aviso, en vez de quedarse "escuchando".
+      onError: (errorCode) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
+        setState(() {
+          _state = ConvState.idle;
+          _partialText = '';
+        });
+        final message = switch (errorCode) {
+          'error_no_match' => l10n.conversationSttErrorNoMatch,
+          'error_speech_timeout' => l10n.conversationSttErrorTimeout,
+          _ => l10n.conversationSttErrorGeneric,
+        };
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      },
     );
   }
 
   Future<void> _stopListening() async {
     await _speech.stop();
+  }
+
+  Future<void> _showMicPermissionDeniedDialog() async {
+    final l10n = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.conversationMicPermissionDeniedTitle),
+        content: Text(l10n.conversationMicPermissionDeniedBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.conversationMicPermissionDeniedCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              openAppSettings();
+            },
+            child: Text(l10n.conversationMicPermissionDeniedOpenSettings),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showMicUnavailableDialog() async {

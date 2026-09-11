@@ -661,6 +661,32 @@ class AppLocalizationsPt extends AppLocalizations {
   String get conversationMicUnavailableAccept => 'Entendido';
 
   @override
+  String get conversationMicPermissionDeniedTitle => 'Ative o microfone';
+
+  @override
+  String get conversationMicPermissionDeniedBody =>
+      'O Fluent precisa de permissão de microfone para te ouvir. Ative nas configurações do sistema.';
+
+  @override
+  String get conversationMicPermissionDeniedCancel => 'Cancelar';
+
+  @override
+  String get conversationMicPermissionDeniedOpenSettings =>
+      'Abrir Configurações';
+
+  @override
+  String get conversationSttErrorNoMatch =>
+      'Não entendemos o que você disse. Tente de novo.';
+
+  @override
+  String get conversationSttErrorTimeout =>
+      'O tempo de escuta acabou. Tente de novo.';
+
+  @override
+  String get conversationSttErrorGeneric =>
+      'Houve um problema com o microfone. Tente de novo.';
+
+  @override
   String conversationSpeedButtonLabel(String rate) {
     return '${rate}x';
   }

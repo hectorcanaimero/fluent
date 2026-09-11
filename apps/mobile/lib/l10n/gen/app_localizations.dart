@@ -1274,6 +1274,48 @@ abstract class AppLocalizations {
   /// **'Entendido'**
   String get conversationMicUnavailableAccept;
 
+  /// No description provided for @conversationMicPermissionDeniedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Activá el micrófono'**
+  String get conversationMicPermissionDeniedTitle;
+
+  /// No description provided for @conversationMicPermissionDeniedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.'**
+  String get conversationMicPermissionDeniedBody;
+
+  /// No description provided for @conversationMicPermissionDeniedCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get conversationMicPermissionDeniedCancel;
+
+  /// No description provided for @conversationMicPermissionDeniedOpenSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir Ajustes'**
+  String get conversationMicPermissionDeniedOpenSettings;
+
+  /// No description provided for @conversationSttErrorNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No entendimos lo que dijiste. Probá de nuevo.'**
+  String get conversationSttErrorNoMatch;
+
+  /// No description provided for @conversationSttErrorTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'Se acabó el tiempo de escucha. Probá de nuevo.'**
+  String get conversationSttErrorTimeout;
+
+  /// No description provided for @conversationSttErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Hubo un problema con el micrófono. Probá de nuevo.'**
+  String get conversationSttErrorGeneric;
+
   /// No description provided for @conversationSpeedButtonLabel.
   ///
   /// In es, this message translates to:

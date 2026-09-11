@@ -32,6 +32,7 @@ dependencies:
   # Voz
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0
+  permission_handler: ^11.3.1
 
   # PKCE / navegador externo
   flutter_web_auth_2: ^4.1.0

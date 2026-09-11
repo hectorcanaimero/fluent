@@ -246,6 +246,13 @@
   "conversationMicUnavailableTitle": "No hay reconocimiento de voz",
   "conversationMicUnavailableBody": "Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.",
   "conversationMicUnavailableAccept": "Entendido",
+  "conversationMicPermissionDeniedTitle": "Activá el micrófono",
+  "conversationMicPermissionDeniedBody": "Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.",
+  "conversationMicPermissionDeniedCancel": "Cancelar",
+  "conversationMicPermissionDeniedOpenSettings": "Abrir Ajustes",
+  "conversationSttErrorNoMatch": "No entendimos lo que dijiste. Probá de nuevo.",
+  "conversationSttErrorTimeout": "Se acabó el tiempo de escucha. Probá de nuevo.",
+  "conversationSttErrorGeneric": "Hubo un problema con el micrófono. Probá de nuevo.",
   "conversationSpeedButtonLabel": "{rate}x",
   "@conversationSpeedButtonLabel": {
     "placeholders": {

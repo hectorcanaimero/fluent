@@ -1,13 +1,27 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
+import 'package:fluent_mobile/features/group/presentation/group_screen.dart';
 import 'package:fluent_mobile/features/home/presentation/home_screen.dart';
+import 'package:fluent_mobile/features/home/presentation/home_shell.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+class _CountingGetMeApi extends FakeApi {
+  _CountingGetMeApi() : super(artificialDelay: Duration.zero);
+
+  int getMeCalls = 0;
+
+  @override
+  Future<MeResponse> getMe() {
+    getMeCalls++;
+    return super.getMe();
+  }
+}
 
 Future<void> _pumpHome(WidgetTester tester, FakeApi api) async {
   await tester.pumpWidget(
@@ -152,6 +166,51 @@ void main() {
       expect(find.byKey(const Key('home_practice_button')), findsOneWidget);
     },
   );
+
+  testWidgets('MEJ-16: cambiar de pestaña y volver no vuelve a pedir /me', (
+    tester,
+  ) async {
+    final api = _CountingGetMeApi();
+    final router = GoRouter(
+      initialLocation: '/',
+      routes: [
+        ShellRoute(
+          builder: (context, state, child) => HomeShell(child: child),
+          routes: [
+            GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
+            GoRoute(
+              path: '/group',
+              builder: (context, state) => const GroupScreen(),
+            ),
+          ],
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(api.getMeCalls, 1);
+
+    await tester.tap(find.byIcon(Icons.groups_outlined));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byIcon(Icons.home_outlined));
+    await tester.pumpAndSettle();
+
+    expect(api.getMeCalls, 1);
+  });
 }
 
 class _ThrowingOnceGetProgressApi extends FakeApi {

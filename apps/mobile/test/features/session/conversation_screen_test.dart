@@ -1,6 +1,10 @@
+import 'dart:async';
+
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/api/turn_stream_event.dart';
+import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/session/data/speech_service.dart';
 import 'package:fluent_mobile/features/session/data/tts_service.dart';
@@ -11,6 +15,32 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+/// Deja emitir eventos del stream a mano, para poder aislar el rebuild que
+/// dispara un único token (MEJ-17).
+class _ControlledStreamApi extends FakeApi {
+  _ControlledStreamApi({super.artificialDelay});
+
+  final _controller = StreamController<TurnStreamEvent>();
+
+  /// MAL-08: el `CancelToken` que la pantalla pasó a esta llamada, para
+  /// comprobar que `dispose()` lo cancela.
+  CancelToken? capturedToken;
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) {
+    capturedToken = cancelToken;
+    return _controller.stream;
+  }
+
+  void emit(TurnStreamEvent event) => _controller.add(event);
+
+  Future<void> closeStream() => _controller.close();
+}
 
 /// Simula un stream que arranca bien (algunos `token`) y se corta antes de
 /// `done` (conexión perdida, o el `error` SSE de PEND-55 de PR-04.md): la
@@ -23,6 +53,7 @@ class _StreamDropsBeforeDoneApi extends FakeApi {
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async* {
     yield const TurnStreamToken('Partial');
     yield const TurnStreamToken(' reply...');
@@ -33,6 +64,7 @@ class _StreamDropsBeforeDoneApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     return base.copyWith(reply: 'Full reply from the non-streaming endpoint.');
@@ -48,6 +80,7 @@ class _AlwaysCorrectingApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     if (base.corrections.isNotEmpty) return base;
@@ -77,6 +110,7 @@ class _UnavailableApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     calls++;
     return const TurnResult(
@@ -85,6 +119,37 @@ class _UnavailableApi extends FakeApi {
       degraded: true,
       unavailable: true,
     );
+  }
+}
+
+/// MAL-08: simula un stream que nunca manda ningún evento (proxy colgado):
+/// en la app real esto lo convierte `HttpFluentApi` en un
+/// `ApiException(streamTimeout)` después de 30 s; acá se lanza directo para
+/// no depender de tiempo real. Debe caer al endpoint completo igual que
+/// cualquier otro corte de transporte.
+class _StreamTimeoutApi extends FakeApi {
+  _StreamTimeoutApi({super.artificialDelay});
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async* {
+    throw const ApiException(
+      code: ApiErrorCode.streamTimeout,
+      message: 'turn stream timed out waiting for the next event',
+    );
+  }
+
+  @override
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async {
+    final base = await super.sendTurn(sessionId: sessionId, text: text);
+    return base.copyWith(reply: 'Full reply after stream timeout.');
   }
 }
 
@@ -230,6 +295,45 @@ void main() {
       expect(tts.spokenTexts, ['Full reply from the non-streaming endpoint.']);
     },
   );
+
+  testWidgets(
+    'MAL-08: si el stream nunca manda un evento (timeout), cae al endpoint completo',
+    (tester) async {
+      final api = _StreamTimeoutApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Full reply after stream timeout.'), findsOneWidget);
+    },
+  );
+
 
   testWidgets(
     'tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar',
@@ -420,4 +524,332 @@ void main() {
 
     expect(find.text('HOME_SCREEN'), findsOneWidget);
   });
+
+  testWidgets('MEJ-17: un token de streaming no reconstruye el AppBar', (
+    tester,
+  ) async {
+    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
+
+    // El primer token todavía hace un `setState` (crea la burbuja en
+    // `_messages`), así que se descarta antes de medir.
+    api.emit(const TurnStreamToken('Hi'));
+    await tester.pump();
+    expect(find.text('Hi'), findsOneWidget);
+
+    final rebuiltLines = <String>[];
+    final previousDebugPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null) rebuiltLines.add(message);
+    };
+    debugPrintRebuildDirtyWidgets = true;
+    try {
+      api.emit(const TurnStreamToken(' there'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+    } finally {
+      debugPrintRebuildDirtyWidgets = false;
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(find.text('Hi there'), findsOneWidget);
+    final rebuilt = rebuiltLines.join('\n');
+    expect(rebuilt.contains('AppBar'), isFalse);
+    expect(rebuilt.contains('ListView'), isFalse);
+
+    await api.closeStream();
+  });
+
+  Future<void> pumpConversation(
+    WidgetTester tester, {
+    required FakeApi api,
+    required FakeSpeechService speech,
+    FakeTtsService? tts,
+  }) async {
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => speech),
+          ttsServiceProvider.overrideWith((ref) => tts ?? FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+  }
+
+  testWidgets(
+    'MAL-08: al salir de la conversación cancela el turno en vuelo',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      final speech = FakeSpeechService();
+      await pumpConversation(tester, api: api, speech: speech);
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+
+      expect(api.capturedToken, isNotNull);
+      expect(api.capturedToken!.isCancelled, isFalse);
+
+      // Saca la pantalla del árbol sin que el stream haya mandado `done`.
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(api.capturedToken!.isCancelled, isTrue);
+
+      await api.closeStream();
+    },
+  );
+
+  testWidgets(
+    'MAL-05: si el motor termina solo sin resultado final, pasa a revisar con el parcial',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      speech.emit('partial text', isFinal: false);
+      await tester.pump();
+
+      speech.emitDoneWithoutResult();
+      await tester.pump();
+
+      final draftField = tester.widget<TextField>(
+        find.byKey(const Key('conversation_draft_field')),
+      );
+      expect(draftField.controller!.text, 'partial text');
+      expect(find.byKey(const Key('conversation_send_button')), findsOneWidget);
+      expect(speech.isListening, isFalse);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: un error del motor sin coincidencia vuelve a idle con un aviso',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      speech.emitError('error_no_match');
+      await tester.pump();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationSttErrorNoMatch), findsOneWidget);
+      expect(speech.isListening, isFalse);
+      // Vuelve a idle: el botón de mic sigue ahí para reintentar.
+      expect(find.byKey(const Key('conversation_mic_button')), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: sin permiso de micrófono ofrece abrir Ajustes, distinto del diálogo de locale ausente',
+    (tester) async {
+      final speech = FakeSpeechService(
+        available: false,
+        permissionGranted: false,
+      );
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedTitle),
+        findsOneWidget,
+      );
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedOpenSettings),
+        findsOneWidget,
+      );
+      expect(find.text(l10n.conversationMicUnavailableTitle), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MAL-05: sin STT pero con permiso concedido, muestra el diálogo genérico de siempre',
+    (tester) async {
+      final speech = FakeSpeechService(
+        available: false,
+        permissionGranted: true,
+      );
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationMicUnavailableTitle), findsOneWidget);
+      expect(
+        find.text(l10n.conversationMicPermissionDeniedTitle),
+        findsNothing,
+      );
+    },
+  );
+
+  testWidgets(
+    'MAL-07: minimizar la app (paused) cancela el STT y para el TTS',
+    (tester) async {
+      final speech = FakeSpeechService();
+      final tts = FakeTtsService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+        tts: tts,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      expect(speech.isListening, isTrue);
+
+      tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+      await tester.pump();
+
+      expect(speech.cancelCalled, isTrue);
+      expect(tts.stopCalled, isTrue);
+    },
+  );
+
+  testWidgets('MAL-07: volver (resumed) reanuda el timer', (tester) async {
+    final speech = FakeSpeechService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: speech,
+    );
+
+    await tester.pump(const Duration(seconds: 1));
+    final beforePause = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump();
+    // Mientras está pausada, el timer no debería seguir corriendo.
+    await tester.pump(const Duration(seconds: 3));
+    final duringPause = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+    expect(duringPause, beforePause);
+
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump(const Duration(seconds: 1));
+    final afterResume = tester
+        .widget<Text>(find.byKey(const Key('conversation_timer')))
+        .data;
+    expect(afterResume, isNot(duringPause));
+  });
+
+  testWidgets(
+    'MAL-07: el back del sistema pide confirmar en vez de abandonar la sesión',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      final router = GoRouter(
+        initialLocation: '/session/${created.session.id}',
+        routes: [
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Text('HOME_SCREEN'),
+          ),
+          GoRoute(
+            path: '/session/:id',
+            builder: (context, state) =>
+                ConversationScreen(sessionId: state.pathParameters['id']!),
+          ),
+        ],
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      final navigator = tester.state<NavigatorState>(
+        find.byType(Navigator).first,
+      );
+      unawaited(navigator.maybePop());
+      await tester.pumpAndSettle();
+
+      expect(find.text(l10n.conversationEndConfirmTitle), findsOneWidget);
+      expect(find.text('HOME_SCREEN'), findsNothing);
+    },
+  );
+
 }

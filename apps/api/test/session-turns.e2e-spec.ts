@@ -10,7 +10,10 @@ import { DEGRADED_REPLY, HISTORY_TURNS } from '../src/llm/config.js';
 import type { LlmMessage } from '../src/llm/llm.client.js';
 import { LlmService, LlmUnavailableError } from '../src/llm/llm.service.js';
 import { REDIS_CACHE_CLIENT } from '../src/redis/redis.constants.js';
+import { ConfigService } from '@nestjs/config';
 import { TURNS_THROTTLE_LIMIT } from '../src/rate-limit/rate-limit.constants.js';
+import { RedisService } from '../src/redis/redis.service.js';
+import { turnsDayKey, userDay } from '../src/sessions/user-day.js';
 import { SESSION_RANDOM } from '../src/sessions/sessions.constants.js';
 import {
   applyInsforgeE2eEnv,
@@ -102,6 +105,19 @@ function createRedisDouble() {
       return 'OK';
     },
     del: async (key: string) => (store.delete(key) ? 1 : 0),
+    // Contador del tope diario de turnos (MAL-23).
+    incr: async (key: string) => {
+      const current = Number(alive(key)?.value ?? 0);
+      const next = current + 1;
+      store.set(key, { value: String(next), expiresAt: alive(key)?.expiresAt ?? null });
+      return next;
+    },
+    expire: async (key: string, ttlSeconds: number) => {
+      const entry = alive(key);
+      if (!entry) return 0;
+      store.set(key, { value: entry.value, expiresAt: Date.now() + ttlSeconds * 1000 });
+      return 1;
+    },
   };
 }
 
@@ -387,6 +403,36 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
     // Solo se escribió el turno ganador: apertura + usuario + tutor.
     const turns = await readTurns(sessionId);
     expect(turns).toHaveLength(3);
+  }, 60_000);
+
+  it('alcanzado el tope diario → 429 TURNS_DAILY_CAP con Retry-After (MAL-23)', async () => {
+    const user = await newReadyUser('T cap');
+    const sessionId = await openSession(user);
+
+    // Se siembra el contador en el tope real de producción en vez de bajarlo
+    // por env: así se prueba el valor que se va a desplegar y no se perturba
+    // al resto de la suite, que comparte la misma app.
+    const cap = app.get(ConfigService).get('TURNS_DAILY_CAP', { infer: true }) as number;
+    const { data: profile } = await admin.database
+      .from('profiles')
+      .select('timezone')
+      .eq('user_id', user.id)
+      .single();
+    const timezone = (profile as { timezone: string } | null)?.timezone ?? 'UTC';
+    const key = turnsDayKey(user.id, userDay(timezone));
+    await app.get(RedisService).set(key, String(cap), 3_600);
+
+    const response = await postTurn(user, sessionId, 'Over the cap').expect(429);
+
+    expect(response.body).toMatchObject({ error: 'TURNS_DAILY_CAP', statusCode: 429 });
+    expect(typeof response.body.retryAfter).toBe('number');
+    expect(response.headers['retry-after']).toBe(String(response.body.retryAfter));
+
+    // Nada escrito: ni el turno del usuario ni el del tutor.
+    const turns = await readTurns(sessionId);
+    expect(turns).toHaveLength(1); // solo la apertura
+
+    await app.get(RedisService).del(key);
   }, 60_000);
 
   it('un segundo turno dentro de la ventana de 2 s → 429 RATE_LIMITED', async () => {

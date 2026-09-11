@@ -56,6 +56,30 @@ describe('HealthController (e2e)', () => {
     }
   });
 
+  it('/v1/health/ready responde con el mismo shape y estado de dependencias (MEJ-27)', async () => {
+    const response = await request(app.getHttpServer()).get('/v1/health/ready');
+
+    // Contra la rama de e2e las dependencias están arriba, así que 200; lo
+    // que se fija aquí es el contrato, no el estado del entorno.
+    expect([200, 503]).toContain(response.status);
+    expect(response.body).toMatchObject({
+      ok: expect.any(Boolean),
+      version: expect.any(String),
+      redis: { ok: expect.any(Boolean) },
+      insforge: { ok: expect.any(Boolean) },
+    });
+    expect(response.body.ok).toBe(
+      response.body.redis.ok && response.body.insforge.ok,
+    );
+    expect(response.status).toBe(response.body.ok ? 200 : 503);
+  });
+
+  it('/v1/health es liveness: ok:true aunque alguna dependencia falle (MEJ-27)', async () => {
+    const response = await request(app.getHttpServer()).get('/v1/health').expect(200);
+
+    expect(response.body.ok).toBe(true);
+  });
+
   afterEach(async () => {
     await app.close();
   });

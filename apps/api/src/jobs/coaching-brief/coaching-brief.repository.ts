@@ -62,6 +62,8 @@ export interface BriefCredentialRow extends EncryptedCredential {
 export abstract class CoachingBriefRepository {
   abstract loadSession(sessionId: string): Promise<BriefSessionRow | null>;
   abstract markSessionRunning(sessionId: string): Promise<void>;
+  /** Deja `brief_job_status = 'failed'` al agotarse los reintentos (MAL-20). */
+  abstract markSessionFailed(sessionId: string): Promise<void>;
   abstract loadTurns(sessionId: string): Promise<BriefTurnRow[]>;
   abstract loadProfile(userId: string): Promise<BriefProfileRow | null>;
   /** Texto del brief vigente del usuario, o `null` si aún no tiene. */
@@ -126,6 +128,20 @@ export class InsforgeCoachingBriefRepository extends CoachingBriefRepository {
       .update({ brief_job_status: 'running' satisfies BriefJobStatus })
       .eq('id', sessionId);
     unwrap(result as PostgrestLike<unknown>, 'marcar la sesión como running');
+  }
+
+  /**
+   * Marca la sesión como `failed` cuando el job agota sus reintentos
+   * (MAL-20). Sin esto la fila se quedaba en `running` para siempre y nadie
+   * volvía a intentarlo: el aprendiz perdía el brief de esa sesión y las
+   * siguientes arrancaban sin notas de coaching, en silencio.
+   */
+  async markSessionFailed(sessionId: string): Promise<void> {
+    const result = await this.db
+      .from(TABLES.sessions)
+      .update({ brief_job_status: 'failed' satisfies BriefJobStatus })
+      .eq('id', sessionId);
+    unwrap(result as PostgrestLike<unknown>, 'marcar la sesión como failed');
   }
 
   async loadTurns(sessionId: string): Promise<BriefTurnRow[]> {

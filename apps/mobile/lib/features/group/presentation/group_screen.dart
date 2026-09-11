@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -67,6 +69,16 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           );
       if (!mounted) return;
       context.push('/session/${result.session.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      if (e.code == ApiErrorCode.sessionAlreadyActive &&
+          e.activeSessionId != null) {
+        context.push('/session/${e.activeSessionId}');
+        return;
+      }
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
     } finally {
       if (mounted) setState(() => _startingChallenge = false);
     }

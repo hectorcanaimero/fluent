@@ -1,13 +1,13 @@
 [
   {
     "name": "BBC World",
-    "url": "http://feeds.bbci.co.uk/news/world/rss.xml",
+    "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
     "tags": [],
     "lang": "en"
   },
   {
     "name": "BBC Technology",
-    "url": "http://feeds.bbci.co.uk/news/technology/rss.xml",
+    "url": "https://feeds.bbci.co.uk/news/technology/rss.xml",
     "tags": [
       "tech"
     ],
@@ -40,7 +40,7 @@
   },
   {
     "name": "BBC Sport Football",
-    "url": "http://feeds.bbci.co.uk/sport/football/rss.xml",
+    "url": "https://feeds.bbci.co.uk/sport/football/rss.xml",
     "tags": [
       "soccer"
     ],

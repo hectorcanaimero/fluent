@@ -14,20 +14,46 @@ import '../../../l10n/gen/app_localizations.dart';
 /// `GET /sessions/:id` para no tener que arrastrar esa lista completa por
 /// la navegación.
 class SessionSummaryScreen extends ConsumerStatefulWidget {
-  const SessionSummaryScreen({super.key, required this.sessionId, required this.summary});
+  const SessionSummaryScreen({
+    super.key,
+    required this.sessionId,
+    this.summary,
+  });
 
   final String sessionId;
-  final SessionSummary summary;
+
+  /// `null` si se llega sin pasar por `_endSession` (MEJ-20) — por ejemplo,
+  /// la app se reinició justo en esta ruta. En ese caso no hay forma de
+  /// volver a pedir xp/streak/duración reales (SPEC-02 no expone ese
+  /// endpoint), así que se arma un resumen best-effort con lo que sí
+  /// devuelve `GET /sessions/:id`.
+  final SessionSummary? summary;
 
   @override
-  ConsumerState<SessionSummaryScreen> createState() => _SessionSummaryScreenState();
+  ConsumerState<SessionSummaryScreen> createState() =>
+      _SessionSummaryScreenState();
 }
 
 class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
-  late final Future<List<Correction>> _correctionsFuture = ref
+  late final Future<SessionDetailResult> _detailFuture = ref
       .read(fluentApiProvider)
-      .getSession(widget.sessionId)
-      .then((d) => d.corrections);
+      .getSession(widget.sessionId);
+
+  SessionSummary _summaryFromDetail(SessionDetailResult detail) {
+    final started = DateTime.tryParse(detail.session.startedAt);
+    final ended = detail.session.endedAt == null
+        ? null
+        : DateTime.tryParse(detail.session.endedAt!);
+    final durationSec = (started != null && ended != null)
+        ? ended.difference(started).inSeconds.clamp(0, 24 * 60 * 60)
+        : 0;
+    return SessionSummary(
+      xpEarned: detail.session.xpEarned ?? 0,
+      streak: 0,
+      correctionsCount: detail.corrections.length,
+      durationSec: durationSec,
+    );
+  }
 
   @override
   void initState() {
@@ -45,16 +71,46 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     });
   }
 
-  String get _duration {
-    final m = (widget.summary.durationSec ~/ 60).toString().padLeft(2, '0');
-    final s = (widget.summary.durationSec % 60).toString().padLeft(2, '0');
+  String _durationFor(SessionSummary summary) {
+    final m = (summary.durationSec ~/ 60).toString().padLeft(2, '0');
+    final s = (summary.durationSec % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
   @override
   Widget build(BuildContext context) {
+    final explicitSummary = widget.summary;
+    if (explicitSummary != null) {
+      return _buildScaffold(
+        context,
+        summary: explicitSummary,
+        correctionsFuture: _detailFuture.then((d) => d.corrections),
+      );
+    }
+    return FutureBuilder<SessionDetailResult>(
+      future: _detailFuture,
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
+        final detail = snapshot.data!;
+        return _buildScaffold(
+          context,
+          summary: _summaryFromDetail(detail),
+          correctionsFuture: Future.value(detail.corrections),
+        );
+      },
+    );
+  }
+
+  Widget _buildScaffold(
+    BuildContext context, {
+    required SessionSummary summary,
+    required Future<List<Correction>> correctionsFuture,
+  }) {
     final l10n = AppLocalizations.of(context);
-    final summary = widget.summary;
 
     return Scaffold(
       body: SafeArea(
@@ -75,12 +131,11 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 children: [
                   _StatColumn(
                     label: l10n.summaryXpEarnedLabel,
-                    valueBuilder:
-                        (context) => TweenAnimationBuilder<int>(
-                          tween: IntTween(begin: 0, end: summary.xpEarned),
-                          duration: const Duration(milliseconds: 800),
-                          builder: (context, value, _) => Text('+$value'),
-                        ),
+                    valueBuilder: (context) => TweenAnimationBuilder<int>(
+                      tween: IntTween(begin: 0, end: summary.xpEarned),
+                      duration: const Duration(milliseconds: 800),
+                      builder: (context, value, _) => Text('+$value'),
+                    ),
                   ),
                   _StatColumn(
                     label: l10n.summaryStreakLabel,
@@ -88,23 +143,32 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   ),
                   _StatColumn(
                     label: l10n.summaryDurationLabel,
-                    valueBuilder: (context) => Text(_duration),
+                    valueBuilder: (context) => Text(_durationFor(summary)),
                   ),
                 ],
               ),
               if (summary.isDoubleDay) ...[
                 const SizedBox(height: AppSpacing.lg),
-                _Banner(text: l10n.summaryDoubleDayBadge, color: AppColors.goldSoft),
+                _Banner(
+                  text: l10n.summaryDoubleDayBadge,
+                  color: AppColors.goldSoft,
+                ),
               ],
               if (summary.nextIsBoss) ...[
                 const SizedBox(height: AppSpacing.md),
-                _Banner(text: l10n.summaryNextIsBossBanner, color: AppColors.accentSoft),
+                _Banner(
+                  text: l10n.summaryNextIsBossBanner,
+                  color: AppColors.accentSoft,
+                ),
               ],
               const SizedBox(height: AppSpacing.xl),
-              Text(l10n.summaryCorrectionsTitle, style: Theme.of(context).textTheme.titleMedium),
+              Text(
+                l10n.summaryCorrectionsTitle,
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
               const SizedBox(height: AppSpacing.sm),
               FutureBuilder<List<Correction>>(
-                future: _correctionsFuture,
+                future: correctionsFuture,
                 builder: (context, snapshot) {
                   final corrections = snapshot.data ?? const <Correction>[];
                   if (snapshot.connectionState != ConnectionState.done) {
@@ -127,7 +191,9 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                     children: [
                       for (final entry in byCategory.entries)
                         Padding(
-                          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+                          padding: const EdgeInsets.symmetric(
+                            vertical: AppSpacing.xs,
+                          ),
                           child: Row(
                             children: [
                               Expanded(child: Text(entry.key)),
@@ -164,7 +230,8 @@ class _StatColumn extends StatelessWidget {
     return Column(
       children: [
         DefaultTextStyle(
-          style: Theme.of(context).textTheme.headlineMedium!.copyWith(color: AppColors.primary),
+          style: Theme.of(context).textTheme.headlineMedium!
+              .copyWith(color: AppColors.primary),
           child: valueBuilder(context),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -184,7 +251,10 @@ class _Banner extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
-      decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(AppRadius.md)),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
       child: Text(text, textAlign: TextAlign.center),
     );
   }

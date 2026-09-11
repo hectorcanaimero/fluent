@@ -59,7 +59,7 @@ Devuelve `{ xp_earned, streak, is_double_day, next_is_boss: (sessions_count + 1)
 
 - La gracia se aplica en el job diario (SPEC-05 §6), no en el cierre, para que el usuario la vea al abrir la app ("Usaste tu día de gracia").
 - Una gracia por semana calendario (lunes a domingo, en zona del usuario).
-- En Home se muestra "Gracia disponible" o "Gracia usada esta semana".
+- En Home se muestra "Gracia disponible" o "Gracia usada esta semana", a partir del campo `grace` de `GET /progress` (`"available" | "used"`, comparando `profiles.grace_used_week` con el lunes de la semana ISO en curso). El cálculo existía en `src/game/progress.service.ts` desde PR-07 pero no se exponía: la app no podía explicar por qué una racha sobrevivió a un día sin sesión ni avisar de que el comodín ya se gastó (MAL-27).
 
 ## 4. Boss battle (RF-5.3)
 

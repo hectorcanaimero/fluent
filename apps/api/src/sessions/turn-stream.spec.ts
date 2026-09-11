@@ -301,4 +301,34 @@ describe('runTurnStream · errores', () => {
     expect(thrown).toBe(true);
     expect(res.ended).toBe(1);
   });
+
+  it('emite `event: reset` cuando la cadena cambia de modelo (MAL-22)', async () => {
+    const res = fakeResponse();
+
+    await runTurnStream(res, async (onToken, onReset) => {
+      onToken('Nice! What');
+      // El intento falla y la cadena pasa a otro modelo.
+      onReset();
+      onToken('Great! How');
+      return turnResult({ reply: 'Great! How was it?' });
+    });
+
+    const body = res.chunks.join('');
+    expect(body).toContain('event: reset\ndata: {}\n\n');
+    // El reset va después del texto descartado y antes del nuevo.
+    expect(body.indexOf('Nice! What')).toBeLessThan(body.indexOf('event: reset'));
+    expect(body.indexOf('event: reset')).toBeLessThan(body.indexOf('Great! How'));
+  });
+
+  it('no emite `reset` si todavía no se había mandado nada (MAL-22)', async () => {
+    const res = fakeResponse();
+
+    await runTurnStream(res, async (_onToken, onReset) => {
+      // Falla el primer intento sin llegar a emitir: no hay burbuja que vaciar.
+      onReset();
+      return turnResult();
+    });
+
+    expect(res.chunks.join('')).not.toContain('event: reset');
+  });
 });

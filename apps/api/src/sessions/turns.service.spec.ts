@@ -8,6 +8,8 @@ import { DEGRADED_REPLY, HISTORY_TURNS } from '../llm/config.js';
 import type { LlmMessage } from '../llm/llm.client.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { RedisService } from '../redis/redis.service.js';
+import { TURN_MAX_ATTEMPTS } from '../llm/config.js';
+import { turnsDayKey, userDay } from './user-day.js';
 import { turnLockKey, turnPaceKey } from './sessions.constants.js';
 import type { SessionsRepository } from './sessions.repository.js';
 import {
@@ -88,14 +90,37 @@ interface FakeSessionsRepoOptions {
   readonly preference?: { provider: 'openrouter' | 'gemini'; model: string } | null;
 }
 
-function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): SessionsRepository {
+type FakeSessionsRepo = SessionsRepository & { readonly callCounts: Map<string, number> };
+
+function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): FakeSessionsRepo {
+  const callCounts = new Map<string, number>();
+  const count = (name: string): void => {
+    callCounts.set(name, (callCounts.get(name) ?? 0) + 1);
+  };
+
   return {
-    findProfile: async () => (options.profile === undefined ? profileFixture() : options.profile),
-    findNewsItem: async () => options.newsItem ?? null,
-    findBriefText: async () => options.brief ?? null,
-    listConfirmedFacts: async () => options.facts ?? [],
-    findChatModelPreference: async () => options.preference ?? null,
-  } as unknown as SessionsRepository;
+    callCounts,
+    findProfile: async () => {
+      count('findProfile');
+      return options.profile === undefined ? profileFixture() : options.profile;
+    },
+    findNewsItem: async () => {
+      count('findNewsItem');
+      return options.newsItem ?? null;
+    },
+    findBriefText: async () => {
+      count('findBriefText');
+      return options.brief ?? null;
+    },
+    listConfirmedFacts: async () => {
+      count('listConfirmedFacts');
+      return options.facts ?? [];
+    },
+    findChatModelPreference: async () => {
+      count('findChatModelPreference');
+      return options.preference ?? null;
+    },
+  } as unknown as FakeSessionsRepo;
 }
 
 interface FakeTurnsRepoOptions {
@@ -177,6 +202,10 @@ interface FakeLlmCall {
   readonly messages: readonly LlmMessage[];
   /** `onToken` que recibió el servicio: solo lo manda el endpoint SSE (T4). */
   readonly onToken?: (delta: string) => void;
+  /** `onReset` que recibió el servicio (MAL-22). */
+  readonly onReset?: () => void;
+  /** Intentos pedidos; el turno usa `TURN_MAX_ATTEMPTS` (MAL-23). */
+  readonly maxAttempts?: number;
 }
 
 type FakeLlm = LlmService & { readonly calls: FakeLlmCall[] };
@@ -188,8 +217,15 @@ function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
     complete: async (request: {
       messages: readonly LlmMessage[];
       onToken?: (delta: string) => void;
+      onReset?: () => void;
+      maxAttempts?: number;
     }) => {
-      calls.push({ messages: request.messages, onToken: request.onToken });
+      calls.push({
+        messages: request.messages,
+        onToken: request.onToken,
+        onReset: request.onReset,
+        maxAttempts: request.maxAttempts,
+      });
       if (options.error) throw options.error;
       if (options.unavailable) throw new LlmUnavailableError([]);
       // Con `onToken` (endpoint SSE) el proveedor va emitiendo el `reply`.
@@ -227,17 +263,30 @@ type FakeRedis = RedisService & {
   readonly keys: Set<string>;
   readonly setIfAbsentCalls: string[];
   readonly deleted: string[];
+  readonly counters: Map<string, number>;
 };
 
-function fakeRedis(preset: readonly string[] = []): FakeRedis {
+function fakeRedis(
+  preset: readonly string[] = [],
+  options: { counters?: Map<string, number>; incrementFails?: boolean } = {},
+): FakeRedis {
   const keys = new Set<string>(preset);
   const setIfAbsentCalls: string[] = [];
   const deleted: string[] = [];
+  const counters = options.counters ?? new Map<string, number>();
 
   return {
     keys,
     setIfAbsentCalls,
     deleted,
+    counters,
+    increment: async (key: string) => {
+      // `null` simula Redis caído: el tope diario es fail-open (MAL-23).
+      if (options.incrementFails) return null;
+      const next = (counters.get(key) ?? 0) + 1;
+      counters.set(key, next);
+      return next;
+    },
     setIfAbsent: async (key: string) => {
       setIfAbsentCalls.push(key);
       if (keys.has(key)) return false;
@@ -255,12 +304,24 @@ function fakeRedis(preset: readonly string[] = []): FakeRedis {
   } as unknown as FakeRedis;
 }
 
-const configService = { get: () => 3 } as unknown as ConfigService<never, true>;
+/**
+ * `PROMPT_VERSION` es 3 (como antes) y el tope diario queda desactivado por
+ * defecto, para que los tests que no van de MAL-23 no lo toquen.
+ */
+function fakeConfig(turnsDailyCap = 0): ConfigService<never, true> {
+  return {
+    get: (key: string) => (key === 'TURNS_DAILY_CAP' ? turnsDailyCap : 3),
+  } as unknown as ConfigService<never, true>;
+}
+
+
 
 interface BuildOptions extends FakeSessionsRepoOptions, FakeTurnsRepoOptions, FakeLlmOptions {
   readonly llm?: FakeLlm;
   readonly redis?: FakeRedis;
   readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
+  /** Tope diario de turnos (MAL-23). 0 lo desactiva. */
+  readonly turnsDailyCap?: number;
 }
 
 function buildService(options: BuildOptions = {}) {
@@ -274,7 +335,7 @@ function buildService(options: BuildOptions = {}) {
     fakeCredentials(options.credentialProviders),
     llm,
     redis,
-    configService as never,
+    fakeConfig(options.turnsDailyCap ?? 0) as never,
   );
   return { service, sessions, turns, llm, redis };
 }
@@ -725,5 +786,191 @@ describe('TurnsService.addTurn · `onToken` (endpoint SSE)', () => {
     ).rejects.toMatchObject({ code: 'VALIDATION' });
     expect(tokens).toHaveLength(0);
     expect(llm.calls).toHaveLength(0);
+  });
+});
+
+describe('TurnsService.addTurn · tope diario de turnos (MAL-23)', () => {
+  /**
+   * La ventana de ritmo de 2 s por sesión (SPEC-02 §7) rechazaría el segundo
+   * turno de cualquiera de estos tests antes de llegar al tope diario, que es
+   * lo que se quiere probar aquí. En producción esos 2 s pasan solos.
+   */
+  function skipPaceWindow(redis: FakeRedis): void {
+    redis.keys.delete(turnPaceKey(SESSION_ID));
+  }
+
+  it('deja pasar mientras no se llegue al tope', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({ redis, turnsDailyCap: 3 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+
+    const key = [...redis.counters.keys()][0]!;
+    expect(key).toMatch(/^turns:day:/);
+    expect(redis.counters.get(key)).toBe(1);
+  });
+
+  it('al pasarse responde 429 TURNS_DAILY_CAP con retryAfter', async () => {
+    const redis = fakeRedis();
+    const { service, llm } = buildService({ redis, turnsDailyCap: 1 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+    skipPaceWindow(redis);
+
+    const error = await service
+      .addTurn(USER_ID, SESSION_ID, { text: 'dos' })
+      .catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiException);
+    expect((error as ApiException).code).toBe('TURNS_DAILY_CAP');
+    expect((error as ApiException).getStatus()).toBe(429);
+    const body = (error as ApiException).getApiBody();
+    expect(typeof body.retryAfter).toBe('number');
+    expect(body.retryAfter as number).toBeGreaterThan(0);
+    // Solo se llamó al modelo una vez: el turno rechazado no gasta la key.
+    expect(llm.calls).toHaveLength(1);
+  });
+
+  it('no inserta el turno del usuario cuando rechaza', async () => {
+    const redis = fakeRedis();
+    const { service, turns } = buildService({ redis, turnsDailyCap: 1 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+    skipPaceWindow(redis);
+    const insertedBefore = turns.inserted.length;
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'dos' }),
+    ).rejects.toMatchObject({ code: 'TURNS_DAILY_CAP' });
+
+    expect(turns.inserted).toHaveLength(insertedBefore);
+  });
+
+  it('con el tope a 0 no cuenta nada', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({ redis, turnsDailyCap: 0 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('con Redis caído deja pasar (fail-open, como el lock de turno)', async () => {
+    const redis = fakeRedis([], { incrementFails: true });
+    const { service, llm } = buildService({ redis, turnsDailyCap: 1 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+    skipPaceWindow(redis);
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'dos' });
+
+    // Bloquear a todo el mundo durante una caída de Redis es peor que perder
+    // temporalmente el tope.
+    expect(llm.calls).toHaveLength(2);
+  });
+
+  it('la clave del contador lleva el día de la zona del perfil', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({
+      redis,
+      turnsDailyCap: 5,
+      profile: profileFixture({ timezone: 'Asia/Tokyo' }),
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+
+    const key = [...redis.counters.keys()][0]!;
+    expect(key).toBe(turnsDayKey(USER_ID, userDay('Asia/Tokyo')));
+  });
+
+  it('el turno usa dos intentos y no tres (MAL-23)', async () => {
+    const { service, llm } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+
+    expect(llm.calls[0]!.maxAttempts).toBe(TURN_MAX_ATTEMPTS);
+  });
+});
+
+describe('TurnsService.addTurn · cableado del reset (MAL-22)', () => {
+  it('pasa el onReset del endpoint SSE hasta LlmService', async () => {
+    const { service, llm } = buildService({});
+    const onReset = (): void => {};
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }, () => {}, onReset);
+
+    // Las dos puntas (llm.service y turn-stream) estaban probadas por
+    // separado, pero el parámetro se perdía en el camino: este test cubre el
+    // cableado entero.
+    expect(llm.calls[0]!.onReset).toBe(onReset);
+  });
+
+  it('sin streaming no hay onReset', async () => {
+    const { service, llm } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(llm.calls[0]!.onReset).toBeUndefined();
+  });
+});
+
+describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
+  it('no cambia el número de lecturas al repositorio', async () => {
+    const { service, sessions } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // Paralelizar no puede convertirse en pedir las cosas dos veces.
+    expect(Object.fromEntries(sessions.callCounts)).toEqual({
+      findProfile: 1,
+      findBriefText: 1,
+      listConfirmedFacts: 1,
+      findChatModelPreference: 1,
+    });
+  });
+
+  it('con una sesión de noticias también lee la noticia una sola vez', async () => {
+    const { service, sessions } = buildService({
+      session: sessionFixture({ kind: 'news', news_item_id: 'news-1' }),
+      newsItem: {
+        id: 'news-1',
+        title: 'Solar power',
+        summary: 'Solar beat coal.',
+      } as never,
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(sessions.callCounts.get('findNewsItem')).toBe(1);
+  });
+
+  it('el turno del usuario se sigue insertando después de leer el historial', async () => {
+    const { service, turns } = buildService({ history: historyFixture(3) });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // El historial son los turnos 0..2, así que el del usuario es el 3: si se
+    // hubiera insertado antes de leerlo, el índice saldría mal y el turno
+    // aparecería duplicado dentro de `history`.
+    expect(turns.inserted[0]).toMatchObject({ idx: 3, role: 'user', text: 'hola' });
+  });
+
+  it('un perfil sin onboarding sigue ganando al resto de validaciones', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({ profile: null, redis, turnsDailyCap: 5 });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
+    ).rejects.toMatchObject({ code: 'NOT_ONBOARDED' });
+
+    // Y no consume cupo diario: el orden de validación no cambió.
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('sin credenciales sigue dando PROVIDER_NOT_CONNECTED', async () => {
+    const { service } = buildService({ credentialProviders: [] });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
   });
 });

@@ -132,6 +132,29 @@ void main() {
     expect(memory.facts.confirmed, isNotEmpty);
   });
 
+  // MEJ-20: el controller del diálogo de editar hecho se disponía apenas se
+  // resolvía `showDialog`, mientras el diálogo todavía animaba su cierre —
+  // esto disparaba "TextEditingController was used after being disposed" al
+  // terminar `pumpAndSettle`.
+  testWidgets(
+    'editar un hecho confirmado guarda el texto sin romper al cerrar el diálogo',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await _pumpMemory(tester, api);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+
+      await tester.tap(find.byKey(const Key('confirmed_fact_fact-0')));
+      await tester.pumpAndSettle();
+
+      await tester.enterText(find.byType(TextField).last, 'Texto editado');
+      await tester.tap(find.text(l10n.memoryEditFactSave));
+      await tester.pumpAndSettle();
+
+      final memory = await api.getMemory();
+      expect(memory.facts.confirmed.first.text, 'Texto editado');
+    },
+  );
+
   testWidgets('si falla la carga muestra Reintentar y recupera al tocarlo', (
     tester,
   ) async {

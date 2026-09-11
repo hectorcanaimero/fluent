@@ -80,6 +80,7 @@ describe('ProgressService.getProgress (adaptador de src/game)', () => {
       longestStreak: 10,
       sessionsThisWeek: 2,
       correctionsTrend: [{ category: 'articles', count30d: 1, count7d: 1 }],
+      grace: 'available',
     });
 
     // sessionsThisWeek se cuenta desde el lunes 00:00 UTC de la semana en curso.
@@ -107,6 +108,22 @@ describe('ProgressService.getProgress (adaptador de src/game)', () => {
       longestStreak: 0,
       sessionsThisWeek: 0,
       correctionsTrend: [],
+      grace: 'available',
     });
+  });
+
+  it('devuelve grace: used si el comodín de esta semana ya se gastó (MAL-27)', async () => {
+    // `now` es 2026-09-11; el lunes de su semana ISO es el 2026-09-07.
+    const profile = makeProfile({ grace_used_week: '2026-09-07' });
+    const { service } = createService(profile, 0, []);
+
+    expect((await service.getProgress('user-1', now)).grace).toBe('used');
+  });
+
+  it('el comodín de una semana anterior no cuenta como usado (MAL-27)', async () => {
+    const profile = makeProfile({ grace_used_week: '2026-08-31' });
+    const { service } = createService(profile, 0, []);
+
+    expect((await service.getProgress('user-1', now)).grace).toBe('available');
   });
 });

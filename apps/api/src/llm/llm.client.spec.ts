@@ -386,7 +386,7 @@ describe('LlmClient.complete · streaming', () => {
     expect(result.data.reply).toBe(STREAM_REPLY);
   });
 
-  it('sin `usage` en el stream registra ceros (PEND-53)', async () => {
+  it('sin `usage` en el stream registra null, no ceros (MEJ-29)', async () => {
     const fetchImpl = (async () =>
       sseResponse([
         ...slice(STREAM_CONTENT, 20).map(deltaEvent),
@@ -398,7 +398,61 @@ describe('LlmClient.complete · streaming', () => {
       onToken: () => {},
     });
 
-    expect(result.usage).toEqual({ tokensIn: 0, tokensOut: 0 });
+    // Ceros sesgaban a la baja el coste estimado de `GET /models`: «no lo sé»
+    // y «cero tokens» no son lo mismo.
+    expect(result.usage).toEqual({ tokensIn: null, tokensOut: null });
+  });
+
+  it('pide stream_options.include_usage al abrir el stream (MEJ-29)', async () => {
+    let sentBody: Record<string, unknown> = {};
+    const fetchImpl = (async (_url: string, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return sseResponse([
+        ...slice(STREAM_CONTENT, 20).map(deltaEvent),
+        'data: [DONE]\n\n',
+      ]);
+    }) as unknown as typeof fetch;
+
+    await new LlmClient({ fetchImpl }).complete({ ...baseRequest(), onToken: () => {} });
+
+    expect(sentBody.stream).toBe(true);
+    expect(sentBody.stream_options).toEqual({ include_usage: true });
+  });
+
+  it('no manda stream_options fuera del streaming (MEJ-29)', async () => {
+    let sentBody: Record<string, unknown> = {};
+    const fetchImpl = (async (_url: string, init?: RequestInit) => {
+      sentBody = JSON.parse(String(init?.body)) as Record<string, unknown>;
+      return jsonResponse({
+        choices: [{ message: { content: STREAM_CONTENT } }],
+        usage: { prompt_tokens: 7, completion_tokens: 3 },
+      });
+    }) as unknown as typeof fetch;
+
+    const result = await new LlmClient({ fetchImpl }).complete(baseRequest());
+
+    expect(sentBody.stream).toBeUndefined();
+    expect(sentBody.stream_options).toBeUndefined();
+    expect(result.usage).toEqual({ tokensIn: 7, tokensOut: 3 });
+  });
+
+  it('el usage que llega al final del stream se registra (MEJ-29)', async () => {
+    const fetchImpl = (async () =>
+      sseResponse([
+        ...slice(STREAM_CONTENT, 20).map(deltaEvent),
+        `data: ${JSON.stringify({
+          choices: [],
+          usage: { prompt_tokens: 120, completion_tokens: 40 },
+        })}\n\n`,
+        'data: [DONE]\n\n',
+      ])) as unknown as typeof fetch;
+
+    const result = await new LlmClient({ fetchImpl }).complete({
+      ...baseRequest(),
+      onToken: () => {},
+    });
+
+    expect(result.usage).toEqual({ tokensIn: 120, tokensOut: 40 });
   });
 
   it('un stream cortado a medias da `invalid_json`', async () => {

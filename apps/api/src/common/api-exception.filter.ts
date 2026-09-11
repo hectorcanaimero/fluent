@@ -97,6 +97,15 @@ export class ApiExceptionFilter implements ExceptionFilter {
 
     this.logException(exception, body, request);
 
+    // `Retry-After` (MAL-23): el cliente necesita saber cuándo volver, y la
+    // cabecera estándar la entienden también los proxies y las herramientas
+    // de monitorización, no solo nuestra app. El valor viaja en el cuerpo
+    // como `retryAfter` desde `ApiException.extra`.
+    const retryAfter = (body as { retryAfter?: unknown }).retryAfter;
+    if (typeof retryAfter === 'number' && Number.isFinite(retryAfter)) {
+      response.setHeader('Retry-After', String(Math.max(1, Math.ceil(retryAfter))));
+    }
+
     response.status(body.statusCode).json(body);
   }
 

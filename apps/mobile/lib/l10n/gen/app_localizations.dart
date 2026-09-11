@@ -158,6 +158,138 @@ abstract class AppLocalizations {
   /// **'Reintentar'**
   String get commonRetry;
 
+  /// No description provided for @errorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Ocurrió un error. Probá de nuevo.'**
+  String get errorGeneric;
+
+  /// No description provided for @errorUnauthenticated.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu sesión venció. Volvé a entrar.'**
+  String get errorUnauthenticated;
+
+  /// No description provided for @errorForbidden.
+  ///
+  /// In es, this message translates to:
+  /// **'No tenés permiso para hacer eso.'**
+  String get errorForbidden;
+
+  /// No description provided for @errorNotOnboarded.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía te falta completar tu perfil.'**
+  String get errorNotOnboarded;
+
+  /// No description provided for @errorValidation.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá los datos e intentá de nuevo.'**
+  String get errorValidation;
+
+  /// No description provided for @errorInvitationInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación no es válido.'**
+  String get errorInvitationInvalid;
+
+  /// No description provided for @errorInvitationUsed.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación ya se usó.'**
+  String get errorInvitationUsed;
+
+  /// No description provided for @errorInvitationExpired.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese código de invitación venció.'**
+  String get errorInvitationExpired;
+
+  /// No description provided for @errorAlreadyInGroup.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya estás en un grupo.'**
+  String get errorAlreadyInGroup;
+
+  /// No description provided for @errorProviderNotConnected.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectá un proveedor para poder practicar.'**
+  String get errorProviderNotConnected;
+
+  /// No description provided for @errorProviderKeyInvalid.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa clave no es válida.'**
+  String get errorProviderKeyInvalid;
+
+  /// No description provided for @errorModelNotAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese modelo no está disponible ahora.'**
+  String get errorModelNotAvailable;
+
+  /// No description provided for @errorSessionNotActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa sesión ya no está activa.'**
+  String get errorSessionNotActive;
+
+  /// No description provided for @errorSessionAlreadyActive.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tenés una sesión abierta.'**
+  String get errorSessionAlreadyActive;
+
+  /// No description provided for @errorLlmUnavailable.
+  ///
+  /// In es, this message translates to:
+  /// **'El tutor no está disponible ahora. Probá de nuevo en un rato.'**
+  String get errorLlmUnavailable;
+
+  /// No description provided for @errorRateLimited.
+  ///
+  /// In es, this message translates to:
+  /// **'Hiciste muchas peticiones seguidas. Esperá un momento.'**
+  String get errorRateLimited;
+
+  /// No description provided for @errorNotReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no está listo. Probá de nuevo en un momento.'**
+  String get errorNotReady;
+
+  /// No description provided for @errorNotFound.
+  ///
+  /// In es, this message translates to:
+  /// **'No encontramos eso.'**
+  String get errorNotFound;
+
+  /// No description provided for @errorInternal.
+  ///
+  /// In es, this message translates to:
+  /// **'Tuvimos un problema de nuestro lado. Probá de nuevo.'**
+  String get errorInternal;
+
+  /// No description provided for @errorChallengeNotAvailable.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese desafío ya no está disponible.'**
+  String get errorChallengeNotAvailable;
+
+  /// No description provided for @errorTurnsDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.'**
+  String get errorTurnsDailyCap;
+
+  /// No description provided for @errorStreamTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'El tutor tardó en responder. Probá de nuevo.'**
+  String get errorStreamTimeout;
+
   /// No description provided for @formFieldRequired.
   ///
   /// In es, this message translates to:
@@ -1147,6 +1279,48 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Entendido'**
   String get conversationMicUnavailableAccept;
+
+  /// No description provided for @conversationMicPermissionDeniedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Activá el micrófono'**
+  String get conversationMicPermissionDeniedTitle;
+
+  /// No description provided for @conversationMicPermissionDeniedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.'**
+  String get conversationMicPermissionDeniedBody;
+
+  /// No description provided for @conversationMicPermissionDeniedCancel.
+  ///
+  /// In es, this message translates to:
+  /// **'Cancelar'**
+  String get conversationMicPermissionDeniedCancel;
+
+  /// No description provided for @conversationMicPermissionDeniedOpenSettings.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir Ajustes'**
+  String get conversationMicPermissionDeniedOpenSettings;
+
+  /// No description provided for @conversationSttErrorNoMatch.
+  ///
+  /// In es, this message translates to:
+  /// **'No entendimos lo que dijiste. Probá de nuevo.'**
+  String get conversationSttErrorNoMatch;
+
+  /// No description provided for @conversationSttErrorTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'Se acabó el tiempo de escucha. Probá de nuevo.'**
+  String get conversationSttErrorTimeout;
+
+  /// No description provided for @conversationSttErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'Hubo un problema con el micrófono. Probá de nuevo.'**
+  String get conversationSttErrorGeneric;
 
   /// No description provided for @conversationSpeedButtonLabel.
   ///

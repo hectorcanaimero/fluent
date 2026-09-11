@@ -13,6 +13,7 @@ import { isoDateString } from '../game/iso-week.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { LlmMessage } from '../llm/llm.client.js';
 import { OPENING_USER_MESSAGE } from '../llm/prompts/turn.js';
+import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ChallengesService } from '../social/challenges.service.js';
 import type { ChallengesResultDto } from '../social/social.types.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
@@ -110,6 +111,8 @@ interface FakeRepoOptions {
   readonly facts?: Fact[];
   readonly lastSession?: { found: boolean; callbackFactId: string | null };
   readonly callbackFact?: Fact | null;
+  /** Sesión con el brief fallido que `openSession` debe reencolar (MAL-20). */
+  readonly failedBriefSessionId?: string | null;
 }
 
 type FakeRepo = SessionsRepository & {
@@ -143,6 +146,7 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
     listConfirmedFacts: async () => options.facts ?? [],
     findLastSessionCallback: async () =>
       options.lastSession ?? { found: false, callbackFactId: null },
+    findRecentFailedBriefSessionId: async () => options.failedBriefSessionId ?? null,
     pickCallbackFact: async (userId: string) => {
       pickCallbackCalls.push(userId);
       return options.callbackFact ?? null;
@@ -261,6 +265,18 @@ function fakeChallenges(
   return { service: service as unknown as ChallengesService, calls };
 }
 
+/** `JobDispatcher` de mentira: anota qué sesiones se reencolan (MAL-20). */
+function fakeJobs(options: { fails?: boolean } = {}) {
+  const enqueued: string[] = [];
+  const dispatcher = {
+    enqueueCoachingBrief: async (sessionId: string) => {
+      enqueued.push(sessionId);
+      if (options.fails) throw new Error('cola caída');
+    },
+  };
+  return { enqueued, dispatcher: dispatcher as unknown as JobDispatcher };
+}
+
 const configService = { get: () => 3 } as unknown as ConfigService<never, true>;
 
 interface BuildOptions extends FakeRepoOptions {
@@ -276,16 +292,18 @@ function buildService(options: BuildOptions = {}) {
   const llm = options.llm ?? fakeLlm();
   const boss = options.boss ?? fakeBoss();
   const challenges = options.challenges ?? fakeChallenges();
+  const jobs = fakeJobs();
   const service = new SessionsService(
     repository,
     fakeCredentials(options.credentialProviders),
     llm,
     boss.service,
     challenges.service,
+    jobs.dispatcher,
     configService as never,
     () => options.random ?? 0.99,
   );
-  return { service, repository, llm, boss, challenges };
+  return { service, repository, llm, boss, challenges, jobs };
 }
 
 function systemPromptOf(llm: FakeLlm): string {
@@ -837,5 +855,50 @@ describe('SessionsService.openSession · apertura degradada (SPEC-04 §3, SPEC-0
     for (const text of texts) {
       expect(text.trim().endsWith('?')).toBe(true);
     }
+  });
+});
+
+describe('SessionsService.openSession · recuperación del brief fallido (MAL-20)', () => {
+  it('reencola el brief de la última sesión fallida reciente', async () => {
+    const { service, jobs } = buildService({ failedBriefSessionId: 'sesion-fallida' });
+
+    await service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' });
+    // El reencolado no bloquea la apertura, así que se deja correr la cola
+    // de microtareas antes de comprobarlo.
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(jobs.enqueued).toEqual(['sesion-fallida']);
+  });
+
+  it('no reencola nada si no hay briefs fallidos recientes', async () => {
+    const { service, jobs } = buildService({ failedBriefSessionId: null });
+
+    await service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(jobs.enqueued).toEqual([]);
+  });
+
+  it('una cola caída no impide abrir la sesión', async () => {
+    const repository = fakeRepository({ failedBriefSessionId: 'sesion-fallida' });
+    const jobs = fakeJobs({ fails: true });
+    const service = new SessionsService(
+      repository,
+      fakeCredentials(),
+      fakeLlm(),
+      fakeBoss().service,
+      fakeChallenges().service,
+      jobs.dispatcher,
+      configService as never,
+      () => 0.99,
+    );
+
+    const result = await service.openSession(USER_ID, {
+      kind: 'free_topic',
+      topic: 'Viajes',
+    });
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(result.session.id).toBeTruthy();
   });
 });

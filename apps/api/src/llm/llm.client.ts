@@ -39,9 +39,14 @@ export interface LlmRequest<T> {
   readonly onToken?: (delta: string) => void;
 }
 
+/**
+ * Tokens de una llamada. `null` significa «el proveedor no lo dijo», que no
+ * es lo mismo que cero: registrar ceros sesgaba a la baja el coste estimado
+ * de `GET /models` (MEJ-29).
+ */
 export interface LlmUsage {
-  readonly tokensIn: number;
-  readonly tokensOut: number;
+  readonly tokensIn: number | null;
+  readonly tokensOut: number | null;
 }
 
 export interface LlmResult<T> {
@@ -154,11 +159,11 @@ function readContent(message: unknown): string {
 function readUsage(body: unknown): LlmUsage {
   const usage =
     typeof body === 'object' && body !== null ? (body as { usage?: unknown }).usage : undefined;
-  if (typeof usage !== 'object' || usage === null) return { tokensIn: 0, tokensOut: 0 };
+  if (typeof usage !== 'object' || usage === null) return { tokensIn: null, tokensOut: null };
   const u = usage as { prompt_tokens?: unknown; completion_tokens?: unknown };
   return {
-    tokensIn: typeof u.prompt_tokens === 'number' ? u.prompt_tokens : 0,
-    tokensOut: typeof u.completion_tokens === 'number' ? u.completion_tokens : 0,
+    tokensIn: typeof u.prompt_tokens === 'number' ? u.prompt_tokens : null,
+    tokensOut: typeof u.completion_tokens === 'number' ? u.completion_tokens : null,
   };
 }
 
@@ -207,11 +212,15 @@ export class LlmClient {
     if (config.supportsJsonMode) {
       body.response_format = { type: 'json_object' };
     }
-    // SPEC-04 §4 «Streaming»: el único cambio en la petición es `stream: true`
-    // (no se manda `stream_options`, ver PEND-53).
+    // SPEC-04 §4 «Streaming». Además de `stream: true` se pide
+    // `stream_options: { include_usage: true }` (MEJ-29): sin eso, la mayoría
+    // de proveedores compatibles con OpenAI no mandan `usage` en el stream y
+    // los tokens quedaban registrados como 0, sesgando a la baja el coste
+    // estimado. La opción es inocua en los que la ignoran.
     const streaming = request.onToken !== undefined;
     if (streaming) {
       body.stream = true;
+      body.stream_options = { include_usage: true };
     }
 
     // Nunca se registran ni la key ni el contenido de los mensajes.
@@ -313,7 +322,7 @@ export class LlmClient {
    *
    * Devuelve el texto acumulado de `choices[0].delta.content` —que se valida
    * después **exactamente igual** que en el modo no streaming— y el `usage`
-   * que el proveedor haya mandado (ceros si no manda ninguno, PEND-53).
+   * que el proveedor haya mandado, o `null` si no mandó ninguno (MEJ-29).
    *
    * Mientras acumula alimenta un `StreamReplyParser` y llama a `onToken` con
    * cada delta del campo `reply`. Si el parser no reconoce la estructura deja
@@ -344,7 +353,7 @@ export class LlmClient {
     const reader = stream.getReader();
 
     let content = '';
-    let usage: LlmUsage = { tokensIn: 0, tokensOut: 0 };
+    let usage: LlmUsage = { tokensIn: null, tokensOut: null };
     /** Resto de la última línea, que puede venir partida entre dos trozos. */
     let pending = '';
     /** Líneas `data:` del evento en curso (SSE permite varias por evento). */

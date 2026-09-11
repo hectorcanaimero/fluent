@@ -1,4 +1,5 @@
-import { Controller, Get } from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res } from '@nestjs/common';
+import type { Response } from 'express';
 import { ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { Public } from '../auth/public.decorator.js';
@@ -21,8 +22,23 @@ import type { HealthStatus } from './health.service.js';
 export class HealthController {
   constructor(private readonly healthService: HealthService) {}
 
+  /**
+   * Liveness (MEJ-27): 200 mientras el proceso responda, aunque Redis o
+   * InsForge estén caídos. Es el que mira el HEALTHCHECK del contenedor.
+   */
   @Get()
   async check(): Promise<HealthStatus> {
     return this.healthService.check();
+  }
+
+  /**
+   * Readiness (MEJ-27): 200 solo con Redis e InsForge arriba, 503 si no.
+   * Para decidir si mandarle tráfico, no si reiniciar el contenedor.
+   */
+  @Get('ready')
+  async ready(@Res({ passthrough: true }) res: Response): Promise<HealthStatus> {
+    const status = await this.healthService.ready();
+    res.status(status.ok ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
+    return status;
   }
 }

@@ -9,6 +9,7 @@ import type { Level, Locale, SessionKind } from '../config.js';
 import { MAX_FACTS_IN_PROMPT } from '../config.js';
 import type { LlmMessage } from '../llm.client.js';
 import { languageForLocale } from './languages.js';
+import { untrustedBlock, untrustedInline } from './untrusted.js';
 import {
   truncateBrief,
   truncateHistory,
@@ -80,7 +81,11 @@ function openingRule(input: TurnPromptInput): string | null {
   const fact = input.callbackFact;
   if (fact) {
     const scheduled = fact.happensOn ? ` (scheduled for ${fact.happensOn})` : '';
-    return `6. Open by asking casually about this: "${fact.text}"${scheduled}. One sentence, then move to the session topic.`;
+    // El texto del hecho lo controla el usuario y aquí va dentro de una
+    // *regla*, que es el peor sitio donde puede acabar: se delimita (MEJ-35).
+    return `6. Open by asking casually about the data in this block: ${untrustedInline(
+      fact.text,
+    )}${scheduled}. One sentence, then move to the session topic.`;
   }
   return '6. Open with a warm one-sentence greeting and the first question about the topic.';
 }
@@ -116,10 +121,10 @@ export function buildTurnSystemPrompt(input: TurnPromptInput): string {
     `Session type: ${input.kind}. ${scenarioBlock(input)}`,
     '',
     'Coaching notes about this learner (follow them):',
-    brief,
+    untrustedBlock(brief),
     '',
     'Things you know about the learner (use naturally, never list them):',
-    factsBlock(input.facts),
+    untrustedBlock(factsBlock(input.facts)),
     '',
     'Rules:',
     ...rules,

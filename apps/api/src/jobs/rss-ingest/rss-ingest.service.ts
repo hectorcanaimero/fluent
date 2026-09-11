@@ -38,6 +38,9 @@ const DEFAULT_RETENTION_DAYS = 14;
 /** SPEC-05 §3 paso 1: «descargar con timeout 10 s». */
 const DEFAULT_TIMEOUT_MS = 10_000;
 
+/** Tope de descarga por feed (MEJ-36). Un RSS normal no llega ni a 1 MB. */
+const DEFAULT_MAX_BYTES = 2 * 1024 * 1024;
+
 export interface RssIngestFeedFailure {
   readonly name: string;
   readonly url: string;
@@ -59,6 +62,8 @@ export interface RssIngestServiceOptions {
   /** Por defecto `INTERESTS`. Override solo para tests. */
   readonly interests?: readonly Interest[];
   readonly fetchImpl?: typeof fetch;
+  /** Máximo de bytes por feed; por encima, se aborta la descarga. */
+  readonly maxBytes?: number;
   /** Reloj inyectable para que los tests fijen "hoy". Por defecto `() => new Date()`. */
   readonly now?: () => Date;
   readonly itemsPerFeed?: number;
@@ -70,6 +75,7 @@ export class RssIngestService {
   private readonly repository: RssIngestRepository;
   private readonly feeds: readonly Feed[];
   private readonly fetchImpl: typeof fetch;
+  private readonly maxBytes: number;
   private readonly now: () => Date;
   private readonly keywords: ReadonlySet<string>;
   private readonly itemsPerFeed: number;
@@ -86,6 +92,7 @@ export class RssIngestService {
     this.itemsPerFeed = options.itemsPerFeed ?? DEFAULT_ITEMS_PER_FEED;
     this.retentionDays = options.retentionDays ?? DEFAULT_RETENTION_DAYS;
     this.timeoutMs = options.timeoutMs ?? DEFAULT_TIMEOUT_MS;
+    this.maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
   }
 
   async run(): Promise<RssIngestJobResult> {
@@ -147,6 +154,17 @@ export class RssIngestService {
     return date.toISOString().slice(0, 10);
   }
 
+  /**
+   * Descarga un feed con dos topes: el `AbortSignal.timeout` de siempre y un
+   * máximo de bytes (`maxBytes`, 2 MB por defecto).
+   *
+   * Sin el segundo, un feed hostil o roto —un `Content-Length` mentiroso, una
+   * respuesta que no termina nunca— podía hacer crecer el buffer hasta
+   * tumbar el worker por memoria; con 23 GB compartidos en el VPS y
+   * `earlyoom` vigilando, eso se lleva por delante también a la API. Se lee
+   * el cuerpo por trozos y se aborta en cuanto se pasa del límite, en vez de
+   * fiarse de `Content-Length`, que el servidor controla.
+   */
   private async downloadFeed(url: string): Promise<string> {
     const response = await this.fetchImpl(url, {
       signal: AbortSignal.timeout(this.timeoutMs),
@@ -154,7 +172,34 @@ export class RssIngestService {
     if (!response.ok) {
       throw new Error(`respuesta HTTP ${response.status} al descargar ${url}`);
     }
-    return response.text();
+
+    if (response.body === null) {
+      return response.text();
+    }
+
+    const decoder = new TextDecoder();
+    const reader = response.body.getReader();
+    let received = 0;
+    let xml = '';
+
+    try {
+      for (;;) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        received += value.byteLength;
+        if (received > this.maxBytes) {
+          throw new Error(
+            `el feed ${url} supera el máximo de ${this.maxBytes} bytes`,
+          );
+        }
+        xml += decoder.decode(value, { stream: true });
+      }
+    } finally {
+      // Corta la descarga y libera la conexión también en el camino de error.
+      await reader.cancel().catch(() => undefined);
+    }
+
+    return xml + decoder.decode();
   }
 
   private buildRow(

@@ -1,4 +1,5 @@
 import type { CorrectionCategory } from '../db/schema.js';
+import type { GraceStatus } from '../game/progress.service.js';
 
 /** `level` de `GET /progress` (SPEC-02 §4.5, SPEC-07 §1). */
 export interface LevelInfo {
@@ -30,4 +31,11 @@ export interface ProgressResultDto {
   readonly longestStreak: number;
   readonly sessionsThisWeek: number;
   readonly correctionsTrend: CorrectionTrendItem[];
+  /**
+   * Comodín de racha de la semana ISO en curso (MAL-27): `'available'` si
+   * todavía queda, `'used'` si ya se gastó. Sin esto la app no podía
+   * explicar por qué una racha sobrevivió a un día sin sesión, ni avisar de
+   * que el de esta semana ya no está.
+   */
+  readonly grace: GraceStatus;
 }

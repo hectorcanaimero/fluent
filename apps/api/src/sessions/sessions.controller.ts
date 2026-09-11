@@ -117,8 +117,8 @@ export class SessionsController {
     @Body() dto: CreateTurnDto,
     @Res() res: Response,
   ): Promise<void> {
-    return runTurnStream(res, (onToken) =>
-      this.turnsService.addTurn(userId, sessionId, dto, onToken),
+    return runTurnStream(res, (onToken, onReset) =>
+      this.turnsService.addTurn(userId, sessionId, dto, onToken, onReset),
     );
   }
 

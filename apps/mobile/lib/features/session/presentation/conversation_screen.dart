@@ -1,13 +1,17 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/api/turn_stream_event.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/speech_service.dart';
@@ -35,7 +39,8 @@ class ConversationScreen extends ConsumerStatefulWidget {
   ConsumerState<ConversationScreen> createState() => _ConversationScreenState();
 }
 
-class _ConversationScreenState extends ConsumerState<ConversationScreen> {
+class _ConversationScreenState extends ConsumerState<ConversationScreen>
+    with WidgetsBindingObserver {
   ConvState _state = ConvState.idle;
   final List<ChatMessage> _messages = [];
   final _draftController = TextEditingController();
@@ -52,31 +57,86 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   String? _errorMessage;
 
   Timer? _timer;
-  late int _remainingSeconds;
+
+  /// MEJ-17: el timer tiqueaba cada segundo con un `setState` de pantalla
+  /// completa (AppBar, lista de mensajes y controles de abajo). Con esto
+  /// solo repinta el `Text` del AppBar envuelto en `ValueListenableBuilder`.
+  late final ValueNotifier<int> _remainingSecondsNotifier = ValueNotifier(
+    widget.sessionDuration.inSeconds,
+  );
+  int get _remainingSeconds => _remainingSecondsNotifier.value;
   bool _warningShown = false;
+
+  /// MEJ-17: la burbuja del tutor mientras llegan tokens del streaming
+  /// actualizaba `_messages` con un `setState` por delta. Ahora solo el
+  /// texto en vivo (mientras `_liveIndex` apunta a esa burbuja) pasa por
+  /// este notifier; `_AssistantBubble` lo escucha con
+  /// `ValueListenableBuilder` en vez de que reconstruya toda la pantalla.
+  final ValueNotifier<String> _liveText = ValueNotifier('');
+  int? _liveIndex;
 
   bool _micAvailable = true;
   bool _micHasEnUsLocale = true;
+
+  /// MAL-05: si `initialize()` falló, distingue "el usuario denegó el
+  /// permiso" (se ofrece abrir Ajustes) de "el dispositivo no tiene
+  /// reconocimiento de voz en absoluto" (diálogo genérico, ya existente).
+  bool _micPermissionDenied = false;
 
   // Se leen una sola vez: son `Provider` simples (sin `watch`), y así
   // `dispose()` puede usarlos sin tocar `ref` después de desmontar.
   late final SpeechService _speech = ref.read(speechServiceProvider);
   late final TtsService _tts = ref.read(ttsServiceProvider);
 
+  /// MAL-08: un solo token por pantalla (no por turno) para poder cancelar
+  /// cualquier `sendTurn`/`sendTurnStream` en vuelo al salir de la
+  /// conversación, en vez de dejarlo terminar en segundo plano.
+  final _turnCancelToken = CancelToken();
+
   @override
   void initState() {
     super.initState();
-    _remainingSeconds = widget.sessionDuration.inSeconds;
+    WidgetsBinding.instance.addObserver(this);
     _bootstrap();
   }
 
   @override
   void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _turnCancelToken.cancel();
     _timer?.cancel();
     _draftController.dispose();
     _scrollController.dispose();
     _speech.cancel();
+    // MAL-07: sin esto, minimizar la app durante `speaking` dejaba al tutor
+    // sonando en segundo plano indefinidamente.
+    _tts.stop();
+    _remainingSecondsNotifier.dispose();
+    _liveText.dispose();
     super.dispose();
+  }
+
+  /// MAL-07: sin observar el ciclo de vida, minimizar la app (o el pop-up
+  /// de una llamada entrante) dejaba el timer corriendo en segundo plano —
+  /// al volver, el cronómetro ya había avanzado sin que la sesión hubiera
+  /// "pasado" realmente — y el STT/TTS seguían activos sin que nadie los
+  /// viera ni escuchara.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    switch (state) {
+      case AppLifecycleState.paused:
+        _timer?.cancel();
+        _speech.cancel();
+        _tts.stop();
+      case AppLifecycleState.resumed:
+        if (!_loading && !_bootError && _remainingSeconds > 0) {
+          _startTimer();
+        }
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.detached:
+      case AppLifecycleState.hidden:
+        break;
+    }
   }
 
   Future<void> _bootstrap() async {
@@ -93,6 +153,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       _micAvailable = await speech.initialize();
       if (_micAvailable) {
         _micHasEnUsLocale = await speech.hasLocale('en_US');
+      } else {
+        _micPermissionDenied = !(await speech.hasPermission);
       }
 
       final detail = await api.getSession(widget.sessionId);
@@ -126,11 +188,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   void _onTick() {
     if (!mounted) return;
-    setState(
-      () => _remainingSeconds = (_remainingSeconds - 1).clamp(
-        0,
-        widget.sessionDuration.inSeconds,
-      ),
+    _remainingSecondsNotifier.value = (_remainingSeconds - 1).clamp(
+      0,
+      widget.sessionDuration.inSeconds,
     );
 
     if (!_warningShown &&
@@ -152,9 +212,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
   }
 
-  String get _formattedTime {
-    final m = (_remainingSeconds ~/ 60).toString().padLeft(2, '0');
-    final s = (_remainingSeconds % 60).toString().padLeft(2, '0');
+  String _formatTime(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
@@ -208,7 +268,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Future<void> _startListening() async {
-    if (!_micAvailable || !_micHasEnUsLocale) {
+    if (!_micAvailable) {
+      if (_micPermissionDenied) {
+        await _showMicPermissionDeniedDialog();
+      } else {
+        await _showMicUnavailableDialog();
+      }
+      return;
+    }
+    if (!_micHasEnUsLocale) {
       await _showMicUnavailableDialog();
       return;
     }
@@ -229,11 +297,62 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           }
         });
       },
+      // MAL-05: el motor puede terminar solo sin `isFinal` (45 s, una
+      // llamada entrante) — se pasa a revisar con lo que ya se transcribió
+      // en vez de dejar el mic "escuchando" para siempre.
+      onDoneWithoutResult: () {
+        if (!mounted) return;
+        setState(() {
+          _draftController.text = _partialText;
+          _state = ConvState.reviewing;
+        });
+      },
+      // MAL-05: un error del motor (sin coincidencia, timeout) vuelve a
+      // `idle` con un aviso, en vez de quedarse "escuchando".
+      onError: (errorCode) {
+        if (!mounted) return;
+        final l10n = AppLocalizations.of(context);
+        setState(() {
+          _state = ConvState.idle;
+          _partialText = '';
+        });
+        final message = switch (errorCode) {
+          'error_no_match' => l10n.conversationSttErrorNoMatch,
+          'error_speech_timeout' => l10n.conversationSttErrorTimeout,
+          _ => l10n.conversationSttErrorGeneric,
+        };
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(message)));
+      },
     );
   }
 
   Future<void> _stopListening() async {
     await _speech.stop();
+  }
+
+  Future<void> _showMicPermissionDeniedDialog() async {
+    final l10n = AppLocalizations.of(context);
+    await showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.conversationMicPermissionDeniedTitle),
+        content: Text(l10n.conversationMicPermissionDeniedBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.conversationMicPermissionDeniedCancel),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              openAppSettings();
+            },
+            child: Text(l10n.conversationMicPermissionDeniedOpenSettings),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> _showMicUnavailableDialog() async {
@@ -305,22 +424,23 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
     int? assistantIndex;
     final liveReply = StringBuffer();
+    // MEJ-17: solo el primer token reconstruye la pantalla (agrega la
+    // burbuja a `_messages`); los siguientes deltas solo tocan `_liveText`,
+    // que únicamente escucha la burbuja en vivo (`ValueListenableBuilder`
+    // en `_AssistantBubble`).
     void onToken(String delta) {
       liveReply.write(delta);
       if (!mounted) return;
-      setState(() {
-        final aIdx = assistantIndex;
-        if (aIdx == null) {
+      if (assistantIndex == null) {
+        setState(() {
           assistantIndex = _messages.length;
+          _liveIndex = assistantIndex;
           _messages.add(
             ChatMessage(role: 'assistant', text: liveReply.toString()),
           );
-        } else {
-          _messages[aIdx] = _messages[aIdx].copyWith(
-            text: liveReply.toString(),
-          );
-        }
-      });
+        });
+      }
+      _liveText.value = liveReply.toString();
       _scrollToBottom();
     }
 
@@ -352,6 +472,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             degraded: result.degraded,
           );
         }
+        _liveIndex = null;
         _draftController.clear();
         _state = ConvState.speaking;
       });
@@ -368,14 +489,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       if (_pendingTimerEnd) {
         await _endSession(reason: 'timer');
       }
-    } on ApiException catch (_) {
+    } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
         final aIdx = assistantIndex;
         if (aIdx != null) _messages.removeAt(aIdx);
         _messages.removeAt(userIndex);
+        _liveIndex = null;
         _state = ConvState.reviewing;
-        _errorMessage = l10n.conversationSendErrorGeneric;
+        _errorMessage = l10nForApiError(e.code, l10n);
       });
     }
   }
@@ -390,11 +512,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   /// modo no streaming»): un error que llega **antes** de cualquier evento
   /// se relanza tal cual en vez de reintentar (es el mismo `403/409/429/400`
   /// que daría el endpoint sin streaming, así que reintentar solo gastaría
-  /// una llamada de más); cualquier otro corte —de red, o un `error` SSE
-  /// después de haber empezado a recibir tokens— cae al endpoint completo.
-  /// Ver PEND de `docs/specs/pendientes/PR-06.md` sobre el turno duplicado
-  /// que puede producir esa caída si el stream ya había terminado del lado
-  /// del servidor cuando se corta la conexión.
+  /// una llamada de más); cualquier otro corte —de red, un `error` SSE
+  /// después de haber empezado a recibir tokens, o un `streamTimeout`
+  /// (MAL-08: proxy/conexión colgada, nunca la rechazó el servidor)— cae al
+  /// endpoint completo. Ver PEND de `docs/specs/pendientes/PR-06.md` sobre
+  /// el turno duplicado que puede producir esa caída si el stream ya había
+  /// terminado del lado del servidor cuando se corta la conexión.
   Future<TurnResult> _sendTurnWithStreamFallback({
     required String text,
     required void Function(String delta) onToken,
@@ -405,6 +528,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       final stream = api.sendTurnStream(
         sessionId: widget.sessionId,
         text: text,
+        cancelToken: _turnCancelToken,
       );
       await for (final event in stream) {
         sawEvent = true;
@@ -420,13 +544,17 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             throw exception;
         }
       }
-    } on ApiException {
-      if (!sawEvent) rethrow;
+    } on ApiException catch (e) {
+      if (!sawEvent && e.code != ApiErrorCode.streamTimeout) rethrow;
     } catch (_) {
       // Fallo de transporte antes de cualquier evento: se intenta igual el
       // modo completo abajo.
     }
-    return api.sendTurn(sessionId: widget.sessionId, text: text);
+    return api.sendTurn(
+      sessionId: widget.sessionId,
+      text: text,
+      cancelToken: _turnCancelToken,
+    );
   }
 
   Future<void> _showUnavailableDialog() async {
@@ -525,58 +653,75 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       );
     }
 
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_sessionTopic ?? ''),
-        actions: [
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-            child: Center(
-              child: Text(_formattedTime, key: const Key('conversation_timer')),
+    return PopScope<Object?>(
+      // MAL-07: el back de Android abandonaba la sesión activa sin avisar;
+      // ahora reutiliza el mismo diálogo de confirmación que el botón de
+      // cerrar del AppBar.
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        if (didPop) return;
+        _confirmEndByUser();
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_sessionTopic ?? ''),
+          actions: [
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+              child: Center(
+                child: ValueListenableBuilder<int>(
+                  valueListenable: _remainingSecondsNotifier,
+                  builder: (context, seconds, _) => Text(
+                    _formatTime(seconds),
+                    key: const Key('conversation_timer'),
+                  ),
+                ),
+              ),
             ),
-          ),
-          IconButton(
-            key: const Key('conversation_end_button'),
-            icon: const Icon(Icons.close),
-            onPressed: _confirmEndByUser,
-            tooltip: l10n.conversationEndButton,
-          ),
-        ],
-      ),
-      body: Column(
-        children: [
-          Expanded(
-            child: ListView.builder(
-              key: const Key('conversation_message_list'),
-              controller: _scrollController,
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
-              itemCount: _messages.length,
-              itemBuilder: (context, index) {
-                final message = _messages[index];
-                return message.isAssistant
-                    ? _AssistantBubble(
-                        message: message,
-                        rate: _ttsRate,
-                        onSetRate: _setRate,
-                        onReplay: () => _replay(message.text),
-                      )
-                    : _UserBubble(message: message);
-              },
+            IconButton(
+              key: const Key('conversation_end_button'),
+              icon: const Icon(Icons.close),
+              onPressed: _confirmEndByUser,
+              tooltip: l10n.conversationEndButton,
             ),
-          ),
-          _BottomControls(
-            state: _state,
-            partialText: _partialText,
-            draftController: _draftController,
-            errorMessage: _errorMessage,
-            onMicTap: _state == ConvState.listening
-                ? _stopListening
-                : _startListening,
-            onSend: _send,
-            onRetry: _retry,
-            onTextMode: _enterTextMode,
-          ),
-        ],
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: ListView.builder(
+                key: const Key('conversation_message_list'),
+                controller: _scrollController,
+                padding: const EdgeInsets.all(AppSpacing.screenPad),
+                itemCount: _messages.length,
+                itemBuilder: (context, index) {
+                  final message = _messages[index];
+                  return message.isAssistant
+                      ? _AssistantBubble(
+                          message: message,
+                          rate: _ttsRate,
+                          onSetRate: _setRate,
+                          onReplay: () => _replay(message.text),
+                          liveText: index == _liveIndex ? _liveText : null,
+                        )
+                      : _UserBubble(message: message);
+                },
+              ),
+            ),
+            _BottomControls(
+              state: _state,
+              partialText: _partialText,
+              draftController: _draftController,
+              errorMessage: _errorMessage,
+              onMicTap: _state == ConvState.listening
+                  ? _stopListening
+                  : _startListening,
+              onSend: _send,
+              onRetry: _retry,
+              onTextMode: _enterTextMode,
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -588,6 +733,7 @@ class _AssistantBubble extends StatelessWidget {
     required this.rate,
     required this.onSetRate,
     required this.onReplay,
+    this.liveText,
   });
 
   final ChatMessage message;
@@ -595,9 +741,15 @@ class _AssistantBubble extends StatelessWidget {
   final ValueChanged<double> onSetRate;
   final VoidCallback onReplay;
 
+  /// MEJ-17: mientras esta burbuja es la que está recibiendo tokens del
+  /// streaming, el texto viene de acá (actualizado sin reconstruir el
+  /// resto de la pantalla) en vez de `message.text`.
+  final ValueListenable<String>? liveText;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final live = liveText;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Column(
@@ -610,7 +762,12 @@ class _AssistantBubble extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: AppColors.border),
             ),
-            child: Text(message.text),
+            child: live == null
+                ? Text(message.text)
+                : ValueListenableBuilder<String>(
+                    valueListenable: live,
+                    builder: (context, value, _) => Text(value),
+                  ),
           ),
           Row(
             children: [

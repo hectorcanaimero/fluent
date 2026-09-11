@@ -7,6 +7,7 @@ import request from 'supertest';
 import type { App } from 'supertest/types';
 import type { NextFunction, Request, Response } from 'express';
 import { RateLimitModule } from './rate-limit.module.js';
+import { clientIpOf } from './user-throttler.guard.js';
 import { CommonModule } from '../common/common.module.js';
 import { I18nModule } from '../i18n/i18n.module.js';
 
@@ -119,5 +120,43 @@ describe('UserThrottlerGuard (rate limiting, SPEC-02 §7)', () => {
       .get('/toy/limited')
       .set('x-test-user', 'user-rate-b')
       .expect(200);
+  });
+});
+
+describe('clientIpOf · IP real detrás de Cloudflare (MEJ-30)', () => {
+  it('prefiere CF-Connecting-IP a request.ip', () => {
+    expect(
+      clientIpOf({ headers: { 'cf-connecting-ip': '203.0.113.9' }, ip: '10.0.0.1' }),
+    ).toBe('203.0.113.9');
+  });
+
+  it('cae a request.ip si no hay cabecera de Cloudflare', () => {
+    expect(clientIpOf({ headers: {}, ip: '10.0.0.1' })).toBe('10.0.0.1');
+  });
+
+  it('ignora una cabecera vacía o de solo espacios', () => {
+    expect(clientIpOf({ headers: { 'cf-connecting-ip': '   ' }, ip: '10.0.0.1' })).toBe(
+      '10.0.0.1',
+    );
+  });
+
+  it('con la cabecera repetida se queda con la primera', () => {
+    expect(
+      clientIpOf({ headers: { 'cf-connecting-ip': ['203.0.113.9', '198.51.100.2'] } }),
+    ).toBe('203.0.113.9');
+  });
+
+  it('devuelve undefined si no hay ni cabecera ni ip', () => {
+    expect(clientIpOf({ headers: {} })).toBeUndefined();
+    expect(clientIpOf({})).toBeUndefined();
+  });
+
+  it('dos IPs distintas no comparten cubo de rate limit', () => {
+    // La razón de ser del cambio: sin esto ambas resolvían a la IP del proxy
+    // y todo el tráfico anónimo compartía presupuesto.
+    const a = clientIpOf({ headers: { 'cf-connecting-ip': '203.0.113.9' }, ip: '10.0.0.1' });
+    const b = clientIpOf({ headers: { 'cf-connecting-ip': '198.51.100.2' }, ip: '10.0.0.1' });
+
+    expect(a).not.toBe(b);
   });
 });

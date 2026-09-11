@@ -1,6 +1,12 @@
 import { NestFactory } from '@nestjs/core';
 import { Logger } from 'nestjs-pino';
 import { WorkerModule } from './worker.module.js';
+import { RedisService } from './redis/redis.service.js';
+import {
+  WORKER_HEARTBEAT_INTERVAL_MS,
+  WORKER_HEARTBEAT_KEY,
+  WORKER_HEARTBEAT_TTL_SECONDS,
+} from './health/worker-heartbeat.js';
 
 /**
  * Punto de entrada del worker (`node dist/worker.js`, ver
@@ -31,10 +37,23 @@ async function bootstrap() {
   const logger = app.get(Logger);
   logger.log('Worker iniciado; procesadores de colas activos (PR-05)', 'Worker');
 
-  // Cinturón de seguridad: aunque los `Worker` de BullMQ ya mantienen el
-  // proceso vivo por sí solos, este intervalo no molesta y cubre el caso de
-  // que todas las colas se queden temporalmente sin conexión activa.
-  const keepAlive = setInterval(() => undefined, 60_000);
+  // Latido en Redis (MEJ-27). El HEALTHCHECK del contenedor comprobaba solo
+  // que el proceso existiera (`pgrep`), que es casi no comprobar nada: un
+  // worker con las colas caídas o el bucle bloqueado seguía "sano". Ahora
+  // escribe una marca con TTL, así que dejar de latir lo marca como enfermo.
+  //
+  // De paso hace de cinturón de seguridad que mantiene el proceso vivo,
+  // como el `setInterval` vacío que había antes.
+  const redis = app.get(RedisService);
+  const beat = async (): Promise<void> => {
+    await redis.set(
+      WORKER_HEARTBEAT_KEY,
+      new Date().toISOString(),
+      WORKER_HEARTBEAT_TTL_SECONDS,
+    );
+  };
+  await beat();
+  const keepAlive = setInterval(() => void beat(), WORKER_HEARTBEAT_INTERVAL_MS);
 
   const shutdown = async (signal: string) => {
     logger.log(`Señal ${signal} recibida, cerrando el worker`, 'Worker');

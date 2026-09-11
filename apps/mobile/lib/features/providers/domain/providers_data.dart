@@ -24,5 +24,10 @@ class ProvidersData {
     return null;
   }
 
-  bool isConnected(String provider) => providerInfo(provider)?.status == 'active';
+  bool isConnected(String provider) =>
+      providerInfo(provider)?.status == 'active';
+
+  /// MAL-11: con al menos un proveedor activo, la pantalla deja de ser un
+  /// callejón sin salida y muestra un CTA para volver a practicar.
+  bool get hasActiveProvider => me.hasActiveProvider;
 }

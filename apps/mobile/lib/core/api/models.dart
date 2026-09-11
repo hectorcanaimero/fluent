@@ -77,6 +77,13 @@ abstract class MeResponse with _$MeResponse {
       _$MeResponseFromJson(json);
 }
 
+/// MAL-13: única definición de "hay un proveedor conectado", para que
+/// `HomeData`, `ProvidersData` y `canPracticeProvider` (core/providers.dart)
+/// no la reimplementen cada uno por su cuenta y puedan desincronizarse.
+extension MeResponseProviders on MeResponse {
+  bool get hasActiveProvider => providers.any((p) => p.status == 'active');
+}
+
 @freezed
 abstract class GroupMember with _$GroupMember {
   const factory GroupMember({
@@ -265,6 +272,7 @@ abstract class TurnResult with _$TurnResult {
     @Default(<Correction>[]) List<Correction> corrections,
     String? modelUsed,
     @Default(false) bool degraded,
+
     /// Solo `true` cuando la cadena de modelos se agotó (SPEC-03 §6): la API
     /// no manda el campo en el resto de los casos, así que el `false` por
     /// defecto cubre esa ausencia (SPEC-02 §4.3, `docs/specs/SPEC-04-sesion-de-conversacion.md` §4).
@@ -397,11 +405,8 @@ abstract class MemoryResult with _$MemoryResult {
 
 @freezed
 abstract class LevelInfo with _$LevelInfo {
-  const factory LevelInfo({
-    required String name,
-    required int min,
-    int? next,
-  }) = _LevelInfo;
+  const factory LevelInfo({required String name, required int min, int? next}) =
+      _LevelInfo;
 
   factory LevelInfo.fromJson(Map<String, dynamic> json) =>
       _$LevelInfoFromJson(json);
@@ -427,7 +432,8 @@ abstract class ProgressResult with _$ProgressResult {
     required int streak,
     required int longestStreak,
     required int sessionsThisWeek,
-    @Default(<CorrectionTrendItem>[]) List<CorrectionTrendItem> correctionsTrend,
+    @Default(<CorrectionTrendItem>[])
+    List<CorrectionTrendItem> correctionsTrend,
   }) = _ProgressResult;
 
   factory ProgressResult.fromJson(Map<String, dynamic> json) =>

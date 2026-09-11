@@ -36,6 +36,12 @@ export const API_ERROR_STATUS = {
   SESSION_NOT_ACTIVE: 409,
   /** Ya hay una sesión activa; la respuesta incluye `activeSessionId`. */
   SESSION_ALREADY_ACTIVE: 409,
+  /**
+   * `challengeFromUserId` que no corresponde a ningún desafío ofrecido hoy a
+   * este usuario (SPEC-07 §7). 422 y no 400 porque el cuerpo está bien
+   * formado: lo que falla es la regla de negocio. Ver MAL-19.
+   */
+  CHALLENGE_NOT_AVAILABLE: 422,
   /** Agotada la cadena de fallback de proveedores (RF-2.5). */
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */

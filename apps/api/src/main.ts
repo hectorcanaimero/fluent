@@ -6,11 +6,18 @@ import { Env } from './config/env.js';
 import { setupOpenApi } from './openapi.js';
 import { mountBullBoard } from './admin/bull-board.js';
 import { createOwnerBearerMiddleware } from './auth/owner-bearer.middleware.js';
+import { configureHttpServer } from './config/http-server.js';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule, { bufferLogs: true });
 
   app.useLogger(app.get(Logger));
+
+  // Coolify manda SIGTERM en cada deploy. Sin los shutdown hooks, Nest no
+  // ejecuta los `onModuleDestroy`/`onApplicationShutdown` (conexiones de
+  // Redis, colas de BullMQ) y el contenedor muere a los 10 s por SIGKILL,
+  // cortando los turnos en vuelo. Ver MAL-21.
+  app.enableShutdownHooks();
 
   // El filtro global de errores y el ValidationPipe global (PR-02/T3, SPEC-02
   // §6/§8) se registran como providers `APP_FILTER`/`APP_PIPE` en
@@ -43,6 +50,10 @@ async function bootstrap() {
 
   const port = configService.get('PORT', { infer: true });
   await app.listen(port);
+
+  // Después de `listen`: antes de esa llamada `getHttpServer()` devuelve un
+  // servidor todavía sin arrancar y Nest lo sustituye al escuchar.
+  configureHttpServer(app.getHttpServer());
 }
 
 // Sin `await` a nivel de módulo a propósito: con `"type": "module"` un

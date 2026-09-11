@@ -31,6 +31,15 @@ class AppLocalizationsPt extends AppLocalizations {
   String get comingSoonTitle => 'Em breve';
 
   @override
+  String get commonLoadErrorTitle => 'Não conseguimos carregar isso';
+
+  @override
+  String get commonLoadErrorBody => 'Verifique sua conexão e tente de novo.';
+
+  @override
+  String get commonRetry => 'Tentar de novo';
+
+  @override
   String get formFieldRequired => 'Este campo é obrigatório.';
 
   @override
@@ -263,6 +272,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providersTitle => 'Provedores e modelos';
 
   @override
+  String get providersGoPractice => 'Pronto, ir praticar';
+
+  @override
   String get providersOpenRouterTitle => 'OpenRouter';
 
   @override
@@ -294,6 +306,10 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get providersErrorGeneric =>
       'Não conseguimos concluir a conexão. Tente de novo.';
+
+  @override
+  String get providersOauthError =>
+      'Não conseguimos conectar com o OpenRouter. Tente de novo.';
 
   @override
   String get providersLoadError => 'Não conseguimos carregar os provedores.';
@@ -354,6 +370,9 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get providersModelProviderDisabledHint =>
       'Conecte esse provedor para usá-lo';
+
+  @override
+  String get homeNeedProviderHint => 'Conecte um provedor para poder praticar';
 
   @override
   String homeGreetingMorning(String name) {
@@ -557,6 +576,9 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get conversationSendErrorGeneric =>
       'Não conseguimos enviar sua mensagem. Tente de novo.';
+
+  @override
+  String get conversationBootErrorBack => 'Voltar';
 
   @override
   String get conversationMicUnavailableTitle => 'Sem reconhecimento de voz';
@@ -767,4 +789,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountConfirm => 'Apagar conta';
+
+  @override
+  String get authOfflineTitle => 'Não conseguimos conectar';
+
+  @override
+  String get authOfflineBody =>
+      'Verifique sua conexão com a internet e tente de novo. Sua sessão continua salva.';
+
+  @override
+  String get authRetry => 'Tentar de novo';
 }

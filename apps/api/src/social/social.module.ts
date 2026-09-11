@@ -34,5 +34,10 @@ import { WeeklySummaryService } from './weekly-summary.service.js';
     WeeklySummaryRepository,
     WeeklySummaryService,
   ],
+  // `SessionsModule` lo necesita para validar `challengeFromUserId` al abrir
+  // una sesión (MAL-19). Se exporta el servicio en vez de duplicarlo allí:
+  // arrastra `GroupAccessService` + repositorios y no hay ciclo
+  // (`SocialModule` solo importa `SessionsQueryModule`, que es un módulo hoja).
+  exports: [ChallengesService],
 })
 export class SocialModule {}

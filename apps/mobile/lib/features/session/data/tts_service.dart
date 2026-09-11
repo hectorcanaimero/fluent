@@ -5,9 +5,8 @@ import 'package:flutter_tts/flutter_tts.dart';
 abstract class TtsService {
   Future<void> setLanguage(String language);
 
-  /// [rate] va de 0.0 a 1.0. La UI ofrece 0.8x/1x/1.2x (control de
-  /// velocidad, SPEC-06 §4.3); se mapean a valores razonables del rango
-  /// nativo en la implementación real.
+  /// [rate] es el multiplicador que ofrece la UI (0.8x/1x/1.2x, control de
+  /// velocidad, SPEC-06 §4.3), no el valor nativo de `flutter_tts`.
   Future<void> setSpeechRate(double rate);
 
   /// Completa cuando termina de reproducir (equivalente a
@@ -20,11 +19,11 @@ abstract class TtsService {
 }
 
 class FlutterTtsService implements TtsService {
-  FlutterTtsService() {
+  FlutterTtsService({FlutterTts? tts}) : _tts = tts ?? FlutterTts() {
     _tts.awaitSpeakCompletion(true);
   }
 
-  final FlutterTts _tts = FlutterTts();
+  final FlutterTts _tts;
 
   @override
   Future<void> setLanguage(String language) async {
@@ -33,7 +32,12 @@ class FlutterTtsService implements TtsService {
 
   @override
   Future<void> setSpeechRate(double rate) async {
-    await _tts.setSpeechRate(rate);
+    // `setSpeechRate` de flutter_tts usa el rango nativo de cada plataforma:
+    // Android multiplica por 2 (0.5 nativo == "normal"), iOS usa 0-1 con 0.5
+    // como "normal". El multiplicador de la UI (0.8x/1x/1.2x) asume 1.0 ==
+    // "normal", así que hay que centrarlo en 0.5 en vez de pasarlo crudo
+    // (eso sonaba al doble de rápido, MAL-06).
+    await _tts.setSpeechRate(0.5 * rate);
   }
 
   @override

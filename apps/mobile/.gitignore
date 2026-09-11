@@ -53,3 +53,9 @@ untranslated.txt
 # Variables reales de --dart-define-from-file (SPEC-06 §6): lleva la anon
 # key de InsForge. Ver defines.example.json y README.md.
 defines.json
+
+# Keystore de release (MAL-16): nunca se commitea. Ver README.md para
+# generarlo en la Mac.
+android/key.properties
+android/**/*.jks
+android/**/*.keystore

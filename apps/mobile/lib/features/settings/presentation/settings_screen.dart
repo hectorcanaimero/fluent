@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
@@ -28,6 +29,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   @override
   void initState() {
     super.initState();
+    _loadProfile();
+  }
+
+  void _loadProfile() {
     _future = ref.read(fluentApiProvider).getMe().then((me) => me.profile);
   }
 
@@ -61,22 +66,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.settingsDeleteAccountConfirmTitle),
-            content: Text(l10n.settingsDeleteAccountConfirmBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.settingsDeleteAccountCancel),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.settingsDeleteAccountConfirm),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.settingsDeleteAccountConfirmTitle),
+        content: Text(l10n.settingsDeleteAccountConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.settingsDeleteAccountCancel),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.settingsDeleteAccountConfirm),
+          ),
+        ],
+      ),
     );
     if (confirmed != true) return;
     await ref.read(fluentApiProvider).deleteAccount();
@@ -92,90 +96,104 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         child: FutureBuilder<Profile>(
           future: _future,
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final profile = snapshot.data!;
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
-              children: [
-                Text(profile.displayName, style: Theme.of(context).textTheme.headlineMedium),
-                const SizedBox(height: AppSpacing.xs),
-                Text(profile.level, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: AppSpacing.lg),
-                Wrap(
-                  spacing: AppSpacing.sm,
-                  runSpacing: AppSpacing.sm,
-                  children: [
-                    for (final id in profile.interests)
-                      Chip(label: Text(interestLabel(l10n, id))),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(l10n.settingsLanguageTitle, style: Theme.of(context).textTheme.titleMedium),
-                _LocaleOption(
-                  key: const Key('settings_locale_system'),
-                  label: l10n.settingsLanguageSystem,
-                  value: null,
-                  selected: ref.watch(localeOverrideProvider),
-                  onSelected: _setLocale,
-                ),
-                _LocaleOption(
-                  key: const Key('settings_locale_es'),
-                  label: l10n.settingsLanguageSpanish,
-                  value: const Locale('es'),
-                  selected: ref.watch(localeOverrideProvider),
-                  onSelected: _setLocale,
-                ),
-                _LocaleOption(
-                  key: const Key('settings_locale_pt'),
-                  label: l10n.settingsLanguagePortuguese,
-                  value: const Locale('pt'),
-                  selected: ref.watch(localeOverrideProvider),
-                  onSelected: _setLocale,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(l10n.settingsRemindersTitle, style: Theme.of(context).textTheme.titleMedium),
-                ListTile(
-                  key: const Key('settings_morning_reminder'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.settingsMorningReminder),
-                  trailing: Text(_morning.format(context)),
-                  onTap: () => _pickTime(morning: true),
-                ),
-                ListTile(
-                  key: const Key('settings_evening_reminder'),
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.settingsEveningReminder),
-                  trailing: Text(_evening.format(context)),
-                  onTap: () => _pickTime(morning: false),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.settingsStreakAlert),
-                  value: _streakAlert,
-                  onChanged: (v) => setState(() => _streakAlert = v),
-                ),
-                SwitchListTile(
-                  contentPadding: EdgeInsets.zero,
-                  title: Text(l10n.settingsSoundEffects),
-                  value: _soundEffects,
-                  onChanged: (v) => setState(() => _soundEffects = v),
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                OutlinedButton(
-                  key: const Key('settings_logout_button'),
-                  onPressed: _logout,
-                  child: Text(l10n.settingsLogout),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                OutlinedButton(
-                  key: const Key('settings_delete_account_button'),
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                  onPressed: _deleteAccount,
-                  child: Text(l10n.settingsDeleteAccount),
-                ),
-              ],
+            return AsyncBody<Profile>(
+              snapshot: snapshot,
+              onRetry: () => setState(_loadProfile),
+              builder: (profile) => ListView(
+                padding: const EdgeInsets.all(AppSpacing.screenPad),
+                children: [
+                  Text(
+                    profile.displayName,
+                    style: Theme.of(context).textTheme.headlineMedium,
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    profile.level,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.lg),
+                  Wrap(
+                    spacing: AppSpacing.sm,
+                    runSpacing: AppSpacing.sm,
+                    children: [
+                      for (final id in profile.interests)
+                        Chip(label: Text(interestLabel(l10n, id))),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    l10n.settingsLanguageTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  _LocaleOption(
+                    key: const Key('settings_locale_system'),
+                    label: l10n.settingsLanguageSystem,
+                    value: null,
+                    selected: ref.watch(localeOverrideProvider),
+                    onSelected: _setLocale,
+                  ),
+                  _LocaleOption(
+                    key: const Key('settings_locale_es'),
+                    label: l10n.settingsLanguageSpanish,
+                    value: const Locale('es'),
+                    selected: ref.watch(localeOverrideProvider),
+                    onSelected: _setLocale,
+                  ),
+                  _LocaleOption(
+                    key: const Key('settings_locale_pt'),
+                    label: l10n.settingsLanguagePortuguese,
+                    value: const Locale('pt'),
+                    selected: ref.watch(localeOverrideProvider),
+                    onSelected: _setLocale,
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  Text(
+                    l10n.settingsRemindersTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  ListTile(
+                    key: const Key('settings_morning_reminder'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.settingsMorningReminder),
+                    trailing: Text(_morning.format(context)),
+                    onTap: () => _pickTime(morning: true),
+                  ),
+                  ListTile(
+                    key: const Key('settings_evening_reminder'),
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.settingsEveningReminder),
+                    trailing: Text(_evening.format(context)),
+                    onTap: () => _pickTime(morning: false),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.settingsStreakAlert),
+                    value: _streakAlert,
+                    onChanged: (v) => setState(() => _streakAlert = v),
+                  ),
+                  SwitchListTile(
+                    contentPadding: EdgeInsets.zero,
+                    title: Text(l10n.settingsSoundEffects),
+                    value: _soundEffects,
+                    onChanged: (v) => setState(() => _soundEffects = v),
+                  ),
+                  const SizedBox(height: AppSpacing.xl),
+                  OutlinedButton(
+                    key: const Key('settings_logout_button'),
+                    onPressed: _logout,
+                    child: Text(l10n.settingsLogout),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
+                  OutlinedButton(
+                    key: const Key('settings_delete_account_button'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
+                    ),
+                    onPressed: _deleteAccount,
+                    child: Text(l10n.settingsDeleteAccount),
+                  ),
+                ],
+              ),
             );
           },
         ),

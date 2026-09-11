@@ -29,6 +29,22 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
       .getSession(widget.sessionId)
       .then((d) => d.corrections);
 
+  @override
+  void initState() {
+    super.initState();
+    // A esta pantalla solo se llega con la sesión ya cerrada, así que deja de
+    // ser la "activa". Sin esto, `computeRedirect` seguía empujando a
+    // `/session/:id` y no se podía volver al inicio (MAL-04). Se hace en un
+    // post-frame porque tocar el estado del router durante el primer build
+    // dispara una redirección en mitad de la construcción del árbol.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      ref
+          .read(authControllerProvider.notifier)
+          .clearActiveSession(widget.sessionId);
+    });
+  }
+
   String get _duration {
     final m = (widget.summary.durationSec ~/ 60).toString().padLeft(2, '0');
     final s = (widget.summary.durationSec % 60).toString().padLeft(2, '0');

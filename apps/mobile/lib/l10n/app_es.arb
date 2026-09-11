@@ -7,6 +7,9 @@
   "tabGroup": "Grupo",
   "tabProgress": "Progreso",
   "comingSoonTitle": "Muy pronto",
+  "commonLoadErrorTitle": "No pudimos cargar esto",
+  "commonLoadErrorBody": "Revisá tu conexión e intentá de nuevo.",
+  "commonRetry": "Reintentar",
   "formFieldRequired": "Este campo es obligatorio.",
   "loginWelcomeHeadline": "Hablá inglés con confianza, de a 10 minutos",
   "loginWelcomeSubtitle": "Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.",
@@ -84,6 +87,7 @@
   "interestEducationCareer": "Educación y carrera",
   "interestFamilyRelationships": "Vida familiar y relaciones",
   "providersTitle": "Proveedores y modelos",
+  "providersGoPractice": "Listo, ir a practicar",
   "providersOpenRouterTitle": "OpenRouter",
   "providersGeminiTitle": "Gemini",
   "providersGeminiRecommendedBadge": "Recomendado",
@@ -99,6 +103,7 @@
     }
   },
   "providersErrorGeneric": "No pudimos completar la conexión. Probá de nuevo.",
+  "providersOauthError": "No pudimos conectar con OpenRouter. Probá de nuevo.",
   "providersLoadError": "No pudimos cargar los proveedores.",
   "providersGeminiPasteKeyButton": "Pegar API key",
   "providersGeminiKeyDialogTitle": "Conectar Gemini",
@@ -123,6 +128,7 @@
     }
   },
   "providersModelProviderDisabledHint": "Conectá este proveedor para usarlo",
+  "homeNeedProviderHint": "Conectá un proveedor para poder practicar",
   "homeGreetingMorning": "Buen día, {name}",
   "@homeGreetingMorning": {
     "placeholders": {
@@ -215,6 +221,7 @@
   "conversationUnavailableEnd": "Terminar sesión",
   "conversationUnavailableStay": "Seguir esperando",
   "conversationSendErrorGeneric": "No pudimos enviar tu mensaje. Probá de nuevo.",
+  "conversationBootErrorBack": "Volver",
   "conversationMicUnavailableTitle": "No hay reconocimiento de voz",
   "conversationMicUnavailableBody": "Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.",
   "conversationMicUnavailableAccept": "Entendido",
@@ -301,5 +308,8 @@
   "settingsDeleteAccountConfirmTitle": "¿Borrar tu cuenta?",
   "settingsDeleteAccountConfirmBody": "Se borran tus sesiones, hechos y preferencias. No se puede deshacer.",
   "settingsDeleteAccountCancel": "Cancelar",
-  "settingsDeleteAccountConfirm": "Borrar cuenta"
+  "settingsDeleteAccountConfirm": "Borrar cuenta",
+  "authOfflineTitle": "No pudimos conectar",
+  "authOfflineBody": "Revisá tu conexión a internet y probá de nuevo. Tu sesión sigue guardada.",
+  "authRetry": "Reintentar"
 }

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// "Lo que recuerdo de vos" (SPEC-06 §4.5, RF-4.2, RF-4.6). Todos los
@@ -47,12 +48,16 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
   }
 
   Future<void> _confirmFact(MemoryFact fact, String text) async {
-    await ref.read(fluentApiProvider).patchFact(factId: fact.id, status: 'confirmed', text: text);
+    await ref
+        .read(fluentApiProvider)
+        .patchFact(factId: fact.id, status: 'confirmed', text: text);
     _reload();
   }
 
   Future<void> _dismissFact(MemoryFact fact) async {
-    await ref.read(fluentApiProvider).patchFact(factId: fact.id, status: 'dismissed');
+    await ref
+        .read(fluentApiProvider)
+        .patchFact(factId: fact.id, status: 'dismissed');
     _reload();
   }
 
@@ -66,24 +71,29 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
     final l10n = AppLocalizations.of(context);
     final newText = await showDialog<String>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.memoryEditFactTitle),
-            content: TextField(controller: controller, autofocus: true, maxLines: 3),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.memoryEditFactCancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-                child: Text(l10n.memoryEditFactSave),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.memoryEditFactTitle),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.memoryEditFactCancel),
           ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
+            child: Text(l10n.memoryEditFactSave),
+          ),
+        ],
+      ),
     );
     if (newText != null && newText.isNotEmpty && newText != fact.text) {
-      await ref.read(fluentApiProvider).patchFact(factId: fact.id, text: newText);
+      await ref
+          .read(fluentApiProvider)
+          .patchFact(factId: fact.id, text: newText);
       _reload();
     }
   }
@@ -120,22 +130,21 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
     final l10n = AppLocalizations.of(context);
     return showDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(title),
-            content: Text(body),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.memoryForgetAllCancel),
-              ),
-              ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.memoryForgetAllConfirm),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(title),
+        content: Text(body),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.memoryForgetAllCancel),
           ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.memoryForgetAllConfirm),
+          ),
+        ],
+      ),
     );
   }
 
@@ -148,86 +157,101 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
         child: FutureBuilder<MemoryResult>(
           future: _future,
           builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final data = snapshot.data!;
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
-              children: [
-                if (data.facts.pending.isNotEmpty) ...[
+            return AsyncBody<MemoryResult>(
+              snapshot: snapshot,
+              onRetry: _reload,
+              builder: (data) => ListView(
+                padding: const EdgeInsets.all(AppSpacing.screenPad),
+                children: [
+                  if (data.facts.pending.isNotEmpty) ...[
+                    Text(
+                      l10n.memoryPendingSectionTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    for (final fact in data.facts.pending)
+                      _PendingFactTile(
+                        key: Key('pending_fact_${fact.id}'),
+                        fact: fact,
+                        onConfirm: (text) => _confirmFact(fact, text),
+                        onDismiss: () => _dismissFact(fact),
+                      ),
+                    const SizedBox(height: AppSpacing.xl),
+                  ],
                   Text(
-                    l10n.memoryPendingSectionTitle,
+                    l10n.memoryConfirmedSectionTitle,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
                   const SizedBox(height: AppSpacing.sm),
-                  for (final fact in data.facts.pending)
-                    _PendingFactTile(
-                      key: Key('pending_fact_${fact.id}'),
-                      fact: fact,
-                      onConfirm: (text) => _confirmFact(fact, text),
-                      onDismiss: () => _dismissFact(fact),
+                  if (data.facts.confirmed.isEmpty)
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        l10n.memoryConfirmedEmpty,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
+                  for (final fact in data.facts.confirmed)
+                    Dismissible(
+                      key: Key('confirmed_fact_${fact.id}'),
+                      direction: DismissDirection.endToStart,
+                      onDismissed: (_) => _deleteFact(fact),
+                      background: Container(
+                        alignment: Alignment.centerRight,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.lg,
+                        ),
+                        color: AppColors.error,
+                        child: const Icon(
+                          Icons.delete_outline,
+                          color: Colors.white,
+                        ),
+                      ),
+                      child: ListTile(
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(fact.text),
+                        onTap: () => _editConfirmedFact(fact),
+                      ),
                     ),
                   const SizedBox(height: AppSpacing.xl),
-                ],
-                Text(
-                  l10n.memoryConfirmedSectionTitle,
-                  style: Theme.of(context).textTheme.titleMedium,
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                if (data.facts.confirmed.isEmpty)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
-                    child: Text(
-                      l10n.memoryConfirmedEmpty,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
+                  Text(
+                    l10n.memoryBriefSectionTitle,
+                    style: Theme.of(context).textTheme.titleMedium,
                   ),
-                for (final fact in data.facts.confirmed)
-                  Dismissible(
-                    key: Key('confirmed_fact_${fact.id}'),
-                    direction: DismissDirection.endToStart,
-                    onDismissed: (_) => _deleteFact(fact),
-                    background: Container(
+                  const SizedBox(height: AppSpacing.xs),
+                  Text(
+                    l10n.memoryBriefExplanation,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                  const SizedBox(height: AppSpacing.sm),
+                  TextField(
+                    key: const Key('memory_brief_field'),
+                    controller: _briefController,
+                    maxLines: 5,
+                    maxLength: 600,
+                    onChanged: (_) => setState(() => _briefDirty = true),
+                  ),
+                  if (_briefDirty)
+                    Align(
                       alignment: Alignment.centerRight,
-                      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-                      color: AppColors.error,
-                      child: const Icon(Icons.delete_outline, color: Colors.white),
+                      child: ElevatedButton(
+                        onPressed: _savingBrief ? null : _saveBrief,
+                        child: Text(l10n.memoryBriefSaveButton),
+                      ),
                     ),
-                    child: ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      title: Text(fact.text),
-                      onTap: () => _editConfirmedFact(fact),
+                  const SizedBox(height: AppSpacing.xl),
+                  OutlinedButton(
+                    key: const Key('memory_forget_all_button'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.error,
                     ),
+                    onPressed: _forgetAll,
+                    child: Text(l10n.memoryForgetAllButton),
                   ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(l10n.memoryBriefSectionTitle, style: Theme.of(context).textTheme.titleMedium),
-                const SizedBox(height: AppSpacing.xs),
-                Text(l10n.memoryBriefExplanation, style: Theme.of(context).textTheme.bodySmall),
-                const SizedBox(height: AppSpacing.sm),
-                TextField(
-                  key: const Key('memory_brief_field'),
-                  controller: _briefController,
-                  maxLines: 5,
-                  maxLength: 600,
-                  onChanged: (_) => setState(() => _briefDirty = true),
-                ),
-                if (_briefDirty)
-                  Align(
-                    alignment: Alignment.centerRight,
-                    child: ElevatedButton(
-                      onPressed: _savingBrief ? null : _saveBrief,
-                      child: Text(l10n.memoryBriefSaveButton),
-                    ),
-                  ),
-                const SizedBox(height: AppSpacing.xl),
-                OutlinedButton(
-                  key: const Key('memory_forget_all_button'),
-                  style: OutlinedButton.styleFrom(foregroundColor: AppColors.error),
-                  onPressed: _forgetAll,
-                  child: Text(l10n.memoryForgetAllButton),
-                ),
-              ],
+                ],
+              ),
             );
           },
         ),

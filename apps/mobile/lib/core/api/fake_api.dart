@@ -148,10 +148,9 @@ class FakeApi implements FluentApi {
     );
   }
 
-  Future<void> _delay() =>
-      artificialDelay == Duration.zero
-          ? Future.value()
-          : Future.delayed(artificialDelay);
+  Future<void> _delay() => artificialDelay == Duration.zero
+      ? Future.value()
+      : Future.delayed(artificialDelay);
 
   Never _fail(ApiErrorCode code, String message, {int statusCode = 400}) {
     throw ApiException(code: code, message: message, statusCode: statusCode);
@@ -251,7 +250,6 @@ class FakeApi implements FluentApi {
 
   @override
   Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String code,
     required String codeVerifierId,
   }) async {
     await _delay();
@@ -283,15 +281,13 @@ class FakeApi implements FluentApi {
     await _delay();
     final info = _providers.firstWhere(
       (p) => p.provider == provider,
-      orElse:
-          () => ProviderInfo(provider: provider, status: 'not_connected'),
+      orElse: () => ProviderInfo(provider: provider, status: 'not_connected'),
     );
     return ProviderStatusResult(
       status: info.status,
-      credits:
-          provider == 'openrouter' && info.status == 'active'
-              ? const ProviderCredits(total: 10, used: 1.2)
-              : null,
+      credits: provider == 'openrouter' && info.status == 'active'
+          ? const ProviderCredits(total: 10, used: 1.2)
+          : null,
     );
   }
 
@@ -341,9 +337,7 @@ class FakeApi implements FluentApi {
           ],
         ),
         'gemini': ModelTierGroups(
-          free: [
-            ModelOption(id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash'),
-          ],
+          free: [ModelOption(id: 'gemini-1.5-flash', name: 'Gemini 1.5 Flash')],
         ),
       },
       estimatePerSession: {
@@ -368,7 +362,11 @@ class FakeApi implements FluentApi {
       (p) => p.provider == chatProvider && p.status == 'active',
     );
     if (!providerConnected) {
-      _fail(ApiErrorCode.modelNotAvailable, 'provider not connected', statusCode: 400);
+      _fail(
+        ApiErrorCode.modelNotAvailable,
+        'provider not connected',
+        statusCode: 400,
+      );
     }
     _modelPreference = ModelPreference(
       chatProvider: chatProvider,
@@ -403,8 +401,14 @@ class FakeApi implements FluentApi {
         'Learning something new',
       ],
       roleplays: const [
-        RoleplayOption(id: 'roleplay-airport', title: 'Checking in at the airport'),
-        RoleplayOption(id: 'roleplay-restaurant', title: 'Ordering at a restaurant'),
+        RoleplayOption(
+          id: 'roleplay-airport',
+          title: 'Checking in at the airport',
+        ),
+        RoleplayOption(
+          id: 'roleplay-restaurant',
+          title: 'Ordering at a restaurant',
+        ),
         RoleplayOption(id: 'roleplay-interview', title: 'Job interview'),
         RoleplayOption(id: 'roleplay-doctor', title: "Doctor's appointment"),
       ],
@@ -413,8 +417,7 @@ class FakeApi implements FluentApi {
           id: 'news-1',
           title: 'Cities expand bike lanes to cut car traffic',
           source: 'The Guardian',
-          summary:
-              'More cities are adding protected bike lanes as commuters look for cheaper, faster ways to get around.',
+          summary: 'More cities are adding protected bike lanes as commuters look for cheaper, faster ways to get around.',
           time: '20 min ago',
         ),
         NewsItem(
@@ -463,7 +466,11 @@ class FakeApi implements FluentApi {
     }
     final providerConnected = _providers.any((p) => p.status == 'active');
     if (!providerConnected) {
-      _fail(ApiErrorCode.providerNotConnected, 'no provider connected', statusCode: 409);
+      _fail(
+        ApiErrorCode.providerNotConnected,
+        'no provider connected',
+        statusCode: 409,
+      );
     }
     _sessionCounter++;
     final id = 'session-$_sessionCounter';
@@ -480,12 +487,12 @@ class FakeApi implements FluentApi {
     _activeSessionId = id;
     _turnCounter = 0;
 
-    final useCallback = _confirmedFacts.isNotEmpty && _random.nextDouble() < 0.4;
-    final opening =
-        useCallback
-            ? "Hey María! Last time you mentioned you're planning a trip. "
-                "Let's talk about ${resolvedTopic.toLowerCase()} — how does that sound?"
-            : "Hi María, ready to talk about ${resolvedTopic.toLowerCase()}? Tell me more.";
+    final useCallback =
+        _confirmedFacts.isNotEmpty && _random.nextDouble() < 0.4;
+    final opening = useCallback
+        ? "Hey María! Last time you mentioned you're planning a trip. "
+              "Let's talk about ${resolvedTopic.toLowerCase()} — how does that sound?"
+        : "Hi María, ready to talk about ${resolvedTopic.toLowerCase()}? Tell me more.";
     _sessionTurns[id]!.add(TurnRecord(idx: 0, role: 'tutor', text: opening));
 
     return CreateSessionResult(
@@ -502,7 +509,11 @@ class FakeApi implements FluentApi {
     await _delay();
     final session = _sessions[sessionId];
     if (session == null || session.endedAt != null) {
-      _fail(ApiErrorCode.sessionNotActive, 'session is not active', statusCode: 409);
+      _fail(
+        ApiErrorCode.sessionNotActive,
+        'session is not active',
+        statusCode: 409,
+      );
     }
     // Cada turno (del usuario y del tutor) tiene su propio `idx` secuencial,
     // igual que la API real (`TurnsService`, SPEC-04 §4 paso 2): el `idx` de
@@ -510,7 +521,9 @@ class FakeApi implements FluentApi {
     // `1`, su respuesta `2`, y así.
     _turnCounter++;
     final userIdx = _turnCounter;
-    _sessionTurns[sessionId]!.add(TurnRecord(idx: userIdx, role: 'user', text: text));
+    _sessionTurns[sessionId]!.add(
+      TurnRecord(idx: userIdx, role: 'user', text: text),
+    );
 
     final hasMistake = _random.nextDouble() < 0.5;
     final corrections = <Correction>[];
@@ -529,7 +542,9 @@ class FakeApi implements FluentApi {
     final reply =
         "That's interesting! Can you tell me a bit more about why you feel that way?";
     _turnCounter++;
-    _sessionTurns[sessionId]!.add(TurnRecord(idx: _turnCounter, role: 'tutor', text: reply));
+    _sessionTurns[sessionId]!.add(
+      TurnRecord(idx: _turnCounter, role: 'tutor', text: reply),
+    );
 
     return TurnResult(
       turnIdx: userIdx,
@@ -592,7 +607,10 @@ class FakeApi implements FluentApi {
   }
 
   @override
-  Future<SessionListResult> getSessions({int limit = 20, String? cursor}) async {
+  Future<SessionListResult> getSessions({
+    int limit = 20,
+    String? cursor,
+  }) async {
     await _delay();
     final items = _sessions.values.toList().reversed.take(limit).toList();
     return SessionListResult(items: items);
@@ -608,7 +626,9 @@ class FakeApi implements FluentApi {
     return SessionDetailResult(
       session: session,
       turns: List.unmodifiable(_sessionTurns[sessionId] ?? const []),
-      corrections: List.unmodifiable(_sessionCorrections[sessionId] ?? const []),
+      corrections: List.unmodifiable(
+        _sessionCorrections[sessionId] ?? const [],
+      ),
     );
   }
 
@@ -704,7 +724,11 @@ class FakeApi implements FluentApi {
       sessionsThisWeek: 6,
       correctionsTrend: const [
         CorrectionTrendItem(category: 'past_simple', count30d: 14, count7d: 3),
-        CorrectionTrendItem(category: 'present_perfect', count30d: 9, count7d: 1),
+        CorrectionTrendItem(
+          category: 'present_perfect',
+          count30d: 9,
+          count7d: 1,
+        ),
         CorrectionTrendItem(category: 'prepositions', count30d: 6, count7d: 2),
       ],
     );

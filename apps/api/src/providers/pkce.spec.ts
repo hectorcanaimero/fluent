@@ -52,26 +52,49 @@ describe('buildOpenRouterAuthUrl', () => {
   });
 });
 
-describe('isValidCallbackUrl', () => {
-  it('accepts the deep link of the app and https URLs', () => {
-    expect(isValidCallbackUrl('fluent://oauth/openrouter')).toBe(true);
-    expect(isValidCallbackUrl('https://app.fluent.test/oauth/openrouter')).toBe(true);
+describe('isValidCallbackUrl · lista blanca (MAL-18)', () => {
+  /** El valor de `OPENROUTER_OAUTH_CALLBACK` en estos tests. */
+  const CONFIGURED = 'https://fluent.usebot.chat/v1/providers/openrouter/callback';
+
+  it('accepts any deep link of the app', () => {
+    expect(isValidCallbackUrl('fluent://oauth/openrouter', CONFIGURED)).toBe(true);
+    expect(isValidCallbackUrl('fluent://oauth/openrouter?x=1', CONFIGURED)).toBe(true);
+  });
+
+  it('accepts the configured callback, normalised', () => {
+    expect(isValidCallbackUrl(CONFIGURED, CONFIGURED)).toBe(true);
+    expect(isValidCallbackUrl(`  ${CONFIGURED}  `, CONFIGURED)).toBe(true);
+  });
+
+  it('rejects any other https URL: era una redirección abierta', () => {
+    expect(isValidCallbackUrl('https://app.fluent.test/oauth/openrouter', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('https://evil.test/steal', CONFIGURED)).toBe(false);
+    // Un host que solo *empieza* igual tampoco vale.
+    expect(isValidCallbackUrl('https://fluent.usebot.chat.evil.test/v1', CONFIGURED)).toBe(false);
+    // Ni otra ruta del mismo host.
+    expect(isValidCallbackUrl('https://fluent.usebot.chat/otra', CONFIGURED)).toBe(false);
   });
 
   it('rejects empty values, relative paths and values with whitespace', () => {
-    expect(isValidCallbackUrl('')).toBe(false);
-    expect(isValidCallbackUrl('   ')).toBe(false);
-    expect(isValidCallbackUrl('/oauth/openrouter')).toBe(false);
-    expect(isValidCallbackUrl('fluent://oauth/open router')).toBe(false);
+    expect(isValidCallbackUrl('', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('   ', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('/oauth/openrouter', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('fluent://oauth/open router', CONFIGURED)).toBe(false);
   });
 
   it('rejects dangerous schemes', () => {
-    expect(isValidCallbackUrl('javascript:alert(1)')).toBe(false);
-    expect(isValidCallbackUrl('data:text/html,hola')).toBe(false);
-    expect(isValidCallbackUrl('file:///etc/passwd')).toBe(false);
+    expect(isValidCallbackUrl('javascript:alert(1)', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('data:text/html,hola', CONFIGURED)).toBe(false);
+    expect(isValidCallbackUrl('file:///etc/passwd', CONFIGURED)).toBe(false);
   });
 
   it('rejects absurdly long values', () => {
-    expect(isValidCallbackUrl(`https://app.fluent.test/${'a'.repeat(3000)}`)).toBe(false);
+    expect(isValidCallbackUrl(`https://app.fluent.test/${'a'.repeat(3000)}`, CONFIGURED)).toBe(false);
+  });
+
+  it('rejects everything if the configured callback is itself invalid', () => {
+    expect(isValidCallbackUrl('https://app.fluent.test/x', 'no-es-una-url')).toBe(false);
+    // …salvo el deep link de la app, que no depende de la configuración.
+    expect(isValidCallbackUrl('fluent://oauth/openrouter', 'no-es-una-url')).toBe(true);
   });
 });

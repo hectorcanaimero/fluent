@@ -27,7 +27,6 @@ abstract class FluentApi {
   // 4.2 Proveedores y modelos
   Future<PkceStartResult> startOpenRouterPkce(String callbackUrl);
   Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String code,
     required String codeVerifierId,
   });
   Future<ProviderStatusResult> connectGemini(String apiKey);
@@ -48,18 +47,25 @@ abstract class FluentApi {
     String? topic,
     String? roleplayId,
     String? newsItemId,
+
     /// SPEC-07 §7: solo se manda al aceptar un desafío del grupo; la API la
     /// guarda en `sessions.challenge_from_user_id` para el bono de XP.
     String? challengeFromUserId,
   });
-  Future<TurnResult> sendTurn({required String sessionId, required String text});
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+  });
 
   /// `POST /sessions/:id/turns/stream` (SPEC-04 §4, RF-3.8). Mismo turno que
   /// [sendTurn], pero el texto del tutor llega por eventos SSE en vez de en
   /// un único cuerpo JSON; ver `turn_stream_event.dart`. Quien consuma este
   /// stream debe tratar el evento `TurnStreamDone` como la fuente de verdad
   /// y caer a [sendTurn] si el stream se corta sin llegar a emitirlo.
-  Stream<TurnStreamEvent> sendTurnStream({required String sessionId, required String text});
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  });
   Future<SessionEndResult> endSession({
     required String sessionId,
     required String reason,

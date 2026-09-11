@@ -13,22 +13,40 @@ Future<ProviderContainer> _authenticatedContainer() async {
   final container = ProviderContainer(
     overrides: [
       tokenStoreProvider.overrideWithValue(
-        InMemoryTokenStore()..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+        InMemoryTokenStore()
+          ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
       ),
-      fluentApiProvider.overrideWith((ref) => FakeApi(artificialDelay: Duration.zero)),
+      fluentApiProvider.overrideWith(
+        (ref) => FakeApi(artificialDelay: Duration.zero),
+      ),
+      // MAL-12: el plugin real de flutter_timezone no tiene binding en
+      // tests; se inyecta un valor fijo en vez de depender de su fallback.
+      timezoneProvider.overrideWith((ref) async => 'UTC'),
     ],
   );
   await container.read(authControllerProvider.notifier).bootstrap();
   return container;
 }
 
-Future<void> _pumpOnboarding(WidgetTester tester, ProviderContainer container) async {
+Future<void> _pumpOnboarding(
+  WidgetTester tester,
+  ProviderContainer container,
+) async {
   final router = GoRouter(
     initialLocation: '/onboarding',
     routes: [
-      GoRoute(path: '/onboarding', builder: (context, state) => const OnboardingFlow()),
-      GoRoute(path: '/providers', builder: (context, state) => const Text('PROVIDERS_SCREEN')),
-      GoRoute(path: '/', builder: (context, state) => const Text('HOME_SCREEN')),
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingFlow(),
+      ),
+      GoRoute(
+        path: '/providers',
+        builder: (context, state) => const Text('PROVIDERS_SCREEN'),
+      ),
+      GoRoute(
+        path: '/',
+        builder: (context, state) => const Text('HOME_SCREEN'),
+      ),
     ],
   );
   await tester.pumpWidget(
@@ -50,7 +68,10 @@ Future<void> _pumpOnboarding(WidgetTester tester, ProviderContainer container) a
 }
 
 Future<void> _goThroughNameAndLevel(WidgetTester tester) async {
-  await tester.enterText(find.byKey(const Key('onboarding_name_field')), 'María');
+  await tester.enterText(
+    find.byKey(const Key('onboarding_name_field')),
+    'María',
+  );
   await tester.pump();
   await tester.tap(find.byKey(const Key('onboarding_continue_button')));
   await tester.pumpAndSettle();
@@ -80,7 +101,9 @@ void main() {
     expect(finishButton.onPressed, isNull);
 
     // Con un tercer interés, el botón se habilita.
-    await tester.tap(find.byKey(const Key('onboarding_interest_movies-series')));
+    await tester.tap(
+      find.byKey(const Key('onboarding_interest_movies-series')),
+    );
     await tester.pumpAndSettle();
     final enabledButton = tester.widget<ElevatedButton>(
       find.byKey(const Key('onboarding_continue_button')),
@@ -88,7 +111,9 @@ void main() {
     expect(enabledButton.onPressed, isNotNull);
   });
 
-  testWidgets('al terminar con un proveedor ya conectado, navega a /', (tester) async {
+  testWidgets('al terminar con un proveedor ya conectado, navega a /', (
+    tester,
+  ) async {
     final container = await _authenticatedContainer();
     addTearDown(container.dispose);
     await _pumpOnboarding(tester, container);
@@ -96,7 +121,9 @@ void main() {
 
     await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
     await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
-    await tester.tap(find.byKey(const Key('onboarding_interest_movies-series')));
+    await tester.tap(
+      find.byKey(const Key('onboarding_interest_movies-series')),
+    );
     await tester.pumpAndSettle();
 
     await tester.tap(find.byKey(const Key('onboarding_continue_button')));
@@ -107,4 +134,38 @@ void main() {
     expect(find.text('HOME_SCREEN'), findsOneWidget);
     expect(find.text('PROVIDERS_SCREEN'), findsNothing);
   });
+
+  testWidgets(
+    'MAL-12: usa la timezone inyectada, no el valor fijo de Buenos Aires',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final container = ProviderContainer(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(
+            InMemoryTokenStore()
+              ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+          ),
+          fluentApiProvider.overrideWith((ref) => api),
+          timezoneProvider.overrideWith((ref) async => 'America/Sao_Paulo'),
+        ],
+      );
+      await container.read(authControllerProvider.notifier).bootstrap();
+      addTearDown(container.dispose);
+      await _pumpOnboarding(tester, container);
+      await _goThroughNameAndLevel(tester);
+
+      await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
+      await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
+      await tester.tap(
+        find.byKey(const Key('onboarding_interest_movies-series')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('onboarding_continue_button')));
+      await tester.pumpAndSettle();
+
+      final me = await api.getMe();
+      expect(me.profile.timezone, 'America/Sao_Paulo');
+    },
+  );
 }

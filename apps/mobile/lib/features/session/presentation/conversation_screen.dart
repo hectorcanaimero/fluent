@@ -42,6 +42,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   final _scrollController = ScrollController();
 
   bool _loading = true;
+  bool _bootError = false;
   String? _sessionTopic;
   String _partialText = '';
   double _ttsRate = 1.0;
@@ -79,28 +80,43 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   }
 
   Future<void> _bootstrap() async {
-    final api = ref.read(fluentApiProvider);
-    final speech = _speech;
-    final tts = _tts;
-
-    await tts.setLanguage('en-US');
-    _micAvailable = await speech.initialize();
-    if (_micAvailable) {
-      _micHasEnUsLocale = await speech.hasLocale('en_US');
-    }
-
-    final detail = await api.getSession(widget.sessionId);
-    if (!mounted) return;
     setState(() {
-      _sessionTopic = detail.session.topic;
-      _messages.addAll(
-        detail.turns.map(
-          (t) => ChatMessage(role: t.role == 'user' ? 'user' : 'assistant', text: t.text),
-        ),
-      );
-      _loading = false;
+      _loading = true;
+      _bootError = false;
     });
-    _startTimer();
+    try {
+      final api = ref.read(fluentApiProvider);
+      final speech = _speech;
+      final tts = _tts;
+
+      await tts.setLanguage('en-US');
+      _micAvailable = await speech.initialize();
+      if (_micAvailable) {
+        _micHasEnUsLocale = await speech.hasLocale('en_US');
+      }
+
+      final detail = await api.getSession(widget.sessionId);
+      if (!mounted) return;
+      setState(() {
+        _sessionTopic = detail.session.topic;
+        _messages.addAll(
+          detail.turns.map(
+            (t) => ChatMessage(
+              role: t.role == 'user' ? 'user' : 'assistant',
+              text: t.text,
+            ),
+          ),
+        );
+        _loading = false;
+      });
+      _startTimer();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _loading = false;
+        _bootError = true;
+      });
+    }
   }
 
   void _startTimer() {
@@ -110,14 +126,20 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   void _onTick() {
     if (!mounted) return;
-    setState(() => _remainingSeconds = (_remainingSeconds - 1).clamp(0, widget.sessionDuration.inSeconds));
+    setState(
+      () => _remainingSeconds = (_remainingSeconds - 1).clamp(
+        0,
+        widget.sessionDuration.inSeconds,
+      ),
+    );
 
-    if (!_warningShown && _remainingSeconds <= widget.warningThreshold.inSeconds) {
+    if (!_warningShown &&
+        _remainingSeconds <= widget.warningThreshold.inSeconds) {
       _warningShown = true;
       final l10n = AppLocalizations.of(context);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(l10n.conversationTwoMinutesWarning)));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(l10n.conversationTwoMinutesWarning)),
+      );
     }
 
     if (_remainingSeconds <= 0) {
@@ -152,7 +174,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
     if (!mounted) return;
     if (summary != null) {
-      context.pushReplacement('/session/${widget.sessionId}/summary', extra: summary);
+      context.pushReplacement(
+        '/session/${widget.sessionId}/summary',
+        extra: summary,
+      );
     } else {
       context.go('/');
     }
@@ -162,21 +187,20 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final l10n = AppLocalizations.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.conversationEndConfirmTitle),
-            content: Text(l10n.conversationEndConfirmBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(false),
-                child: Text(l10n.conversationEndConfirmCancel),
-              ),
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(true),
-                child: Text(l10n.conversationEndConfirmConfirm),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.conversationEndConfirmTitle),
+        content: Text(l10n.conversationEndConfirmBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.conversationEndConfirmCancel),
           ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.conversationEndConfirmConfirm),
+          ),
+        ],
+      ),
     );
     if (confirmed == true) {
       await _endSession(reason: 'user');
@@ -216,17 +240,16 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final l10n = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.conversationMicUnavailableTitle),
-            content: Text(l10n.conversationMicUnavailableBody),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.conversationMicUnavailableAccept),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.conversationMicUnavailableTitle),
+        content: Text(l10n.conversationMicUnavailableBody),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.conversationMicUnavailableAccept),
           ),
+        ],
+      ),
     );
     if (mounted) {
       setState(() {
@@ -289,24 +312,37 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         final aIdx = assistantIndex;
         if (aIdx == null) {
           assistantIndex = _messages.length;
-          _messages.add(ChatMessage(role: 'assistant', text: liveReply.toString()));
+          _messages.add(
+            ChatMessage(role: 'assistant', text: liveReply.toString()),
+          );
         } else {
-          _messages[aIdx] = _messages[aIdx].copyWith(text: liveReply.toString());
+          _messages[aIdx] = _messages[aIdx].copyWith(
+            text: liveReply.toString(),
+          );
         }
       });
       _scrollToBottom();
     }
 
     try {
-      final result = await _sendTurnWithStreamFallback(text: text, onToken: onToken);
+      final result = await _sendTurnWithStreamFallback(
+        text: text,
+        onToken: onToken,
+      );
       _unavailableCount = result.unavailable ? _unavailableCount + 1 : 0;
       if (!mounted) return;
       setState(() {
-        _messages[userIndex] = _messages[userIndex].copyWith(corrections: result.corrections);
+        _messages[userIndex] = _messages[userIndex].copyWith(
+          corrections: result.corrections,
+        );
         final aIdx = assistantIndex;
         if (aIdx == null) {
           _messages.add(
-            ChatMessage(role: 'assistant', text: result.reply, degraded: result.degraded),
+            ChatMessage(
+              role: 'assistant',
+              text: result.reply,
+              degraded: result.degraded,
+            ),
           );
         } else {
           // `done` es la fuente de verdad (SPEC-04 §4, PEND-56 de PR-04.md):
@@ -320,6 +356,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         _state = ConvState.speaking;
       });
       _scrollToBottom();
+      await _tts.setSpeechRate(_ttsRate);
       await _tts.speak(result.reply);
       if (!mounted) return;
       if (result.unavailable && _unavailableCount >= 3) {
@@ -365,7 +402,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     final api = ref.read(fluentApiProvider);
     var sawEvent = false;
     try {
-      final stream = api.sendTurnStream(sessionId: widget.sessionId, text: text);
+      final stream = api.sendTurnStream(
+        sessionId: widget.sessionId,
+        text: text,
+      );
       await for (final event in stream) {
         sawEvent = true;
         switch (event) {
@@ -395,28 +435,27 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     await showDialog<void>(
       context: context,
       barrierDismissible: false,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.conversationUnavailableTitle),
-            content: Text(l10n.conversationUnavailableBody),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _unavailableCount = 0;
-                  setState(() => _state = ConvState.reviewing);
-                },
-                child: Text(l10n.conversationUnavailableStay),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.of(ctx).pop();
-                  _endSession(reason: 'user');
-                },
-                child: Text(l10n.conversationUnavailableEnd),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.conversationUnavailableTitle),
+        content: Text(l10n.conversationUnavailableBody),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _unavailableCount = 0;
+              setState(() => _state = ConvState.reviewing);
+            },
+            child: Text(l10n.conversationUnavailableStay),
           ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.of(ctx).pop();
+              _endSession(reason: 'user');
+            },
+            child: Text(l10n.conversationUnavailableEnd),
+          ),
+        ],
+      ),
     );
   }
 
@@ -446,6 +485,44 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
     if (_loading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    }
+
+    if (_bootError) {
+      return Scaffold(
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(AppSpacing.xl),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  l10n.commonLoadErrorTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.commonLoadErrorBody,
+                  style: Theme.of(context).textTheme.bodySmall,
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: AppSpacing.lg),
+                ElevatedButton(
+                  key: const Key('conversation_boot_error_retry'),
+                  onPressed: _bootstrap,
+                  child: Text(l10n.commonRetry),
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                TextButton(
+                  key: const Key('conversation_boot_error_back'),
+                  onPressed: () => context.go('/'),
+                  child: Text(l10n.conversationBootErrorBack),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     }
 
     return Scaffold(
@@ -478,11 +555,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                 final message = _messages[index];
                 return message.isAssistant
                     ? _AssistantBubble(
-                      message: message,
-                      rate: _ttsRate,
-                      onSetRate: _setRate,
-                      onReplay: () => _replay(message.text),
-                    )
+                        message: message,
+                        rate: _ttsRate,
+                        onSetRate: _setRate,
+                        onReplay: () => _replay(message.text),
+                      )
                     : _UserBubble(message: message);
               },
             ),
@@ -492,7 +569,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             partialText: _partialText,
             draftController: _draftController,
             errorMessage: _errorMessage,
-            onMicTap: _state == ConvState.listening ? _stopListening : _startListening,
+            onMicTap: _state == ConvState.listening
+                ? _stopListening
+                : _startListening,
             onSend: _send,
             onRetry: _retry,
             onTextMode: _enterTextMode,
@@ -545,13 +624,18 @@ class _AssistantBubble extends StatelessWidget {
                 TextButton(
                   onPressed: () => onSetRate(r),
                   style: TextButton.styleFrom(
-                    foregroundColor: rate == r ? AppColors.primary : AppColors.textMuted,
+                    foregroundColor: rate == r
+                        ? AppColors.primary
+                        : AppColors.textMuted,
                   ),
                   child: Text(l10n.conversationSpeedButtonLabel(r.toString())),
                 ),
               if (message.degraded)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.locked,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
@@ -607,8 +691,13 @@ class _UserBubbleState extends State<_UserBubble> {
                 child: Padding(
                   padding: const EdgeInsets.only(top: AppSpacing.xs),
                   child: Text(
-                    l10n.conversationCorrectionChip(widget.message.corrections.length),
-                    style: const TextStyle(color: AppColors.accent, fontWeight: FontWeight.w600),
+                    l10n.conversationCorrectionChip(
+                      widget.message.corrections.length,
+                    ),
+                    style: const TextStyle(
+                      color: AppColors.accent,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
                 ),
               ),
@@ -637,7 +726,10 @@ class _UserBubbleState extends State<_UserBubble> {
                         '${l10n.conversationCorrectionCorrectedLabel}: ${c.corrected}',
                         style: const TextStyle(fontWeight: FontWeight.w700),
                       ),
-                      Text(c.note, style: Theme.of(context).textTheme.bodySmall),
+                      Text(
+                        c.note,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
                     ],
                   ],
                 ),
@@ -680,18 +772,26 @@ class _BottomControls extends StatelessWidget {
           ConvState.reviewing => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(l10n.conversationEditableHint, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                l10n.conversationEditableHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: AppSpacing.xs),
               TextField(
                 key: const Key('conversation_draft_field'),
                 controller: draftController,
                 minLines: 1,
                 maxLines: 4,
-                decoration: InputDecoration(hintText: l10n.conversationTextFieldHint),
+                decoration: InputDecoration(
+                  hintText: l10n.conversationTextFieldHint,
+                ),
               ),
               if (errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text(errorMessage!, style: const TextStyle(color: AppColors.error)),
+                Text(
+                  errorMessage!,
+                  style: const TextStyle(color: AppColors.error),
+                ),
               ],
               const SizedBox(height: AppSpacing.md),
               Row(
@@ -719,7 +819,10 @@ class _BottomControls extends StatelessWidget {
             children: [
               Text(partialText, textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.sm),
-              Text(l10n.conversationListeningHint, style: Theme.of(context).textTheme.bodySmall),
+              Text(
+                l10n.conversationListeningHint,
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: AppSpacing.md),
               _MicButton(active: true, onTap: onMicTap),
             ],

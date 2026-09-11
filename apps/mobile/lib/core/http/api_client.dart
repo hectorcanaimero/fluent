@@ -57,6 +57,13 @@ class ApiClient {
               }
             }
             await _tokenStore.clear();
+            // Los tokens ya no sirven, pero nadie más se entera: sin este
+            // aviso `AuthController` seguía en `authenticated` y la app
+            // quedaba "zombi", dando errores genéricos en cada pantalla
+            // hasta reiniciarla (MAL-02).
+            if (!_sessionExpired.isClosed) {
+              _sessionExpired.add(null);
+            }
           }
           handler.next(error);
         },
@@ -68,6 +75,23 @@ class ApiClient {
   final TokenStore _tokenStore;
   final TokenRefresher _tokenRefresher;
   Future<AuthTokens?>? _refreshInFlight;
+  final StreamController<void> _sessionExpired =
+      StreamController<void>.broadcast();
+
+  /// Emite cuando un 401 no se pudo recuperar refrescando y los tokens se
+  /// borraron. `AuthController` se suscribe para pasar a
+  /// `AuthStatus.unauthenticated` y que el router mande a `/login`.
+  ///
+  /// Es un stream de difusión y no un callback único porque el cliente vive
+  /// más que cualquier pantalla: varios oyentes pueden entrar y salir sin
+  /// pisarse.
+  Stream<void> get onSessionExpired => _sessionExpired.stream;
+
+  /// Cierra el stream de [onSessionExpired]. La app usa un único cliente
+  /// durante toda su vida; esto es para los tests y para `ref.onDispose`.
+  void dispose() {
+    unawaited(_sessionExpired.close());
+  }
 
   /// Evita refrescos concurrentes: si ya hay uno en curso, todas las
   /// peticiones que reciben 401 al mismo tiempo esperan el mismo resultado.

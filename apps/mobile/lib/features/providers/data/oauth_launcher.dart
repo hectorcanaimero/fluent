@@ -26,18 +26,26 @@ class FlutterWebAuthOAuthLauncher implements OAuthLauncher {
   }
 }
 
-/// Simula un login exitoso devolviendo el deep link de retorno
-/// directamente, sin abrir nada. Se usa con `USE_FAKE_API` y en tests.
+/// Simula el deep link de retorno del PKCE de OpenRouter (SPEC-02 §(PKCE),
+/// contrato tras MAL-18), sin abrir nada. Se usa con `USE_FAKE_API` y en
+/// tests.
 class FakeOAuthLauncher implements OAuthLauncher {
-  FakeOAuthLauncher({this.code = 'fake-authorization-code'});
+  /// `'done'` simula `?done=1` (éxito, el caso por defecto); `'error'`
+  /// simula `?error=access_denied`; cualquier otro valor se manda tal cual
+  /// como query string, para simular un deep link sin `done` ni `error`.
+  FakeOAuthLauncher({this.result = 'done'});
 
-  final String code;
+  final String result;
 
   @override
   Future<String> authenticate({
     required String url,
     required String callbackUrlScheme,
   }) async {
-    return '$callbackUrlScheme://oauth/openrouter?code=$code';
+    return switch (result) {
+      'done' => '$callbackUrlScheme://oauth/openrouter?done=1',
+      'error' => '$callbackUrlScheme://oauth/openrouter?error=access_denied',
+      _ => '$callbackUrlScheme://oauth/openrouter?$result',
+    };
   }
 }

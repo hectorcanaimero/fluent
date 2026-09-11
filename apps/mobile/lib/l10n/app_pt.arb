@@ -93,6 +93,7 @@
   "providersDisconnectButton": "Desconectar",
   "providersCreditsRemaining": "Crédito restante: {amount} USD",
   "providersErrorGeneric": "Não conseguimos concluir a conexão. Tente de novo.",
+  "providersOauthError": "Não conseguimos conectar com o OpenRouter. Tente de novo.",
   "providersLoadError": "Não conseguimos carregar os provedores.",
   "providersGeminiPasteKeyButton": "Colar API key",
   "providersGeminiKeyDialogTitle": "Conectar Gemini",

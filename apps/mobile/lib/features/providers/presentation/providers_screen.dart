@@ -57,6 +57,12 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
     });
   }
 
+  /// SPEC-02 §(PKCE), contrato tras MAL-18: el callback público de
+  /// OpenRouter ya no canjea nada, solo deja el `code` pendiente en Redis y
+  /// redirige acá con `?done=1` (o `?error=…` si el usuario canceló o
+  /// OpenRouter rechazó). El canje real lo hace `POST /pkce/complete`
+  /// autenticado, con el `codeVerifierId` — sin `code`: ya no existe el
+  /// flujo legado que lo aceptaba por deep link.
   Future<void> _connectOpenRouter() async {
     final l10n = AppLocalizations.of(context);
     setState(() {
@@ -73,33 +79,53 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             callbackUrlScheme: Env.oauthCallbackScheme,
           );
       final params = Uri.parse(callback).queryParameters;
-      if (params['error'] != null) {
-        throw ApiException(
-          code: ApiErrorCode.providerKeyInvalid,
-          message: 'openrouter callback error: ${params['error']}',
-        );
-      }
-      // Camino normal: la API ya canjeó el código en su callback HTTPS y
-      // devolvió `done=1`. Si llega un `code` (flujo antiguo), se canjea aquí.
       if (params['done'] != '1') {
-        final code = params['code'];
-        if (code == null) {
-          throw const ApiException(
-            code: ApiErrorCode.unknown,
-            message: 'missing authorization code',
-          );
-        }
-        await api.completeOpenRouterPkce(
-          code: code,
-          codeVerifierId: pkce.codeVerifierId,
-        );
+        // `error=…`, o cualquier otra cosa que no sea el `done=1` del
+        // contrato nuevo: no hay nada que canjear.
+        if (mounted) setState(() => _error = l10n.providersOauthError);
+        return;
       }
+      final completed = await _completeOpenRouterPkce(
+        codeVerifierId: pkce.codeVerifierId,
+      );
+      if (!completed) return;
       await ref.read(authControllerProvider.notifier).refresh();
       _reload();
     } catch (_) {
       if (mounted) setState(() => _error = l10n.providersErrorGeneric);
     } finally {
       if (mounted) setState(() => _connectingOpenRouter = false);
+    }
+  }
+
+  /// `POST /pkce/complete`: `403 FORBIDDEN` si el `codeVerifierId` no
+  /// existe, caducó o es de otro usuario — se relanza y cae al catch
+  /// genérico de [_connectOpenRouter], que equivale a reiniciar el flujo
+  /// desde `startOpenRouterPkce`. `400 VALIDATION` si todavía no llegó el
+  /// `code` (el navegador no volvió) — recuperable: se reintenta una vez
+  /// tras un breve retraso; si persiste, `providersOauthError`.
+  Future<bool> _completeOpenRouterPkce({
+    required String codeVerifierId,
+    bool retried = false,
+  }) async {
+    try {
+      await ref
+          .read(fluentApiProvider)
+          .completeOpenRouterPkce(codeVerifierId: codeVerifierId);
+      return true;
+    } on ApiException catch (e) {
+      if (e.code != ApiErrorCode.validation) rethrow;
+      if (!retried) {
+        await Future.delayed(const Duration(milliseconds: 800));
+        if (!mounted) return false;
+        return _completeOpenRouterPkce(
+          codeVerifierId: codeVerifierId,
+          retried: true,
+        );
+      }
+      if (!mounted) return false;
+      setState(() => _error = AppLocalizations.of(context).providersOauthError);
+      return false;
     }
   }
 

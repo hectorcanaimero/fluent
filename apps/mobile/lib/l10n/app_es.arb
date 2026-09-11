@@ -103,6 +103,7 @@
     }
   },
   "providersErrorGeneric": "No pudimos completar la conexión. Probá de nuevo.",
+  "providersOauthError": "No pudimos conectar con OpenRouter. Probá de nuevo.",
   "providersLoadError": "No pudimos cargar los proveedores.",
   "providersGeminiPasteKeyButton": "Pegar API key",
   "providersGeminiKeyDialogTitle": "Conectar Gemini",

@@ -308,6 +308,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não conseguimos concluir a conexão. Tente de novo.';
 
   @override
+  String get providersOauthError =>
+      'Não conseguimos conectar com o OpenRouter. Tente de novo.';
+
+  @override
   String get providersLoadError => 'Não conseguimos carregar os provedores.';
 
   @override

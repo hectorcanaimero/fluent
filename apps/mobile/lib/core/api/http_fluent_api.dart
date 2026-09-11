@@ -53,14 +53,15 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<List<String>> createInvitations({int count = 1}) => _client.guard(() async {
-    final res = await _client.dio.post(
-      '/admin/invitations',
-      data: {'count': count},
-    );
-    final data = res.data as Map<String, dynamic>;
-    return (data['codes'] as List).cast<String>();
-  });
+  Future<List<String>> createInvitations({int count = 1}) =>
+      _client.guard(() async {
+        final res = await _client.dio.post(
+          '/admin/invitations',
+          data: {'count': count},
+        );
+        final data = res.data as Map<String, dynamic>;
+        return (data['codes'] as List).cast<String>();
+      });
 
   @override
   Future<GroupResponse> getGroup() => _client.guard(() async {
@@ -74,34 +75,35 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) => _client.guard(() async {
-    final res = await _client.dio.post(
-      '/providers/openrouter/pkce/start',
-      data: {'callbackUrl': callbackUrl},
-    );
-    return PkceStartResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) =>
+      _client.guard(() async {
+        final res = await _client.dio.post(
+          '/providers/openrouter/pkce/start',
+          data: {'callbackUrl': callbackUrl},
+        );
+        return PkceStartResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
   Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String code,
     required String codeVerifierId,
   }) => _client.guard(() async {
     final res = await _client.dio.post(
       '/providers/openrouter/pkce/complete',
-      data: {'code': code, 'codeVerifierId': codeVerifierId},
+      data: {'codeVerifierId': codeVerifierId},
     );
     return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
   });
 
   @override
-  Future<ProviderStatusResult> connectGemini(String apiKey) => _client.guard(() async {
-    final res = await _client.dio.post(
-      '/providers/gemini',
-      data: {'apiKey': apiKey},
-    );
-    return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<ProviderStatusResult> connectGemini(String apiKey) =>
+      _client.guard(() async {
+        final res = await _client.dio.post(
+          '/providers/gemini',
+          data: {'apiKey': apiKey},
+        );
+        return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
   Future<void> disconnectProvider(String provider) => _client.guard(() async {
@@ -109,10 +111,11 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<ProviderStatusResult> getProviderStatus(String provider) => _client.guard(() async {
-    final res = await _client.dio.get('/providers/$provider/status');
-    return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<ProviderStatusResult> getProviderStatus(String provider) =>
+      _client.guard(() async {
+        final res = await _client.dio.get('/providers/$provider/status');
+        return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
   Future<ModelsCatalog> getModels() => _client.guard(() async {
@@ -250,14 +253,20 @@ class HttpFluentApi implements FluentApi {
     final data = jsonDecode(rawData);
     switch (name) {
       case 'token':
-        return TurnStreamToken((data as Map<String, dynamic>)['text'] as String);
+        return TurnStreamToken(
+          (data as Map<String, dynamic>)['text'] as String,
+        );
       case 'corrections':
         final list = (data as Map<String, dynamic>)['corrections'] as List;
         return TurnStreamCorrections(
-          list.map((e) => Correction.fromJson(e as Map<String, dynamic>)).toList(),
+          list
+              .map((e) => Correction.fromJson(e as Map<String, dynamic>))
+              .toList(),
         );
       case 'done':
-        return TurnStreamDone(TurnResult.fromJson(data as Map<String, dynamic>));
+        return TurnStreamDone(
+          TurnResult.fromJson(data as Map<String, dynamic>),
+        );
       case 'error':
         final body = data as Map<String, dynamic>;
         return TurnStreamError(
@@ -288,7 +297,8 @@ class HttpFluentApi implements FluentApi {
             code: ApiErrorCode.fromWire(decoded['error'] as String?),
             message: (decoded['message'] as String?) ?? e.message ?? 'error',
             statusCode: e.response?.statusCode,
-            details: (decoded['details'] as List?)?.cast<Map<String, dynamic>>(),
+            details: (decoded['details'] as List?)
+                ?.cast<Map<String, dynamic>>(),
             activeSessionId: decoded['activeSessionId'] as String?,
           );
         }
@@ -313,19 +323,21 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<SessionListResult> getSessions({int limit = 20, String? cursor}) => _client.guard(() async {
-    final res = await _client.dio.get(
-      '/sessions',
-      queryParameters: {'limit': limit, 'cursor': ?cursor},
-    );
-    return SessionListResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<SessionListResult> getSessions({int limit = 20, String? cursor}) =>
+      _client.guard(() async {
+        final res = await _client.dio.get(
+          '/sessions',
+          queryParameters: {'limit': limit, 'cursor': ?cursor},
+        );
+        return SessionListResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
-  Future<SessionDetailResult> getSession(String sessionId) => _client.guard(() async {
-    final res = await _client.dio.get('/sessions/$sessionId');
-    return SessionDetailResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<SessionDetailResult> getSession(String sessionId) =>
+      _client.guard(() async {
+        final res = await _client.dio.get('/sessions/$sessionId');
+        return SessionDetailResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
   Future<MemoryResult> getMemory() => _client.guard(() async {
@@ -369,13 +381,14 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<LeaderboardResult> getLeaderboard({String? week}) => _client.guard(() async {
-    final res = await _client.dio.get(
-      '/leaderboard',
-      queryParameters: {'week': ?week},
-    );
-    return LeaderboardResult.fromJson(res.data as Map<String, dynamic>);
-  });
+  Future<LeaderboardResult> getLeaderboard({String? week}) =>
+      _client.guard(() async {
+        final res = await _client.dio.get(
+          '/leaderboard',
+          queryParameters: {'week': ?week},
+        );
+        return LeaderboardResult.fromJson(res.data as Map<String, dynamic>);
+      });
 
   @override
   Future<List<ChallengeItem>> getChallenges() => _client.guard(() async {

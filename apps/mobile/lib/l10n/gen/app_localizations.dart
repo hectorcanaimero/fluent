@@ -656,6 +656,12 @@ abstract class AppLocalizations {
   /// **'No pudimos completar la conexión. Probá de nuevo.'**
   String get providersErrorGeneric;
 
+  /// No description provided for @providersOauthError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectar con OpenRouter. Probá de nuevo.'**
+  String get providersOauthError;
+
   /// No description provided for @providersLoadError.
   ///
   /// In es, this message translates to:

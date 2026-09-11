@@ -11,9 +11,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('muestra XP, streak, duración y el aviso de boss battle', (tester) async {
+  testWidgets('muestra XP, streak, duración y el aviso de boss battle', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
     const summary = SessionSummary(
       xpEarned: 85,
       streak: 13,
@@ -34,7 +39,10 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SessionSummaryScreen(sessionId: created.session.id, summary: summary),
+          home: SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
         ),
       ),
     );
@@ -48,9 +56,14 @@ void main() {
     expect(find.text(l10n.summaryDoubleDayBadge), findsOneWidget);
   });
 
-  testWidgets('al abrirse limpia la sesión activa del estado (MAL-04)', (tester) async {
+  testWidgets('al abrirse limpia la sesión activa del estado (MAL-04)', (
+    tester,
+  ) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
     const summary = SessionSummary(
       xpEarned: 10,
       streak: 1,
@@ -87,7 +100,10 @@ void main() {
             GlobalCupertinoLocalizations.delegate,
           ],
           supportedLocales: AppLocalizations.supportedLocales,
-          home: SessionSummaryScreen(sessionId: created.session.id, summary: summary),
+          home: SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
         ),
       ),
     );
@@ -95,4 +111,41 @@ void main() {
 
     expect(container.read(authControllerProvider).activeSessionId, isNull);
   });
+
+  testWidgets(
+    'MEJ-20: sin `extra` (summary null) arma un resumen best-effort desde GET /sessions/:id',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      await api.endSession(sessionId: created.session.id, reason: 'user');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [fluentApiProvider.overrideWith((ref) => api)],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SessionSummaryScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // `endSession` de FakeApi siempre paga 85 XP; sin `extra` no hay forma
+      // de saber streak/isDoubleDay/nextIsBoss reales, así que no deben
+      // aparecer los banners que dependerían de eso.
+      expect(find.text('+85'), findsOneWidget);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.summaryNextIsBossBanner), findsNothing);
+      expect(find.text(l10n.summaryDoubleDayBadge), findsNothing);
+    },
+  );
 }

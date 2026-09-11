@@ -170,86 +170,10 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
   }
 
   Future<void> _openGeminiKeySheet() async {
-    final l10n = AppLocalizations.of(context);
-    final controller = TextEditingController();
     final key = await showModalBottomSheet<String>(
       context: context,
       isScrollControlled: true,
-      builder: (context) {
-        return Padding(
-          padding: EdgeInsets.only(
-            left: AppSpacing.screenPad,
-            right: AppSpacing.screenPad,
-            top: AppSpacing.screenPad,
-            bottom:
-                MediaQuery.of(context).viewInsets.bottom + AppSpacing.screenPad,
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                l10n.providersGeminiKeyDialogTitle,
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: AppSpacing.md),
-              Text(
-                l10n.providersGeminiKeyHelpStep1,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              InkWell(
-                onTap: () => launchUrl(
-                  Uri.parse(_kGeminiHelpUrl),
-                  mode: LaunchMode.externalApplication,
-                ),
-                child: Text(
-                  l10n.providersGeminiKeyLink,
-                  style: const TextStyle(
-                    color: AppColors.primary,
-                    decoration: TextDecoration.underline,
-                  ),
-                ),
-              ),
-              Text(
-                l10n.providersGeminiKeyHelpStep2,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              Text(
-                l10n.providersGeminiKeyHelpStep3,
-                style: Theme.of(context).textTheme.bodyMedium,
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              TextField(
-                key: const Key('gemini_key_field'),
-                controller: controller,
-                decoration: InputDecoration(
-                  labelText: l10n.providersGeminiKeyLabel,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.lg),
-              Row(
-                children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      onPressed: () => Navigator.of(context).pop(),
-                      child: Text(l10n.providersGeminiKeyCancel),
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.md),
-                  Expanded(
-                    child: ElevatedButton(
-                      key: const Key('gemini_key_confirm_button'),
-                      onPressed: () =>
-                          Navigator.of(context).pop(controller.text.trim()),
-                      child: Text(l10n.providersGeminiKeyConfirm),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        );
-      },
+      builder: (context) => const _GeminiKeySheet(),
     );
     if (key != null && key.isNotEmpty) {
       await _connectGemini(key);
@@ -396,6 +320,107 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             );
           },
         ),
+      ),
+    );
+  }
+}
+
+/// Contenido de la hoja para pegar la API key de Gemini. Un `StatefulWidget`
+/// propio en vez de un `TextEditingController` creado en el método que abre
+/// la hoja (MEJ-20): así el `dispose()` lo llama el framework cuando el
+/// widget realmente se desmonta (al terminar la animación de cierre), en
+/// vez de nosotros disponiéndolo apenas se resuelve el `Future` de
+/// `showModalBottomSheet` — eso pasaba mientras la hoja todavía estaba
+/// animando y tiraba "TextEditingController was used after being disposed".
+class _GeminiKeySheet extends StatefulWidget {
+  const _GeminiKeySheet();
+
+  @override
+  State<_GeminiKeySheet> createState() => _GeminiKeySheetState();
+}
+
+class _GeminiKeySheetState extends State<_GeminiKeySheet> {
+  final _controller = TextEditingController();
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.only(
+        left: AppSpacing.screenPad,
+        right: AppSpacing.screenPad,
+        top: AppSpacing.screenPad,
+        bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.screenPad,
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text(
+            l10n.providersGeminiKeyDialogTitle,
+            style: Theme.of(context).textTheme.titleLarge,
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Text(
+            l10n.providersGeminiKeyHelpStep1,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          InkWell(
+            onTap: () => launchUrl(
+              Uri.parse(_kGeminiHelpUrl),
+              mode: LaunchMode.externalApplication,
+            ),
+            child: Text(
+              l10n.providersGeminiKeyLink,
+              style: const TextStyle(
+                color: AppColors.primary,
+                decoration: TextDecoration.underline,
+              ),
+            ),
+          ),
+          Text(
+            l10n.providersGeminiKeyHelpStep2,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          Text(
+            l10n.providersGeminiKeyHelpStep3,
+            style: Theme.of(context).textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          TextField(
+            key: const Key('gemini_key_field'),
+            controller: _controller,
+            decoration: InputDecoration(
+              labelText: l10n.providersGeminiKeyLabel,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+          Row(
+            children: [
+              Expanded(
+                child: OutlinedButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: Text(l10n.providersGeminiKeyCancel),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.md),
+              Expanded(
+                child: ElevatedButton(
+                  key: const Key('gemini_key_confirm_button'),
+                  onPressed: () =>
+                      Navigator.of(context).pop(_controller.text.trim()),
+                  child: Text(l10n.providersGeminiKeyConfirm),
+                ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }

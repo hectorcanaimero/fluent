@@ -67,28 +67,9 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
   }
 
   Future<void> _editConfirmedFact(MemoryFact fact) async {
-    final controller = TextEditingController(text: fact.text);
-    final l10n = AppLocalizations.of(context);
     final newText = await showDialog<String>(
       context: context,
-      builder: (ctx) => AlertDialog(
-        title: Text(l10n.memoryEditFactTitle),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLines: 3,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(),
-            child: Text(l10n.memoryEditFactCancel),
-          ),
-          ElevatedButton(
-            onPressed: () => Navigator.of(ctx).pop(controller.text.trim()),
-            child: Text(l10n.memoryEditFactSave),
-          ),
-        ],
-      ),
+      builder: (ctx) => _EditFactDialog(initialText: fact.text),
     );
     if (newText != null && newText.isNotEmpty && newText != fact.text) {
       await ref
@@ -319,6 +300,51 @@ class _PendingFactTileState extends State<_PendingFactTile> {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Diálogo para editar un hecho confirmado. Un `StatefulWidget` propio en
+/// vez de un `TextEditingController` creado en el método que abre el
+/// diálogo (MEJ-20): así el framework llama a `dispose()` cuando el widget
+/// realmente se desmonta (al terminar la animación de cierre del diálogo),
+/// no antes — disponer apenas se resuelve el `Future` de `showDialog`
+/// tira "TextEditingController was used after being disposed" mientras el
+/// diálogo todavía está animando.
+class _EditFactDialog extends StatefulWidget {
+  const _EditFactDialog({required this.initialText});
+
+  final String initialText;
+
+  @override
+  State<_EditFactDialog> createState() => _EditFactDialogState();
+}
+
+class _EditFactDialogState extends State<_EditFactDialog> {
+  late final _controller = TextEditingController(text: widget.initialText);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return AlertDialog(
+      title: Text(l10n.memoryEditFactTitle),
+      content: TextField(controller: _controller, autofocus: true, maxLines: 3),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text(l10n.memoryEditFactCancel),
+        ),
+        ElevatedButton(
+          onPressed: () => Navigator.of(context).pop(_controller.text.trim()),
+          child: Text(l10n.memoryEditFactSave),
+        ),
+      ],
     );
   }
 }

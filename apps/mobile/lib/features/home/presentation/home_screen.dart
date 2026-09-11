@@ -23,6 +23,11 @@ class HomeScreen extends ConsumerStatefulWidget {
 class _HomeScreenState extends ConsumerState<HomeScreen> {
   late Future<HomeData> _future;
 
+  /// MEJ-20: sin esto, dos toques rápidos en el boss o en un chip de tema
+  /// (sin el guard que ya tiene `new_session_screen._start`) creaban dos
+  /// sesiones seguidas.
+  bool _starting = false;
+
   @override
   void initState() {
     super.initState();
@@ -80,6 +85,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// genérico). El CTA principal ya se deshabilita en ese caso, pero los
   /// chips de temas rápidos pasan por acá también.
   Future<void> _startSession({required String kind, String? topic}) async {
+    if (_starting) return;
     final l10n = AppLocalizations.of(context);
     final data = await _future;
     if (!mounted) return;
@@ -89,6 +95,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
       return;
     }
+    setState(() => _starting = true);
     try {
       final result = await ref
           .read(fluentApiProvider)
@@ -110,6 +117,8 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.homeLoadError)));
+    } finally {
+      if (mounted) setState(() => _starting = false);
     }
   }
 
@@ -148,6 +157,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     ],
                     _PrimaryCta(
                       data: data,
+                      starting: _starting,
                       onPractice: () => context.push('/session/new'),
                       onBoss: () => _startSession(kind: 'boss'),
                     ),
@@ -168,6 +178,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                     const SizedBox(height: AppSpacing.xl),
                     _QuickTopics(
                       data: data,
+                      starting: _starting,
                       onTopic: (topic) =>
                           _startSession(kind: 'free_topic', topic: topic),
                     ),
@@ -386,18 +397,20 @@ class _PendingActionBanner extends StatelessWidget {
 class _PrimaryCta extends StatelessWidget {
   const _PrimaryCta({
     required this.data,
+    required this.starting,
     required this.onPractice,
     required this.onBoss,
   });
 
   final HomeData data;
+  final bool starting;
   final VoidCallback onPractice;
   final VoidCallback onBoss;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final blocked = !data.canPractice;
+    final blocked = !data.canPractice || starting;
     if (data.suggestions.bossPending) {
       return Column(
         children: [
@@ -510,9 +523,14 @@ class _GroupCard extends StatelessWidget {
 }
 
 class _QuickTopics extends StatelessWidget {
-  const _QuickTopics({required this.data, required this.onTopic});
+  const _QuickTopics({
+    required this.data,
+    required this.starting,
+    required this.onTopic,
+  });
 
   final HomeData data;
+  final bool starting;
   final ValueChanged<String> onTopic;
 
   @override
@@ -545,7 +563,7 @@ class _QuickTopics extends StatelessWidget {
               ActionChip(
                 label: Text(topic),
                 backgroundColor: AppColors.primarySoft,
-                onPressed: () => onTopic(topic),
+                onPressed: starting ? null : () => onTopic(topic),
               ),
           ],
         ),

@@ -68,7 +68,9 @@ String? computeRedirect(AuthState auth, String location) {
     return '/session/$activeId';
   }
 
-  if (isAuthRoute || location == '/splash' || location.startsWith('/onboarding')) {
+  if (isAuthRoute ||
+      location == '/splash' ||
+      location.startsWith('/onboarding')) {
     return '/';
   }
 
@@ -84,9 +86,15 @@ final routerProvider = Provider<GoRouter>((ref) {
     redirect: (context, state) =>
         computeRedirect(notifier.authState, state.matchedLocation),
     routes: [
-      GoRoute(path: '/splash', builder: (context, state) => const SplashScreen()),
+      GoRoute(
+        path: '/splash',
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
-      GoRoute(path: '/register', builder: (context, state) => const RegisterScreen()),
+      GoRoute(
+        path: '/register',
+        builder: (context, state) => const RegisterScreen(),
+      ),
       GoRoute(
         path: '/onboarding',
         builder: (context, state) => const OnboardingFlow(),
@@ -95,7 +103,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state, child) => HomeShell(child: child),
         routes: [
           GoRoute(path: '/', builder: (context, state) => const HomeScreen()),
-          GoRoute(path: '/group', builder: (context, state) => const GroupScreen()),
+          GoRoute(
+            path: '/group',
+            builder: (context, state) => const GroupScreen(),
+          ),
           GoRoute(
             path: '/progress',
             builder: (context, state) => const ProgressScreen(),
@@ -108,21 +119,25 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/session/:id',
-        builder:
-            (context, state) =>
-                ConversationScreen(sessionId: state.pathParameters['id']!),
+        builder: (context, state) =>
+            ConversationScreen(sessionId: state.pathParameters['id']!),
         routes: [
           GoRoute(
             path: 'summary',
-            builder:
-                (context, state) => SessionSummaryScreen(
-                  sessionId: state.pathParameters['id']!,
-                  summary: state.extra as SessionSummary,
-                ),
+            builder: (context, state) => SessionSummaryScreen(
+              sessionId: state.pathParameters['id']!,
+              // MEJ-20: `extra` no sobrevive un reinicio de la app (por
+              // ejemplo, si quedó como última ruta); sin el cast
+              // opcional, `state.extra as SessionSummary` reventaba.
+              summary: state.extra as SessionSummary?,
+            ),
           ),
         ],
       ),
-      GoRoute(path: '/memory', builder: (context, state) => const MemoryScreen()),
+      GoRoute(
+        path: '/memory',
+        builder: (context, state) => const MemoryScreen(),
+      ),
       GoRoute(
         path: '/providers',
         builder: (context, state) => const ProvidersScreen(),
@@ -132,7 +147,6 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const SettingsScreen(),
       ),
     ],
-    errorBuilder:
-        (context, state) => const PlaceholderScreen(title: 'Fluent'),
+    errorBuilder: (context, state) => const PlaceholderScreen(title: 'Fluent'),
   );
 });

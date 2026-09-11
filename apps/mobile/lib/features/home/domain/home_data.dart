@@ -52,7 +52,13 @@ class HomeData {
     final g = group;
     if (g == null) return null;
     final sorted = [...g.members]..sort((a, b) => b.xp.compareTo(a.xp));
-    final idx = sorted.indexWhere((m) => m.displayName == displayName);
+    // MEJ-20: comparar por userId evita confundir a dos miembros con el
+    // mismo nombre visible; se cae a displayName mientras `GET /me` no
+    // mande `userId` (ver Profile.userId).
+    final myUserId = me.profile.userId;
+    final idx = myUserId != null
+        ? sorted.indexWhere((m) => m.userId == myUserId)
+        : sorted.indexWhere((m) => m.displayName == displayName);
     return idx == -1 ? null : idx + 1;
   }
 }

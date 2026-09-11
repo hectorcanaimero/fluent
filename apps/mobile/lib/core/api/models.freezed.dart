@@ -16,7 +16,12 @@ T _$identity<T>(T value) => value;
 /// @nodoc
 mixin _$Profile {
 
- String get displayName; String get level; List<String> get interests; String get timezone; String get locale; int get xp; int get streak; String? get lastSessionDay;
+ String get displayName; String get level; List<String> get interests; String get timezone; String get locale; int get xp; int get streak; String? get lastSessionDay;/// MEJ-20: `GET /me` todavía no lo manda (`ProfileDto` de la API no
+/// tiene `userId`); se lee igual para poder comparar contra
+/// `GroupMember.userId` en vez de por `displayName` en cuanto la API lo
+/// agregue. Mientras tanto queda `null` y `yourGroupPosition` cae al
+/// viejo criterio.
+ String? get userId;
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -30,20 +35,20 @@ $ProfileCopyWith<Profile> get copyWith => _$ProfileCopyWithImpl<Profile>(this as
 @override
 bool operator ==(Object other) {
   final _this = this as Profile;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is Profile&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.level, _this.level) || other.level == _this.level)&&const DeepCollectionEquality().equals(other.interests, _this.interests)&&(identical(other.timezone, _this.timezone) || other.timezone == _this.timezone)&&(identical(other.locale, _this.locale) || other.locale == _this.locale)&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.lastSessionDay, _this.lastSessionDay) || other.lastSessionDay == _this.lastSessionDay));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is Profile&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.level, _this.level) || other.level == _this.level)&&const DeepCollectionEquality().equals(other.interests, _this.interests)&&(identical(other.timezone, _this.timezone) || other.timezone == _this.timezone)&&(identical(other.locale, _this.locale) || other.locale == _this.locale)&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.lastSessionDay, _this.lastSessionDay) || other.lastSessionDay == _this.lastSessionDay)&&(identical(other.userId, _this.userId) || other.userId == _this.userId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as Profile;
-  return Object.hash(runtimeType,_this.displayName,_this.level,const DeepCollectionEquality().hash(_this.interests),_this.timezone,_this.locale,_this.xp,_this.streak,_this.lastSessionDay);
+  return Object.hash(runtimeType,_this.displayName,_this.level,const DeepCollectionEquality().hash(_this.interests),_this.timezone,_this.locale,_this.xp,_this.streak,_this.lastSessionDay,_this.userId);
 }
 
 @override
 String toString() {
   final _this = this as Profile;
-  return 'Profile(displayName: ${_this.displayName}, level: ${_this.level}, interests: ${_this.interests}, timezone: ${_this.timezone}, locale: ${_this.locale}, xp: ${_this.xp}, streak: ${_this.streak}, lastSessionDay: ${_this.lastSessionDay})';
+  return 'Profile(displayName: ${_this.displayName}, level: ${_this.level}, interests: ${_this.interests}, timezone: ${_this.timezone}, locale: ${_this.locale}, xp: ${_this.xp}, streak: ${_this.streak}, lastSessionDay: ${_this.lastSessionDay}, userId: ${_this.userId})';
 }
 
 
@@ -54,7 +59,7 @@ abstract mixin class $ProfileCopyWith<$Res>  {
   factory $ProfileCopyWith(Profile value, $Res Function(Profile) _then) = _$ProfileCopyWithImpl;
 @useResult
 $Res call({
- String displayName, String level, List<String> interests, String timezone, String locale, int xp, int streak, String? lastSessionDay
+ String displayName, String level, List<String> interests, String timezone, String locale, int xp, int streak, String? lastSessionDay, String? userId
 });
 
 
@@ -71,7 +76,7 @@ class _$ProfileCopyWithImpl<$Res>
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? displayName = null,Object? level = null,Object? interests = null,Object? timezone = null,Object? locale = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? displayName = null,Object? level = null,Object? interests = null,Object? timezone = null,Object? locale = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,Object? userId = freezed,}) {
   return _then(Profile(
 displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -81,6 +86,7 @@ as String,locale: null == locale ? _self.locale : locale // ignore: cast_nullabl
 as String,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
 as int,lastSessionDay: freezed == lastSessionDay ? _self.lastSessionDay : lastSessionDay // ignore: cast_nullable_to_non_nullable
+as String?,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -166,10 +172,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay,  String? userId)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
-return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay,_that.userId);case _:
   return orElse();
 
 }
@@ -187,10 +193,10 @@ return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay,  String? userId)  $default,) {final _that = this;
 switch (_that) {
 case _Profile():
-return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay,_that.userId);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -207,10 +213,10 @@ return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_th
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String displayName,  String level,  List<String> interests,  String timezone,  String locale,  int xp,  int streak,  String? lastSessionDay,  String? userId)?  $default,) {final _that = this;
 switch (_that) {
 case _Profile() when $default != null:
-return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_that.locale,_that.xp,_that.streak,_that.lastSessionDay,_that.userId);case _:
   return null;
 
 }
@@ -222,7 +228,7 @@ return $default(_that.displayName,_that.level,_that.interests,_that.timezone,_th
 @JsonSerializable()
 
 class _Profile implements Profile {
-  const _Profile({required this.displayName, required this.level, required  List<String> interests, required this.timezone, required this.locale, required this.xp, required this.streak, this.lastSessionDay}): _interests = interests;
+  const _Profile({required this.displayName, required this.level, required  List<String> interests, required this.timezone, required this.locale, required this.xp, required this.streak, this.lastSessionDay, this.userId}): _interests = interests;
   factory _Profile.fromJson(Map<String, dynamic> json) => _$ProfileFromJson(json);
 
 @override final  String displayName;
@@ -239,6 +245,12 @@ class _Profile implements Profile {
 @override final  int xp;
 @override final  int streak;
 @override final  String? lastSessionDay;
+/// MEJ-20: `GET /me` todavía no lo manda (`ProfileDto` de la API no
+/// tiene `userId`); se lee igual para poder comparar contra
+/// `GroupMember.userId` en vez de por `displayName` en cuanto la API lo
+/// agregue. Mientras tanto queda `null` y `yourGroupPosition` cae al
+/// viejo criterio.
+@override final  String? userId;
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
@@ -253,18 +265,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Profile&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.level, level) || other.level == level)&&const DeepCollectionEquality().equals(other.interests, _interests)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.lastSessionDay, lastSessionDay) || other.lastSessionDay == lastSessionDay));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _Profile&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.level, level) || other.level == level)&&const DeepCollectionEquality().equals(other.interests, _interests)&&(identical(other.timezone, timezone) || other.timezone == timezone)&&(identical(other.locale, locale) || other.locale == locale)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.lastSessionDay, lastSessionDay) || other.lastSessionDay == lastSessionDay)&&(identical(other.userId, userId) || other.userId == userId));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,displayName,level,const DeepCollectionEquality().hash(_interests),timezone,locale,xp,streak,lastSessionDay);
+    return Object.hash(runtimeType,displayName,level,const DeepCollectionEquality().hash(_interests),timezone,locale,xp,streak,lastSessionDay,userId);
 }
 
 @override
 String toString() {
-    return 'Profile(displayName: $displayName, level: $level, interests: $interests, timezone: $timezone, locale: $locale, xp: $xp, streak: $streak, lastSessionDay: $lastSessionDay)';
+    return 'Profile(displayName: $displayName, level: $level, interests: $interests, timezone: $timezone, locale: $locale, xp: $xp, streak: $streak, lastSessionDay: $lastSessionDay, userId: $userId)';
 }
 
 
@@ -275,7 +287,7 @@ abstract mixin class _$ProfileCopyWith<$Res> implements $ProfileCopyWith<$Res> {
   factory _$ProfileCopyWith(_Profile value, $Res Function(_Profile) _then) = __$ProfileCopyWithImpl;
 @override @useResult
 $Res call({
- String displayName, String level, List<String> interests, String timezone, String locale, int xp, int streak, String? lastSessionDay
+ String displayName, String level, List<String> interests, String timezone, String locale, int xp, int streak, String? lastSessionDay, String? userId
 });
 
 
@@ -292,7 +304,7 @@ class __$ProfileCopyWithImpl<$Res>
 
 /// Create a copy of Profile
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? displayName = null,Object? level = null,Object? interests = null,Object? timezone = null,Object? locale = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? displayName = null,Object? level = null,Object? interests = null,Object? timezone = null,Object? locale = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,Object? userId = freezed,}) {
   return _then(_Profile(
 displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,level: null == level ? _self.level : level // ignore: cast_nullable_to_non_nullable
@@ -302,6 +314,7 @@ as String,locale: null == locale ? _self.locale : locale // ignore: cast_nullabl
 as String,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
 as int,lastSessionDay: freezed == lastSessionDay ? _self.lastSessionDay : lastSessionDay // ignore: cast_nullable_to_non_nullable
+as String?,userId: freezed == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }

@@ -52,6 +52,7 @@ class FakeApi implements FluentApi {
       xp: 720,
       streak: 12,
       lastSessionDay: '2026-09-08',
+      userId: 'user-maria',
     );
     _group = const GroupInfo(
       id: 'group-1',

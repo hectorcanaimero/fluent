@@ -1477,6 +1477,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Borrar cuenta'**
   String get settingsDeleteAccountConfirm;
+
+  /// No description provided for @authOfflineTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectar'**
+  String get authOfflineTitle;
+
+  /// No description provided for @authOfflineBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá tu conexión a internet y probá de nuevo. Tu sesión sigue guardada.'**
+  String get authOfflineBody;
+
+  /// No description provided for @authRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get authRetry;
 }
 
 class _AppLocalizationsDelegate

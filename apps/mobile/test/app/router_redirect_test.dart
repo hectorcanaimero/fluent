@@ -40,5 +40,13 @@ void main() {
       expect(computeRedirect(auth, '/session/session-42'), isNull);
       expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
     });
+
+    test('en error se queda en /splash y no manda a /login (MAL-03)', () {
+      const auth = AuthState(status: AuthStatus.error);
+      expect(computeRedirect(auth, '/splash'), isNull);
+      expect(computeRedirect(auth, '/'), '/splash');
+      expect(computeRedirect(auth, '/login'), '/splash');
+      expect(computeRedirect(auth, '/group'), '/splash');
+    });
   });
 }

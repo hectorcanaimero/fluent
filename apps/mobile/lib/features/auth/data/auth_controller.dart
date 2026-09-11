@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/fluent_api.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/storage/token_store.dart';
 import '../domain/auth_state.dart';
 import 'insforge_auth_client.dart';
@@ -72,9 +73,18 @@ class AuthController extends StateNotifier<AuthState> {
         clearActiveSessionId: me.activeSessionId == null,
         me: me,
       );
+    } on ApiException catch (e) {
+      // Solo un 401 significa que los tokens ya no valen. Antes se borraban
+      // ante *cualquier* error, así que abrir la app en modo avión, con un
+      // timeout o contra un 500 obligaba a volver a loguearse (MAL-03).
+      if (e.code == ApiErrorCode.unauthenticated || e.statusCode == 401) {
+        await _tokenStore.clear();
+        state = const AuthState(status: AuthStatus.unauthenticated);
+      } else {
+        state = state.copyWith(status: AuthStatus.error);
+      }
     } catch (_) {
-      await _tokenStore.clear();
-      state = const AuthState(status: AuthStatus.unauthenticated);
+      state = state.copyWith(status: AuthStatus.error);
     }
   }
 
@@ -83,6 +93,10 @@ class AuthController extends StateNotifier<AuthState> {
     if (state.status != AuthStatus.authenticated) return;
     await _loadMe();
   }
+
+  /// Reintento del splash tras un [AuthStatus.error] (MAL-03): vuelve a
+  /// empezar el arranque con los tokens que se conservaron.
+  Future<void> retry() => bootstrap();
 
   Future<void> logout() async {
     // Revocar el refresh token en InsForge **antes** de borrarlo: después ya

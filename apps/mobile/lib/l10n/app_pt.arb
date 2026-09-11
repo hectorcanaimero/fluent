@@ -229,5 +229,8 @@
   "settingsDeleteAccountConfirmTitle": "Apagar sua conta?",
   "settingsDeleteAccountConfirmBody": "Suas sessões, fatos e preferências serão apagados. Isso não pode ser desfeito.",
   "settingsDeleteAccountCancel": "Cancelar",
-  "settingsDeleteAccountConfirm": "Apagar conta"
+  "settingsDeleteAccountConfirm": "Apagar conta",
+  "authOfflineTitle": "Não conseguimos conectar",
+  "authOfflineBody": "Verifique sua conexão com a internet e tente de novo. Sua sessão continua salva.",
+  "authRetry": "Tentar de novo"
 }

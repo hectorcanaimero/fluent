@@ -767,4 +767,14 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountConfirm => 'Apagar conta';
+
+  @override
+  String get authOfflineTitle => 'Não conseguimos conectar';
+
+  @override
+  String get authOfflineBody =>
+      'Verifique sua conexão com a internet e tente de novo. Sua sessão continua salva.';
+
+  @override
+  String get authRetry => 'Tentar de novo';
 }

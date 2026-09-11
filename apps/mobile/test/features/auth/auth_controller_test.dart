@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:dio/dio.dart';
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/fluent_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
+import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/storage/token_store.dart';
 import 'package:fluent_mobile/features/auth/data/auth_controller.dart';
 import 'package:fluent_mobile/features/auth/data/insforge_auth_client.dart';
@@ -11,6 +13,16 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http_mock_adapter/http_mock_adapter.dart';
 
 const _tokens = AuthTokens(accessToken: 'access-1', refreshToken: 'refresh-1');
+
+/// `FluentApi` que falla `getMe()` con lo que se le indique.
+class _FailingMeApi extends FakeApi {
+  _FailingMeApi(this.error) : super(artificialDelay: Duration.zero);
+
+  final Object error;
+
+  @override
+  Future<MeResponse> getMe() async => throw error;
+}
 
 /// `InsforgeAuthClient` que anota los logout remotos que recibe.
 class _RecordingAuthClient extends InsforgeAuthClient {
@@ -107,4 +119,119 @@ void main() {
       expect(controller.state.status, AuthStatus.unauthenticated);
     });
   });
+
+  group('AuthController · arranque sin red (MAL-03)', () {
+    test('un 401 sí borra los tokens y manda a unauthenticated', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(
+        tokenStore: store,
+        api: _FailingMeApi(
+          const ApiException(
+            code: ApiErrorCode.unauthenticated,
+            message: 'token vencido',
+            statusCode: 401,
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.unauthenticated);
+      expect(await store.read(), isNull);
+    });
+
+    test('un error de red conserva los tokens y deja el estado en error', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(
+        tokenStore: store,
+        api: _FailingMeApi(
+          const ApiException(
+            code: ApiErrorCode.unknown,
+            message: 'network error',
+            statusCode: null,
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.error);
+      expect(await store.read(), isNotNull);
+    });
+
+    test('un 500 tampoco cierra la sesión', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(
+        tokenStore: store,
+        api: _FailingMeApi(
+          const ApiException(
+            code: ApiErrorCode.internal,
+            message: 'boom',
+            statusCode: 500,
+          ),
+        ),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.error);
+      expect(await store.read(), isNotNull);
+    });
+
+    test('una excepción que no es ApiException tampoco cierra la sesión', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(
+        tokenStore: store,
+        api: _FailingMeApi(StateError('inesperado')),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+
+      expect(controller.state.status, AuthStatus.error);
+      expect(await store.read(), isNotNull);
+    });
+
+    test('retry() vuelve a intentar y recupera la sesión', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      var failing = true;
+      final controller = AuthController(
+        tokenStore: store,
+        api: _ToggleMeApi(() => failing),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+      expect(controller.state.status, AuthStatus.error);
+
+      failing = false;
+      await controller.retry();
+
+      expect(controller.state.status, AuthStatus.authenticated);
+    });
+  });
+}
+
+/// `getMe()` falla o no según el interruptor que se le pase.
+class _ToggleMeApi extends FakeApi {
+  _ToggleMeApi(this.shouldFail) : super(artificialDelay: Duration.zero);
+
+  final bool Function() shouldFail;
+
+  @override
+  Future<MeResponse> getMe() {
+    if (shouldFail()) {
+      return Future.error(
+        const ApiException(
+          code: ApiErrorCode.unknown,
+          message: 'network error',
+          statusCode: null,
+        ),
+      );
+    }
+    return super.getMe();
+  }
 }

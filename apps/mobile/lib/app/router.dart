@@ -45,7 +45,11 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
 
 @visibleForTesting
 String? computeRedirect(AuthState auth, String location) {
-  if (auth.status == AuthStatus.unknown) {
+  // `unknown` (resolviendo) y `error` (hay tokens pero no se pudo comprobar
+  // la sesión, MAL-03) van los dos al splash: es la pantalla que muestra o
+  // bien el spinner o bien "No pudimos conectar" con **Reintentar**. Mandar
+  // un `error` a `/login` obligaría a volver a loguearse por estar sin red.
+  if (auth.status == AuthStatus.unknown || auth.status == AuthStatus.error) {
     return location == '/splash' ? null : '/splash';
   }
 

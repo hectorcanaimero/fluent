@@ -301,5 +301,8 @@
   "settingsDeleteAccountConfirmTitle": "¿Borrar tu cuenta?",
   "settingsDeleteAccountConfirmBody": "Se borran tus sesiones, hechos y preferencias. No se puede deshacer.",
   "settingsDeleteAccountCancel": "Cancelar",
-  "settingsDeleteAccountConfirm": "Borrar cuenta"
+  "settingsDeleteAccountConfirm": "Borrar cuenta",
+  "authOfflineTitle": "No pudimos conectar",
+  "authOfflineBody": "Revisá tu conexión a internet y probá de nuevo. Tu sesión sigue guardada.",
+  "authRetry": "Reintentar"
 }

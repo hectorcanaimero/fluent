@@ -40,6 +40,7 @@ function profileFixture(overrides: Partial<Profile> = {}): Profile {
     longest_streak: 0,
     last_session_day: null,
     grace_used_week: null,
+    courtesy_session_used_at: null,
     sessions_count: 0,
     onboarded_at: '2026-09-01T10:00:00.000Z',
     created_at: '2026-09-01T10:00:00.000Z',
@@ -65,6 +66,7 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     chat_model_used: 'gemini-2.5-flash',
     callback_fact_id: null,
     brief_job_status: 'pending',
+    courtesy: false,
     ...overrides,
   };
 }
@@ -88,6 +90,8 @@ interface FakeSessionsRepoOptions {
   readonly brief?: string | null;
   readonly facts?: Fact[];
   readonly preference?: { provider: 'openrouter' | 'gemini'; model: string } | null;
+  /** Owner del grupo, para los turnos de cortesía (MAL-24). */
+  readonly groupOwnerId?: string | null;
 }
 
 type FakeSessionsRepo = SessionsRepository & { readonly callCounts: Map<string, number> };
@@ -119,6 +123,10 @@ function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): FakeSess
     findChatModelPreference: async () => {
       count('findChatModelPreference');
       return options.preference ?? null;
+    },
+    findGroupOwnerId: async () => {
+      count('findGroupOwnerId');
+      return options.groupOwnerId ?? null;
     },
   } as unknown as FakeSessionsRepo;
 }
@@ -164,6 +172,33 @@ function fakeTurnsRepository(options: FakeTurnsRepoOptions = {}): FakeTurnsRepo 
     insertTurn: async (row: InsertTurnRow) => {
       inserted.push(row);
     },
+    // MEJ-25: el turno del tutor, sus correcciones y los contadores llegan
+    // ahora en una sola llamada. Se descompone en los mismos registros que
+    // antes para que el resto de aserciones sigan valiendo.
+    recordTurn: async (args: {
+      sessionId: string;
+      tutorIdx: number;
+      text: string;
+      model?: string | null;
+      tokensIn?: number | null;
+      tokensOut?: number | null;
+      latencyMs?: number | null;
+      turnsCount: number;
+      corrections: readonly InsertCorrectionRow[];
+    }) => {
+      inserted.push({
+        sessionId: args.sessionId,
+        idx: args.tutorIdx,
+        role: 'tutor',
+        text: args.text,
+        model: args.model,
+        tokensIn: args.tokensIn,
+        tokensOut: args.tokensOut,
+        latencyMs: args.latencyMs,
+      } as InsertTurnRow);
+      corrections.push([...args.corrections]);
+      updates.push({ turnsCount: args.turnsCount, chatModelUsed: args.model });
+    },
     deleteTurn: async (sessionId: string, idx: number) => {
       deleted.push({ sessionId, idx });
     },
@@ -180,9 +215,13 @@ function fakeTurnsRepository(options: FakeTurnsRepoOptions = {}): FakeTurnsRepo 
   } as unknown as FakeTurnsRepo;
 }
 
-function fakeCredentials(providers: readonly ('openrouter' | 'gemini')[] = ['openrouter']) {
+function fakeCredentials(
+  providers: readonly ('openrouter' | 'gemini')[] = ['openrouter'],
+  byUser: Record<string, readonly ('openrouter' | 'gemini')[]> = {},
+) {
   return {
-    listActive: async () => providers.map((provider) => ({ provider, apiKey: 'k' })),
+    listActive: async (userId: string) =>
+      (byUser[userId] ?? providers).map((provider) => ({ provider, apiKey: 'k' })),
   } as unknown as CredentialsService;
 }
 
@@ -320,6 +359,7 @@ interface BuildOptions extends FakeSessionsRepoOptions, FakeTurnsRepoOptions, Fa
   readonly llm?: FakeLlm;
   readonly redis?: FakeRedis;
   readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
+  readonly credentialsByUser?: Record<string, readonly ('openrouter' | 'gemini')[]>;
   /** Tope diario de turnos (MAL-23). 0 lo desactiva. */
   readonly turnsDailyCap?: number;
 }
@@ -332,7 +372,7 @@ function buildService(options: BuildOptions = {}) {
   const service = new TurnsService(
     sessions,
     turns,
-    fakeCredentials(options.credentialProviders),
+    fakeCredentials(options.credentialProviders, options.credentialsByUser),
     llm,
     redis,
     fakeConfig(options.turnsDailyCap ?? 0) as never,
@@ -968,6 +1008,105 @@ describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
 
   it('sin credenciales sigue dando PROVIDER_NOT_CONNECTED', async () => {
     const { service } = buildService({ credentialProviders: [] });
+
+    await expect(
+      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
+    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
+  });
+});
+
+describe('TurnsService.addTurn · escritura atómica del turno (MEJ-25)', () => {
+  it('escribe turno, correcciones y contadores en una sola llamada', async () => {
+    const { service, turns } = buildService({
+      corrections: [
+        {
+          original: 'I go yesterday',
+          corrected: 'I went yesterday',
+          category: 'past_simple',
+          note: 'Usá el pasado simple.',
+        },
+      ],
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'I go yesterday' });
+
+    // El doble descompone `recordTurn` en los tres registros de antes, así
+    // que lo que se comprueba aquí es que llegan juntos y coherentes.
+    expect(turns.corrections).toHaveLength(1);
+    expect(turns.corrections[0]).toHaveLength(1);
+    expect(turns.updates[0]).toMatchObject({ chatModelUsed: 'gemini-2.5-flash' });
+  });
+
+  it('una respuesta degradada avanza turns_count igualmente', async () => {
+    const { service, turns } = buildService({ unavailable: true });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // `turns_count` cuenta turnos del usuario (PEND-18): el aprendiz habló.
+    expect(turns.updates[0]!.turnsCount).toBe(2);
+  });
+});
+
+const COURTESY_OWNER_ID = '99999999-9999-4999-8999-999999999999';
+
+describe('TurnsService.addTurn · turnos de una sesión de cortesía (MAL-24)', () => {
+  function courtesyOptions(overrides: Record<string, unknown> = {}) {
+    return {
+      session: sessionFixture({ courtesy: true }),
+      profile: profileFixture({ group_id: 'group-1' }),
+      credentialsByUser: { [USER_ID]: [], [COURTESY_OWNER_ID]: ['openrouter' as const] },
+      groupOwnerId: COURTESY_OWNER_ID,
+      ...overrides,
+    };
+  }
+
+  it('usa la credencial del owner y no falla con PROVIDER_NOT_CONNECTED', async () => {
+    const { service, llm } = buildService(courtesyOptions());
+
+    // Sin esto el aprendiz se quedaba con el saludo y nada más, habiendo
+    // gastado ya su única sesión gratuita.
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(llm.calls).toHaveLength(1);
+  });
+
+  it('no aplica la preferencia de modelo: la key es prestada', async () => {
+    const { service, sessions } = buildService(
+      courtesyOptions({ preference: { provider: 'openrouter', model: 'modelo/caro' } }),
+    );
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(sessions.callCounts.get('findChatModelPreference')).toBeUndefined();
+  });
+
+  it('si el aprendiz conectó su propia key, se usa la suya', async () => {
+    const { service, sessions } = buildService(
+      courtesyOptions({
+        credentialsByUser: { [USER_ID]: ['gemini' as const] },
+      }),
+    );
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // Mejor gastar la del dueño de la cuenta que la prestada.
+    expect(sessions.callCounts.get('findGroupOwnerId')).toBeUndefined();
+  });
+
+  it('una sesión normal no pide el owner del grupo', async () => {
+    const { service, sessions } = buildService({});
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    expect(sessions.callCounts.get('findGroupOwnerId')).toBeUndefined();
+  });
+
+  it('si el owner se quedó sin credencial, el turno da PROVIDER_NOT_CONNECTED', async () => {
+    const { service } = buildService(
+      courtesyOptions({
+        credentialsByUser: { [USER_ID]: [], [COURTESY_OWNER_ID]: [] },
+      }),
+    );
 
     await expect(
       service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),

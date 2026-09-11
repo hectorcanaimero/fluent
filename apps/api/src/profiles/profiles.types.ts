@@ -54,6 +54,38 @@ export interface MeDto {
    * ignora campos que no conoce, así que añadirlo ahora no rompe nada.
    */
   pendingActions: string[];
+  /**
+   * Sesiones válidas (`ended` con XP) que el usuario cerró **hoy**, en su
+   * propia zona horaria.
+   *
+   * Home lo necesita para el bono de día doble (SPEC-07 §2: se aplica cuando
+   * `sesiones_validas_hoy == 1`) y para su checklist. Antes lo deducía
+   * pidiendo `GET /sessions?limit=20` y filtrando en el cliente: veinte filas
+   * completas para contar hasta dos, en cada arranque.
+   */
+  sessionsToday: number;
+  /**
+   * `true` si el usuario puede abrir una sesión de cortesía con la credencial
+   * del owner de su grupo (MAL-24): no ha gastado la suya, no tiene credencial
+   * propia y el owner sí tiene una activa.
+   *
+   * Home lo usa para no bloquear el CTA de practicar antes de que el usuario
+   * haya visto para qué sirve conectar un proveedor.
+   */
+  courtesySessionAvailable: boolean;
+}
+
+/**
+ * Respuesta de `PUT /me/profile`. Es el `ProfileDto` de siempre más
+ * `xpAwarded` (MEJ-14): cuántos XP se concedieron en **esta** llamada, 0 si
+ * el perfil ya estaba completo.
+ *
+ * Campo añadido al mismo nivel y no dentro de un envoltorio nuevo para no
+ * romper a las versiones de la app que parsean `ProfileDto` directamente:
+ * ignoran lo que no conocen (mismo criterio que `MeDto.pendingActions`).
+ */
+export interface UpdateProfileResultDto extends ProfileDto {
+  xpAwarded: number;
 }
 
 /** Elemento de `members[]` en `GET /group` (RF-6.5, SPEC-07 §9). */

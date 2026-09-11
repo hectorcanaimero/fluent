@@ -8,6 +8,7 @@ import type { ProfilesRepository } from './profiles.repository.js';
 import type { GroupsRepository } from '../groups/groups.repository.js';
 import type { Profile } from '../db/schema.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
+import type { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
 
 function makeProfile(overrides: Partial<Profile> = {}): Profile {
   return {
@@ -24,6 +25,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     longest_streak: 0,
     last_session_day: null,
     grace_used_week: null,
+    courtesy_session_used_at: null,
     sessions_count: 0,
     onboarded_at: null,
     created_at: '2026-08-01T00:00:00.000Z',
@@ -47,6 +49,7 @@ function createService(
   profile: Profile,
   group: unknown = null,
   pendingActions: string[] = [],
+  sessionsToday = 0,
 ) {
   const profilesRepository = {
     ensureProfile: vi.fn().mockResolvedValue(profile),
@@ -56,6 +59,7 @@ function createService(
     })),
     getModelPreference: vi.fn().mockResolvedValue(null),
     getActiveSessionId: vi.fn().mockResolvedValue(null),
+    awardProfileCompleted: vi.fn().mockResolvedValue(20),
     purgeAppData: vi.fn().mockResolvedValue(undefined),
   };
 
@@ -76,15 +80,21 @@ function createService(
     listFor: vi.fn().mockResolvedValue(pendingActions),
   };
 
+  const sessionsQuery = {
+    countValidSessionsSince: vi.fn().mockResolvedValue(sessionsToday),
+  };
+
   const service = new ProfilesService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
     credentialsRepository as unknown as CredentialsRepository,
     pendingActionsService as unknown as PendingActionsService,
+    sessionsQuery as unknown as SessionsQueryRepository,
   );
 
   return {
     service,
+    sessionsQuery,
     profilesRepository,
     groupsRepository,
     credentialsRepository,
@@ -184,5 +194,176 @@ describe('ProfilesService.getMe', () => {
     const me = await service.getMe('user-1');
 
     expect(me.pendingActions).toEqual(['WEEKLY_SUMMARY_NEEDS_CREDENTIAL']);
+  });
+});
+
+describe('ProfilesService.getMe · sessionsToday', () => {
+  it('cuenta las sesiones válidas de hoy en la zona del usuario', async () => {
+    const profile = makeProfile({ timezone: 'Asia/Tokyo' });
+    const { service, sessionsQuery } = createService(profile, null, [], 2);
+
+    const me = await service.getMe('user-1');
+
+    expect(me.sessionsToday).toBe(2);
+
+    // El corte es el comienzo del día **del usuario**: en Tokio, a las 02:00
+    // UTC ya es por la tarde, así que `since` tiene que quedar por detrás.
+    const since = new Date(
+      (sessionsQuery.countValidSessionsSince.mock.calls[0] as [string, string])[1],
+    );
+    expect(since.getTime()).toBeLessThanOrEqual(Date.now());
+    expect(Date.now() - since.getTime()).toBeLessThan(24 * 60 * 60 * 1000);
+  });
+
+  it('devuelve 0 cuando el usuario no cerró ninguna hoy', async () => {
+    const { service } = createService(makeProfile(), null, [], 0);
+
+    expect((await service.getMe('user-1')).sessionsToday).toBe(0);
+  });
+});
+
+describe('ProfilesService.updateProfile · XP por perfil completado (MEJ-14)', () => {
+  it('concede el XP la primera vez que el perfil queda completo', async () => {
+    const profile = makeProfile({ group_id: 'group-1', onboarded_at: null, xp: 0 });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).toHaveBeenCalledWith('user-1', 20);
+    expect(result.xpAwarded).toBe(20);
+    // El XP recién concedido viaja en la respuesta: la app no tiene que
+    // recargar `/me` solo para ver su propia recompensa.
+    expect(result.xp).toBe(20);
+  });
+
+  it('no lo pide si el perfil ya estaba onboarded', async () => {
+    const profile = makeProfile({
+      group_id: 'group-1',
+      onboarded_at: '2026-09-01T10:00:00.000Z',
+    });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).not.toHaveBeenCalled();
+    expect(result.xpAwarded).toBe(0);
+  });
+
+  it('no lo pide si todavía no hay grupo: el perfil no está completo', async () => {
+    const profile = makeProfile({ group_id: null, onboarded_at: null });
+    const { service, profilesRepository } = createService(profile);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    expect(profilesRepository.awardProfileCompleted).not.toHaveBeenCalled();
+    expect(result.xpAwarded).toBe(0);
+  });
+
+  it('si la base dice que ya estaba concedido, xpAwarded es 0', async () => {
+    const profile = makeProfile({ group_id: 'group-1', onboarded_at: null, xp: 20 });
+    const { service, profilesRepository } = createService(profile);
+    profilesRepository.awardProfileCompleted.mockResolvedValue(0);
+
+    const result = await service.updateProfile('user-1', {
+      displayName: 'Ana',
+      level: 'B1',
+      interests: ['travel', 'movies', 'food'],
+      timezone: 'America/Sao_Paulo',
+      locale: 'es',
+    });
+
+    // La idempotencia la decide la base, no esta capa: aquí solo se refleja.
+    expect(result.xpAwarded).toBe(0);
+    expect(result.xp).toBe(20);
+  });
+});
+
+describe('ProfilesService.getMe · courtesySessionAvailable (MAL-24)', () => {
+  const ownerId = 'owner-1';
+
+  function activeStatuses() {
+    return [
+      { provider: 'openrouter', status: 'active', connectedAt: null },
+      { provider: 'gemini', status: 'not_connected', connectedAt: null },
+    ];
+  }
+
+  function noStatuses() {
+    return [
+      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
+      { provider: 'gemini', status: 'not_connected', connectedAt: null },
+    ];
+  }
+
+  it('es true si no tiene credencial, no la gastó y el owner sí tiene', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository, groupsRepository } = createService(profile, {
+      id: 'group-1',
+      name: 'G',
+      owner_id: ownerId,
+      group_streak: 0,
+    });
+    credentialsRepository.listStatuses
+      .mockResolvedValueOnce(noStatuses())
+      .mockResolvedValueOnce(activeStatuses());
+    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(true);
+  });
+
+  it('es false si el usuario ya tiene credencial propia', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(activeStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false si ya la gastó', async () => {
+    const profile = makeProfile({
+      group_id: 'group-1',
+      courtesy_session_used_at: '2026-09-01T10:00:00.000Z',
+    });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false si el owner tampoco tiene credencial activa', async () => {
+    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
+    const { service, credentialsRepository, groupsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
+
+    // Ofrecer una cortesía que va a fallar al abrir la sesión es peor que no
+    // ofrecerla.
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  });
+
+  it('es false sin grupo', async () => {
+    const profile = makeProfile({ group_id: null, courtesy_session_used_at: null });
+    const { service, credentialsRepository } = createService(profile);
+    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
+
+    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
   });
 });

@@ -158,6 +158,29 @@ export class TurnsService {
   }
 
   /**
+   * Credenciales de una sesión de cortesía (MAL-24): las del owner del grupo.
+   *
+   * Si el aprendiz conectó su propia key a mitad de sesión, se usa la suya:
+   * es mejor gastar la del dueño de la cuenta que la prestada, y evita que
+   * una sesión larga siga consumiendo del owner más de lo necesario.
+   */
+  private async courtesyCredentials(
+    profile: Profile,
+    own: readonly ActiveCredential[],
+  ): Promise<readonly ActiveCredential[]> {
+    if (own.length > 0 || profile.group_id === null) {
+      return own;
+    }
+
+    const ownerId = await this.sessions.findGroupOwnerId(profile.group_id);
+    if (ownerId === null || ownerId === profile.user_id) {
+      return own;
+    }
+
+    return this.credentials.listActive(ownerId);
+  }
+
+  /**
    * Cuenta el turno del día y rechaza con `429 TURNS_DAILY_CAP` al pasarse
    * (MAL-23).
    *
@@ -227,7 +250,7 @@ export class TurnsService {
     // El historial se lee **antes** de insertar el turno del usuario, porque
     // ese va aparte como `userMessage` y no dentro de `history`: por eso la
     // inserción sigue siendo secuencial y posterior.
-    const [profile, credentials, history] = await Promise.all([
+    const [profile, ownCredentials, history] = await Promise.all([
       this.sessions.findProfile(userId),
       this.credentials.listActive(userId),
       this.turns.listRecentTurns(session.id, HISTORY_TURNS),
@@ -241,6 +264,15 @@ export class TurnsService {
     // del usuario y de llamar al modelo: pasado el tope no se escribe nada ni
     // se gasta un céntimo de la key del aprendiz.
     await this.requireDailyTurnsBudget(userId, profile);
+
+    // En una sesión de cortesía la key es la del owner del grupo (MAL-24), y
+    // eso vale para **todos** los turnos, no solo para la apertura: si aquí
+    // se mirara solo `listActive(userId)`, el primer mensaje del aprendiz
+    // fallaría con PROVIDER_NOT_CONNECTED y se habría quedado con el saludo
+    // y nada más, con su única sesión gratuita ya gastada.
+    const credentials = session.courtesy
+      ? await this.courtesyCredentials(profile, ownCredentials)
+      : ownCredentials;
 
     if (credentials.length === 0) {
       // El usuario borró la credencial con la sesión abierta: sin ninguna
@@ -312,7 +344,9 @@ export class TurnsService {
         : this.sessions.findNewsItem(session.news_item_id),
       this.sessions.findBriefText(userId),
       this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
-      this.findPreference(userId),
+      // En cortesía no se aplica la preferencia: sin ella `ModelResolver`
+      // solo ofrece la cadena gratuita, y la key es prestada (MAL-24).
+      session.courtesy ? Promise.resolve(null) : this.findPreference(userId),
     ]);
 
     const scenario = rebuildScenario(session, newsItem);
@@ -398,17 +432,6 @@ export class TurnsService {
     userTurnIdx: number,
     outcome: TutorOutcome,
   ): Promise<TurnResultDto> {
-    await this.turns.insertTurn({
-      sessionId: session.id,
-      idx: userTurnIdx + 1,
-      role: 'tutor',
-      text: outcome.text,
-      model: outcome.model,
-      tokensIn: outcome.tokensIn,
-      tokensOut: outcome.tokensOut,
-      latencyMs: outcome.latencyMs,
-    });
-
     const rows: InsertCorrectionRow[] = outcome.corrections.map((correction) => ({
       sessionId: session.id,
       userId,
@@ -420,13 +443,20 @@ export class TurnsService {
       category: correction.category,
       note: clampNote(correction.note),
     }));
-    await this.turns.insertCorrections(rows);
 
-    // `turns_count` cuenta turnos **del usuario** (PEND-18), así que avanza
-    // también en la respuesta degradada: el aprendiz sí habló.
-    await this.turns.updateAfterTurn(userId, session.id, {
+    // Una sola transacción para las tres escrituras (MEJ-25). `turns_count`
+    // cuenta turnos **del usuario** (PEND-18), así que avanza también en la
+    // respuesta degradada: el aprendiz sí habló.
+    await this.turns.recordTurn({
+      sessionId: session.id,
+      tutorIdx: userTurnIdx + 1,
+      text: outcome.text,
+      model: outcome.model,
+      tokensIn: outcome.tokensIn,
+      tokensOut: outcome.tokensOut,
+      latencyMs: outcome.latencyMs,
       turnsCount: session.turns_count + 1,
-      chatModelUsed: outcome.model,
+      corrections: rows,
     });
 
     const corrections: CorrectionDto[] = rows.map((row) => toCorrectionDto(row));

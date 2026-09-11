@@ -3,7 +3,7 @@ import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { ProfilesService } from './profiles.service.js';
 import { UpdateProfileDto } from './dto/update-profile.dto.js';
-import type { MeDto, ProfileDto } from './profiles.types.js';
+import type { MeDto, UpdateProfileResultDto } from './profiles.types.js';
 
 /**
  * `GET /me`, `PUT /me/profile`, `DELETE /me` (SPEC-02 §4.1).
@@ -22,12 +22,15 @@ export class MeController {
     return this.profilesService.getMe(userId);
   }
 
-  /** Devuelve el `profile` **plano** (no envuelto), como pide el contrato de la app. */
+  /**
+   * Devuelve el `profile` **plano** (no envuelto), como pide el contrato de
+   * la app, más `xpAwarded` (MEJ-14) al mismo nivel.
+   */
   @Put('me/profile')
   updateProfile(
     @CurrentUser('id') userId: string,
     @Body() dto: UpdateProfileDto,
-  ): Promise<ProfileDto> {
+  ): Promise<UpdateProfileResultDto> {
     return this.profilesService.updateProfile(userId, dto);
   }
 

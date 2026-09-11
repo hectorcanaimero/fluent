@@ -143,9 +143,11 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
         interests: VALID_INTERESTS,
         timezone: 'America/Sao_Paulo',
         locale: 'es',
-        xp: 0,
+        xp: 20, // MEJ-14: concedidos al completar el perfil.
         streak: 0,
         lastSessionDay: null,
+        // MEJ-14: el PUT devuelve el perfil plano más `xpAwarded`.
+        xpAwarded: 20,
       });
 
       const meResponse = await request(app.getHttpServer())
@@ -161,7 +163,7 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
         interests: VALID_INTERESTS,
         timezone: 'America/Sao_Paulo',
         locale: 'es',
-        xp: 0,
+        xp: 20, // MEJ-14: concedidos al completar el perfil.
         streak: 0,
         lastSessionDay: null,
       });
@@ -169,6 +171,16 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
       expect(Array.isArray(meResponse.body.interestsCatalog)).toBe(true);
       expect(meResponse.body.interestsCatalog.length).toBeGreaterThan(0);
       expect(meResponse.body.pendingActions).toEqual([]);
+      // Usuario recién creado: ninguna sesión cerrada hoy.
+      expect(meResponse.body.sessionsToday).toBe(0);
+      // MAL-24: el owner del grupo de prueba no tiene credencial activa, así
+      // que no hay cortesía que ofrecer.
+      // DEPENDE de la migración `sesion-de-cortesia`, todavía sin aplicar.
+      expect(meResponse.body.courtesySessionAvailable).toBe(false);
+
+      // MEJ-14: los 20 XP del PUT ya están en `/me`.
+      // DEPENDE de la migración `xp-perfil-completado`, todavía sin aplicar.
+      expect(meResponse.body.profile.xp).toBe(20);
     },
     30_000,
   );

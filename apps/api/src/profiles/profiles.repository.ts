@@ -4,6 +4,7 @@ import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { InsforgeHttp } from '../insforge/insforge.http.js';
 import { TABLES, type Level, type Locale, type Profile } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
+import { RPC } from '../db/rpc.js';
 
 /**
  * Nivel inicial de un perfil creado por `ensureProfile` (docs/specs/pendientes/PR-02.md):
@@ -71,6 +72,17 @@ export function localPartOfEmail(email: string | null | undefined): string | nul
  * `CredentialsRepository.listStatuses` (PR-02/T4), que es quien manda sobre
  * esa tabla.
  */
+/** Lee el escalar que devuelve `award_profile_completed` (MEJ-14). */
+function readAwardedAmount(data: unknown): number {
+  if (typeof data === 'number') return data;
+  if (Array.isArray(data) && data.length > 0) return readAwardedAmount(data[0]);
+  if (typeof data === 'object' && data !== null) {
+    const value = (data as Record<string, unknown>).award_profile_completed;
+    if (typeof value === 'number') return value;
+  }
+  return 0;
+}
+
 @Injectable()
 export class ProfilesRepository {
   constructor(
@@ -176,6 +188,33 @@ export class ProfilesRepository {
   }
 
   /** Id de la sesión `active` del usuario, o `null` (`GET /me`, SPEC-06 §3). */
+  /**
+   * RPC `award_profile_completed` (MEJ-14): suma el XP y registra el evento
+   * en una sola transacción, una única vez por usuario. Devuelve cuánto
+   * concedió, o 0 si ya estaba concedido.
+   *
+   * La idempotencia vive en la base (índice único parcial sobre
+   * `xp_events`), no en un SELECT previo desde aquí: dos peticiones
+   * simultáneas al terminar el onboarding no pueden cobrarlo dos veces.
+   */
+  async awardProfileCompleted(userId: string, amount: number): Promise<number> {
+    const result = (await this.admin.database.rpc(RPC.awardProfileCompleted, {
+      p_user_id: userId,
+      p_amount: amount,
+    })) as { data: unknown; error: { message?: string } | null };
+
+    if (result.error) {
+      throw new Error(
+        `InsForge falló al conceder el XP de perfil completado: ${result.error.message ?? 'error desconocido'}`,
+      );
+    }
+
+    // PostgREST devuelve el escalar suelto o envuelto en una fila según la
+    // versión; se aceptan las dos formas para que un cambio de la plataforma
+    // no haga que la base conceda el XP y la respuesta diga que no.
+    return readAwardedAmount(result.data);
+  }
+
   async getActiveSessionId(userId: string): Promise<string | null> {
     const result = await this.admin.database
       .from(TABLES.sessions)

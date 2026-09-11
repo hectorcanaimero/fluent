@@ -68,7 +68,9 @@ export type XpEventKind =
   | 'double_day'
   | 'boss'
   | 'challenge'
-  | 'streak_7';
+  | 'streak_7'
+  /** MEJ-14: una sola vez por usuario, sin `session_id`. */
+  | 'profile_completed';
 
 /** Propósito de una llamada a LLM (SPEC-01 §2.14) */
 export type LlmCallPurpose = 'turn' | 'brief' | 'weekly';
@@ -116,6 +118,8 @@ export interface Profile {
   longest_streak: number;
   last_session_day: string | null; // ISO 8601 date (PostgREST serializa date como string)
   grace_used_week: string | null; // ISO 8601 date
+  /** MAL-24: cuándo gastó su sesión de cortesía; `null` si aún le queda. */
+  courtesy_session_used_at: string | null; // ISO 8601 timestamp
   sessions_count: number;
   onboarded_at: string | null; // ISO 8601 timestamp (PostgREST serializa timestamptz como string)
   created_at: string; // ISO 8601 timestamp
@@ -211,6 +215,8 @@ export interface Session {
   chat_model_used: string | null;
   callback_fact_id: string | null;
   brief_job_status: BriefJobStatus;
+  /** MAL-24: corre con la credencial del owner del grupo. */
+  courtesy: boolean;
 }
 
 /**

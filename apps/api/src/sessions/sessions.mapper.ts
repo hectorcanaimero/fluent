@@ -22,6 +22,10 @@ export function toSessionInfoDto(row: Session): SessionInfoDto {
     endedAt: row.ended_at,
     xpEarned: row.xp_earned,
     modelUsed: row.chat_model_used,
+    // Solo se incluye cuando es cierto: así las respuestas de siempre no
+    // cambian de forma (MAL-24). Sale de la columna, así que `GET /sessions`
+    // y `GET /sessions/:id` también lo llevan, no solo la apertura.
+    ...(row.courtesy ? { courtesy: true } : {}),
   };
 }
 

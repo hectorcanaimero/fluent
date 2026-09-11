@@ -29,7 +29,7 @@ export class SessionsHistoryService {
     const lastRow = page.at(-1);
 
     return {
-      items: page.map(toSessionInfoDto),
+      items: page.map((row) => toSessionInfoDto(row)),
       nextCursor: hasMore && lastRow ? encodeSessionsCursor(lastRow) : null,
     };
   }

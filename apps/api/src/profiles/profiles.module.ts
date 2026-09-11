@@ -5,6 +5,7 @@ import { MeController } from './me.controller.js';
 import { PendingActionsService } from './pending-actions.service.js';
 import { ProfilesRepository } from './profiles.repository.js';
 import { ProfilesService } from './profiles.service.js';
+import { SessionsQueryModule } from '../sessions-query/sessions-query.module.js';
 
 /**
  * Módulo de cuenta y perfil (SPEC-02 §4.1).
@@ -26,7 +27,10 @@ import { ProfilesService } from './profiles.service.js';
   //
   // `PendingActionsService` inyecta `RedisService`, que viene de `RedisModule`
   // (`@Global()`), así que no hace falta importarlo aquí.
-  imports: [CredentialsModule],
+  // `SessionsQueryModule` es un módulo hoja (solo exporta el repositorio),
+  // así que importarlo aquí no crea ciclos: lo comparten ya `ProgressModule` y
+  // `SocialModule`.
+  imports: [CredentialsModule, SessionsQueryModule],
   controllers: [MeController],
   providers: [
     ProfilesRepository,

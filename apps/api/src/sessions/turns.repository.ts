@@ -11,6 +11,7 @@ import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { HISTORY_TURNS } from '../llm/config.js';
 import type { HistoryTurn } from '../llm/prompts/truncate.js';
+import { RPC } from '../db/rpc.js';
 
 /** Turno tal y como se lee para el historial del prompt (SPEC-03 §3). */
 export interface TurnHistoryRow extends HistoryTurn {
@@ -31,6 +32,21 @@ export interface InsertTurnRow {
 }
 
 /** Fila a insertar en `corrections` (SPEC-01 §2.8). */
+/** Argumentos de `record_turn` (MEJ-25). */
+export interface RecordTurnArgs {
+  readonly sessionId: string;
+  /** `idx` del turno **del tutor** (el del usuario es el anterior). */
+  readonly tutorIdx: number;
+  readonly text: string;
+  readonly model?: string | null;
+  readonly tokensIn?: number | null;
+  readonly tokensOut?: number | null;
+  readonly latencyMs?: number | null;
+  /** Valor ya calculado de `sessions.turns_count`. */
+  readonly turnsCount: number;
+  readonly corrections: readonly InsertCorrectionRow[];
+}
+
 export interface InsertCorrectionRow {
   readonly sessionId: string;
   readonly userId: string;
@@ -136,6 +152,37 @@ export class TurnsRepository {
   }
 
   /** Inserta las correcciones de un turno. No hace nada con la lista vacía. */
+  /**
+   * RPC `record_turn` (MEJ-25): turno del tutor, correcciones y contadores de
+   * la sesión en **una** transacción.
+   *
+   * Antes eran tres escrituras encadenadas en la ruta caliente del turno, con
+   * tres idas y vueltas a InsForge y sin atomicidad: si fallaba la segunda,
+   * quedaba un turno del tutor sin correcciones y con `turns_count`
+   * desfasado, y el historial de la llamada siguiente salía mal.
+   */
+  async recordTurn(args: RecordTurnArgs): Promise<void> {
+    const result = await this.admin.database.rpc(RPC.recordTurn, {
+      p_session_id: args.sessionId,
+      p_tutor_idx: args.tutorIdx,
+      p_text: args.text,
+      p_model: args.model ?? null,
+      p_tokens_in: args.tokensIn ?? null,
+      p_tokens_out: args.tokensOut ?? null,
+      p_latency_ms: args.latencyMs ?? null,
+      p_turns_count: args.turnsCount,
+      p_corrections: args.corrections.map((row) => ({
+        turn_idx: row.turnIdx,
+        original: row.original,
+        corrected: row.corrected,
+        category: row.category,
+        note: row.note,
+      })),
+    });
+
+    unwrapInsforge(result);
+  }
+
   async insertCorrections(rows: readonly InsertCorrectionRow[]): Promise<void> {
     if (rows.length === 0) {
       return;

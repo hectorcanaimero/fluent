@@ -206,6 +206,19 @@ export class SessionsRepository {
   }
 
   /**
+   * Devuelve la sesión de cortesía al usuario (MAL-24). Solo se usa cuando la
+   * apertura falla por un error nuestro después de haberla consumido.
+   */
+  async releaseCourtesySession(userId: string): Promise<void> {
+    const result = await this.admin.database
+      .from(TABLES.profiles)
+      .update({ courtesy_session_used_at: null })
+      .eq('user_id', userId);
+
+    unwrapInsforge(result);
+  }
+
+  /**
    * Última sesión cerrada del usuario cuyo brief quedó `failed` (MAL-20), si
    * terminó hace menos de `maxAgeDays` días.
    *

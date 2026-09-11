@@ -121,6 +121,7 @@ interface FakeRepoOptions {
 
 type FakeRepo = SessionsRepository & {
   readonly courtesyClaims: number[];
+  readonly courtesyReleases: number[];
   readonly created: unknown[];
   readonly updates: unknown[];
   readonly turns: unknown[];
@@ -131,6 +132,7 @@ type FakeRepo = SessionsRepository & {
 function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
   const created: unknown[] = [];
   const courtesyClaims: number[] = [];
+  const courtesyReleases: number[] = [];
   const updates: unknown[] = [];
   const turns: unknown[] = [];
   const deleted: string[] = [];
@@ -139,6 +141,7 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
 
   const repo = {
     courtesyClaims,
+    courtesyReleases,
     created,
     updates,
     turns,
@@ -158,6 +161,9 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
     markCourtesySessionUsed: async () => {
       courtesyClaims.push(1);
       return options.courtesyAlreadyClaimed !== true;
+    },
+    releaseCourtesySession: async () => {
+      courtesyReleases.push(1);
     },
     pickCallbackFact: async (userId: string) => {
       pickCallbackCalls.push(userId);
@@ -1033,5 +1039,42 @@ describe('SessionsService.openSession · sesión de cortesía (MAL-24)', () => {
 
     // Y no se llegó a crear ninguna sesión con la key del owner.
     expect(repository.created).toHaveLength(0);
+  });
+});
+
+describe('SessionsService.openSession · la cortesía se devuelve si falla (MAL-24)', () => {
+  it('un error inesperado del LLM no quema la sesión de cortesía', async () => {
+    const { service, repository } = buildService({
+      profile: profileFixture({ group_id: 'group-1', courtesy_session_used_at: null }),
+      credentialsByUser: { [USER_ID]: [], [OWNER_ID]: ['openrouter' as const] },
+      groupOwnerId: OWNER_ID,
+      llm: fakeLlm({ error: new Error('InsForge caído') }),
+    });
+
+    await expect(
+      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
+    ).rejects.toThrow('InsForge caído');
+
+    // Quemar su única sesión gratuita por un error nuestro, sin que haya
+    // llegado a hablar, es lo contrario de lo que MAL-24 arregla.
+    expect(repository.courtesyClaims).toHaveLength(1);
+    expect(repository.courtesyReleases).toHaveLength(1);
+  });
+
+  it('la cadena agotada sí la consume: hay sesión y saludo degradado', async () => {
+    const { service, repository } = buildService({
+      profile: profileFixture({ group_id: 'group-1', courtesy_session_used_at: null }),
+      credentialsByUser: { [USER_ID]: [], [OWNER_ID]: ['openrouter' as const] },
+      groupOwnerId: OWNER_ID,
+      llm: fakeLlm({ unavailable: true }),
+    });
+
+    const result = await service.openSession(USER_ID, {
+      kind: 'free_topic',
+      topic: 'Viajes',
+    });
+
+    expect(result.session.courtesy).toBe(true);
+    expect(repository.courtesyReleases).toHaveLength(0);
   });
 });

@@ -208,6 +208,13 @@ export class SessionsService {
         // Fallo inesperado (no "cadena agotada"): no dejamos una sesión
         // `active` fantasma que bloquee al usuario con SESSION_ALREADY_ACTIVE.
         await this.repository.deleteSession(userId, session.id);
+        // Y si era de cortesía, se le devuelve: quemar su única sesión
+        // gratuita por un error nuestro, sin que haya llegado a hablar, es
+        // justo lo contrario de lo que MAL-24 viene a arreglar. La cadena
+        // agotada no entra aquí a propósito: ahí sí hay sesión y saludo.
+        if (courtesy !== null) {
+          await this.repository.releaseCourtesySession(userId);
+        }
         throw error;
       }
 

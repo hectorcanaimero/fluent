@@ -71,41 +71,49 @@ class AppTheme {
           )
           .copyWith(
             headlineLarge: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 28,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
             headlineMedium: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 22,
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
             titleLarge: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 18,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
             titleMedium: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 16,
               fontWeight: FontWeight.w700,
               color: AppColors.textPrimary,
             ),
             titleSmall: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 15,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
             bodyMedium: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
             bodySmall: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
             ),
             labelSmall: const TextStyle(
+              fontFamily: _fontFamily,
               fontSize: 11,
               fontWeight: FontWeight.w700,
               color: AppColors.textMuted,
@@ -134,10 +142,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -148,10 +153,7 @@ class AppTheme {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
-          textStyle: const TextStyle(
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-          ),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
         ),
       ),
       inputDecorationTheme: InputDecorationTheme(

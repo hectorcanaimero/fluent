@@ -140,6 +140,24 @@ abstract class AppLocalizations {
   /// **'Muy pronto'**
   String get comingSoonTitle;
 
+  /// No description provided for @commonLoadErrorTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar esto'**
+  String get commonLoadErrorTitle;
+
+  /// No description provided for @commonLoadErrorBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Revisá tu conexión e intentá de nuevo.'**
+  String get commonLoadErrorBody;
+
+  /// No description provided for @commonRetry.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar'**
+  String get commonRetry;
+
   /// No description provided for @formFieldRequired.
   ///
   /// In es, this message translates to:
@@ -572,6 +590,12 @@ abstract class AppLocalizations {
   /// **'Proveedores y modelos'**
   String get providersTitle;
 
+  /// No description provided for @providersGoPractice.
+  ///
+  /// In es, this message translates to:
+  /// **'Listo, ir a practicar'**
+  String get providersGoPractice;
+
   /// No description provided for @providersOpenRouterTitle.
   ///
   /// In es, this message translates to:
@@ -631,6 +655,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos completar la conexión. Probá de nuevo.'**
   String get providersErrorGeneric;
+
+  /// No description provided for @providersOauthError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos conectar con OpenRouter. Probá de nuevo.'**
+  String get providersOauthError;
 
   /// No description provided for @providersLoadError.
   ///
@@ -745,6 +775,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Conectá este proveedor para usarlo'**
   String get providersModelProviderDisabledHint;
+
+  /// No description provided for @homeNeedProviderHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectá un proveedor para poder practicar'**
+  String get homeNeedProviderHint;
 
   /// No description provided for @homeGreetingMorning.
   ///
@@ -1087,6 +1123,12 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos enviar tu mensaje. Probá de nuevo.'**
   String get conversationSendErrorGeneric;
+
+  /// No description provided for @conversationBootErrorBack.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver'**
+  String get conversationBootErrorBack;
 
   /// No description provided for @conversationMicUnavailableTitle.
   ///

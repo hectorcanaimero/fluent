@@ -7,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// Selector de nueva sesión (SPEC-06 §4.2): Temas, Roleplay, Noticias.
@@ -28,8 +29,31 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
   void initState() {
     super.initState();
     _tabController = TabController(length: 3, vsync: this);
+    _loadSuggestions();
+    WidgetsBinding.instance.addPostFrameCallback((_) => _guardCanPractice());
+  }
+
+  void _loadSuggestions() {
     _future = ref.read(fluentApiProvider).getSessionSuggestions();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _maybeShowMicPrimer());
+  }
+
+  /// MAL-13: último resguardo por si se llega acá sin proveedor activo por
+  /// un camino que no pasa por el gate de `HomeScreen`/`HomeShell` (por
+  /// ejemplo el "Saltar" del boss o "Ver todo" de temas rápidos, que
+  /// navegan directo con `context.push('/session/new')`): sin esto,
+  /// cualquier tema fallaría igual al crear la sesión, con un error
+  /// genérico y sin salida.
+  Future<void> _guardCanPractice() async {
+    final canPractice = await ref.read(canPracticeProvider.future);
+    if (!mounted) return;
+    if (!canPractice) {
+      final l10n = AppLocalizations.of(context);
+      context.go('/providers');
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
+      return;
+    }
+    await _maybeShowMicPrimer();
   }
 
   /// SPEC-06 §5: la primera vez que se entra acá se explica para qué se
@@ -43,17 +67,16 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
     final l10n = AppLocalizations.of(context);
     await showDialog<void>(
       context: context,
-      builder:
-          (ctx) => AlertDialog(
-            title: Text(l10n.micPermissionTitle),
-            content: Text(l10n.micPermissionBody),
-            actions: [
-              ElevatedButton(
-                onPressed: () => Navigator.of(ctx).pop(),
-                child: Text(l10n.micPermissionContinue),
-              ),
-            ],
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.micPermissionTitle),
+        content: Text(l10n.micPermissionBody),
+        actions: [
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: Text(l10n.micPermissionContinue),
           ),
+        ],
+      ),
     );
   }
 
@@ -76,14 +99,18 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
     try {
       final result = await ref
           .read(fluentApiProvider)
-          .createSession(kind: kind, topic: topic, roleplayId: roleplayId, newsItemId: newsItemId);
+          .createSession(
+            kind: kind,
+            topic: topic,
+            roleplayId: roleplayId,
+            newsItemId: newsItemId,
+          );
       if (!mounted) return;
       context.pushReplacement('/session/${result.session.id}');
     } catch (_) {
       if (mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(l10n.sessionNewErrorGeneric)));
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.sessionNewErrorGeneric)));
       }
     } finally {
       if (mounted) setState(() => _starting = false);
@@ -108,41 +135,43 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
       body: FutureBuilder<SessionSuggestions>(
         future: _future,
         builder: (context, snapshot) {
-          if (!snapshot.hasData) {
-            return const Center(child: CircularProgressIndicator());
-          }
-          final suggestions = snapshot.data!;
-          return TabBarView(
-            controller: _tabController,
-            children: [
-              _TopicsTab(
-                topics: suggestions.topics,
-                freeTopicController: _freeTopicController,
-                starting: _starting,
-                onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
-                // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
-                // que "Surprise me" elige uno al azar de las sugerencias en
-                // vez de mandar la petición sin tema (eso siempre daría
-                // `400 VALIDATION`).
-                onSurpriseMe:
-                    suggestions.topics.isEmpty
-                        ? null
-                        : () => _start(
+          return AsyncBody<SessionSuggestions>(
+            snapshot: snapshot,
+            onRetry: () => setState(_loadSuggestions),
+            builder: (suggestions) => TabBarView(
+              controller: _tabController,
+              children: [
+                _TopicsTab(
+                  topics: suggestions.topics,
+                  freeTopicController: _freeTopicController,
+                  starting: _starting,
+                  onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
+                  // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
+                  // que "Surprise me" elige uno al azar de las sugerencias en
+                  // vez de mandar la petición sin tema (eso siempre daría
+                  // `400 VALIDATION`).
+                  onSurpriseMe: suggestions.topics.isEmpty
+                      ? null
+                      : () => _start(
                           kind: 'free_topic',
-                          topic: suggestions.topics[Random().nextInt(suggestions.topics.length)],
+                          topic:
+                              suggestions.topics[Random().nextInt(
+                                suggestions.topics.length,
+                              )],
                         ),
-              ),
-              _RoleplayTab(
-                roleplays: suggestions.roleplays,
-                starting: _starting,
-                onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
-              ),
-              _NewsTab(
-                news: suggestions.news,
-                starting: _starting,
-                onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
-              ),
-            ],
+                ),
+                _RoleplayTab(
+                  roleplays: suggestions.roleplays,
+                  starting: _starting,
+                  onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
+                ),
+                _NewsTab(
+                  news: suggestions.news,
+                  starting: _starting,
+                  onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
+                ),
+              ],
+            ),
           );
         },
       ),
@@ -192,10 +221,9 @@ class _TopicsTab extends StatelessWidget {
         ),
         const SizedBox(height: AppSpacing.md),
         ElevatedButton(
-          onPressed:
-              starting || freeTopicController.text.trim().isEmpty
-                  ? null
-                  : () => onTopic(freeTopicController.text.trim()),
+          onPressed: starting || freeTopicController.text.trim().isEmpty
+              ? null
+              : () => onTopic(freeTopicController.text.trim()),
           child: Text(l10n.sessionNewFreeTopicSubmit),
         ),
         const SizedBox(height: AppSpacing.xl),
@@ -216,7 +244,11 @@ class _TopicsTab extends StatelessWidget {
 }
 
 class _RoleplayTab extends StatelessWidget {
-  const _RoleplayTab({required this.roleplays, required this.starting, required this.onSelected});
+  const _RoleplayTab({
+    required this.roleplays,
+    required this.starting,
+    required this.onSelected,
+  });
 
   final List<RoleplayOption> roleplays;
   final bool starting;
@@ -243,7 +275,11 @@ class _RoleplayTab extends StatelessWidget {
 }
 
 class _NewsTab extends StatelessWidget {
-  const _NewsTab({required this.news, required this.starting, required this.onSelected});
+  const _NewsTab({
+    required this.news,
+    required this.starting,
+    required this.onSelected,
+  });
 
   final List<NewsItem> news;
   final bool starting;
@@ -270,10 +306,16 @@ class _NewsTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(item.source, style: Theme.of(context).textTheme.labelSmall),
+                    Text(
+                      item.source,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                     if (item.time != null) ...[
                       const SizedBox(width: AppSpacing.sm),
-                      Text(item.time!, style: Theme.of(context).textTheme.labelSmall),
+                      Text(
+                        item.time!,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     ],
                   ],
                 ),
@@ -281,7 +323,10 @@ class _NewsTab extends StatelessWidget {
                 Text(item.title, style: Theme.of(context).textTheme.titleSmall),
                 if (item.summary != null) ...[
                   const SizedBox(height: AppSpacing.xs),
-                  Text(item.summary!, style: Theme.of(context).textTheme.bodySmall),
+                  Text(
+                    item.summary!,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
                 const SizedBox(height: AppSpacing.sm),
                 Align(
@@ -318,7 +363,11 @@ class _Card extends StatelessWidget {
           border: Border.all(color: AppColors.border),
         ),
         alignment: Alignment.center,
-        child: Text(title, textAlign: TextAlign.center, style: Theme.of(context).textTheme.titleSmall),
+        child: Text(
+          title,
+          textAlign: TextAlign.center,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
       ),
     );
   }

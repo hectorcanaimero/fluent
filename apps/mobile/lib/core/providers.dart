@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
@@ -11,6 +12,7 @@ import '../features/session/data/tts_service.dart';
 import 'api/fake_api.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
+import 'api/models.dart';
 import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
@@ -100,6 +102,28 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
     return FakeReminderService();
   }
   return FlutterLocalNotificationsReminderService();
+});
+
+/// Zona horaria IANA del dispositivo (MAL-12), con `'UTC'` de reserva si el
+/// plugin nativo falla. Un `FutureProvider` en vez de leer el plugin
+/// directo para que los tests puedan sobreescribirlo sin tocar
+/// `flutter_timezone`.
+final timezoneProvider = FutureProvider<String>((ref) async {
+  try {
+    return await FlutterTimezone.getLocalTimezone();
+  } catch (_) {
+    return 'UTC';
+  }
+});
+
+/// MAL-13: si se puede empezar una sesión ahora mismo (hay al menos un
+/// proveedor activo). Fuente única para el CTA de Home, sus chips de
+/// temas rápidos y la pestaña Practicar de `HomeShell`, que antes lo
+/// derivaban cada uno por su cuenta y quedaban inconsistentes. Se
+/// invalida al conectar/desconectar un proveedor (`ProvidersScreen`).
+final canPracticeProvider = FutureProvider<bool>((ref) async {
+  final me = await ref.watch(fluentApiProvider).getMe();
+  return me.hasActiveProvider;
 });
 
 final authControllerProvider =

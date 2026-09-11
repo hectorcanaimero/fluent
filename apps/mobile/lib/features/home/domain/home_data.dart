@@ -28,13 +28,20 @@ class HomeData {
   /// así que acá solo se cuenta el total del día.
   final int sessionsToday;
 
-  bool get hasActiveProvider => me.providers.any((p) => p.status == 'active');
+  bool get hasActiveProvider => me.hasActiveProvider;
+
+  /// MAL-13: única fuente de verdad de "se puede empezar una sesión ahora"
+  /// para el CTA de Home, los chips de temas rápidos y la pestaña
+  /// Practicar — antes cada uno lo derivaba (o no) por su cuenta y quedaban
+  /// inconsistentes entre sí.
+  bool get canPractice => hasActiveProvider;
 
   /// `pendingActions` de `GET /me` (SPEC-02 §4.1) solo llega poblado al
   /// owner del grupo (la API la calcula por `userId` de quien pide `/me`,
   /// docs/specs/pendientes/PR-02.md PEND-76), así que no hace falta que la
   /// app verifique el rol: si la lista no está vacía, es para vos.
-  static const _weeklySummaryCredentialAction = 'WEEKLY_SUMMARY_NEEDS_CREDENTIAL';
+  static const _weeklySummaryCredentialAction =
+      'WEEKLY_SUMMARY_NEEDS_CREDENTIAL';
 
   bool get hasWeeklySummaryCredentialPending =>
       me.pendingActions.contains(_weeklySummaryCredentialAction);

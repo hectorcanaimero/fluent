@@ -31,6 +31,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get comingSoonTitle => 'Muy pronto';
 
   @override
+  String get commonLoadErrorTitle => 'No pudimos cargar esto';
+
+  @override
+  String get commonLoadErrorBody => 'Revisá tu conexión e intentá de nuevo.';
+
+  @override
+  String get commonRetry => 'Reintentar';
+
+  @override
   String get formFieldRequired => 'Este campo es obligatorio.';
 
   @override
@@ -263,6 +272,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get providersTitle => 'Proveedores y modelos';
 
   @override
+  String get providersGoPractice => 'Listo, ir a practicar';
+
+  @override
   String get providersOpenRouterTitle => 'OpenRouter';
 
   @override
@@ -294,6 +306,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get providersErrorGeneric =>
       'No pudimos completar la conexión. Probá de nuevo.';
+
+  @override
+  String get providersOauthError =>
+      'No pudimos conectar con OpenRouter. Probá de nuevo.';
 
   @override
   String get providersLoadError => 'No pudimos cargar los proveedores.';
@@ -354,6 +370,10 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get providersModelProviderDisabledHint =>
       'Conectá este proveedor para usarlo';
+
+  @override
+  String get homeNeedProviderHint =>
+      'Conectá un proveedor para poder practicar';
 
   @override
   String homeGreetingMorning(String name) {
@@ -557,6 +577,9 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get conversationSendErrorGeneric =>
       'No pudimos enviar tu mensaje. Probá de nuevo.';
+
+  @override
+  String get conversationBootErrorBack => 'Volver';
 
   @override
   String get conversationMicUnavailableTitle => 'No hay reconocimiento de voz';

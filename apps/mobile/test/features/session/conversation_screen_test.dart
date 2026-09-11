@@ -30,7 +30,10 @@ class _StreamDropsBeforeDoneApi extends FakeApi {
   }
 
   @override
-  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+  }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     return base.copyWith(reply: 'Full reply from the non-streaming endpoint.');
   }
@@ -42,7 +45,10 @@ class _AlwaysCorrectingApi extends FakeApi {
   _AlwaysCorrectingApi({super.artificialDelay});
 
   @override
-  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+  }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     if (base.corrections.isNotEmpty) return base;
     return base.copyWith(
@@ -68,7 +74,10 @@ class _UnavailableApi extends FakeApi {
   int calls = 0;
 
   @override
-  Future<TurnResult> sendTurn({required String sessionId, required String text}) async {
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+  }) async {
     calls++;
     return const TurnResult(
       turnIdx: 0,
@@ -76,6 +85,22 @@ class _UnavailableApi extends FakeApi {
       degraded: true,
       unavailable: true,
     );
+  }
+}
+
+/// Simula un `getSession` que falla siempre en la primera llamada (MAL-09):
+/// la pantalla debe mostrar el error de arranque con Reintentar/Volver en
+/// vez de girar para siempre.
+class _FailingGetSessionApi extends FakeApi {
+  _FailingGetSessionApi({super.artificialDelay});
+
+  var calls = 0;
+
+  @override
+  Future<SessionDetailResult> getSession(String sessionId) {
+    calls++;
+    if (calls == 1) return Future.error(Exception('boom'));
+    return super.getSession(sessionId);
   }
 }
 
@@ -87,9 +112,14 @@ const _delegates = [
 ];
 
 void main() {
-  testWidgets('escuchar, editar, enviar, mostrar corrección y reproducir', (tester) async {
+  testWidgets('escuchar, editar, enviar, mostrar corrección y reproducir', (
+    tester,
+  ) async {
     final api = _AlwaysCorrectingApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
     final speech = FakeSpeechService();
     final tts = FakeTtsService();
 
@@ -135,11 +165,20 @@ void main() {
     await tester.pumpAndSettle();
 
     // Se muestra la corrección de forma no intrusiva (chip expandible).
-    expect(find.byKey(const Key('conversation_correction_chip')), findsOneWidget);
-    expect(find.byKey(const Key('conversation_correction_detail')), findsNothing);
+    expect(
+      find.byKey(const Key('conversation_correction_chip')),
+      findsOneWidget,
+    );
+    expect(
+      find.byKey(const Key('conversation_correction_detail')),
+      findsNothing,
+    );
     await tester.tap(find.byKey(const Key('conversation_correction_chip')));
     await tester.pump();
-    expect(find.byKey(const Key('conversation_correction_detail')), findsOneWidget);
+    expect(
+      find.byKey(const Key('conversation_correction_detail')),
+      findsOneWidget,
+    );
 
     // El tutor "reprodujo" su respuesta.
     expect(tts.spokenTexts, isNotEmpty);
@@ -149,7 +188,10 @@ void main() {
     'si el stream se corta antes de done, cae al endpoint completo y descarta el texto parcial',
     (tester) async {
       final api = _StreamDropsBeforeDoneApi(artificialDelay: Duration.zero);
-      final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
       final tts = FakeTtsService();
 
       await tester.pumpWidget(
@@ -170,71 +212,90 @@ void main() {
 
       await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
       await tester.pump();
-      await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello');
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
       await tester.tap(find.byKey(const Key('conversation_send_button')));
       await tester.pumpAndSettle();
 
       // El `done` (acá, el resultado del endpoint completo de caída) es la
       // fuente de verdad: se descarta "Partial reply..." y se pinta y
       // reproduce el `reply` del endpoint sin streaming.
-      expect(find.text('Full reply from the non-streaming endpoint.'), findsOneWidget);
+      expect(
+        find.text('Full reply from the non-streaming endpoint.'),
+        findsOneWidget,
+      );
       expect(find.textContaining('Partial'), findsNothing);
       expect(tts.spokenTexts, ['Full reply from the non-streaming endpoint.']);
     },
   );
 
-  testWidgets('tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar', (tester) async {
-    final api = _UnavailableApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+  testWidgets(
+    'tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar',
+    (tester) async {
+      final api = _UnavailableApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          fluentApiProvider.overrideWith((ref) => api),
-          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
-          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
-        ],
-        child: MaterialApp(
-          localizationsDelegates: _delegates,
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: ConversationScreen(sessionId: created.session.id),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
-
-    // Cada turno degradado se persiste con `200` (no lanza una excepción,
-    // ver `turns.service.ts`), así que la conversación vuelve a `idle` entre
-    // envío y envío: hay que reabrir el modo texto en cada vuelta en vez de
-    // una sola vez al principio.
-    for (var i = 0; i < 3; i++) {
-      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
-      await tester.pump();
-      await tester.enterText(find.byKey(const Key('conversation_draft_field')), 'hello $i');
-      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      );
       await tester.pumpAndSettle();
-    }
 
-    expect(api.calls, 3);
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-    expect(find.text(l10n.conversationUnavailableTitle), findsOneWidget);
-  });
+      // Cada turno degradado se persiste con `200` (no lanza una excepción,
+      // ver `turns.service.ts`), así que la conversación vuelve a `idle` entre
+      // envío y envío: hay que reabrir el modo texto en cada vuelta en vez de
+      // una sola vez al principio.
+      for (var i = 0; i < 3; i++) {
+        await tester.tap(
+          find.byKey(const Key('conversation_text_mode_button')),
+        );
+        await tester.pump();
+        await tester.enterText(
+          find.byKey(const Key('conversation_draft_field')),
+          'hello $i',
+        );
+        await tester.tap(find.byKey(const Key('conversation_send_button')));
+        await tester.pumpAndSettle();
+      }
+
+      expect(api.calls, 3);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationUnavailableTitle), findsOneWidget);
+    },
+  );
 
   testWidgets('el temporizador llega a 0 y dispara /end', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
 
     final router = GoRouter(
       initialLocation: '/session/${created.session.id}',
       routes: [
         GoRoute(
           path: '/session/:id',
-          builder:
-              (context, state) => ConversationScreen(
-                sessionId: state.pathParameters['id']!,
-                sessionDuration: const Duration(seconds: 2),
-                warningThreshold: const Duration(seconds: 1),
-              ),
+          builder: (context, state) => ConversationScreen(
+            sessionId: state.pathParameters['id']!,
+            sessionDuration: const Duration(seconds: 2),
+            warningThreshold: const Duration(seconds: 1),
+          ),
         ),
         GoRoute(
           path: '/session/:id/summary',
@@ -264,5 +325,99 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('SUMMARY_SCREEN'), findsOneWidget);
+  });
+
+  testWidgets('si falla el arranque muestra Reintentar y Volver', (
+    tester,
+  ) async {
+    final api = _FailingGetSessionApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+
+    final router = GoRouter(
+      initialLocation: '/session/${created.session.id}',
+      routes: [
+        GoRoute(
+          path: '/session/:id',
+          builder: (context, state) =>
+              ConversationScreen(sessionId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Text('HOME_SCREEN'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('conversation_boot_error_retry')));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+    expect(find.byKey(const Key('conversation_mic_button')), findsOneWidget);
+  });
+
+  testWidgets('Volver en el error de arranque navega a home', (tester) async {
+    final api = _FailingGetSessionApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+
+    final router = GoRouter(
+      initialLocation: '/session/${created.session.id}',
+      routes: [
+        GoRoute(
+          path: '/session/:id',
+          builder: (context, state) =>
+              ConversationScreen(sessionId: state.pathParameters['id']!),
+        ),
+        GoRoute(
+          path: '/',
+          builder: (context, state) => const Text('HOME_SCREEN'),
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('conversation_boot_error_back')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOME_SCREEN'), findsOneWidget);
   });
 }

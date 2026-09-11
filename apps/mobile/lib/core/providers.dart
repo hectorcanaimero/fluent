@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
@@ -96,6 +97,18 @@ final reminderServiceProvider = Provider<ReminderService>((ref) {
     return FakeReminderService();
   }
   return FlutterLocalNotificationsReminderService();
+});
+
+/// Zona horaria IANA del dispositivo (MAL-12), con `'UTC'` de reserva si el
+/// plugin nativo falla. Un `FutureProvider` en vez de leer el plugin
+/// directo para que los tests puedan sobreescribirlo sin tocar
+/// `flutter_timezone`.
+final timezoneProvider = FutureProvider<String>((ref) async {
+  try {
+    return await FlutterTimezone.getLocalTimezone();
+  } catch (_) {
+    return 'UTC';
+  }
 });
 
 /// MAL-13: si se puede empezar una sesión ahora mismo (hay al menos un

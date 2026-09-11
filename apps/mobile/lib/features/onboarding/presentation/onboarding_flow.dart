@@ -59,7 +59,9 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   Future<List<String>> _loadCatalog() async {
     if (_catalog != null) return _catalog!;
     final me = await ref.read(fluentApiProvider).getMe();
-    final catalog = me.interestsCatalog.isNotEmpty ? me.interestsCatalog : kFallbackInterests;
+    final catalog = me.interestsCatalog.isNotEmpty
+        ? me.interestsCatalog
+        : kFallbackInterests;
     _catalog = catalog;
     return catalog;
   }
@@ -73,22 +75,21 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
     try {
       final locale = Localizations.localeOf(context);
       final apiLocale = locale.languageCode == 'pt' ? 'pt-BR' : 'es';
+      final timezone = await ref.read(timezoneProvider.future);
       await ref
           .read(fluentApiProvider)
           .putProfile(
             displayName: _nameController.text.trim(),
             level: _level!.apiValue,
             interests: _selectedInterests.toList(),
-            // TODO(pendiente): no hay paquete de detección de zona horaria
-            // IANA en las dependencias de SPEC-06 §1; se usa un valor por
-            // defecto hasta agregar uno (ver docs/specs/pendientes/PR-06.md).
-            timezone: 'America/Argentina/Buenos_Aires',
+            timezone: timezone,
             locale: apiLocale,
           );
       await ref.read(authControllerProvider.notifier).refresh();
       if (!mounted) return;
       final me = ref.read(authControllerProvider).me;
-      final hasProvider = me?.providers.any((p) => p.status == 'active') ?? false;
+      final hasProvider =
+          me?.providers.any((p) => p.status == 'active') ?? false;
       context.go(hasProvider ? '/' : '/providers');
     } catch (_) {
       setState(() => _errorMessage = l10n.onboardingErrorGeneric);
@@ -119,19 +120,21 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
 
     return Scaffold(
       appBar: AppBar(
-        leading:
-            _step > 0
-                ? IconButton(
-                  icon: const Icon(Icons.arrow_back),
-                  onPressed: () => setState(() => _step -= 1),
-                )
-                : null,
+        leading: _step > 0
+            ? IconButton(
+                icon: const Icon(Icons.arrow_back),
+                onPressed: () => setState(() => _step -= 1),
+              )
+            : null,
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPad),
           child: switch (_step) {
-            0 => _NameStep(controller: _nameController, onChanged: () => setState(() {})),
+            0 => _NameStep(
+              controller: _nameController,
+              onChanged: () => setState(() {}),
+            ),
             1 => _LevelStep(
               selected: _level,
               onSelected: (level) => setState(() => _level = level),
@@ -161,20 +164,31 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
             mainAxisSize: MainAxisSize.min,
             children: [
               if (_errorMessage != null) ...[
-                Text(_errorMessage!, style: const TextStyle(color: AppColors.error)),
+                Text(
+                  _errorMessage!,
+                  style: const TextStyle(color: AppColors.error),
+                ),
                 const SizedBox(height: AppSpacing.sm),
               ],
               ElevatedButton(
                 key: const Key('onboarding_continue_button'),
-                onPressed: (canContinue && !_submitting) ? _onPrimaryPressed : null,
-                child:
-                    _submitting
-                        ? const SizedBox(
-                          height: 20,
-                          width: 20,
-                          child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                        )
-                        : Text(_step == 2 ? l10n.onboardingFinishButton : l10n.onboardingContinueButton),
+                onPressed: (canContinue && !_submitting)
+                    ? _onPrimaryPressed
+                    : null,
+                child: _submitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: Colors.white,
+                        ),
+                      )
+                    : Text(
+                        _step == 2
+                            ? l10n.onboardingFinishButton
+                            : l10n.onboardingContinueButton,
+                      ),
               ),
             ],
           ),
@@ -197,9 +211,15 @@ class _NameStep extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         const SizedBox(height: AppSpacing.xl),
-        Text(l10n.onboardingNameHeadline, style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          l10n.onboardingNameHeadline,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: AppSpacing.sm),
-        Text(l10n.onboardingNameSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          l10n.onboardingNameSubtitle,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: AppSpacing.xl),
         TextField(
           key: const Key('onboarding_name_field'),
@@ -225,9 +245,15 @@ class _LevelStep extends StatelessWidget {
     return ListView(
       children: [
         const SizedBox(height: AppSpacing.xl),
-        Text(l10n.onboardingLevelHeadline, style: Theme.of(context).textTheme.headlineMedium),
+        Text(
+          l10n.onboardingLevelHeadline,
+          style: Theme.of(context).textTheme.headlineMedium,
+        ),
         const SizedBox(height: AppSpacing.sm),
-        Text(l10n.onboardingLevelSubtitle, style: Theme.of(context).textTheme.bodyMedium),
+        Text(
+          l10n.onboardingLevelSubtitle,
+          style: Theme.of(context).textTheme.bodyMedium,
+        ),
         const SizedBox(height: AppSpacing.lg),
         _LevelCard(
           level: _Level.beginner,
@@ -328,8 +354,9 @@ class _InterestsStep extends StatelessWidget {
           return const Center(child: CircularProgressIndicator());
         }
         final catalog = snapshot.data!;
-        final visible =
-            showAll ? catalog : catalog.take(_kInitialInterestsShown).toList();
+        final visible = showAll
+            ? catalog
+            : catalog.take(_kInitialInterestsShown).toList();
         return ListView(
           children: [
             const SizedBox(height: AppSpacing.xl),
@@ -345,9 +372,8 @@ class _InterestsStep extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             Text(
               l10n.onboardingInterestsSelectedCount(selected.length),
-              style: Theme.of(
-                context,
-              ).textTheme.bodySmall?.copyWith(color: AppColors.primary),
+              style: Theme.of(context).textTheme.bodySmall
+                  ?.copyWith(color: AppColors.primary),
             ),
             const SizedBox(height: AppSpacing.md),
             Wrap(
@@ -396,11 +422,16 @@ class _InterestChip extends StatelessWidget {
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.pill),
       child: Container(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg, vertical: AppSpacing.sm),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.lg,
+          vertical: AppSpacing.sm,
+        ),
         decoration: BoxDecoration(
           color: isSelected ? AppColors.primarySoft : AppColors.surface,
           borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(color: isSelected ? AppColors.primary : AppColors.border),
+          border: Border.all(
+            color: isSelected ? AppColors.primary : AppColors.border,
+          ),
         ),
         child: Text(
           label,

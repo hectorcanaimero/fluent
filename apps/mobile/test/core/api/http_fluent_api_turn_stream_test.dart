@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:fluent_mobile/core/api/http_fluent_api.dart';
 import 'package:fluent_mobile/core/api/turn_stream_event.dart';
 import 'package:fluent_mobile/core/errors/api_exception.dart';
@@ -155,6 +156,41 @@ void main() {
         () => api.sendTurnStream(sessionId: 'session-1', text: 'hi').toList(),
         throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.sessionNotActive)),
       );
+    },
+  );
+
+  // MAL-08: un proxy/conexión colgada nunca corta el socket ni manda un
+  // evento — sin un timeout, `await for` de quien consuma el stream se
+  // queda esperando para siempre. `fakeAsync` avanza el reloj virtual sin
+  // esperar los 30 s reales.
+  test(
+    'POST /sessions/:id/turns/stream: sin eventos por 30s emite streamTimeout',
+    () {
+      fakeAsync((async) {
+        adapter.onPost(
+          '/sessions/session-1/turns/stream',
+          (server) => server.reply(
+            200,
+            'event: token\ndata: {"text":"too late"}\n\n',
+            delay: const Duration(seconds: 45),
+            headers: {
+              Headers.contentTypeHeader: ['text/event-stream'],
+            },
+          ),
+          data: Matchers.any,
+        );
+
+        final events = <TurnStreamEvent>[];
+        api
+            .sendTurnStream(sessionId: 'session-1', text: 'hi')
+            .listen(events.add);
+
+        async.elapse(const Duration(seconds: 30));
+
+        expect(events, hasLength(1));
+        final error = events.single as TurnStreamError;
+        expect(error.exception.code, ApiErrorCode.streamTimeout);
+      });
     },
   );
 }

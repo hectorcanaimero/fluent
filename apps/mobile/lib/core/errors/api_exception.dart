@@ -30,6 +30,12 @@ enum ApiErrorCode {
   /// (lo agrega Opus en esta misma ola); se mapea desde ya para no
   /// depender de otro despliegue del móvil.
   turnsDailyCap,
+
+  /// P1 MAL-08: no llegó ningún evento del stream dentro de la ventana
+  /// esperada (proxy/conexión colgada). No lo manda la API — lo genera el
+  /// cliente al envolver el stream con `.timeout()` — así que no tiene caso
+  /// en [fromWire].
+  streamTimeout,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {

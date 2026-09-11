@@ -1,3 +1,5 @@
+import 'package:dio/dio.dart' show CancelToken;
+
 import 'models.dart';
 import 'turn_stream_event.dart';
 
@@ -55,6 +57,11 @@ abstract class FluentApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+
+    /// MAL-08: la pantalla de conversación cancela este token en su
+    /// `dispose()` para no dejar el turno en vuelo si el usuario navega
+    /// hacia atrás a mitad de un envío.
+    CancelToken? cancelToken,
   });
 
   /// `POST /sessions/:id/turns/stream` (SPEC-04 §4, RF-3.8). Mismo turno que
@@ -62,9 +69,15 @@ abstract class FluentApi {
   /// un único cuerpo JSON; ver `turn_stream_event.dart`. Quien consuma este
   /// stream debe tratar el evento `TurnStreamDone` como la fuente de verdad
   /// y caer a [sendTurn] si el stream se corta sin llegar a emitirlo.
+  ///
+  /// MAL-08: si no llega ningún evento dentro de la ventana de espera (un
+  /// proxy que se cuelga sin cortar la conexión), la implementación debe
+  /// emitir un `TurnStreamError` con `ApiException(code: streamTimeout)` en
+  /// vez de dejar el stream abierto para siempre.
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   });
   Future<SessionEndResult> endSession({
     required String sessionId,

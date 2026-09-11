@@ -284,6 +284,12 @@ abstract class AppLocalizations {
   /// **'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.'**
   String get errorTurnsDailyCap;
 
+  /// No description provided for @errorStreamTimeout.
+  ///
+  /// In es, this message translates to:
+  /// **'El tutor tardó en responder. Probá de nuevo.'**
+  String get errorStreamTimeout;
+
   /// No description provided for @formFieldRequired.
   ///
   /// In es, this message translates to:

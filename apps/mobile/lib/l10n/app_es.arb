@@ -31,6 +31,7 @@
   "errorInternal": "Tuvimos un problema de nuestro lado. Probá de nuevo.",
   "errorChallengeNotAvailable": "Ese desafío ya no está disponible.",
   "errorTurnsDailyCap": "Por hoy alcanzaste el máximo de turnos. Mañana seguimos.",
+  "errorStreamTimeout": "El tutor tardó en responder. Probá de nuevo.",
   "formFieldRequired": "Este campo es obligatorio.",
   "loginWelcomeHeadline": "Hablá inglés con confianza, de a 10 minutos",
   "loginWelcomeSubtitle": "Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.",

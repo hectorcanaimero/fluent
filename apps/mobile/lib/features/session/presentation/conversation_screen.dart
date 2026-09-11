@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -87,6 +88,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   late final SpeechService _speech = ref.read(speechServiceProvider);
   late final TtsService _tts = ref.read(ttsServiceProvider);
 
+  /// MAL-08: un solo token por pantalla (no por turno) para poder cancelar
+  /// cualquier `sendTurn`/`sendTurnStream` en vuelo al salir de la
+  /// conversación, en vez de dejarlo terminar en segundo plano.
+  final _turnCancelToken = CancelToken();
+
   @override
   void initState() {
     super.initState();
@@ -97,6 +103,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   @override
   void dispose() {
     WidgetsBinding.instance.removeObserver(this);
+    _turnCancelToken.cancel();
     _timer?.cancel();
     _draftController.dispose();
     _scrollController.dispose();
@@ -505,11 +512,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   /// modo no streaming»): un error que llega **antes** de cualquier evento
   /// se relanza tal cual en vez de reintentar (es el mismo `403/409/429/400`
   /// que daría el endpoint sin streaming, así que reintentar solo gastaría
-  /// una llamada de más); cualquier otro corte —de red, o un `error` SSE
-  /// después de haber empezado a recibir tokens— cae al endpoint completo.
-  /// Ver PEND de `docs/specs/pendientes/PR-06.md` sobre el turno duplicado
-  /// que puede producir esa caída si el stream ya había terminado del lado
-  /// del servidor cuando se corta la conexión.
+  /// una llamada de más); cualquier otro corte —de red, un `error` SSE
+  /// después de haber empezado a recibir tokens, o un `streamTimeout`
+  /// (MAL-08: proxy/conexión colgada, nunca la rechazó el servidor)— cae al
+  /// endpoint completo. Ver PEND de `docs/specs/pendientes/PR-06.md` sobre
+  /// el turno duplicado que puede producir esa caída si el stream ya había
+  /// terminado del lado del servidor cuando se corta la conexión.
   Future<TurnResult> _sendTurnWithStreamFallback({
     required String text,
     required void Function(String delta) onToken,
@@ -520,6 +528,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       final stream = api.sendTurnStream(
         sessionId: widget.sessionId,
         text: text,
+        cancelToken: _turnCancelToken,
       );
       await for (final event in stream) {
         sawEvent = true;
@@ -535,13 +544,17 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
             throw exception;
         }
       }
-    } on ApiException {
-      if (!sawEvent) rethrow;
+    } on ApiException catch (e) {
+      if (!sawEvent && e.code != ApiErrorCode.streamTimeout) rethrow;
     } catch (_) {
       // Fallo de transporte antes de cualquier evento: se intenta igual el
       // modo completo abajo.
     }
-    return api.sendTurn(sessionId: widget.sessionId, text: text);
+    return api.sendTurn(
+      sessionId: widget.sessionId,
+      text: text,
+      cancelToken: _turnCancelToken,
+    );
   }
 
   Future<void> _showUnavailableDialog() async {

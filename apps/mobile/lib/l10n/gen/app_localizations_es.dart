@@ -109,6 +109,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.';
 
   @override
+  String get errorStreamTimeout =>
+      'El tutor tardó en responder. Probá de nuevo.';
+
+  @override
   String get formFieldRequired => 'Este campo es obligatorio.';
 
   @override

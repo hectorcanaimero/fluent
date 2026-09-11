@@ -1,5 +1,7 @@
 import 'dart:math';
 
+import 'package:dio/dio.dart' show CancelToken;
+
 import '../../features/onboarding/data/interests_catalog.dart';
 import '../errors/api_exception.dart';
 import 'fluent_api.dart';
@@ -506,6 +508,7 @@ class FakeApi implements FluentApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     await _delay();
     final session = _sessions[sessionId];
@@ -564,8 +567,13 @@ class FakeApi implements FluentApi {
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async* {
-    final result = await sendTurn(sessionId: sessionId, text: text);
+    final result = await sendTurn(
+      sessionId: sessionId,
+      text: text,
+      cancelToken: cancelToken,
+    );
     final words = result.reply.split(' ');
     for (var i = 0; i < words.length; i++) {
       await _delay();

@@ -27,6 +27,12 @@ String l10nForApiError(ApiErrorCode code, AppLocalizations l10n) {
     ApiErrorCode.internal => l10n.errorInternal,
     ApiErrorCode.challengeNotAvailable => l10n.errorChallengeNotAvailable,
     ApiErrorCode.turnsDailyCap => l10n.errorTurnsDailyCap,
+    // MAL-08: en el flujo normal no debería llegar hasta acá —
+    // `_sendTurnWithStreamFallback` lo trata como un corte de transporte y
+    // cae al modo completo en vez de mostrarlo — pero si de todos modos
+    // escapa (por ejemplo, el propio endpoint de caída vuelve a colgarse),
+    // tiene su propio texto en vez de cae en el genérico.
+    ApiErrorCode.streamTimeout => l10n.errorStreamTimeout,
     ApiErrorCode.unknown => l10n.errorGeneric,
   };
 }

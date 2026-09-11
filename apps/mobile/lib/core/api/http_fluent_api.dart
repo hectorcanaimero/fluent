@@ -173,10 +173,12 @@ class HttpFluentApi implements FluentApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) => _client.guard(() async {
     final res = await _client.dio.post(
       '/sessions/$sessionId/turns',
       data: {'text': text},
+      cancelToken: cancelToken,
     );
     return TurnResult.fromJson(res.data as Map<String, dynamic>);
   });
@@ -199,12 +201,46 @@ class HttpFluentApi implements FluentApi {
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
+  }) {
+    // MAL-08: si el proxy/conexión se cuelga sin cortar el socket, el
+    // `await for` de abajo nunca ve un evento ni un error — se queda
+    // esperando para siempre. Envolver el stream con `.timeout()` (en vez
+    // de ponerlo dentro del `async*`, donde no cortaría la espera de la
+    // próxima línea) convierte esa espera colgada en un `TurnStreamError`
+    // catchable, que el llamador ya sabe convertir en la caída al modo
+    // completo (`_sendTurnWithStreamFallback`).
+    return _sendTurnStreamRaw(
+      sessionId: sessionId,
+      text: text,
+      cancelToken: cancelToken,
+    ).timeout(
+      const Duration(seconds: 30),
+      onTimeout: (sink) {
+        sink.add(
+          const TurnStreamError(
+            ApiException(
+              code: ApiErrorCode.streamTimeout,
+              message: 'turn stream timed out waiting for the next event',
+            ),
+          ),
+        );
+        sink.close();
+      },
+    );
+  }
+
+  Stream<TurnStreamEvent> _sendTurnStreamRaw({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
   }) async* {
     Response<ResponseBody> response;
     try {
       response = await _client.dio.post<ResponseBody>(
         '/sessions/$sessionId/turns/stream',
         data: {'text': text},
+        cancelToken: cancelToken,
         options: Options(
           responseType: ResponseType.stream,
           // El turno puede tardar más que el timeout general de lectura

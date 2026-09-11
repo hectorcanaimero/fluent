@@ -1,8 +1,10 @@
 import 'dart:async';
 
+import 'package:dio/dio.dart' show CancelToken;
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/api/turn_stream_event.dart';
+import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/session/data/speech_service.dart';
 import 'package:fluent_mobile/features/session/data/tts_service.dart';
@@ -21,11 +23,17 @@ class _ControlledStreamApi extends FakeApi {
 
   final _controller = StreamController<TurnStreamEvent>();
 
+  /// MAL-08: el `CancelToken` que la pantalla pasó a esta llamada, para
+  /// comprobar que `dispose()` lo cancela.
+  CancelToken? capturedToken;
+
   @override
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) {
+    capturedToken = cancelToken;
     return _controller.stream;
   }
 
@@ -45,6 +53,7 @@ class _StreamDropsBeforeDoneApi extends FakeApi {
   Stream<TurnStreamEvent> sendTurnStream({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async* {
     yield const TurnStreamToken('Partial');
     yield const TurnStreamToken(' reply...');
@@ -55,6 +64,7 @@ class _StreamDropsBeforeDoneApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     return base.copyWith(reply: 'Full reply from the non-streaming endpoint.');
@@ -70,6 +80,7 @@ class _AlwaysCorrectingApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     final base = await super.sendTurn(sessionId: sessionId, text: text);
     if (base.corrections.isNotEmpty) return base;
@@ -99,6 +110,7 @@ class _UnavailableApi extends FakeApi {
   Future<TurnResult> sendTurn({
     required String sessionId,
     required String text,
+    CancelToken? cancelToken,
   }) async {
     calls++;
     return const TurnResult(
@@ -107,6 +119,37 @@ class _UnavailableApi extends FakeApi {
       degraded: true,
       unavailable: true,
     );
+  }
+}
+
+/// MAL-08: simula un stream que nunca manda ningún evento (proxy colgado):
+/// en la app real esto lo convierte `HttpFluentApi` en un
+/// `ApiException(streamTimeout)` después de 30 s; acá se lanza directo para
+/// no depender de tiempo real. Debe caer al endpoint completo igual que
+/// cualquier otro corte de transporte.
+class _StreamTimeoutApi extends FakeApi {
+  _StreamTimeoutApi({super.artificialDelay});
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async* {
+    throw const ApiException(
+      code: ApiErrorCode.streamTimeout,
+      message: 'turn stream timed out waiting for the next event',
+    );
+  }
+
+  @override
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async {
+    final base = await super.sendTurn(sessionId: sessionId, text: text);
+    return base.copyWith(reply: 'Full reply after stream timeout.');
   }
 }
 
@@ -252,6 +295,45 @@ void main() {
       expect(tts.spokenTexts, ['Full reply from the non-streaming endpoint.']);
     },
   );
+
+  testWidgets(
+    'MAL-08: si el stream nunca manda un evento (timeout), cae al endpoint completo',
+    (tester) async {
+      final api = _StreamTimeoutApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Full reply after stream timeout.'), findsOneWidget);
+    },
+  );
+
 
   testWidgets(
     'tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar',
@@ -535,6 +617,34 @@ void main() {
   }
 
   testWidgets(
+    'MAL-08: al salir de la conversación cancela el turno en vuelo',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      final speech = FakeSpeechService();
+      await pumpConversation(tester, api: api, speech: speech);
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+
+      expect(api.capturedToken, isNotNull);
+      expect(api.capturedToken!.isCancelled, isFalse);
+
+      // Saca la pantalla del árbol sin que el stream haya mandado `done`.
+      await tester.pumpWidget(const SizedBox.shrink());
+
+      expect(api.capturedToken!.isCancelled, isTrue);
+
+      await api.closeStream();
+    },
+  );
+
+  testWidgets(
     'MAL-05: si el motor termina solo sin resultado final, pasa a revisar con el parcial',
     (tester) async {
       final speech = FakeSpeechService();
@@ -741,4 +851,5 @@ void main() {
       expect(find.text('HOME_SCREEN'), findsNothing);
     },
   );
+
 }

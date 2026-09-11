@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
@@ -9,7 +10,10 @@ import { createOwnerBearerMiddleware } from './auth/owner-bearer.middleware.js';
 import { configureHttpServer } from './config/http-server.js';
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule, { bufferLogs: true });
+  // Tipado como app de Express para poder tocar `set('trust proxy')` (MEJ-30).
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    bufferLogs: true,
+  });
 
   app.useLogger(app.get(Logger));
 
@@ -25,6 +29,13 @@ async function bootstrap() {
   // en producción (`main.ts`) y en los tests e2e, que arrancan la app con
   // `Test.createTestingModule({ imports: [AppModule] })` sin pasar por esta
   // función. Ver `apps/api/src/common/common.module.ts`.
+
+  // Express detrás de Traefik y Cloudflare (SPEC-08 §1). Sin esto `req.ip` es
+  // la del proxy y todo el tráfico anónimo comparte un único cubo de rate
+  // limit. `1` = un salto de confianza: se cree la última entrada de
+  // `X-Forwarded-For`, la que añade nuestro propio proxy, no la cadena entera
+  // que el cliente puede inventarse. Ver MEJ-30.
+  app.set('trust proxy', 1);
 
   app.setGlobalPrefix('v1');
 

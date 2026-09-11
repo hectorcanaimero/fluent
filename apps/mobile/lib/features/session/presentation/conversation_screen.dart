@@ -8,6 +8,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/api/turn_stream_event.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/speech_service.dart';
@@ -368,14 +369,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
       if (_pendingTimerEnd) {
         await _endSession(reason: 'timer');
       }
-    } on ApiException catch (_) {
+    } on ApiException catch (e) {
       if (!mounted) return;
       setState(() {
         final aIdx = assistantIndex;
         if (aIdx != null) _messages.removeAt(aIdx);
         _messages.removeAt(userIndex);
         _state = ConvState.reviewing;
-        _errorMessage = l10n.conversationSendErrorGeneric;
+        _errorMessage = l10nForApiError(e.code, l10n);
       });
     }
   }

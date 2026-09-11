@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -93,6 +95,17 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .createSession(kind: kind, topic: topic);
       if (!mounted) return;
       context.push('/session/${result.session.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // MEJ-10: ya hay una sesión abierta (por ejemplo, en otra pestaña o
+      // dispositivo) — vamos directo a ella en vez de mostrar un error.
+      if (e.code == ApiErrorCode.sessionAlreadyActive &&
+          e.activeSessionId != null) {
+        context.push('/session/${e.activeSessionId}');
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)

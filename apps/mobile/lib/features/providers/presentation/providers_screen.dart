@@ -7,6 +7,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/env.dart';
 import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/providers_data.dart';
@@ -91,6 +92,8 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
       if (!completed) return;
       await ref.read(authControllerProvider.notifier).refresh();
       _reload();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = l10nForApiError(e.code, l10n));
     } catch (_) {
       if (mounted) setState(() => _error = l10n.providersErrorGeneric);
     } finally {
@@ -136,6 +139,8 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
       await ref.read(fluentApiProvider).disconnectProvider(provider);
       await ref.read(authControllerProvider.notifier).refresh();
       _reload();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = l10nForApiError(e.code, l10n));
     } catch (_) {
       if (mounted) setState(() => _error = l10n.providersErrorGeneric);
     }
@@ -156,7 +161,7 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
         setState(() {
           _error = e.code == ApiErrorCode.providerKeyInvalid
               ? l10n.providersGeminiKeyInvalid
-              : l10n.providersErrorGeneric;
+              : l10nForApiError(e.code, l10n);
         });
       }
     } finally {
@@ -283,6 +288,8 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             briefModel: !isChatRole ? modelId : (pref?.briefModel ?? modelId),
           );
       _reload();
+    } on ApiException catch (e) {
+      if (mounted) setState(() => _error = l10nForApiError(e.code, l10n));
     } catch (_) {
       if (mounted) setState(() => _error = l10n.providersErrorGeneric);
     }

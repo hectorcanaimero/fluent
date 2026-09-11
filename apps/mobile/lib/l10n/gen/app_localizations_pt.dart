@@ -40,6 +40,76 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonRetry => 'Tentar de novo';
 
   @override
+  String get errorGeneric => 'Ocorreu um erro. Tente de novo.';
+
+  @override
+  String get errorUnauthenticated => 'Sua sessão expirou. Entre de novo.';
+
+  @override
+  String get errorForbidden => 'Você não tem permissão para fazer isso.';
+
+  @override
+  String get errorNotOnboarded => 'Ainda falta completar seu perfil.';
+
+  @override
+  String get errorValidation => 'Revise os dados e tente de novo.';
+
+  @override
+  String get errorInvitationInvalid => 'Esse código de convite não é válido.';
+
+  @override
+  String get errorInvitationUsed => 'Esse código de convite já foi usado.';
+
+  @override
+  String get errorInvitationExpired => 'Esse código de convite expirou.';
+
+  @override
+  String get errorAlreadyInGroup => 'Você já está em um grupo.';
+
+  @override
+  String get errorProviderNotConnected =>
+      'Conecte um provedor para poder praticar.';
+
+  @override
+  String get errorProviderKeyInvalid => 'Essa chave não é válida.';
+
+  @override
+  String get errorModelNotAvailable => 'Esse modelo não está disponível agora.';
+
+  @override
+  String get errorSessionNotActive => 'Essa sessão não está mais ativa.';
+
+  @override
+  String get errorSessionAlreadyActive => 'Você já tem uma sessão aberta.';
+
+  @override
+  String get errorLlmUnavailable =>
+      'O tutor não está disponível agora. Tente de novo em instantes.';
+
+  @override
+  String get errorRateLimited =>
+      'Você fez muitas solicitações seguidas. Espere um momento.';
+
+  @override
+  String get errorNotReady =>
+      'Ainda não está pronto. Tente de novo em instantes.';
+
+  @override
+  String get errorNotFound => 'Não encontramos isso.';
+
+  @override
+  String get errorInternal =>
+      'Tivemos um problema do nosso lado. Tente de novo.';
+
+  @override
+  String get errorChallengeNotAvailable =>
+      'Esse desafio não está mais disponível.';
+
+  @override
+  String get errorTurnsDailyCap =>
+      'Você atingiu o máximo de turnos hoje. Amanhã a gente continua.';
+
+  @override
   String get formFieldRequired => 'Este campo é obrigatório.';
 
   @override

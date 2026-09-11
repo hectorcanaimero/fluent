@@ -93,12 +93,12 @@ describe('toProgressResultDto · resto de campos', () => {
       longestStreak: 10,
       sessionsThisWeek: 2,
       correctionsTrend: [],
+      grace: 'available',
     });
   });
 
-  it('no expone `grace`: no está en SPEC-02 §4.5 ni en el modelo de la app', () => {
-    const dto = toProgressResultDto(summary({ grace: 'used' }));
-
-    expect(dto).not.toHaveProperty('grace');
+  it('expone `grace` con el valor que calcula src/game (MAL-27)', () => {
+    expect(toProgressResultDto(summary({ grace: 'used' })).grace).toBe('used');
+    expect(toProgressResultDto(summary({ grace: 'available' })).grace).toBe('available');
   });
 });

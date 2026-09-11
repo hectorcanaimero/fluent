@@ -12,11 +12,17 @@ class AsyncBody<T> extends StatelessWidget {
     required this.snapshot,
     required this.builder,
     required this.onRetry,
+    this.skeleton,
   });
 
   final AsyncSnapshot<T> snapshot;
   final Widget Function(T data) builder;
   final VoidCallback onRetry;
+
+  /// MEJ-02: skeleton por pantalla mientras carga, en vez del spinner
+  /// genérico. `null` conserva el spinner (pantallas que todavía no tienen
+  /// uno propio).
+  final WidgetBuilder? skeleton;
 
   @override
   Widget build(BuildContext context) {
@@ -47,7 +53,10 @@ class AsyncBody<T> extends StatelessWidget {
       );
     }
     if (!snapshot.hasData) {
-      return const Center(child: CircularProgressIndicator());
+      final skeletonBuilder = skeleton;
+      return skeletonBuilder != null
+          ? skeletonBuilder(context)
+          : const Center(child: CircularProgressIndicator());
     }
     return builder(snapshot.data as T);
   }

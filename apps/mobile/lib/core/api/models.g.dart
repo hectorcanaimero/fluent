@@ -32,6 +32,18 @@ Map<String, dynamic> _$ProfileToJson(_Profile instance) => <String, dynamic>{
   'userId': instance.userId,
 };
 
+_PutProfileResult _$PutProfileResultFromJson(Map<String, dynamic> json) =>
+    _PutProfileResult(
+      profile: Profile.fromJson(json['profile'] as Map<String, dynamic>),
+      xpAwarded: (json['xpAwarded'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$PutProfileResultToJson(_PutProfileResult instance) =>
+    <String, dynamic>{
+      'profile': instance.profile,
+      'xpAwarded': instance.xpAwarded,
+    };
+
 _GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => _GroupInfo(
   id: json['id'] as String,
   name: json['name'] as String,
@@ -102,6 +114,7 @@ _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
           ?.map((e) => e as String)
           .toList() ??
       const <String>[],
+  courtesySessionAvailable: json['courtesySessionAvailable'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
@@ -114,6 +127,7 @@ Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
       'activeSessionId': instance.activeSessionId,
       'interestsCatalog': instance.interestsCatalog,
       'pendingActions': instance.pendingActions,
+      'courtesySessionAvailable': instance.courtesySessionAvailable,
     };
 
 _GroupMember _$GroupMemberFromJson(Map<String, dynamic> json) => _GroupMember(
@@ -301,6 +315,7 @@ _SessionInfo _$SessionInfoFromJson(Map<String, dynamic> json) => _SessionInfo(
   endedAt: json['endedAt'] as String?,
   xpEarned: (json['xpEarned'] as num?)?.toInt(),
   modelUsed: json['modelUsed'] as String?,
+  courtesy: json['courtesy'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$SessionInfoToJson(_SessionInfo instance) =>
@@ -312,6 +327,7 @@ Map<String, dynamic> _$SessionInfoToJson(_SessionInfo instance) =>
       'endedAt': instance.endedAt,
       'xpEarned': instance.xpEarned,
       'modelUsed': instance.modelUsed,
+      'courtesy': instance.courtesy,
     };
 
 _SessionOpening _$SessionOpeningFromJson(Map<String, dynamic> json) =>

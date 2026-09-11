@@ -34,6 +34,25 @@ HomeData _homeData({
       group: const GroupInfo(id: 'g1', name: 'Grupo'),
       members: members,
     ),
+    // MAL-29: yourGroupPosition ahora se calcula sobre el leaderboard
+    // semanal, no sobre `GroupInfo.members` — se arma con el mismo orden
+    // (por xp) para no cambiar la intención de estos tests.
+    leaderboard: LeaderboardResult(
+      weekStart: '2026-09-07',
+      rows:
+          members
+              .map(
+                (m) => LeaderboardRow(
+                  userId: m.userId,
+                  displayName: m.displayName,
+                  xpWeek: m.xp,
+                  sessionsWeek: 0,
+                  streak: m.streak,
+                ),
+              )
+              .toList()
+            ..sort((a, b) => b.xpWeek.compareTo(a.xpWeek)),
+    ),
     suggestions: const SessionSuggestions(topics: [], roleplays: [], news: []),
     pendingFactsCount: 0,
     sessionsToday: 0,

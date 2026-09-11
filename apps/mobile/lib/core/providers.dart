@@ -129,7 +129,9 @@ final timezoneProvider = FutureProvider<String>((ref) async {
 /// invalida al conectar/desconectar un proveedor (`ProvidersScreen`).
 final canPracticeProvider = FutureProvider<bool>((ref) async {
   final me = await ref.watch(fluentApiProvider).getMe();
-  return me.hasActiveProvider;
+  // MAL-24: sin proveedor propio, la sesión de cortesía también habilita
+  // practicar — ver `HomeData.canPractice`.
+  return me.hasActiveProvider || me.courtesySessionAvailable;
 });
 
 final authControllerProvider =

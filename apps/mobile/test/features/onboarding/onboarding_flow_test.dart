@@ -67,15 +67,9 @@ Future<void> _pumpOnboarding(
   await tester.pumpAndSettle();
 }
 
-Future<void> _goThroughNameAndLevel(WidgetTester tester) async {
-  await tester.enterText(
-    find.byKey(const Key('onboarding_name_field')),
-    'María',
-  );
-  await tester.pump();
-  await tester.tap(find.byKey(const Key('onboarding_continue_button')));
-  await tester.pumpAndSettle();
-
+/// MAL-24: el onboarding ya no pide el nombre (lo pidió el registro) —
+/// arranca directo en el paso de nivel.
+Future<void> _goThroughLevel(WidgetTester tester) async {
   await tester.tap(find.byKey(const Key('onboarding_level_intermediate')));
   await tester.pumpAndSettle();
   await tester.tap(find.byKey(const Key('onboarding_continue_button')));
@@ -87,7 +81,7 @@ void main() {
     final container = await _authenticatedContainer();
     addTearDown(container.dispose);
     await _pumpOnboarding(tester, container);
-    await _goThroughNameAndLevel(tester);
+    await _goThroughLevel(tester);
 
     // Estamos en el paso de intereses: seleccionamos solo 2.
     await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
@@ -117,7 +111,7 @@ void main() {
     final container = await _authenticatedContainer();
     addTearDown(container.dispose);
     await _pumpOnboarding(tester, container);
-    await _goThroughNameAndLevel(tester);
+    await _goThroughLevel(tester);
 
     await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
     await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
@@ -136,6 +130,41 @@ void main() {
   });
 
   testWidgets(
+    'MAL-24: al terminar sin proveedor conectado, ya no fuerza /providers',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await api.disconnectProvider('openrouter');
+      final container = ProviderContainer(
+        overrides: [
+          tokenStoreProvider.overrideWithValue(
+            InMemoryTokenStore()
+              ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
+          ),
+          fluentApiProvider.overrideWith((ref) => api),
+          timezoneProvider.overrideWith((ref) async => 'UTC'),
+        ],
+      );
+      await container.read(authControllerProvider.notifier).bootstrap();
+      addTearDown(container.dispose);
+      await _pumpOnboarding(tester, container);
+      await _goThroughLevel(tester);
+
+      await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
+      await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
+      await tester.tap(
+        find.byKey(const Key('onboarding_interest_movies-series')),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('onboarding_continue_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('HOME_SCREEN'), findsOneWidget);
+      expect(find.text('PROVIDERS_SCREEN'), findsNothing);
+    },
+  );
+
+  testWidgets(
     'MAL-12: usa la timezone inyectada, no el valor fijo de Buenos Aires',
     (tester) async {
       final api = FakeApi(artificialDelay: Duration.zero);
@@ -152,7 +181,7 @@ void main() {
       await container.read(authControllerProvider.notifier).bootstrap();
       addTearDown(container.dispose);
       await _pumpOnboarding(tester, container);
-      await _goThroughNameAndLevel(tester);
+      await _goThroughLevel(tester);
 
       await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
       await tester.tap(find.byKey(const Key('onboarding_interest_technology')));

@@ -29,6 +29,10 @@ dependencies:
   # Almacenamiento seguro
   flutter_secure_storage: ^9.2.2
 
+  # Preferencias locales (no sensibles): horarios de recordatorios, flags
+  # de "ya se preguntó esto" (MAL-10, MAL-24, MAL-28).
+  shared_preferences: ^2.3.2
+
   # Voz
   speech_to_text: ^7.0.0
   flutter_tts: ^4.2.0

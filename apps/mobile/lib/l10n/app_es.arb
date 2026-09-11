@@ -58,7 +58,7 @@
   "registerErrorInvitationUsed": "Ese código de invitación ya se usó.",
   "registerErrorInvitationExpired": "Ese código de invitación venció.",
   "registerInvitationPendingTitle": "Tu cuenta ya está creada",
-  "registerInvitationPendingBody": "El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.",
+  "registerInvitationPendingBody": "El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.",
   "registerInvitationRetryButton": "Reintentar código",
   "registerInvitationContinueButton": "Continuar sin grupo por ahora",
   "loginEmailInvalid": "Ingresá un email válido.",
@@ -71,9 +71,6 @@
   "onboardingContinueButton": "Continuar",
   "onboardingFinishButton": "Terminar",
   "onboardingErrorGeneric": "Algo salió mal. Probá de nuevo.",
-  "onboardingNameHeadline": "¿Cómo te llamamos?",
-  "onboardingNameSubtitle": "Así te van a ver tus compañeros de grupo.",
-  "onboardingNameLabel": "Nombre",
   "onboardingLevelHeadline": "¿Cómo está tu inglés ahora mismo?",
   "onboardingLevelSubtitle": "Sin presión. Nos vamos a ajustar sobre la marcha, esto solo marca tu punto de partida.",
   "onboardingLevelBeginnerTitle": "Principiante",
@@ -359,5 +356,72 @@
   "settingsDeleteAccountConfirm": "Borrar cuenta",
   "authOfflineTitle": "No pudimos conectar",
   "authOfflineBody": "Revisá tu conexión a internet y probá de nuevo. Tu sesión sigue guardada.",
-  "authRetry": "Reintentar"
+  "authRetry": "Reintentar",
+  "summaryTooShortTitle": "Sesión corta",
+  "summaryTooShortBody": "Con 3 minutos y 2 respuestas ya cuenta. ¿Otra ahora?",
+  "summaryTooShortRetryButton": "Practicar de nuevo",
+  "summaryFirstValidSessionBanner": "Primera sesión hecha. El tutor ya está tomando notas para la próxima.",
+  "settingsInvitationTitle": "Código de invitación",
+  "settingsInvitationHint": "Ingresá el código de tu grupo",
+  "settingsInvitationSubmit": "Unirme al grupo",
+  "settingsInvitationSuccess": "¡Listo! Ya sos parte del grupo.",
+  "commonUndo": "Deshacer",
+  "memoryFactDeleted": "Hecho borrado.",
+  "commonXpAmount": "{amount} XP",
+  "@commonXpAmount": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "commonEmptyValue": "—",
+  "summaryXpDelta": "+{amount}",
+  "@summaryXpDelta": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "correctionCategoryPastSimple": "Pasado simple",
+  "correctionCategoryPresentPerfect": "Presente perfecto",
+  "correctionCategoryArticles": "Artículos",
+  "correctionCategoryPrepositions": "Preposiciones",
+  "correctionCategoryWordOrder": "Orden de las palabras",
+  "correctionCategorySubjectVerb": "Concordancia sujeto-verbo",
+  "correctionCategoryPlurals": "Plurales",
+  "correctionCategoryVocabulary": "Vocabulario",
+  "correctionCategoryPronunciationHint": "Pronunciación",
+  "correctionCategoryFalseFriend": "Falso amigo",
+  "correctionCategoryPhrasalVerb": "Verbo frasal",
+  "correctionCategoryConditional": "Condicional",
+  "correctionCategoryModal": "Verbo modal",
+  "correctionCategoryOther": "Otro",
+  "summaryLevelUpBanner": "¡Subiste de nivel! Ahora sos {level}.",
+  "@summaryLevelUpBanner": {
+    "placeholders": {
+      "level": {"type": "String"}
+    }
+  },
+  "summaryShareStreakButton": "Compartir tu racha",
+  "commonComingSoon": "Pronto",
+  "settingsReminderNotificationTitle": "Fluent",
+  "settingsReminderNotificationBody": "Es hora de tu práctica de inglés de 10 minutos.",
+  "onboardingStepIndicator": "Paso {step} de {total}",
+  "@onboardingStepIndicator": {
+    "placeholders": {
+      "step": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "onboardingXpAwarded": "¡Perfil completo! +{amount} XP",
+  "@onboardingXpAwarded": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "homeChecklistTitle": "Para arrancar",
+  "homeChecklistProfile": "Perfil listo",
+  "homeChecklistProvider": "Conectar IA",
+  "homeChecklistFirstSession": "Primera sesión de 3 min",
+  "homeCourtesyPracticeButton": "Probá tu primera sesión sin conectar nada",
+  "summaryCourtesyBanner": "Esa fue tu sesión de cortesía.",
+  "summaryCourtesyConnectButton": "Para seguir, conectá tu cuenta gratis (2 minutos)"
 }

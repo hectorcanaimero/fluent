@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../data/reminder_prefs.dart';
 
 /// Ajustes (Pen "10 Profile" -> `/settings`). Perfil, zona horaria,
 /// recordatorios locales (SPEC-06 §8), idioma, cuenta y borrar cuenta.
@@ -21,20 +25,83 @@ class SettingsScreen extends ConsumerStatefulWidget {
 }
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
-  late Future<Profile> _future;
-  TimeOfDay _morning = const TimeOfDay(hour: 8, minute: 30);
-  TimeOfDay _evening = const TimeOfDay(hour: 20, minute: 30);
-  bool _streakAlert = true;
-  bool _soundEffects = true;
+  late Future<MeResponse> _future;
+  // MAL-10: valores por defecto compartidos con `reminder_prefs.dart` —
+  // se pisan en cuanto `_loadReminderPrefs` resuelve, si había algo guardado.
+  TimeOfDay _morning = kReminderMorningDefault;
+  TimeOfDay _evening = kReminderEveningDefault;
+
+  // MAL-10: "Alerta de racha" y "Sonido" quedan deshabilitados con la
+  // etiqueta "Pronto" — el valor ya no importa hasta que existan de verdad.
+  final bool _streakAlert = false;
+  final bool _soundEffects = false;
+
+  // MAL-14: código de invitación para quien se registró sin grupo.
+  final _invitationCodeController = TextEditingController();
+  bool _redeeming = false;
+  String? _invitationErrorMessage;
 
   @override
   void initState() {
     super.initState();
     _loadProfile();
+    _loadReminderPrefs();
+  }
+
+  Future<void> _loadReminderPrefs() async {
+    final (morning, evening) = await loadReminderTimes();
+    if (!mounted) return;
+    setState(() {
+      _morning = morning;
+      _evening = evening;
+    });
+  }
+
+  @override
+  void dispose() {
+    _invitationCodeController.dispose();
+    super.dispose();
   }
 
   void _loadProfile() {
-    _future = ref.read(fluentApiProvider).getMe().then((me) => me.profile);
+    _future = ref.read(fluentApiProvider).getMe();
+  }
+
+  Future<void> _redeemInvitationCode() async {
+    final l10n = AppLocalizations.of(context);
+    final code = _invitationCodeController.text.trim();
+    if (code.isEmpty) return;
+    setState(() {
+      _redeeming = true;
+      _invitationErrorMessage = null;
+    });
+    try {
+      await ref.read(fluentApiProvider).redeemInvitation(code);
+      if (!mounted) return;
+      _invitationCodeController.clear();
+      // El grupo recién asignado cambia `me.group` (esta pantalla) y
+      // `HomeData.group`/`leaderboard` (MAL-29): ambos se recargan.
+      ref.invalidate(homeDataProvider);
+      setState(_loadProfile);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10n.settingsInvitationSuccess)));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _invitationErrorMessage = switch (e.code) {
+          ApiErrorCode.invitationInvalid =>
+            l10n.registerErrorInvitationInvalid,
+          ApiErrorCode.invitationUsed => l10n.registerErrorInvitationUsed,
+          ApiErrorCode.invitationExpired =>
+            l10n.registerErrorInvitationExpired,
+          ApiErrorCode.alreadyInGroup => l10n.registerErrorGeneric,
+          _ => l10nForApiError(e.code, l10n),
+        };
+      });
+    } finally {
+      if (mounted) setState(() => _redeeming = false);
+    }
   }
 
   Future<void> _pickTime({required bool morning}) async {
@@ -50,9 +117,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _evening = picked;
       }
     });
-    await ref
-        .read(reminderServiceProvider)
-        .scheduleDaily(morning: _morning, evening: _evening);
+    await saveReminderTimes(morning: _morning, evening: _evening);
+    // MAL-10: sin el permiso, `scheduleDaily` "funciona" pero la
+    // notificación nunca aparece — pedirlo acá, al activar un recordatorio,
+    // en vez de esperar a que alguien se pregunte por qué nunca sonó.
+    await Permission.notification.request();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    await ref.read(reminderServiceProvider).scheduleDaily(
+      morning: _morning,
+      evening: _evening,
+      title: l10n.settingsReminderNotificationTitle,
+      body: l10n.settingsReminderNotificationBody,
+    );
   }
 
   void _setLocale(Locale? locale) {
@@ -88,7 +165,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       ),
     );
     if (confirmed != true) return;
-    await ref.read(fluentApiProvider).deleteAccount();
+    // MEJ-08: antes un fallo acá (por ejemplo, sin red) no mostraba nada —
+    // el diálogo simplemente se cerraba y la cuenta seguía intacta sin que
+    // quien la borra se enterara de que no pasó nada.
+    try {
+      await ref.read(fluentApiProvider).deleteAccount();
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+      return;
+    }
     await ref.read(authControllerProvider.notifier).logout();
     ref.invalidate(homeDataProvider);
   }
@@ -99,22 +187,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return Scaffold(
       appBar: AppBar(title: Text(l10n.settingsTitle)),
       body: SafeArea(
-        child: FutureBuilder<Profile>(
+        child: FutureBuilder<MeResponse>(
           future: _future,
           builder: (context, snapshot) {
-            return AsyncBody<Profile>(
+            return AsyncBody<MeResponse>(
               snapshot: snapshot,
               onRetry: () => setState(_loadProfile),
-              builder: (profile) => ListView(
+              builder: (me) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
                   Text(
-                    profile.displayName,
+                    me.profile.displayName,
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    profile.level,
+                    me.profile.level,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -122,10 +210,36 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     spacing: AppSpacing.sm,
                     runSpacing: AppSpacing.sm,
                     children: [
-                      for (final id in profile.interests)
+                      for (final id in me.profile.interests)
                         Chip(label: Text(interestLabel(l10n, id))),
                     ],
                   ),
+                  // MAL-14: quien se registró sin grupo (código inválido, o
+                  // "continuar sin grupo") no tenía forma de sumarse
+                  // después — la única entrada de código era el registro.
+                  if (me.group == null) ...[
+                    const SizedBox(height: AppSpacing.xl),
+                    Text(
+                      l10n.settingsInvitationTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    TextField(
+                      key: const Key('settings_invitation_code_field'),
+                      controller: _invitationCodeController,
+                      decoration: InputDecoration(
+                        hintText: l10n.settingsInvitationHint,
+                        errorText: _invitationErrorMessage,
+                      ),
+                      textCapitalization: TextCapitalization.characters,
+                    ),
+                    const SizedBox(height: AppSpacing.xs),
+                    OutlinedButton(
+                      key: const Key('settings_invitation_submit_button'),
+                      onPressed: _redeeming ? null : _redeemInvitationCode,
+                      child: Text(l10n.settingsInvitationSubmit),
+                    ),
+                  ],
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     l10n.settingsLanguageTitle,
@@ -171,17 +285,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: Text(_evening.format(context)),
                     onTap: () => _pickTime(morning: false),
                   ),
+                  // MAL-10: ninguno de los dos existe todavía de verdad
+                  // (no hay detección de racha en riesgo ni sonidos) — antes
+                  // el switch prometía algo que tocarlo no hacía nada.
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.settingsStreakAlert),
+                    subtitle: Text(l10n.commonComingSoon),
                     value: _streakAlert,
-                    onChanged: (v) => setState(() => _streakAlert = v),
+                    onChanged: null,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.settingsSoundEffects),
+                    subtitle: Text(l10n.commonComingSoon),
                     value: _soundEffects,
-                    onChanged: (v) => setState(() => _soundEffects = v),
+                    onChanged: null,
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   OutlinedButton(

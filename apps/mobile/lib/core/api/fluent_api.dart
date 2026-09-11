@@ -10,7 +10,10 @@ import 'turn_stream_event.dart';
 abstract class FluentApi {
   // 4.1 Cuenta y grupo
   Future<MeResponse> getMe();
-  Future<Profile> putProfile({
+
+  /// MEJ-14: la respuesta incluye `xpAwarded` (+20, una sola vez) cuando
+  /// esta llamada completa el onboarding — ver [PutProfileResult].
+  Future<PutProfileResult> putProfile({
     required String displayName,
     required String level,
     required List<String> interests,

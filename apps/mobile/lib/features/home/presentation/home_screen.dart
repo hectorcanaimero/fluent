@@ -1,12 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
+import '../../../features/session/domain/session_prefs.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/home_data.dart';
 
@@ -91,6 +94,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         child: AsyncBody<HomeData>(
           snapshot: snapshot,
           onRetry: _reload,
+          skeleton: (context) => const _HomeSkeleton(),
           builder: (data) => RefreshIndicator(
             onRefresh: () async {
               _reload();
@@ -101,11 +105,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 _HeaderRow(data: data),
                 const SizedBox(height: AppSpacing.lg),
+                _OnboardingChecklist(data: data),
                 _StreakCard(data: data),
                 const SizedBox(height: AppSpacing.lg),
                 _LevelCard(data: data),
                 const SizedBox(height: AppSpacing.xl),
-                if (!data.hasActiveProvider) ...[
+                // MAL-24: con la sesión de cortesía disponible, el banner de
+                // "conectá un proveedor" no aplica — la promesa es
+                // justamente que se puede practicar sin conectar nada.
+                if (!data.hasActiveProvider && !data.hasCourtesySession) ...[
                   _NoProviderBanner(),
                   const SizedBox(height: AppSpacing.lg),
                 ],
@@ -149,6 +157,39 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   }
 }
 
+/// MEJ-02: forma aproximada de la pantalla (saludo + racha + nivel +
+/// temas rápidos) mientras `homeDataProvider` resuelve sus ~5 llamadas en
+/// paralelo, en vez de un spinner sin relación con lo que va a aparecer.
+class _HomeSkeleton extends StatelessWidget {
+  const _HomeSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        Row(
+          children: [
+            Expanded(child: SkeletonBox(height: 28)),
+            SizedBox(width: AppSpacing.md),
+            SkeletonBox(width: 44, height: 44, borderRadius: 999),
+          ],
+        ),
+        SizedBox(height: AppSpacing.lg),
+        SkeletonBox(height: 88, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.md),
+        SkeletonBox(height: 96, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonBox(width: 160, height: 20),
+        SizedBox(height: AppSpacing.md),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
+    );
+  }
+}
+
 class _HeaderRow extends StatelessWidget {
   const _HeaderRow({required this.data});
 
@@ -172,25 +213,120 @@ class _HeaderRow extends StatelessWidget {
             style: Theme.of(context).textTheme.headlineMedium,
           ),
         ),
-        InkWell(
-          key: const Key('home_avatar_button'),
-          onTap: () => context.push('/settings'),
-          borderRadius: BorderRadius.circular(999),
-          child: CircleAvatar(
-            radius: 22,
-            backgroundColor: AppColors.primarySoft,
-            child: Text(
-              data.displayName.isNotEmpty
-                  ? data.displayName[0].toUpperCase()
-                  : '?',
-              style: const TextStyle(
-                fontWeight: FontWeight.w700,
-                color: AppColors.primaryDark,
+        Semantics(
+          button: true,
+          label: l10n.settingsTitle,
+          child: InkWell(
+            key: const Key('home_avatar_button'),
+            onTap: () => context.push('/settings'),
+            borderRadius: BorderRadius.circular(999),
+            child: CircleAvatar(
+              radius: 22,
+              backgroundColor: AppColors.primarySoft,
+              child: Text(
+                data.displayName.isNotEmpty
+                    ? data.displayName[0].toUpperCase()
+                    : '?',
+                style: const TextStyle(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.primaryDark,
+                ),
               ),
             ),
           ),
         ),
       ],
+    );
+  }
+}
+
+/// MEJ-14: checklist de arranque (perfil, proveedor, primera sesión) —
+/// desaparece en cuanto los 3 están listos, no se queda ocupando lugar para
+/// siempre. "Primera sesión de 3 min" reusa el mismo flag de
+/// `SharedPreferences` que MAL-28 usa para "primera sesión válida".
+class _OnboardingChecklist extends StatelessWidget {
+  const _OnboardingChecklist({required this.data});
+
+  final HomeData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _hasFirstValidSession(),
+      builder: (context, snapshot) {
+        final firstSessionDone = snapshot.data ?? false;
+        final providerConnected = data.hasActiveProvider;
+        if (providerConnected && firstSessionDone) {
+          return const SizedBox.shrink();
+        }
+        final l10n = AppLocalizations.of(context);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.homeChecklistTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _ChecklistItem(label: l10n.homeChecklistProfile, done: true),
+                _ChecklistItem(
+                  label: l10n.homeChecklistProvider,
+                  done: providerConnected,
+                ),
+                _ChecklistItem(
+                  label: l10n.homeChecklistFirstSession,
+                  done: firstSessionDone,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static Future<bool> _hasFirstValidSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(kFirstValidSessionPrefsKey) ?? false;
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  const _ChecklistItem({required this.label, required this.done});
+
+  final String label;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: done ? AppColors.primary : AppColors.textMuted,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            label,
+            style: TextStyle(
+              color: done ? AppColors.textPrimary : AppColors.textMuted,
+              decoration: done ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -389,10 +525,16 @@ class _PrimaryCta extends StatelessWidget {
         ],
       );
     }
+    // MAL-24: sin proveedor propio pero con cortesía disponible, el botón
+    // adelanta la promesa ("no hace falta conectar nada") en vez de mostrar
+    // el texto genérico de siempre.
+    final label = (!data.hasActiveProvider && data.hasCourtesySession)
+        ? l10n.homeCourtesyPracticeButton
+        : l10n.homePracticeButton;
     return ElevatedButton(
       key: const Key('home_practice_button'),
       onPressed: blocked ? null : onPractice,
-      child: Text(l10n.homePracticeButton),
+      child: Text(label),
     );
   }
 }
@@ -435,9 +577,11 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final members = [...data.group!.members]
-      ..sort((a, b) => b.xp.compareTo(a.xp));
-    final top3 = members.take(3).toList();
+    // MAL-29: XP semanal del leaderboard, no el XP total de
+    // `GroupInfo.members` — son números distintos y mostrar el total acá
+    // no coincide con lo que se ve al entrar a Grupo.
+    final rows = data.leaderboard?.rows ?? const [];
+    final top3 = rows.take(3).toList();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -463,13 +607,13 @@ class _GroupCard extends StatelessWidget {
               ),
             ],
           ),
-          for (final m in top3)
+          for (final row in top3)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Row(
                 children: [
-                  Expanded(child: Text(m.displayName)),
-                  Text('${m.xp} XP'),
+                  Expanded(child: Text(row.displayName)),
+                  Text(l10n.commonXpAmount(row.xpWeek)),
                 ],
               ),
             ),
@@ -525,10 +669,14 @@ class _QuickTopics extends StatelessWidget {
           runSpacing: AppSpacing.sm,
           children: [
             for (final topic in topics)
-              ActionChip(
-                label: Text(topic),
-                backgroundColor: AppColors.primarySoft,
-                onPressed: starting ? null : () => onTopic(topic),
+              Semantics(
+                button: true,
+                label: topic,
+                child: ActionChip(
+                  label: Text(topic),
+                  backgroundColor: AppColors.primarySoft,
+                  onPressed: starting ? null : () => onTopic(topic),
+                ),
               ),
           ],
         ),

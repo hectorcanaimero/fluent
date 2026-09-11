@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/api/models.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
@@ -39,8 +38,12 @@ extension on _Level {
 }
 
 class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
+  // MAL-24: el nombre ya lo pidió el registro — pedirlo de nuevo acá era
+  // literalmente la misma pregunta dos veces seguidas. Quedan 2 pasos:
+  // nivel (0) e intereses (1).
+  static const _totalSteps = 2;
+
   int _step = 0;
-  final _nameController = TextEditingController();
   _Level? _level;
   final Set<String> _selectedInterests = {};
   bool _showAllInterests = false;
@@ -48,14 +51,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
   String? _errorMessage;
   List<String>? _catalog;
 
-  @override
-  void dispose() {
-    _nameController.dispose();
-    super.dispose();
-  }
-
-  bool get _canContinueFromStep0 => _nameController.text.trim().isNotEmpty;
-  bool get _canContinueFromStep1 => _level != null;
+  bool get _canContinueFromStep0 => _level != null;
   bool get _canFinish =>
       _selectedInterests.length >= _kMinInterests &&
       _selectedInterests.length <= _kMaxInterests;
@@ -80,10 +76,14 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
       final locale = Localizations.localeOf(context);
       final apiLocale = locale.languageCode == 'pt' ? 'pt-BR' : 'es';
       final timezone = await ref.read(timezoneProvider.future);
-      await ref
+      // MAL-24: el nombre ya se cargó en el registro — se reenvía tal cual
+      // en vez de pedirlo de nuevo (`putProfile` lo requiere igual).
+      final displayName =
+          ref.read(authControllerProvider).me?.profile.displayName ?? '';
+      final result = await ref
           .read(fluentApiProvider)
           .putProfile(
-            displayName: _nameController.text.trim(),
+            displayName: displayName,
             level: _level!.apiValue,
             interests: _selectedInterests.toList(),
             timezone: timezone,
@@ -91,9 +91,20 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           );
       await ref.read(authControllerProvider.notifier).refresh();
       if (!mounted) return;
-      final me = ref.read(authControllerProvider).me;
-      final hasProvider = me?.hasActiveProvider ?? false;
-      context.go(hasProvider ? '/' : '/providers');
+      // MEJ-14: se muestra antes de navegar — una vez que `context.go`
+      // reemplaza el árbol, el snackbar de esta pantalla desaparece con él.
+      final xpAwarded = result.xpAwarded;
+      if (xpAwarded != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(l10n.onboardingXpAwarded(xpAwarded))),
+        );
+        await Future.delayed(const Duration(milliseconds: 900));
+        if (!mounted) return;
+      }
+      // MAL-24: ya no fuerza `/providers` sin proveedor — con la sesión de
+      // cortesía, Home puede ofrecer practicar igual; el checklist ahí
+      // mismo recuerda "Conectar IA" sin bloquear el paso.
+      context.go('/');
     } on ApiException catch (e) {
       setState(() => _errorMessage = l10nForApiError(e.code, l10n));
     } catch (_) {
@@ -107,8 +118,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
     switch (_step) {
       case 0:
         if (_canContinueFromStep0) setState(() => _step = 1);
-      case 1:
-        if (_canContinueFromStep1) setState(() => _step = 2);
       default:
         if (_canFinish) _finish();
     }
@@ -119,7 +128,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
     final l10n = AppLocalizations.of(context);
     final canContinue = switch (_step) {
       0 => _canContinueFromStep0,
-      1 => _canContinueFromStep1,
       _ => _canFinish,
     };
 
@@ -131,16 +139,16 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                 onPressed: () => setState(() => _step -= 1),
               )
             : null,
+        // MEJ-14: "Paso n de 2" — antes no había ninguna señal de cuánto
+        // faltaba, solo la flecha de volver a partir del segundo paso.
+        title: Text(l10n.onboardingStepIndicator(_step + 1, _totalSteps)),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: Padding(
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.screenPad),
           child: switch (_step) {
-            0 => _NameStep(
-              controller: _nameController,
-              onChanged: () => setState(() {}),
-            ),
-            1 => _LevelStep(
+            0 => _LevelStep(
               selected: _level,
               onSelected: (level) => setState(() => _level = level),
             ),
@@ -194,7 +202,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                         ),
                       )
                     : Text(
-                        _step == 2
+                        _step == _totalSteps - 1
                             ? l10n.onboardingFinishButton
                             : l10n.onboardingContinueButton,
                       ),
@@ -203,41 +211,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           ),
         ),
       ),
-    );
-  }
-}
-
-class _NameStep extends StatelessWidget {
-  const _NameStep({required this.controller, required this.onChanged});
-
-  final TextEditingController controller;
-  final VoidCallback onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const SizedBox(height: AppSpacing.xl),
-        Text(
-          l10n.onboardingNameHeadline,
-          style: Theme.of(context).textTheme.headlineMedium,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Text(
-          l10n.onboardingNameSubtitle,
-          style: Theme.of(context).textTheme.bodyMedium,
-        ),
-        const SizedBox(height: AppSpacing.xl),
-        TextField(
-          key: const Key('onboarding_name_field'),
-          controller: controller,
-          autofocus: true,
-          onChanged: (_) => onChanged(),
-          decoration: InputDecoration(labelText: l10n.onboardingNameLabel),
-        ),
-      ],
     );
   }
 }
@@ -310,27 +283,32 @@ class _LevelCard extends StatelessWidget {
     final isSelected = selected == level;
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.md),
-      child: InkWell(
-        key: Key('onboarding_level_${level.name}'),
-        onTap: () => onSelected(level),
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.lg),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primarySoft : AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.lg),
-            border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.border,
-              width: isSelected ? 2 : 1,
+      child: Semantics(
+        button: true,
+        selected: isSelected,
+        label: '$title. $subtitle',
+        child: InkWell(
+          key: Key('onboarding_level_${level.name}'),
+          onTap: () => onSelected(level),
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primarySoft : AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.border,
+                width: isSelected ? 2 : 1,
+              ),
             ),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(title, style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.xs),
-              Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
-            ],
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium),
+                const SizedBox(height: AppSpacing.xs),
+                Text(subtitle, style: Theme.of(context).textTheme.bodySmall),
+              ],
+            ),
           ),
         ),
       ),
@@ -431,27 +409,34 @@ class _InterestChip extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.pill),
-      child: Container(
-        padding: const EdgeInsets.symmetric(
-          horizontal: AppSpacing.lg,
-          vertical: AppSpacing.sm,
-        ),
-        decoration: BoxDecoration(
-          color: isSelected ? AppColors.primarySoft : AppColors.surface,
-          borderRadius: BorderRadius.circular(AppRadius.pill),
-          border: Border.all(
-            color: isSelected ? AppColors.primary : AppColors.border,
+    return Semantics(
+      button: true,
+      selected: isSelected,
+      label: label,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.pill),
+        child: Container(
+          padding: const EdgeInsets.symmetric(
+            horizontal: AppSpacing.lg,
+            vertical: AppSpacing.sm,
           ),
-        ),
-        child: Text(
-          label,
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w600,
-            color: isSelected ? AppColors.primaryDark : AppColors.textPrimary,
+          decoration: BoxDecoration(
+            color: isSelected ? AppColors.primarySoft : AppColors.surface,
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+            border: Border.all(
+              color: isSelected ? AppColors.primary : AppColors.border,
+            ),
+          ),
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+              color: isSelected
+                  ? AppColors.primaryDark
+                  : AppColors.textPrimary,
+            ),
           ),
         ),
       ),

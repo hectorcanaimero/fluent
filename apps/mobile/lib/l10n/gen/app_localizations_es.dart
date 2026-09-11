@@ -201,7 +201,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get registerInvitationPendingBody =>
-      'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.';
+      'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.';
 
   @override
   String get registerInvitationRetryButton => 'Reintentar código';
@@ -240,16 +240,6 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingErrorGeneric => 'Algo salió mal. Probá de nuevo.';
-
-  @override
-  String get onboardingNameHeadline => '¿Cómo te llamamos?';
-
-  @override
-  String get onboardingNameSubtitle =>
-      'Así te van a ver tus compañeros de grupo.';
-
-  @override
-  String get onboardingNameLabel => 'Nombre';
 
   @override
   String get onboardingLevelHeadline => '¿Cómo está tu inglés ahora mismo?';
@@ -948,4 +938,142 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authRetry => 'Reintentar';
+
+  @override
+  String get summaryTooShortTitle => 'Sesión corta';
+
+  @override
+  String get summaryTooShortBody =>
+      'Con 3 minutos y 2 respuestas ya cuenta. ¿Otra ahora?';
+
+  @override
+  String get summaryTooShortRetryButton => 'Practicar de nuevo';
+
+  @override
+  String get summaryFirstValidSessionBanner =>
+      'Primera sesión hecha. El tutor ya está tomando notas para la próxima.';
+
+  @override
+  String get settingsInvitationTitle => 'Código de invitación';
+
+  @override
+  String get settingsInvitationHint => 'Ingresá el código de tu grupo';
+
+  @override
+  String get settingsInvitationSubmit => 'Unirme al grupo';
+
+  @override
+  String get settingsInvitationSuccess => '¡Listo! Ya sos parte del grupo.';
+
+  @override
+  String get commonUndo => 'Deshacer';
+
+  @override
+  String get memoryFactDeleted => 'Hecho borrado.';
+
+  @override
+  String commonXpAmount(int amount) {
+    return '$amount XP';
+  }
+
+  @override
+  String get commonEmptyValue => '—';
+
+  @override
+  String summaryXpDelta(int amount) {
+    return '+$amount';
+  }
+
+  @override
+  String get correctionCategoryPastSimple => 'Pasado simple';
+
+  @override
+  String get correctionCategoryPresentPerfect => 'Presente perfecto';
+
+  @override
+  String get correctionCategoryArticles => 'Artículos';
+
+  @override
+  String get correctionCategoryPrepositions => 'Preposiciones';
+
+  @override
+  String get correctionCategoryWordOrder => 'Orden de las palabras';
+
+  @override
+  String get correctionCategorySubjectVerb => 'Concordancia sujeto-verbo';
+
+  @override
+  String get correctionCategoryPlurals => 'Plurales';
+
+  @override
+  String get correctionCategoryVocabulary => 'Vocabulario';
+
+  @override
+  String get correctionCategoryPronunciationHint => 'Pronunciación';
+
+  @override
+  String get correctionCategoryFalseFriend => 'Falso amigo';
+
+  @override
+  String get correctionCategoryPhrasalVerb => 'Verbo frasal';
+
+  @override
+  String get correctionCategoryConditional => 'Condicional';
+
+  @override
+  String get correctionCategoryModal => 'Verbo modal';
+
+  @override
+  String get correctionCategoryOther => 'Otro';
+
+  @override
+  String summaryLevelUpBanner(String level) {
+    return '¡Subiste de nivel! Ahora sos $level.';
+  }
+
+  @override
+  String get summaryShareStreakButton => 'Compartir tu racha';
+
+  @override
+  String get commonComingSoon => 'Pronto';
+
+  @override
+  String get settingsReminderNotificationTitle => 'Fluent';
+
+  @override
+  String get settingsReminderNotificationBody =>
+      'Es hora de tu práctica de inglés de 10 minutos.';
+
+  @override
+  String onboardingStepIndicator(int step, int total) {
+    return 'Paso $step de $total';
+  }
+
+  @override
+  String onboardingXpAwarded(int amount) {
+    return '¡Perfil completo! +$amount XP';
+  }
+
+  @override
+  String get homeChecklistTitle => 'Para arrancar';
+
+  @override
+  String get homeChecklistProfile => 'Perfil listo';
+
+  @override
+  String get homeChecklistProvider => 'Conectar IA';
+
+  @override
+  String get homeChecklistFirstSession => 'Primera sesión de 3 min';
+
+  @override
+  String get homeCourtesyPracticeButton =>
+      'Probá tu primera sesión sin conectar nada';
+
+  @override
+  String get summaryCourtesyBanner => 'Esa fue tu sesión de cortesía.';
+
+  @override
+  String get summaryCourtesyConnectButton =>
+      'Para seguir, conectá tu cuenta gratis (2 minutos)';
 }

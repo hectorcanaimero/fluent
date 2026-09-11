@@ -31,6 +31,21 @@ abstract class Profile with _$Profile {
 }
 
 @freezed
+abstract class PutProfileResult with _$PutProfileResult {
+  const factory PutProfileResult({
+    required Profile profile,
+
+    /// MEJ-14: XP otorgado por completar el onboarding (+20, una sola vez,
+    /// SPEC-07). `null` mientras la API no lo mande — la UI no debe
+    /// mostrar nada en ese caso, igual que `ProgressResult.grace` (MAL-27).
+    int? xpAwarded,
+  }) = _PutProfileResult;
+
+  factory PutProfileResult.fromJson(Map<String, dynamic> json) =>
+      _$PutProfileResultFromJson(json);
+}
+
+@freezed
 abstract class GroupInfo with _$GroupInfo {
   const factory GroupInfo({
     required String id,
@@ -78,6 +93,11 @@ abstract class MeResponse with _$MeResponse {
     String? activeSessionId,
     @Default(<String>[]) List<String> interestsCatalog,
     @Default(<String>[]) List<String> pendingActions,
+
+    /// MAL-24: `true` si no hay proveedor propio conectado y todavía no se
+    /// usó la sesión de cortesía (con la credencial del owner del grupo,
+    /// modelos gratis). `false` por defecto mientras la API no lo mande.
+    @Default(false) bool courtesySessionAvailable,
   }) = _MeResponse;
 
   factory MeResponse.fromJson(Map<String, dynamic> json) =>
@@ -230,6 +250,10 @@ abstract class SessionInfo with _$SessionInfo {
     String? endedAt,
     int? xpEarned,
     String? modelUsed,
+
+    /// MAL-24: `true` cuando la sesión se abrió con la sesión de cortesía
+    /// (credencial del owner del grupo, sin proveedor propio conectado).
+    @Default(false) bool courtesy,
   }) = _SessionInfo;
 
   factory SessionInfo.fromJson(Map<String, dynamic> json) =>

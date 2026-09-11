@@ -449,7 +449,7 @@ abstract class AppLocalizations {
   /// No description provided for @registerInvitationPendingBody.
   ///
   /// In es, this message translates to:
-  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.'**
+  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.'**
   String get registerInvitationPendingBody;
 
   /// No description provided for @registerInvitationRetryButton.
@@ -523,24 +523,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Algo salió mal. Probá de nuevo.'**
   String get onboardingErrorGeneric;
-
-  /// No description provided for @onboardingNameHeadline.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Cómo te llamamos?'**
-  String get onboardingNameHeadline;
-
-  /// No description provided for @onboardingNameSubtitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Así te van a ver tus compañeros de grupo.'**
-  String get onboardingNameSubtitle;
-
-  /// No description provided for @onboardingNameLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Nombre'**
-  String get onboardingNameLabel;
 
   /// No description provided for @onboardingLevelHeadline.
   ///
@@ -1795,6 +1777,252 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reintentar'**
   String get authRetry;
+
+  /// No description provided for @summaryTooShortTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión corta'**
+  String get summaryTooShortTitle;
+
+  /// No description provided for @summaryTooShortBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Con 3 minutos y 2 respuestas ya cuenta. ¿Otra ahora?'**
+  String get summaryTooShortBody;
+
+  /// No description provided for @summaryTooShortRetryButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicar de nuevo'**
+  String get summaryTooShortRetryButton;
+
+  /// No description provided for @summaryFirstValidSessionBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera sesión hecha. El tutor ya está tomando notas para la próxima.'**
+  String get summaryFirstValidSessionBanner;
+
+  /// No description provided for @settingsInvitationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de invitación'**
+  String get settingsInvitationTitle;
+
+  /// No description provided for @settingsInvitationHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el código de tu grupo'**
+  String get settingsInvitationHint;
+
+  /// No description provided for @settingsInvitationSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Unirme al grupo'**
+  String get settingsInvitationSubmit;
+
+  /// No description provided for @settingsInvitationSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Listo! Ya sos parte del grupo.'**
+  String get settingsInvitationSuccess;
+
+  /// No description provided for @commonUndo.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get commonUndo;
+
+  /// No description provided for @memoryFactDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho borrado.'**
+  String get memoryFactDeleted;
+
+  /// No description provided for @commonXpAmount.
+  ///
+  /// In es, this message translates to:
+  /// **'{amount} XP'**
+  String commonXpAmount(int amount);
+
+  /// No description provided for @commonEmptyValue.
+  ///
+  /// In es, this message translates to:
+  /// **'—'**
+  String get commonEmptyValue;
+
+  /// No description provided for @summaryXpDelta.
+  ///
+  /// In es, this message translates to:
+  /// **'+{amount}'**
+  String summaryXpDelta(int amount);
+
+  /// No description provided for @correctionCategoryPastSimple.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasado simple'**
+  String get correctionCategoryPastSimple;
+
+  /// No description provided for @correctionCategoryPresentPerfect.
+  ///
+  /// In es, this message translates to:
+  /// **'Presente perfecto'**
+  String get correctionCategoryPresentPerfect;
+
+  /// No description provided for @correctionCategoryArticles.
+  ///
+  /// In es, this message translates to:
+  /// **'Artículos'**
+  String get correctionCategoryArticles;
+
+  /// No description provided for @correctionCategoryPrepositions.
+  ///
+  /// In es, this message translates to:
+  /// **'Preposiciones'**
+  String get correctionCategoryPrepositions;
+
+  /// No description provided for @correctionCategoryWordOrder.
+  ///
+  /// In es, this message translates to:
+  /// **'Orden de las palabras'**
+  String get correctionCategoryWordOrder;
+
+  /// No description provided for @correctionCategorySubjectVerb.
+  ///
+  /// In es, this message translates to:
+  /// **'Concordancia sujeto-verbo'**
+  String get correctionCategorySubjectVerb;
+
+  /// No description provided for @correctionCategoryPlurals.
+  ///
+  /// In es, this message translates to:
+  /// **'Plurales'**
+  String get correctionCategoryPlurals;
+
+  /// No description provided for @correctionCategoryVocabulary.
+  ///
+  /// In es, this message translates to:
+  /// **'Vocabulario'**
+  String get correctionCategoryVocabulary;
+
+  /// No description provided for @correctionCategoryPronunciationHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronunciación'**
+  String get correctionCategoryPronunciationHint;
+
+  /// No description provided for @correctionCategoryFalseFriend.
+  ///
+  /// In es, this message translates to:
+  /// **'Falso amigo'**
+  String get correctionCategoryFalseFriend;
+
+  /// No description provided for @correctionCategoryPhrasalVerb.
+  ///
+  /// In es, this message translates to:
+  /// **'Verbo frasal'**
+  String get correctionCategoryPhrasalVerb;
+
+  /// No description provided for @correctionCategoryConditional.
+  ///
+  /// In es, this message translates to:
+  /// **'Condicional'**
+  String get correctionCategoryConditional;
+
+  /// No description provided for @correctionCategoryModal.
+  ///
+  /// In es, this message translates to:
+  /// **'Verbo modal'**
+  String get correctionCategoryModal;
+
+  /// No description provided for @correctionCategoryOther.
+  ///
+  /// In es, this message translates to:
+  /// **'Otro'**
+  String get correctionCategoryOther;
+
+  /// No description provided for @summaryLevelUpBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Subiste de nivel! Ahora sos {level}.'**
+  String summaryLevelUpBanner(String level);
+
+  /// No description provided for @summaryShareStreakButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Compartir tu racha'**
+  String get summaryShareStreakButton;
+
+  /// No description provided for @commonComingSoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronto'**
+  String get commonComingSoon;
+
+  /// No description provided for @settingsReminderNotificationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fluent'**
+  String get settingsReminderNotificationTitle;
+
+  /// No description provided for @settingsReminderNotificationBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Es hora de tu práctica de inglés de 10 minutos.'**
+  String get settingsReminderNotificationBody;
+
+  /// No description provided for @onboardingStepIndicator.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {step} de {total}'**
+  String onboardingStepIndicator(int step, int total);
+
+  /// No description provided for @onboardingXpAwarded.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Perfil completo! +{amount} XP'**
+  String onboardingXpAwarded(int amount);
+
+  /// No description provided for @homeChecklistTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Para arrancar'**
+  String get homeChecklistTitle;
+
+  /// No description provided for @homeChecklistProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil listo'**
+  String get homeChecklistProfile;
+
+  /// No description provided for @homeChecklistProvider.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar IA'**
+  String get homeChecklistProvider;
+
+  /// No description provided for @homeChecklistFirstSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera sesión de 3 min'**
+  String get homeChecklistFirstSession;
+
+  /// No description provided for @homeCourtesyPracticeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Probá tu primera sesión sin conectar nada'**
+  String get homeCourtesyPracticeButton;
+
+  /// No description provided for @summaryCourtesyBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa fue tu sesión de cortesía.'**
+  String get summaryCourtesyBanner;
+
+  /// No description provided for @summaryCourtesyConnectButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Para seguir, conectá tu cuenta gratis (2 minutos)'**
+  String get summaryCourtesyConnectButton;
 }
 
 class _AppLocalizationsDelegate

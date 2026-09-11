@@ -5,6 +5,8 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
+import '../../../features/session/domain/correction_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// Progreso (SPEC-06 §9 del diseño): XP, nivel, streaks y tendencia de
@@ -40,6 +42,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
             return AsyncBody<ProgressResult>(
               snapshot: snapshot,
               onRetry: () => setState(_loadProgress),
+              skeleton: (context) => const _ProgressSkeleton(),
               builder: (progress) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
@@ -93,7 +96,11 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                         ),
                         child: Row(
                           children: [
-                            Expanded(child: Text(item.category)),
+                            Expanded(
+                              child: Text(
+                                correctionCategoryLabel(l10n, item.category),
+                              ),
+                            ),
                             Text(
                               l10n.progressCorrectionsTrendCounts(
                                 item.count7d,
@@ -110,6 +117,36 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
           },
         ),
       ),
+    );
+  }
+}
+
+/// MEJ-02: forma aproximada (título + fila de 3 stats + tendencia).
+class _ProgressSkeleton extends StatelessWidget {
+  const _ProgressSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(width: 140, height: 28),
+        SizedBox(height: AppSpacing.lg),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          children: [
+            SkeletonBox(width: 64, height: 48),
+            SkeletonBox(width: 64, height: 48),
+            SkeletonBox(width: 64, height: 48),
+          ],
+        ),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonBox(width: 180, height: 20),
+        SizedBox(height: AppSpacing.md),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

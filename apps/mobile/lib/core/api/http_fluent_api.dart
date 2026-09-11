@@ -22,7 +22,7 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<Profile> putProfile({
+  Future<PutProfileResult> putProfile({
     required String displayName,
     required String level,
     required List<String> interests,
@@ -39,7 +39,11 @@ class HttpFluentApi implements FluentApi {
         'locale': locale,
       },
     );
-    return Profile.fromJson(res.data as Map<String, dynamic>);
+    final data = res.data as Map<String, dynamic>;
+    return PutProfileResult(
+      profile: Profile.fromJson(data),
+      xpAwarded: data['xpAwarded'] as int?,
+    );
   });
 
   @override

@@ -11,6 +11,7 @@ class HomeData {
     required this.me,
     required this.progress,
     required this.group,
+    required this.leaderboard,
     required this.suggestions,
     required this.pendingFactsCount,
     required this.sessionsToday,
@@ -22,6 +23,11 @@ class HomeData {
   /// `null` si el usuario todavía no tiene grupo (por ejemplo, si el
   /// código de invitación falló en el registro, ver T2).
   final GroupResponse? group;
+
+  /// MAL-29: `_GroupCard` mostraba el XP total (`GroupMember.xp`) en vez del
+  /// XP semanal del leaderboard — dos números que no coinciden y confunden
+  /// contra lo que se ve en Grupo. `null` junto con [group].
+  final LeaderboardResult? leaderboard;
   final SessionSuggestions suggestions;
   final int pendingFactsCount;
 
@@ -33,11 +39,15 @@ class HomeData {
 
   bool get hasActiveProvider => me.hasActiveProvider;
 
+  /// MAL-24: sin proveedor propio, la sesión de cortesía (credencial del
+  /// owner del grupo, modelos gratis) también habilita practicar.
+  bool get hasCourtesySession => me.courtesySessionAvailable;
+
   /// MAL-13: única fuente de verdad de "se puede empezar una sesión ahora"
   /// para el CTA de Home, los chips de temas rápidos y la pestaña
   /// Practicar — antes cada uno lo derivaba (o no) por su cuenta y quedaban
   /// inconsistentes entre sí.
-  bool get canPractice => hasActiveProvider;
+  bool get canPractice => hasActiveProvider || hasCourtesySession;
 
   /// `pendingActions` de `GET /me` (SPEC-02 §4.1) solo llega poblado al
   /// owner del grupo (la API la calcula por `userId` de quien pide `/me`,
@@ -52,16 +62,19 @@ class HomeData {
   String get displayName => me.profile.displayName;
 
   int? get yourGroupPosition {
-    final g = group;
-    if (g == null) return null;
-    final sorted = [...g.members]..sort((a, b) => b.xp.compareTo(a.xp));
+    // MAL-29: la posición se calcula sobre el mismo leaderboard semanal que
+    // pinta `_GroupCard`, no sobre el XP total de `GroupInfo.members` — antes
+    // podían no coincidir (por ejemplo, alguien con mucho XP viejo pero
+    // inactivo esta semana).
+    final rows = leaderboard?.rows;
+    if (rows == null) return null;
     // MEJ-20: comparar por userId evita confundir a dos miembros con el
     // mismo nombre visible; se cae a displayName mientras `GET /me` no
     // mande `userId` (ver Profile.userId).
     final myUserId = me.profile.userId;
     final idx = myUserId != null
-        ? sorted.indexWhere((m) => m.userId == myUserId)
-        : sorted.indexWhere((m) => m.displayName == displayName);
+        ? rows.indexWhere((r) => r.userId == myUserId)
+        : rows.indexWhere((r) => r.displayName == displayName);
     return idx == -1 ? null : idx + 1;
   }
 }
@@ -82,12 +95,16 @@ final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
     api.getMemory(),
     api.getSessions(limit: 20),
     if (me.group != null) api.getGroup(),
+    if (me.group != null) api.getLeaderboard(),
   ]);
   final progress = results[0] as ProgressResult;
   final suggestions = results[1] as SessionSuggestions;
   final memory = results[2] as MemoryResult;
   final sessions = results[3] as SessionListResult;
   final group = me.group != null ? results[4] as GroupResponse : null;
+  final leaderboard = me.group != null
+      ? results[5] as LeaderboardResult
+      : null;
 
   final today = DateTime.now();
   final sessionsToday = sessions.items.where((s) {
@@ -102,6 +119,7 @@ final homeDataProvider = FutureProvider.autoDispose<HomeData>((ref) async {
     me: me,
     progress: progress,
     group: group,
+    leaderboard: leaderboard,
     suggestions: suggestions,
     pendingFactsCount: memory.facts.pending.length,
     sessionsToday: sessionsToday,

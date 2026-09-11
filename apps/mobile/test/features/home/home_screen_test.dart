@@ -92,9 +92,9 @@ void main() {
   );
 
   testWidgets(
-    'sin proveedor conectado: banner bloqueante y CTA deshabilitado',
+    'sin proveedor y sin cortesía disponible: banner bloqueante y CTA deshabilitado',
     (tester) async {
-      final api = FakeApi(artificialDelay: Duration.zero);
+      final api = FakeApi(artificialDelay: Duration.zero)..courtesyUsed = true;
       await api.disconnectProvider('openrouter');
       await _pumpHome(tester, api);
 
@@ -103,6 +103,23 @@ void main() {
         find.byKey(const Key('home_practice_button')),
       );
       expect(practiceButton.onPressed, isNull);
+    },
+  );
+
+  testWidgets(
+    'MAL-24: sin proveedor pero con cortesía disponible, el CTA invita a probar sin conectar nada',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await api.disconnectProvider('openrouter');
+      await _pumpHome(tester, api);
+
+      expect(find.byKey(const Key('home_no_provider_banner')), findsNothing);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.homeCourtesyPracticeButton), findsOneWidget);
+      final practiceButton = tester.widget<ElevatedButton>(
+        find.byKey(const Key('home_practice_button')),
+      );
+      expect(practiceButton.onPressed, isNotNull);
     },
   );
 
@@ -162,9 +179,10 @@ void main() {
   });
 
   testWidgets(
-    'MAL-13: sin proveedor activo, un chip de tema rápido manda a Proveedores en vez de crear la sesión',
+    'MAL-13: sin proveedor y sin cortesía, un chip de tema rápido manda a Proveedores en vez de crear la sesión',
     (tester) async {
-      final api = FakeApi(artificialDelay: Duration.zero);
+      final api = FakeApi(artificialDelay: Duration.zero)
+        ..courtesyUsed = true;
       await api.disconnectProvider('openrouter');
       await _pumpHomeWithRouter(tester, api);
 

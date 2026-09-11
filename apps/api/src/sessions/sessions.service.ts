@@ -25,6 +25,8 @@ import {
 import { openingFor } from './session-openings.js';
 import { NEWS_MAX_AGE_DAYS, SESSION_RANDOM, type SessionRandom } from './sessions.constants.js';
 import { roundLatency, toSessionInfoDto } from './sessions.mapper.js';
+import { ChallengesService } from '../social/challenges.service.js';
+import type { ChallengesResultDto } from '../social/social.types.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { CreateSessionResultDto } from './sessions.types.js';
 
@@ -37,6 +39,8 @@ const PROVIDER_NOT_CONNECTED_MESSAGE =
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NO_BOSS_TOPIC_MESSAGE =
   'No quedan temas de reto disponibles para tu nivel; elige otro tipo de sesión.';
+const CHALLENGE_NOT_AVAILABLE_MESSAGE =
+  'Ese desafío ya no está disponible; elige otro o empieza una sesión normal.';
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -63,6 +67,7 @@ export class SessionsService {
     private readonly credentials: CredentialsService,
     private readonly llm: LlmService,
     private readonly boss: BossService,
+    private readonly challenges: ChallengesService,
     private readonly configService: ConfigService<Env, true>,
     @Inject(SESSION_RANDOM) private readonly random: SessionRandom,
   ) {}
@@ -91,7 +96,12 @@ export class SessionsService {
     // 4. Validación por `kind` (SPEC-04 §3.2).
     const scenario = await this.resolveScenario(userId, dto, profile);
 
-    // 4.b El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
+    // 4.b El desafío se valida contra la lista real del usuario (SPEC-07 §7).
+    // Va **antes** del rechazo de boss: si esto falla con 422, la petición no
+    // debe haber quemado la oferta de boss del día.
+    await this.requireOfferedChallenge(userId, dto, scenario);
+
+    // 4.c El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
     // otra cosa, se registra el rechazo de hoy (SPEC-04 §3.2, SPEC-07 §4).
     await this.recordBossSkipIfDeclined(userId, dto.kind, profile);
 
@@ -252,6 +262,64 @@ export class SessionsService {
 
     if (pending) {
       await this.boss.recordSkip(userId);
+    }
+  }
+
+  /**
+   * SPEC-07 §7: `challengeFromUserId` solo vale si ese usuario aparece **hoy**
+   * en los desafíos que `GET /challenges` le ofrece a quien abre la sesión,
+   * con el mismo tema.
+   *
+   * Sin esta comprobación el campo era auto-otorgable: bastaba con mandar el
+   * `id` de cualquier compañero de grupo para marcar la sesión como desafío y
+   * cobrar su bono de XP al cerrarla (MAL-19 del peine fino).
+   *
+   * La comparación es contra `scenario.topic` —la etiqueta que se guarda en
+   * `sessions.topic`— y no contra `dto.topic`: es el mismo valor que
+   * `ChallengesService` devuelve como `topic` del candidato, y para `roleplay`
+   * y `news` el cliente manda `roleplayId`/`newsItemId` en vez del texto.
+   *
+   * **No** se exige que el `kind` coincida.  `GET /challenges` ofrece desafíos
+   * de los cuatro `kind`, pero no expone el `roleplayId` ni el `newsItemId`
+   * del original, así que la app los reabre todos como `free_topic` con el
+   * tema legible (ver `group_screen.dart._acceptChallenge`). Exigir el `kind`
+   * dejaba sin aceptar todo desafío que no fuera `free_topic`, y para `boss`
+   * era imposible por construcción: `resolveBoss` ignora el tema que mande el
+   * cliente y elige el siguiente del propio solicitante.
+   *
+   * Un usuario sin grupo no tiene desafíos posibles: `listChallenges` responde
+   * `NOT_ONBOARDED` y aquí se traduce al mismo 422 que cualquier otro desafío
+   * inexistente, para no filtrar por qué falló.
+   */
+  private async requireOfferedChallenge(
+    userId: string,
+    dto: CreateSessionDto,
+    scenario: SessionScenario,
+  ): Promise<void> {
+    // `== null` y no `=== undefined`: `@IsOptional()` deja pasar un `null`
+    // explícito, y `createSession` más abajo ya lo trata como "sin desafío"
+    // (`dto.challengeFromUserId ?? null`).
+    if (dto.challengeFromUserId == null) {
+      return;
+    }
+
+    let offered: ChallengesResultDto;
+    try {
+      offered = await this.challenges.listChallenges(userId);
+    } catch (error) {
+      if (error instanceof ApiException && error.code === 'NOT_ONBOARDED') {
+        throw ApiException.of('CHALLENGE_NOT_AVAILABLE', CHALLENGE_NOT_AVAILABLE_MESSAGE);
+      }
+      throw error;
+    }
+
+    const match = offered.items.some(
+      (item) =>
+        item.fromUserId === dto.challengeFromUserId && item.topic === scenario.topic,
+    );
+
+    if (!match) {
+      throw ApiException.of('CHALLENGE_NOT_AVAILABLE', CHALLENGE_NOT_AVAILABLE_MESSAGE);
     }
   }
 

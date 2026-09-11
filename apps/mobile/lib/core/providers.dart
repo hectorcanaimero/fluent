@@ -34,10 +34,14 @@ final tokenRefresherProvider = Provider<TokenRefresher>((ref) {
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(
+  final client = ApiClient(
     tokenStore: ref.watch(tokenStoreProvider),
     tokenRefresher: ref.watch(tokenRefresherProvider),
   );
+  // Cierra el stream de `onSessionExpired` (MAL-02). En la app el cliente vive
+  // lo que la app, pero los tests crean y tiran contenedores a pares.
+  ref.onDispose(client.dispose);
+  return client;
 });
 
 /// La app entera depende de esta interfaz, nunca de `FakeApi` o
@@ -103,5 +107,11 @@ final authControllerProvider =
       return AuthController(
         tokenStore: ref.watch(tokenStoreProvider),
         api: ref.watch(fluentApiProvider),
+        // Revoca el refresh token en InsForge al cerrar sesión (MAL-02).
+        authClient: ref.watch(insforgeAuthClientProvider),
+        // Un 401 que no se pudo refrescar borra los tokens dentro de
+        // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
+        // la app quedaba "zombi" hasta reiniciarla (MAL-02).
+        sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
       );
     });

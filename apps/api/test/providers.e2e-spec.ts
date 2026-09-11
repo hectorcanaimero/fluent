@@ -195,7 +195,11 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
       const authUrl = new URL(startResponse.body.authUrl as string);
       expect(authUrl.origin + authUrl.pathname).toBe('https://openrouter.ai/auth');
       expect(authUrl.searchParams.get('code_challenge_method')).toBe('S256');
-      expect(authUrl.searchParams.get('callback_url')).toBe(CALLBACK_URL);
+      // OpenRouter vuelve al callback HTTPS de la API (el deep link queda
+      // guardado en la entrada de Redis); ver `startOpenRouterPkce`.
+      expect(authUrl.searchParams.get('callback_url')).toMatch(
+        new RegExp(`/v1/providers/openrouter/callback/${startResponse.body.codeVerifierId}$`),
+      );
       expect(startResponse.body.codeVerifierId).toMatch(/^[0-9a-f-]{36}$/);
 
       // 2. complete
@@ -289,7 +293,7 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
   );
 
   it(
-    'complete con un codeVerifierId inexistente responde 400 VALIDATION (no un 500)',
+    'complete con un codeVerifierId inexistente responde 403 FORBIDDEN (no un 500)',
     async () => {
       const user = await newUser('PKCE Caducado');
       handlers = { [OPENROUTER_KEYS_URL]: () => jsonResponse({ key: FAKE_OPENROUTER_KEY }) };
@@ -301,12 +305,97 @@ maybeDescribe('Proveedores y credenciales cifradas (e2e, InsForge feat-api)', ()
           code: FAKE_AUTH_CODE,
           codeVerifierId: '44444444-4444-4444-8444-444444444444',
         })
-        .expect(400);
+        .expect(403);
 
-      expect(response.body).toMatchObject({ error: 'VALIDATION', statusCode: 400 });
+      expect(response.body).toMatchObject({ error: 'FORBIDDEN', statusCode: 403 });
       // Ni siquiera se intentó canjear el código.
       expect(fetchCalls).toHaveLength(0);
       expect(await readCredentialRow(user.id, 'openrouter')).toBeNull();
+    },
+    60_000,
+  );
+
+  it(
+    'flujo nuevo (MAL-18): el callback público solo guarda el code y complete lo canjea',
+    async () => {
+      const user = await newUser('PKCE Callback');
+      handlers = { [OPENROUTER_KEYS_URL]: () => jsonResponse({ key: FAKE_OPENROUTER_KEY }) };
+
+      const startResponse = await request(app.getHttpServer())
+        .post('/v1/providers/openrouter/pkce/start')
+        .set(authHeader(user.accessToken))
+        .send({ callbackUrl: CALLBACK_URL })
+        .expect(201);
+      const { codeVerifierId } = startResponse.body as { codeVerifierId: string };
+
+      // El callback es público (sin bearer) y no escribe credencial ninguna.
+      const callbackResponse = await request(app.getHttpServer())
+        .get(`/v1/providers/openrouter/callback/${codeVerifierId}`)
+        .query({ code: FAKE_AUTH_CODE })
+        .expect(200);
+
+      expect(callbackResponse.text).toContain(`${CALLBACK_URL}?done=1`);
+      expect(fetchCalls).toHaveLength(0);
+      expect(await readCredentialRow(user.id, 'openrouter')).toBeNull();
+
+      // El canje ocurre solo con el bearer del dueño y sin mandar el code.
+      const completeResponse = await request(app.getHttpServer())
+        .post('/v1/providers/openrouter/pkce/complete')
+        .set(authHeader(user.accessToken))
+        .send({ codeVerifierId })
+        .expect(201);
+
+      expect(completeResponse.body).toMatchObject({ status: 'active', lastError: null });
+      expect(fetchCalls.some((call) => call.url === OPENROUTER_KEYS_URL)).toBe(true);
+      expect(await readCredentialRow(user.id, 'openrouter')).not.toBeNull();
+    },
+    60_000,
+  );
+
+  it(
+    'flujo nuevo (MAL-18): otro usuario no puede canjear el intento ajeno',
+    async () => {
+      const owner = await newUser('PKCE Duenio');
+      const attacker = await newUser('PKCE Intruso');
+      handlers = { [OPENROUTER_KEYS_URL]: () => jsonResponse({ key: FAKE_OPENROUTER_KEY }) };
+
+      const startResponse = await request(app.getHttpServer())
+        .post('/v1/providers/openrouter/pkce/start')
+        .set(authHeader(owner.accessToken))
+        .send({ callbackUrl: CALLBACK_URL })
+        .expect(201);
+      const { codeVerifierId } = startResponse.body as { codeVerifierId: string };
+
+      await request(app.getHttpServer())
+        .get(`/v1/providers/openrouter/callback/${codeVerifierId}`)
+        .query({ code: FAKE_AUTH_CODE })
+        .expect(200);
+
+      await request(app.getHttpServer())
+        .post('/v1/providers/openrouter/pkce/complete')
+        .set(authHeader(attacker.accessToken))
+        .send({ codeVerifierId })
+        .expect(403);
+
+      expect(fetchCalls).toHaveLength(0);
+      expect(await readCredentialRow(attacker.id, 'openrouter')).toBeNull();
+      expect(await readCredentialRow(owner.id, 'openrouter')).toBeNull();
+    },
+    60_000,
+  );
+
+  it(
+    'start rechaza un callbackUrl que no es el deep link ni el configurado (MAL-18)',
+    async () => {
+      const user = await newUser('PKCE Redirect');
+
+      const response = await request(app.getHttpServer())
+        .post('/v1/providers/openrouter/pkce/start')
+        .set(authHeader(user.accessToken))
+        .send({ callbackUrl: 'https://evil.test/robar' })
+        .expect(400);
+
+      expect(response.body).toMatchObject({ error: 'VALIDATION', statusCode: 400 });
     },
     60_000,
   );

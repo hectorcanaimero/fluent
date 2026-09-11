@@ -65,6 +65,8 @@ Cada feature: `data/` (API), `domain/` (modelos), `presentation/` (pantallas y w
 
 Redirección global en el router según `authState`: sin token → `/login`; con token y sin `onboarded` → `/onboarding`; sesión activa pendiente (`GET /me` devuelve `activeSessionId`) → `/session/:id`.
 
+El arranque solo cierra la sesión si `GET /me` responde `401`. Cualquier otro fallo (sin red, timeout, 5xx) conserva los tokens y deja `authState` en `error`, que el router manda al splash con «No pudimos conectar» y un botón **Reintentar**. Ese estado es exclusivo del arranque: un `/me` fallido en un refresco en caliente (tras conectar un proveedor o terminar el onboarding) no saca al usuario de la pantalla en la que está. Si el refresco de token falla ante un `401`, `ApiClient` borra los tokens y avisa por `onSessionExpired`, y `AuthController` pasa a `unauthenticated` para que el router vaya a `/login`. Al llegar al resumen de una sesión se limpia el `activeSessionId` local, si no el router seguiría empujando a la conversación ya cerrada.
+
 ## 4. Pantallas clave
 
 ### 4.1 Home

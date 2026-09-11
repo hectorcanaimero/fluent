@@ -3,6 +3,7 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv, Env } from './config/env.js';
+import { buildPinoHttpOptions } from './config/logger.js';
 import { RedisModule } from './redis/redis.module.js';
 import { InsforgeModule } from './insforge/insforge.module.js';
 import { QueuesModule } from './jobs/queues.module.js';
@@ -34,9 +35,9 @@ import { JobsModule } from './jobs/jobs.module.js';
     LoggerModule.forRootAsync({
       inject: [ConfigService],
       useFactory: (configService: ConfigService<Env, true>) => ({
-        pinoHttp: {
-          level: configService.get('LOG_LEVEL', { infer: true }),
-        },
+        pinoHttp: buildPinoHttpOptions({
+          LOG_LEVEL: configService.get('LOG_LEVEL', { infer: true }),
+        }),
       }),
     }),
     // Bus de eventos en proceso: `NestLlmEventBus` (PR-02/T4) emite

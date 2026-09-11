@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { BossService } from '../game/boss.service.js';
 import { LlmModule } from '../llm/llm.module.js';
+import { SocialModule } from '../social/social.module.js';
 import { InsforgeBossRepository } from './boss.repository.js';
 import { RedisBossSkipStore } from './boss-skip.store.js';
 import { EndSessionRepository } from './end-session.repository.js';
@@ -41,7 +42,10 @@ import { TurnsService } from './turns.service.js';
  *   para no duplicar esa lógica (SPEC-04 §6).
  */
 @Module({
-  imports: [LlmModule],
+  // `SocialModule` exporta `ChallengesService`, que `SessionsService` usa para
+  // comprobar que el `challengeFromUserId` recibido es un desafío realmente
+  // ofrecido (MAL-19).
+  imports: [LlmModule, SocialModule],
   controllers: [SessionsController],
   providers: [
     SessionsRepository,

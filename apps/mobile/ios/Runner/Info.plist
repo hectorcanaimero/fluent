@@ -41,6 +41,10 @@
 	</array>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Fluent usa el micrófono para que hables con el tutor. La transcripción se procesa en tu dispositivo.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Fluent usa el micrófono para que hables con el tutor. La transcripción se procesa en tu dispositivo.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

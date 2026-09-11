@@ -1753,6 +1753,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Reintentar'**
   String get authRetry;
+
+  /// No description provided for @summaryTooShortTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión corta'**
+  String get summaryTooShortTitle;
+
+  /// No description provided for @summaryTooShortBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Con 3 minutos y 2 respuestas ya cuenta. ¿Otra ahora?'**
+  String get summaryTooShortBody;
+
+  /// No description provided for @summaryTooShortRetryButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicar de nuevo'**
+  String get summaryTooShortRetryButton;
+
+  /// No description provided for @summaryFirstValidSessionBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera sesión hecha. El tutor ya está tomando notas para la próxima.'**
+  String get summaryFirstValidSessionBanner;
+
+  /// No description provided for @settingsInvitationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Código de invitación'**
+  String get settingsInvitationTitle;
+
+  /// No description provided for @settingsInvitationHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ingresá el código de tu grupo'**
+  String get settingsInvitationHint;
+
+  /// No description provided for @settingsInvitationSubmit.
+  ///
+  /// In es, this message translates to:
+  /// **'Unirme al grupo'**
+  String get settingsInvitationSubmit;
+
+  /// No description provided for @settingsInvitationSuccess.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Listo! Ya sos parte del grupo.'**
+  String get settingsInvitationSuccess;
+
+  /// No description provided for @commonUndo.
+  ///
+  /// In es, this message translates to:
+  /// **'Deshacer'**
+  String get commonUndo;
+
+  /// No description provided for @memoryFactDeleted.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecho borrado.'**
+  String get memoryFactDeleted;
 }
 
 class _AppLocalizationsDelegate

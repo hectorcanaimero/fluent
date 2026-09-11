@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
@@ -38,6 +39,28 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   late final Future<SessionDetailResult> _detailFuture = ref
       .read(fluentApiProvider)
       .getSession(widget.sessionId);
+
+  /// MAL-28: "primera sesión válida" no viene de la API (no hay un contador
+  /// de sesiones totales) — se guarda localmente la primera vez que
+  /// `xpEarned > 0`. Memoizado por instancia para no leer/escribir dos
+  /// veces si `_buildScaffold` se reconstruye.
+  static const _firstValidSessionPrefsKey = 'first_valid_session_done';
+  Future<bool>? _isFirstValidSessionFuture;
+
+  Future<bool> _isFirstValidSession(int xpEarned) {
+    return _isFirstValidSessionFuture ??= _computeIsFirstValidSession(
+      xpEarned,
+    );
+  }
+
+  Future<bool> _computeIsFirstValidSession(int xpEarned) async {
+    if (xpEarned <= 0) return false;
+    final prefs = await SharedPreferences.getInstance();
+    final alreadyDone = prefs.getBool(_firstValidSessionPrefsKey) ?? false;
+    if (alreadyDone) return false;
+    await prefs.setBool(_firstValidSessionPrefsKey, true);
+    return true;
+  }
 
   SessionSummary _summaryFromDetail(SessionDetailResult detail) {
     final started = DateTime.tryParse(detail.session.startedAt);
@@ -111,6 +134,10 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     required Future<List<Correction>> correctionsFuture,
   }) {
     final l10n = AppLocalizations.of(context);
+    // MAL-28: antes se celebraba igual una sesión demasiado corta para sumar
+    // XP/racha — el usuario no entendía por qué el resumen no reflejaba
+    // nada. Con `xpEarned == 0` cambia el título y ofrece reintentar ya.
+    final tooShort = summary.xpEarned == 0;
 
     return Scaffold(
       body: SafeArea(
@@ -121,10 +148,24 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
             children: [
               const SizedBox(height: AppSpacing.xl),
               Text(
-                l10n.summaryTitle,
+                tooShort ? l10n.summaryTooShortTitle : l10n.summaryTitle,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),
+              if (tooShort) ...[
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.summaryTooShortBody,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyMedium,
+                ),
+                const SizedBox(height: AppSpacing.md),
+                ElevatedButton(
+                  key: const Key('summary_too_short_retry_button'),
+                  onPressed: () => context.go('/session/new'),
+                  child: Text(l10n.summaryTooShortRetryButton),
+                ),
+              ],
               const SizedBox(height: AppSpacing.xl),
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
@@ -161,6 +202,22 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   color: AppColors.accentSoft,
                 ),
               ],
+              // MAL-28: la primera sesión que sí sumó XP ancla la promesa de
+              // memoria del tutor, para que quede claro que esto no termina
+              // acá.
+              FutureBuilder<bool>(
+                future: _isFirstValidSession(summary.xpEarned),
+                builder: (context, snapshot) {
+                  if (snapshot.data != true) return const SizedBox.shrink();
+                  return Padding(
+                    padding: const EdgeInsets.only(top: AppSpacing.md),
+                    child: _Banner(
+                      text: l10n.summaryFirstValidSessionBanner,
+                      color: AppColors.primarySoft,
+                    ),
+                  );
+                },
+              ),
               const SizedBox(height: AppSpacing.xl),
               Text(
                 l10n.summaryCorrectionsTitle,

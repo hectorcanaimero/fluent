@@ -435,9 +435,11 @@ class _GroupCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final members = [...data.group!.members]
-      ..sort((a, b) => b.xp.compareTo(a.xp));
-    final top3 = members.take(3).toList();
+    // MAL-29: XP semanal del leaderboard, no el XP total de
+    // `GroupInfo.members` — son números distintos y mostrar el total acá
+    // no coincide con lo que se ve al entrar a Grupo.
+    final rows = data.leaderboard?.rows ?? const [];
+    final top3 = rows.take(3).toList();
 
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
@@ -463,13 +465,13 @@ class _GroupCard extends StatelessWidget {
               ),
             ],
           ),
-          for (final m in top3)
+          for (final row in top3)
             Padding(
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Row(
                 children: [
-                  Expanded(child: Text(m.displayName)),
-                  Text('${m.xp} XP'),
+                  Expanded(child: Text(row.displayName)),
+                  Text('${row.xpWeek} XP'),
                 ],
               ),
             ),

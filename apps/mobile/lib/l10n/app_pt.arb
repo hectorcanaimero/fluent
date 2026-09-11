@@ -275,5 +275,15 @@
   "settingsDeleteAccountConfirm": "Apagar conta",
   "authOfflineTitle": "Não conseguimos conectar",
   "authOfflineBody": "Verifique sua conexão com a internet e tente de novo. Sua sessão continua salva.",
-  "authRetry": "Tentar de novo"
+  "authRetry": "Tentar de novo",
+  "summaryTooShortTitle": "Sessão curta",
+  "summaryTooShortBody": "Com 3 minutos e 2 respostas já conta. Outra agora?",
+  "summaryTooShortRetryButton": "Praticar de novo",
+  "summaryFirstValidSessionBanner": "Primeira sessão feita. O tutor já está anotando para a próxima.",
+  "settingsInvitationTitle": "Código de convite",
+  "settingsInvitationHint": "Digite o código do seu grupo",
+  "settingsInvitationSubmit": "Entrar no grupo",
+  "settingsInvitationSuccess": "Pronto! Agora você faz parte do grupo.",
+  "commonUndo": "Desfazer",
+  "memoryFactDeleted": "Fato apagado."
 }

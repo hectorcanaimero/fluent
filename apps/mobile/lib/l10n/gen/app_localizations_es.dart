@@ -923,4 +923,36 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authRetry => 'Reintentar';
+
+  @override
+  String get summaryTooShortTitle => 'Sesión corta';
+
+  @override
+  String get summaryTooShortBody =>
+      'Con 3 minutos y 2 respuestas ya cuenta. ¿Otra ahora?';
+
+  @override
+  String get summaryTooShortRetryButton => 'Practicar de nuevo';
+
+  @override
+  String get summaryFirstValidSessionBanner =>
+      'Primera sesión hecha. El tutor ya está tomando notas para la próxima.';
+
+  @override
+  String get settingsInvitationTitle => 'Código de invitación';
+
+  @override
+  String get settingsInvitationHint => 'Ingresá el código de tu grupo';
+
+  @override
+  String get settingsInvitationSubmit => 'Unirme al grupo';
+
+  @override
+  String get settingsInvitationSuccess => '¡Listo! Ya sos parte del grupo.';
+
+  @override
+  String get commonUndo => 'Deshacer';
+
+  @override
+  String get memoryFactDeleted => 'Hecho borrado.';
 }

@@ -3,6 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../features/home/domain/home_data.dart';
@@ -51,23 +53,74 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
     });
   }
 
+  /// MEJ-08: antes un fallo acá no mostraba nada — el hecho pendiente
+  /// desaparecía de la UI (por el `_reload` optimista implícito del rebuild)
+  /// sin que la confirmación hubiera llegado a guardarse.
+  void _showApiError(ApiException e) {
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+  }
+
   Future<void> _confirmFact(MemoryFact fact, String text) async {
-    await ref
-        .read(fluentApiProvider)
-        .patchFact(factId: fact.id, status: 'confirmed', text: text);
-    _reload();
+    try {
+      await ref
+          .read(fluentApiProvider)
+          .patchFact(factId: fact.id, status: 'confirmed', text: text);
+      _reload();
+    } on ApiException catch (e) {
+      _showApiError(e);
+    }
   }
 
   Future<void> _dismissFact(MemoryFact fact) async {
-    await ref
-        .read(fluentApiProvider)
-        .patchFact(factId: fact.id, status: 'dismissed');
-    _reload();
+    try {
+      await ref
+          .read(fluentApiProvider)
+          .patchFact(factId: fact.id, status: 'dismissed');
+      _reload();
+    } on ApiException catch (e) {
+      _showApiError(e);
+    }
   }
 
+  /// MEJ-08: "borrar" un hecho confirmado no lo elimina de una — lo pasa a
+  /// `dismissed` (ya no aparece ni en pendientes ni en confirmados) y ofrece
+  /// "Deshacer" (`patchFact` inverso, a `confirmed`) mientras dura el
+  /// snackbar.
   Future<void> _deleteFact(MemoryFact fact) async {
-    await ref.read(fluentApiProvider).deleteFact(fact.id);
-    _reload();
+    final l10n = AppLocalizations.of(context);
+    try {
+      await ref
+          .read(fluentApiProvider)
+          .patchFact(factId: fact.id, status: 'dismissed');
+      _reload();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(l10n.memoryFactDeleted),
+          action: SnackBarAction(
+            label: l10n.commonUndo,
+            onPressed: () => _undoDeleteFact(fact),
+          ),
+        ),
+      );
+    } on ApiException catch (e) {
+      _showApiError(e);
+    }
+  }
+
+  Future<void> _undoDeleteFact(MemoryFact fact) async {
+    try {
+      await ref
+          .read(fluentApiProvider)
+          .patchFact(factId: fact.id, status: 'confirmed');
+      _reload();
+    } on ApiException catch (e) {
+      _showApiError(e);
+    }
   }
 
   Future<void> _editConfirmedFact(MemoryFact fact) async {
@@ -76,10 +129,14 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
       builder: (ctx) => _EditFactDialog(initialText: fact.text),
     );
     if (newText != null && newText.isNotEmpty && newText != fact.text) {
-      await ref
-          .read(fluentApiProvider)
-          .patchFact(factId: fact.id, text: newText);
-      _reload();
+      try {
+        await ref
+            .read(fluentApiProvider)
+            .patchFact(factId: fact.id, text: newText);
+        _reload();
+      } on ApiException catch (e) {
+        _showApiError(e);
+      }
     }
   }
 

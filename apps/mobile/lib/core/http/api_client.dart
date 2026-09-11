@@ -30,9 +30,25 @@ class ApiClient {
     this.dio.interceptors.add(
       InterceptorsWrapper(
         onRequest: (options, handler) async {
-          final tokens = await _tokenStore.read();
-          if (tokens != null) {
-            options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+          // Un reintento ya trae el bearer que decidió `_retryWith`, y no
+          // tiene por qué ser el del almacén: si persistir el token nuevo
+          // falló, el almacén sigue teniendo el viejo y releerlo mandaría el
+          // reintento con el token que acaba de dar 401.
+          if (options.extra['fluent_retried'] == true &&
+              options.headers['Authorization'] != null) {
+            handler.next(options);
+            return;
+          }
+
+          try {
+            final tokens = await _tokenStore.read();
+            if (tokens != null) {
+              options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+            }
+          } catch (_) {
+            // Sin cabecera: la API responderá 401 y el flujo de `onError`
+            // decide. Mejor eso que tumbar la petición con la excepción del
+            // keystore.
           }
           handler.next(options);
         },
@@ -48,44 +64,36 @@ class ApiClient {
             // provocaban que todas esperaran un refresco —y, si el lock se
             // soltaba entre medias, alguna disparaba uno redundante que
             // invalidaba el token recién emitido.
-            final current = await _tokenStore.read();
-            final sentWith = error.requestOptions.headers['Authorization'];
-            if (current != null && sentWith != 'Bearer ${current.accessToken}') {
-              final options = error.requestOptions;
-              options.extra['fluent_retried'] = true;
-              options.headers['Authorization'] = 'Bearer ${current.accessToken}';
-              try {
-                handler.resolve(await this.dio.fetch(options));
-                return;
-              } on DioException catch (retryError) {
-                handler.next(retryError);
-                return;
-              }
+            final AuthTokens? current;
+            try {
+              current = await _tokenStore.read();
+            } catch (_) {
+              // No se pudo leer el almacén (keystore bloqueado, por ejemplo).
+              // Se deja pasar el 401 sin tocar nada: los tokens pueden ser
+              // perfectamente válidos.
+              handler.next(error);
+              return;
             }
 
-            final refreshed = await _refreshOnce();
-            if (refreshed != null) {
-              final options = error.requestOptions;
-              options.extra['fluent_retried'] = true;
-              options.headers['Authorization'] =
-                  'Bearer ${refreshed.accessToken}';
-              try {
-                final response = await this.dio.fetch(options);
-                handler.resolve(response);
-                return;
-              } on DioException catch (retryError) {
-                handler.next(retryError);
-                return;
-              }
+            final sentWith = error.requestOptions.headers['Authorization'];
+            if (current != null && sentWith != 'Bearer ${current.accessToken}') {
+              await _retryWith(current, error, handler);
+              return;
             }
-            await _tokenStore.clear();
-            // Los tokens ya no sirven, pero nadie más se entera: sin este
-            // aviso `AuthController` seguía en `authenticated` y la app
-            // quedaba "zombi", dando errores genéricos en cada pantalla
-            // hasta reiniciarla (MAL-02).
-            if (!_sessionExpired.isClosed) {
-              _sessionExpired.add(null);
+
+            final outcome = await _refreshOnce();
+
+            if (outcome.tokens != null) {
+              await _retryWith(outcome.tokens!, error, handler);
+              return;
             }
+
+            if (outcome.rejected) {
+              await _expireSession();
+            }
+            // Si no fue un rechazo sino un fallo de almacén o de red, los
+            // tokens se conservan: un keystore bloqueado o un corte de red no
+            // pueden cerrar la sesión (mismo criterio que MAL-03).
           }
           handler.next(error);
         },
@@ -96,7 +104,7 @@ class ApiClient {
   final Dio dio;
   final TokenStore _tokenStore;
   final TokenRefresher _tokenRefresher;
-  Future<AuthTokens?>? _refreshInFlight;
+  Future<_RefreshOutcome>? _refreshInFlight;
   final StreamController<void> _sessionExpired =
       StreamController<void>.broadcast();
 
@@ -117,28 +125,86 @@ class ApiClient {
 
   /// Evita refrescos concurrentes: si ya hay uno en curso, todas las
   /// peticiones que reciben 401 al mismo tiempo esperan el mismo resultado.
-  Future<AuthTokens?> _refreshOnce() {
+  Future<_RefreshOutcome> _refreshOnce() {
     return _refreshInFlight ??= _doRefresh().whenComplete(() {
       _refreshInFlight = null;
     });
   }
 
-  /// Nunca lanza (MEJ-19): cualquier excepción del refresco —una
-  /// `PlatformException` del keychain, un fallo de red, un JSON inesperado—
-  /// se traduce a `null`, que el interceptor ya trata como «sesión
-  /// expirada». Antes, una excepción aquí escapaba del `onError` y llegaba a
-  /// la pantalla como un error sin forma, distinto en cada caso y sin
-  /// limpiar los tokens ni avisar a `AuthController`.
-  Future<AuthTokens?> _doRefresh() async {
+  /// Nunca lanza (MEJ-19), pero **distingue** por qué falló:
+  ///
+  /// - `rejected: true` solo cuando no hay tokens o el servidor rechaza el
+  ///   refresh token. Eso sí es una sesión terminada y el interceptor la
+  ///   cierra.
+  /// - `rejected: false` cuando lo que falla es el almacén o la red. Los
+  ///   tokens se conservan: un keystore bloqueado —habitual al abrir la app
+  ///   desde una notificación con el móvil bloqueado— o un corte de red no
+  ///   pueden desloguear a nadie. Es el mismo criterio de MAL-03, que ya
+  ///   arregló esto en `AuthController`.
+  ///
+  /// Si el refresco sale bien pero **persistirlo** falla, se devuelven los
+  /// tokens igualmente: ya son válidos y el refresh token viejo está rotado
+  /// en el servidor, así que tirarlos dejaría la sesión irrecuperable.
+  Future<_RefreshOutcome> _doRefresh() async {
+    final AuthTokens? current;
     try {
-      final current = await _tokenStore.read();
-      if (current == null) return null;
-      final refreshed = await _tokenRefresher.refresh(current.refreshToken);
-      if (refreshed == null) return null;
-      await _tokenStore.write(refreshed);
-      return refreshed;
+      current = await _tokenStore.read();
     } catch (_) {
-      return null;
+      return const _RefreshOutcome.unavailable();
+    }
+
+    if (current == null) return const _RefreshOutcome.rejected();
+
+    final AuthTokens? refreshed;
+    try {
+      refreshed = await _tokenRefresher.refresh(current.refreshToken);
+    } catch (_) {
+      return const _RefreshOutcome.unavailable();
+    }
+
+    if (refreshed == null) return const _RefreshOutcome.rejected();
+
+    try {
+      await _tokenStore.write(refreshed);
+    } catch (_) {
+      // Se sigue adelante a propósito: ver el doc comment.
+    }
+    return _RefreshOutcome.refreshed(refreshed);
+  }
+
+  /// Reintenta la petición original con [tokens]. Si el reintento vuelve a
+  /// dar 401, la sesión se cierra de verdad: el token es nuevo y aun así no
+  /// vale (revocada desde otro dispositivo, por ejemplo). Sin esto la app
+  /// quedaba «zombi», que es justo lo que MAL-02 vino a eliminar.
+  Future<void> _retryWith(
+    AuthTokens tokens,
+    DioException error,
+    ErrorInterceptorHandler handler,
+  ) async {
+    final options = error.requestOptions;
+    options.extra['fluent_retried'] = true;
+    options.headers['Authorization'] = 'Bearer ${tokens.accessToken}';
+
+    try {
+      handler.resolve(await dio.fetch(options));
+    } on DioException catch (retryError) {
+      if (retryError.response?.statusCode == 401) {
+        await _expireSession();
+      }
+      handler.next(retryError);
+    }
+  }
+
+  /// Borra los tokens y avisa una sola vez (MAL-02).
+  Future<void> _expireSession() async {
+    try {
+      await _tokenStore.clear();
+    } catch (_) {
+      // Si ni siquiera se puede borrar, el aviso sigue siendo lo importante:
+      // el estado de la app tiene que dejar de decir «autenticado».
+    }
+    if (!_sessionExpired.isClosed) {
+      _sessionExpired.add(null);
     }
   }
 
@@ -169,4 +235,23 @@ class ApiClient {
       statusCode: e.response?.statusCode,
     );
   }
+}
+
+/// Resultado de un intento de refresco (MEJ-19).
+///
+/// La diferencia entre «el servidor dijo que no» y «no se pudo preguntar» es
+/// la que decide si se cierra la sesión o solo falla esta petición.
+class _RefreshOutcome {
+  const _RefreshOutcome.refreshed(this.tokens) : rejected = false;
+  const _RefreshOutcome.rejected()
+    : tokens = null,
+      rejected = true;
+  const _RefreshOutcome.unavailable()
+    : tokens = null,
+      rejected = false;
+
+  final AuthTokens? tokens;
+
+  /// `true` solo si la sesión está realmente terminada.
+  final bool rejected;
 }

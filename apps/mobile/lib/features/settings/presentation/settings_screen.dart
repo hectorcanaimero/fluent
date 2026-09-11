@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
@@ -60,6 +61,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _logout() async {
     await ref.read(authControllerProvider.notifier).logout();
+    // MEJ-16: homeDataProvider sobrevive al logout (autoDispose + keepAlive);
+    // sin invalidarlo, un re-login con otra cuenta en el mismo dispositivo
+    // vería por un instante los datos de la sesión anterior.
+    ref.invalidate(homeDataProvider);
   }
 
   Future<void> _deleteAccount() async {
@@ -85,6 +90,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     if (confirmed != true) return;
     await ref.read(fluentApiProvider).deleteAccount();
     await ref.read(authControllerProvider.notifier).logout();
+    ref.invalidate(homeDataProvider);
   }
 
   @override

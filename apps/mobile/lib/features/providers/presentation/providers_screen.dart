@@ -9,6 +9,7 @@ import '../../../core/env.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
+import '../../../features/home/domain/home_data.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/providers_data.dart';
 
@@ -53,6 +54,10 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
     // MAL-13: mantiene fresco el `canPracticeProvider` que consulta la
     // pestaña Practicar de Home al conectar/desconectar un proveedor.
     ref.invalidate(canPracticeProvider);
+    // MEJ-16: Home también tiene un banner/CTA que depende de si hay
+    // proveedor activo — sin esto quedaba con el dato viejo hasta que algo
+    // más lo invalidara.
+    ref.invalidate(homeDataProvider);
     setState(() {
       _future = _load();
     });

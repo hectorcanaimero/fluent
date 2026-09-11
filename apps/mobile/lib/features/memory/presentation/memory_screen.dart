@@ -5,6 +5,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../features/home/domain/home_data.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
 /// "Lo que recuerdo de vos" (SPEC-06 §4.5, RF-4.2, RF-4.6). Todos los
@@ -42,6 +43,9 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
   }
 
   void _reload() {
+    // MEJ-16: la tarjeta de hechos pendientes de Home cuenta lo mismo que
+    // esta pantalla edita.
+    ref.invalidate(homeDataProvider);
     setState(() {
       _future = _load();
     });

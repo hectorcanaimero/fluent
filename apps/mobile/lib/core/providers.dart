@@ -103,5 +103,11 @@ final authControllerProvider =
       return AuthController(
         tokenStore: ref.watch(tokenStoreProvider),
         api: ref.watch(fluentApiProvider),
+        // Revoca el refresh token en InsForge al cerrar sesión (MAL-02).
+        authClient: ref.watch(insforgeAuthClientProvider),
+        // Un 401 que no se pudo refrescar borra los tokens dentro de
+        // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
+        // la app quedaba "zombi" hasta reiniciarla (MAL-02).
+        sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
       );
     });

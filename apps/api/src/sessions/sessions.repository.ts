@@ -173,6 +173,35 @@ export class SessionsRepository {
   }
 
   /**
+   * Última sesión cerrada del usuario cuyo brief quedó `failed` (MAL-20), si
+   * terminó hace menos de `maxAgeDays` días.
+   *
+   * El límite de antigüedad existe para no reencolar indefinidamente el brief
+   * de una sesión vieja: pasados unos días, sus notas de coaching ya no valen
+   * gran cosa y reintentarlas solo gasta tokens del aprendiz.
+   */
+  async findRecentFailedBriefSessionId(
+    userId: string,
+    maxAgeDays: number,
+    now: Date = new Date(),
+  ): Promise<string | null> {
+    const since = new Date(now.getTime() - maxAgeDays * 24 * 60 * 60 * 1000);
+
+    const result = await this.admin.database
+      .from(TABLES.sessions)
+      .select('id')
+      .eq('user_id', userId)
+      .eq('brief_job_status', 'failed')
+      .gte('ended_at', since.toISOString())
+      .order('ended_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    const row = unwrapInsforge<{ id: string }>(result);
+    return row?.id ?? null;
+  }
+
+  /**
    * RPC `pick_callback_fact` (SPEC-01 §5, RF-4.4). La función SQL ya marca
    * `last_used_at` y `use_count` del hecho elegido; devuelve la fila o `null`
    * si el usuario no tiene ningún hecho `confirmed`.

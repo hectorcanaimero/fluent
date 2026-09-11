@@ -31,7 +31,7 @@ Entrada: `{ sessionId }`.
    - Upsert `coaching_briefs`.
    - Insertar `facts` como `pending`, descartando los que tengan similitud trivial con existentes (misma cadena normalizada: minúsculas, sin puntuación).
    - Marcar sesión `brief_job_status='done'`.
-5. Si falla el LLM tras la cadena: `failed`; BullMQ reintenta. Tras 3 fallos queda `failed` y la app no muestra nada; la siguiente sesión del usuario vuelve a encolar el job para la última sesión `failed` si tiene menos de 3 días.
+5. Si falla el LLM tras la cadena: `failed`; BullMQ reintenta. Tras 3 fallos queda `failed` y la app no muestra nada; la siguiente sesión del usuario vuelve a encolar el job para la última sesión `failed` si tiene menos de 3 días. El marcado lo hace el listener `@OnWorkerEvent('failed')` del processor, y solo cuando `attemptsMade` alcanza el `attempts` de la cola: BullMQ emite ese evento en **cada** intento, y actuar antes daría por definitivo un fallo del que todavía se va a reintentar. El reencolado va en `openSession`, sin bloquear la apertura y sin propagar errores de la cola, y es idempotente por `jobId = sessionId`.
 
 Regla de nivel: si `level_hint` difiere del `profile.level` en tres briefs consecutivos, se guarda `profiles.suggested_level` y la app pregunta al usuario si quiere cambiarlo. El nivel nunca cambia solo.
 
@@ -39,7 +39,7 @@ Regla de nivel: si `level_hint` difiere del `profile.level` en tres briefs conse
 
 Fuentes en `apps/api/src/content/feeds.json`: `{ name, url, tags[] , lang:'en' }`. Iniciales: BBC World, BBC Technology, The Guardian Football, Ars Technica, NPR Science, ESPN Soccer, The Verge, NASA Breaking News. Todas en inglés para que el disparador y la conversación sean en el idioma objetivo.
 
-1. Para cada feed: descargar con timeout 10 s, parsear (`rss-parser`), tomar los 15 más recientes.
+1. Para cada feed: descargar con timeout 10 s y un tope de 2 MB por respuesta (se lee por trozos y se aborta al pasarse, sin fiarse del `Content-Length` que anuncia el servidor), parsear (`rss-parser`), tomar los 15 más recientes. Todas las URLs son `https`. Un feed que falle por cualquiera de los dos topes cuenta como fallo y los demás siguen.
 2. Por ítem: `url` única; `summary` = descripción sin HTML recortada a 400 caracteres; `tags` = los del feed más palabras clave del catálogo de intereses encontradas en el título.
 3. Upsert en `news_items` con `day = hoy`.
 4. Borrar ítems con `day < hoy - 14`.

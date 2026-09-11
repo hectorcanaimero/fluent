@@ -34,6 +34,36 @@ export class CoachingBriefProcessor extends WorkerHost {
     this.logger.warn(`[${QUEUE_BRIEF}] ${error.message}`);
   }
 
+  /**
+   * Último fallo de un job (MAL-20): cuando ya no quedan reintentos, la fila
+   * se queda marcada `failed` en vez de `running` para siempre.
+   *
+   * BullMQ emite `failed` en **cada** intento, así que solo se actúa cuando
+   * `attemptsMade` alcanza el total configurado para la cola; si no, se
+   * marcaría como definitivo un fallo del que todavía se va a reintentar.
+   */
+  @OnWorkerEvent('failed')
+  async onFailed(job: Job<CoachingBriefJobData> | undefined): Promise<void> {
+    if (job === undefined) return;
+
+    const attempts = job.opts.attempts ?? 1;
+    if (job.attemptsMade < attempts) return;
+
+    try {
+      await this.service.markFailed(job.data.sessionId);
+      this.logger.warn(
+        `[${QUEUE_BRIEF}] sesión ${job.data.sessionId} marcada 'failed' tras ${attempts} intento(s)`,
+      );
+    } catch (error) {
+      // No se puede hacer nada más: si la escritura falla, la fila se queda
+      // en `running` y la recuperación de `openSession` no la verá.
+      this.logger.error(
+        `[${QUEUE_BRIEF}] no se pudo marcar 'failed' la sesión ${job.data.sessionId}: ` +
+          (error as Error).message,
+      );
+    }
+  }
+
   async process(
     job: Job<CoachingBriefJobData>,
   ): Promise<CoachingBriefJobResult> {

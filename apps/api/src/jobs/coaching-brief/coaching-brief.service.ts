@@ -61,6 +61,15 @@ export class CoachingBriefService {
     );
   }
 
+  /**
+   * Marca la sesión como `failed` (MAL-20). Lo llama el processor cuando el
+   * job agota sus reintentos; vive aquí y no en el processor para que este
+   * siga sin conocer el repositorio.
+   */
+  async markFailed(sessionId: string): Promise<void> {
+    await this.repository.markSessionFailed(sessionId);
+  }
+
   async run(sessionId: string): Promise<CoachingBriefJobResult> {
     // --- 1. Sesión e idempotencia ------------------------------------------
     const session = await this.repository.loadSession(sessionId);

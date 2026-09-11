@@ -398,17 +398,6 @@ export class TurnsService {
     userTurnIdx: number,
     outcome: TutorOutcome,
   ): Promise<TurnResultDto> {
-    await this.turns.insertTurn({
-      sessionId: session.id,
-      idx: userTurnIdx + 1,
-      role: 'tutor',
-      text: outcome.text,
-      model: outcome.model,
-      tokensIn: outcome.tokensIn,
-      tokensOut: outcome.tokensOut,
-      latencyMs: outcome.latencyMs,
-    });
-
     const rows: InsertCorrectionRow[] = outcome.corrections.map((correction) => ({
       sessionId: session.id,
       userId,
@@ -420,13 +409,20 @@ export class TurnsService {
       category: correction.category,
       note: clampNote(correction.note),
     }));
-    await this.turns.insertCorrections(rows);
 
-    // `turns_count` cuenta turnos **del usuario** (PEND-18), así que avanza
-    // también en la respuesta degradada: el aprendiz sí habló.
-    await this.turns.updateAfterTurn(userId, session.id, {
+    // Una sola transacción para las tres escrituras (MEJ-25). `turns_count`
+    // cuenta turnos **del usuario** (PEND-18), así que avanza también en la
+    // respuesta degradada: el aprendiz sí habló.
+    await this.turns.recordTurn({
+      sessionId: session.id,
+      tutorIdx: userTurnIdx + 1,
+      text: outcome.text,
+      model: outcome.model,
+      tokensIn: outcome.tokensIn,
+      tokensOut: outcome.tokensOut,
+      latencyMs: outcome.latencyMs,
       turnsCount: session.turns_count + 1,
-      chatModelUsed: outcome.model,
+      corrections: rows,
     });
 
     const corrections: CorrectionDto[] = rows.map((row) => toCorrectionDto(row));

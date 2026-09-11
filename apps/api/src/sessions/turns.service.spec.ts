@@ -164,6 +164,33 @@ function fakeTurnsRepository(options: FakeTurnsRepoOptions = {}): FakeTurnsRepo 
     insertTurn: async (row: InsertTurnRow) => {
       inserted.push(row);
     },
+    // MEJ-25: el turno del tutor, sus correcciones y los contadores llegan
+    // ahora en una sola llamada. Se descompone en los mismos registros que
+    // antes para que el resto de aserciones sigan valiendo.
+    recordTurn: async (args: {
+      sessionId: string;
+      tutorIdx: number;
+      text: string;
+      model?: string | null;
+      tokensIn?: number | null;
+      tokensOut?: number | null;
+      latencyMs?: number | null;
+      turnsCount: number;
+      corrections: readonly InsertCorrectionRow[];
+    }) => {
+      inserted.push({
+        sessionId: args.sessionId,
+        idx: args.tutorIdx,
+        role: 'tutor',
+        text: args.text,
+        model: args.model,
+        tokensIn: args.tokensIn,
+        tokensOut: args.tokensOut,
+        latencyMs: args.latencyMs,
+      } as InsertTurnRow);
+      corrections.push([...args.corrections]);
+      updates.push({ turnsCount: args.turnsCount, chatModelUsed: args.model });
+    },
     deleteTurn: async (sessionId: string, idx: number) => {
       deleted.push({ sessionId, idx });
     },
@@ -972,5 +999,37 @@ describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
     await expect(
       service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
     ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
+  });
+});
+
+describe('TurnsService.addTurn · escritura atómica del turno (MEJ-25)', () => {
+  it('escribe turno, correcciones y contadores en una sola llamada', async () => {
+    const { service, turns } = buildService({
+      corrections: [
+        {
+          original: 'I go yesterday',
+          corrected: 'I went yesterday',
+          category: 'past_simple',
+          note: 'Usá el pasado simple.',
+        },
+      ],
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'I go yesterday' });
+
+    // El doble descompone `recordTurn` en los tres registros de antes, así
+    // que lo que se comprueba aquí es que llegan juntos y coherentes.
+    expect(turns.corrections).toHaveLength(1);
+    expect(turns.corrections[0]).toHaveLength(1);
+    expect(turns.updates[0]).toMatchObject({ chatModelUsed: 'gemini-2.5-flash' });
+  });
+
+  it('una respuesta degradada avanza turns_count igualmente', async () => {
+    const { service, turns } = buildService({ unavailable: true });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
+
+    // `turns_count` cuenta turnos del usuario (PEND-18): el aprendiz habló.
+    expect(turns.updates[0]!.turnsCount).toBe(2);
   });
 });

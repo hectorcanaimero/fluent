@@ -124,6 +124,19 @@ export interface LlmServiceDeps {
 }
 
 const NOOP_SINK: LlmCallSink = { record: () => {} };
+
+/**
+ * Registra la llamada sin bloquear (MEJ-25): `llm_calls` es auditoría, y
+ * esperar a que InsForge la escriba retrasaba la respuesta del turno que el
+ * aprendiz está esperando.
+ *
+ * `record` puede devolver `void` (el sink de los tests) o una promesa, así
+ * que se normaliza antes de colgarle el `catch`. El sink real ya se traga sus
+ * propios errores; esto es el cinturón por si alguna vez deja de hacerlo.
+ */
+function recordQuietly(sink: LlmCallSink, call: LlmCallRecord): Promise<void> {
+  return Promise.resolve(sink.record(call)).catch(() => undefined);
+}
 const NOOP_EVENTS: LlmEventBus = { emit: () => {} };
 
 export class LlmService {
@@ -202,7 +215,11 @@ export class LlmService {
           latencyMs: result.latencyMs,
         });
 
-        await this.sink.record({
+        // Sin `await` (MEJ-25): `llm_calls` es auditoría, y esperar a que
+        // InsForge la escriba retrasaba la respuesta del turno que el
+        // aprendiz está esperando. El sink ya se traga sus propios errores;
+        // el `.catch` es el cinturón por si alguna vez deja de hacerlo.
+        void recordQuietly(this.sink, {
           userId: request.userId,
           sessionId: request.sessionId ?? null,
           purpose: request.purpose,
@@ -241,7 +258,11 @@ export class LlmService {
           latencyMs: callError.latencyMs,
         });
 
-        await this.sink.record({
+        // Sin `await` (MEJ-25): `llm_calls` es auditoría, y esperar a que
+        // InsForge la escriba retrasaba la respuesta del turno que el
+        // aprendiz está esperando. El sink ya se traga sus propios errores;
+        // el `.catch` es el cinturón por si alguna vez deja de hacerlo.
+        void recordQuietly(this.sink, {
           userId: request.userId,
           sessionId: request.sessionId ?? null,
           purpose: request.purpose,

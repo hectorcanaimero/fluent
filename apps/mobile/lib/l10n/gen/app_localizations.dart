@@ -449,7 +449,7 @@ abstract class AppLocalizations {
   /// No description provided for @registerInvitationPendingBody.
   ///
   /// In es, this message translates to:
-  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.'**
+  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.'**
   String get registerInvitationPendingBody;
 
   /// No description provided for @registerInvitationRetryButton.

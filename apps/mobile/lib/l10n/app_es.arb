@@ -58,7 +58,7 @@
   "registerErrorInvitationUsed": "Ese código de invitación ya se usó.",
   "registerErrorInvitationExpired": "Ese código de invitación venció.",
   "registerInvitationPendingTitle": "Tu cuenta ya está creada",
-  "registerInvitationPendingBody": "El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.",
+  "registerInvitationPendingBody": "El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.",
   "registerInvitationRetryButton": "Reintentar código",
   "registerInvitationContinueButton": "Continuar sin grupo por ahora",
   "onboardingContinueButton": "Continuar",

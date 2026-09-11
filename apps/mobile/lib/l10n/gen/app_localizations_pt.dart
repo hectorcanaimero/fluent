@@ -199,7 +199,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get registerInvitationPendingBody =>
-      'O código de convite ainda não funcionou. Tente de novo ou continue sem grupo por enquanto; você pode inserir o código mais tarde durante o onboarding.';
+      'O código de convite ainda não funcionou. Tente de novo ou continue sem grupo por enquanto; você pode inserir o código mais tarde em Ajustes.';
 
   @override
   String get registerInvitationRetryButton => 'Tentar código novamente';

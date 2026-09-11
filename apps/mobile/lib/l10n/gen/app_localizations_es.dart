@@ -198,7 +198,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get registerInvitationPendingBody =>
-      'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde el onboarding.';
+      'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.';
 
   @override
   String get registerInvitationRetryButton => 'Reintentar código';

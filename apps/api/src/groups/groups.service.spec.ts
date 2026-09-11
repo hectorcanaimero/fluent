@@ -23,6 +23,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     longest_streak: 0,
     last_session_day: null,
     grace_used_week: null,
+    courtesy_session_used_at: null,
     sessions_count: 0,
     onboarded_at: null,
     created_at: '2026-08-01T00:00:00.000Z',

@@ -30,6 +30,8 @@ export interface CreateSessionRow {
   /** Solo se escribe con `kind = 'news'` (CHECK de la migración 3). */
   readonly newsItemId?: string | null;
   readonly challengeFromUserId?: string | null;
+  /** MAL-24: corre con la credencial del owner del grupo. */
+  readonly courtesy?: boolean;
 }
 
 /** Datos del turno de apertura del tutor (`turns[idx=0]`, SPEC-04 §3.5). */
@@ -278,6 +280,7 @@ export class SessionsRepository {
         // CHECK `kind = 'news' OR news_item_id IS NULL` (migración 3).
         news_item_id: row.kind === 'news' ? (row.newsItemId ?? null) : null,
         challenge_from_user_id: row.challengeFromUserId ?? null,
+        courtesy: row.courtesy ?? false,
         status: 'active',
       })
       .select('*')

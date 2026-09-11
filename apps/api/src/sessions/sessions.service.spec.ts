@@ -43,6 +43,7 @@ function profileFixture(overrides: Partial<Profile> = {}): Profile {
     longest_streak: 0,
     last_session_day: null,
     grace_used_week: null,
+    courtesy_session_used_at: null,
     sessions_count: 0,
     onboarded_at: '2026-09-01T10:00:00.000Z',
     created_at: '2026-09-01T10:00:00.000Z',
@@ -68,6 +69,7 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     chat_model_used: null,
     callback_fact_id: null,
     brief_job_status: 'pending',
+    courtesy: false,
     ...overrides,
   };
 }
@@ -171,11 +173,18 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
     },
     createSession: async (row: unknown) => {
       created.push(row);
-      const typed = row as { kind: Session['kind']; topic: string; newsItemId?: string | null };
+      const typed = row as {
+        kind: Session['kind'];
+        topic: string;
+        newsItemId?: string | null;
+        courtesy?: boolean;
+      };
       inserted = sessionFixture({
         kind: typed.kind,
         topic: typed.topic,
         news_item_id: typed.kind === 'news' ? (typed.newsItemId ?? null) : null,
+        // La columna es lo que decide el `courtesy` de la respuesta (MAL-24).
+        courtesy: typed.courtesy ?? false,
       });
       return inserted;
     },
@@ -396,6 +405,7 @@ describe('SessionsService.openSession · los cuatro kind (SPEC-04 §3.2)', () =>
         topic: 'Viajes',
         newsItemId: undefined,
         challengeFromUserId: null,
+        courtesy: false,
       },
     ]);
     // El mensaje del usuario en la apertura es el fijo de SPEC-04 §3.4.

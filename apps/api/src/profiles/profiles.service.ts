@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { INTERESTS } from '../content/index.js';
 import { CredentialsRepository } from '../credentials/credentials.repository.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
@@ -16,6 +16,28 @@ import type {
   UpdateProfileResultDto,
 } from './profiles.types.js';
 
+/**
+ * ¿Le queda al usuario la sesión de cortesía de MAL-24?
+ *
+ * Función pura: recibe lo que ya se cargó para el resto de `GET /me`. Se
+ * exige que el owner tenga credencial activa porque ofrecer una cortesía que
+ * va a fallar al abrir la sesión es peor que no ofrecerla; `ownerProviders`
+ * viene de `listStatuses`, que no descifra ninguna key.
+ */
+export function isCourtesyAvailable(args: {
+  profile: Profile;
+  providers: ProviderInfoDto[];
+  ownerProviders: ProviderInfoDto[];
+}): boolean {
+  if (args.profile.courtesy_session_used_at !== null || args.profile.group_id === null) {
+    return false;
+  }
+  if (args.providers.some((provider) => provider.status === 'active')) {
+    return false;
+  }
+  return args.ownerProviders.some((provider) => provider.status === 'active');
+}
+
 /** Catálogo de ids de interés, calculado una sola vez (SPEC-02 §4.1). */
 const INTERESTS_CATALOG_IDS = INTERESTS.map((interest) => interest.id);
 
@@ -24,6 +46,8 @@ const INTERESTS_CATALOG_IDS = INTERESTS.map((interest) => interest.id);
  */
 @Injectable()
 export class ProfilesService {
+  private readonly logger = new Logger(ProfilesService.name);
+
   constructor(
     private readonly profilesRepository: ProfilesRepository,
     private readonly groupsRepository: GroupsRepository,
@@ -60,6 +84,15 @@ export class ProfilesService {
       this.sessionsQuery.countValidSessionsSince(userId, since),
     ]);
 
+    // La cortesía necesita saber si el owner del grupo tiene credencial
+    // activa (MAL-24). Depende del grupo, así que no cabe en el `Promise.all`
+    // de arriba; se resuelve con el grupo ya cargado, sin volver a pedirlo.
+    const ownerId = group?.owner_id ?? null;
+    const ownerProviders =
+      ownerId !== null && ownerId !== userId && profile.courtesy_session_used_at === null
+        ? await this.credentialsRepository.listStatuses(ownerId)
+        : [];
+
     return {
       profile: toProfileDto(profile),
       group: group ? toGroupDto(group) : null,
@@ -70,7 +103,11 @@ export class ProfilesService {
       interestsCatalog: INTERESTS_CATALOG_IDS,
       pendingActions,
       sessionsToday,
-      courtesySessionAvailable: await this.isCourtesyAvailable(profile, providers),
+      courtesySessionAvailable: isCourtesyAvailable({
+        profile,
+        providers,
+        ownerProviders,
+      }),
     };
   }
 
@@ -101,9 +138,11 @@ export class ProfilesService {
     // barra de nivel no arranque en cero. La idempotencia la garantiza la
     // base (índice único parcial), así que aquí basta con pedirlo cuando toca
     // y creerse lo que devuelva.
-    const xpAwarded = shouldMarkOnboarded
-      ? await this.profilesRepository.awardProfileCompleted(userId, XP_PROFILE_COMPLETED)
-      : 0;
+    // Best-effort a propósito: es un bono de gamificación, y el perfil ya
+    // está guardado a estas alturas. Si la RPC falla —o todavía no está
+    // aplicada su migración—, el onboarding no puede devolver un 500 y
+    // hacerle creer al usuario que no se guardó nada.
+    const xpAwarded = shouldMarkOnboarded ? await this.awardProfileXp(userId) : 0;
 
     return {
       // El XP recién concedido no está en la fila que devolvió el UPDATE,
@@ -115,32 +154,19 @@ export class ProfilesService {
     };
   }
 
-  /**
-   * ¿Le queda al usuario la sesión de cortesía de MAL-24?
-   *
-   * Se comprueba también que el owner tenga credencial activa: ofrecer una
-   * cortesía que va a fallar al abrir la sesión es peor que no ofrecerla.
-   * Usa `listStatuses`, que no descifra ninguna key.
-   */
-  private async isCourtesyAvailable(
-    profile: Profile,
-    providers: ProviderInfoDto[],
-  ): Promise<boolean> {
-    if (profile.courtesy_session_used_at !== null || profile.group_id === null) {
-      return false;
+  /** Ver el comentario de `updateProfile`: nunca lanza. */
+  private async awardProfileXp(userId: string): Promise<number> {
+    try {
+      return await this.profilesRepository.awardProfileCompleted(
+        userId,
+        XP_PROFILE_COMPLETED,
+      );
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo conceder el XP de perfil completado a ${userId}: ${(error as Error).message}`,
+      );
+      return 0;
     }
-    if (providers.some((provider) => provider.status === 'active')) {
-      return false;
-    }
-
-    const group = await this.groupsRepository.findById(profile.group_id);
-    const ownerId = group?.owner_id ?? null;
-    if (ownerId === null || ownerId === profile.user_id) {
-      return false;
-    }
-
-    const ownerProviders = await this.credentialsRepository.listStatuses(ownerId);
-    return ownerProviders.some((provider) => provider.status === 'active');
   }
 
   async deleteAccountData(userId: string): Promise<void> {

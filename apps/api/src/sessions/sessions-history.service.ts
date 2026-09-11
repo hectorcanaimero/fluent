@@ -29,8 +29,6 @@ export class SessionsHistoryService {
     const lastRow = page.at(-1);
 
     return {
-      // `.map(toSessionInfoDto)` pasaría el índice como segundo argumento:
-      // desde MAL-24 ese hueco es el de las opciones.
       items: page.map((row) => toSessionInfoDto(row)),
       nextCursor: hasMore && lastRow ? encodeSessionsCursor(lastRow) : null,
     };

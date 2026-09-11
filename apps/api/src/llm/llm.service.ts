@@ -258,11 +258,13 @@ export class LlmService {
           latencyMs: callError.latencyMs,
         });
 
-        // Sin `await` (MEJ-25): `llm_calls` es auditoría, y esperar a que
-        // InsForge la escriba retrasaba la respuesta del turno que el
-        // aprendiz está esperando. El sink ya se traga sus propios errores;
-        // el `.catch` es el cinturón por si alguna vez deja de hacerlo.
-        void recordQuietly(this.sink, {
+        // Este **sí** se espera. Es la auditoría de un intento fallido, la
+        // más valiosa, y con `void` perdía la carrera contra el borrado de la
+        // sesión que hace `openSession` en su camino de error: la FK a
+        // `sessions` rechazaba el insert y la fila se perdía en silencio.
+        // Aquí esperar no cuesta nada en la ruta caliente, porque la ruta
+        // caliente es la del intento que sale bien.
+        await recordQuietly(this.sink, {
           userId: request.userId,
           sessionId: request.sessionId ?? null,
           purpose: request.purpose,

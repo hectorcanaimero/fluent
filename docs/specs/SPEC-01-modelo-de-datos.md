@@ -233,8 +233,6 @@ Vista `group_members` (SECURITY INVOKER) expone de `profiles` solo `user_id, dis
 `past_simple, present_perfect, articles, prepositions, word_order, subject_verb, plurals, vocabulary, pronunciation_hint, false_friend, phrasal_verb, conditional, modal, other`. El prompt de SPEC-03 exige una de estas; cualquier otra se mapea a `other`.
 
 ## 5. Funciones RPC (SECURITY DEFINER, search_path fijado)
-| `award_profile_completed(user_id, amount)` | uuid, int | Concede una única vez el XP por perfil completado: inserta `xp_events` con `kind='profile_completed'` y suma `profiles.xp`, en una transacción. Devuelve lo concedido, 0 si ya estaba. La unicidad la impone un índice único parcial, no un SELECT previo (MEJ-14). | API |
-| `record_turn(session_id, tutor_idx, text, model, tokens_in, tokens_out, latency_ms, turns_count, corrections)` | | Inserta el turno del tutor, sus correcciones (`turn_idx` apunta al turno del usuario) y actualiza `turns_count`/`chat_model_used`, todo en una transacción. Devuelve `{turns_count}`. Sustituye a tres escrituras encadenadas en la ruta caliente del turno (MEJ-25). | API |
 
 | Función | Parámetros | Qué hace | Quién la llama |
 |---|---|---|---|
@@ -243,6 +241,8 @@ Vista `group_members` (SECURITY INVOKER) expone de `profiles` solo `user_id, dis
 | `pick_callback_fact(user_id)` | | Elige un hecho `confirmed` no usado en la última sesión, prioriza los que tienen `happens_on` reciente. Actualiza `last_used_at`, `use_count`. Devuelve la fila o null. | API |
 | `weekly_leaderboard(group_id, week_start)` | | XP ganado en la semana por miembro, ordenado. | app y API |
 | `apply_streak_grace()` | | Job diario: a quien no practicó ayer y no usó gracia esta semana, se la aplica en lugar de resetear. | worker |
+| `award_profile_completed(user_id, amount)` | uuid, int | Concede una única vez el XP por perfil completado: inserta `xp_events` con `kind='profile_completed'` y suma `profiles.xp`, en una transacción. Devuelve lo concedido, 0 si ya estaba. La unicidad la impone un índice único parcial, no un SELECT previo (MEJ-14). | API |
+| `record_turn(session_id, tutor_idx, text, model, tokens_in, tokens_out, latency_ms, turns_count, corrections)` | | Inserta el turno del tutor, sus correcciones (`turn_idx` apunta al turno del usuario) y actualiza `turns_count`/`chat_model_used`, todo en una transacción. Devuelve `{turns_count}`. Sustituye a tres escrituras encadenadas en la ruta caliente del turno (MEJ-25). | API |
 
 Las reglas numéricas están en SPEC-07 y se implementan en SQL con los mismos nombres de constante, que la migración recibe como literales documentados.
 

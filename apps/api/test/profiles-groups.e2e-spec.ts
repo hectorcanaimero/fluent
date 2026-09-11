@@ -146,6 +146,8 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
         xp: 20, // MEJ-14: concedidos al completar el perfil.
         streak: 0,
         lastSessionDay: null,
+        // MEJ-14: el PUT devuelve el perfil plano más `xpAwarded`.
+        xpAwarded: 20,
       });
 
       const meResponse = await request(app.getHttpServer())
@@ -176,10 +178,8 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
       // DEPENDE de la migración `sesion-de-cortesia`, todavía sin aplicar.
       expect(meResponse.body.courtesySessionAvailable).toBe(false);
 
-      // MEJ-14: el perfil se completó en el PUT de arriba, así que ahí se
-      // concedieron los 20 XP y ya están en `/me`.
+      // MEJ-14: los 20 XP del PUT ya están en `/me`.
       // DEPENDE de la migración `xp-perfil-completado`, todavía sin aplicar.
-      expect(putResponse.body.xpAwarded).toBe(20);
       expect(meResponse.body.profile.xp).toBe(20);
     },
     30_000,

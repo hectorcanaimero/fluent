@@ -29,6 +29,7 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     chat_model_used: 'gemini-2.5-flash',
     callback_fact_id: null,
     brief_job_status: 'pending',
+    courtesy: false,
     ...overrides,
   };
 }

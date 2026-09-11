@@ -72,6 +72,17 @@ export function localPartOfEmail(email: string | null | undefined): string | nul
  * `CredentialsRepository.listStatuses` (PR-02/T4), que es quien manda sobre
  * esa tabla.
  */
+/** Lee el escalar que devuelve `award_profile_completed` (MEJ-14). */
+function readAwardedAmount(data: unknown): number {
+  if (typeof data === 'number') return data;
+  if (Array.isArray(data) && data.length > 0) return readAwardedAmount(data[0]);
+  if (typeof data === 'object' && data !== null) {
+    const value = (data as Record<string, unknown>).award_profile_completed;
+    if (typeof value === 'number') return value;
+  }
+  return 0;
+}
+
 @Injectable()
 export class ProfilesRepository {
   constructor(
@@ -187,13 +198,21 @@ export class ProfilesRepository {
    * simultáneas al terminar el onboarding no pueden cobrarlo dos veces.
    */
   async awardProfileCompleted(userId: string, amount: number): Promise<number> {
-    const result = await this.admin.database.rpc(RPC.awardProfileCompleted, {
+    const result = (await this.admin.database.rpc(RPC.awardProfileCompleted, {
       p_user_id: userId,
       p_amount: amount,
-    });
+    })) as { data: unknown; error: { message?: string } | null };
 
-    const awarded = unwrapInsforge<number>(result);
-    return typeof awarded === 'number' ? awarded : 0;
+    if (result.error) {
+      throw new Error(
+        `InsForge falló al conceder el XP de perfil completado: ${result.error.message ?? 'error desconocido'}`,
+      );
+    }
+
+    // PostgREST devuelve el escalar suelto o envuelto en una fila según la
+    // versión; se aceptan las dos formas para que un cambio de la plataforma
+    // no haga que la base conceda el XP y la respuesta diga que no.
+    return readAwardedAmount(result.data);
   }
 
   async getActiveSessionId(userId: string): Promise<string | null> {

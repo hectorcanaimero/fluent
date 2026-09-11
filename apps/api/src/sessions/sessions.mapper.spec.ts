@@ -18,6 +18,7 @@ function sessionRow(overrides: Partial<Session> = {}): Session {
     chat_model_used: null,
     callback_fact_id: null,
     brief_job_status: 'pending',
+    courtesy: false,
     ...overrides,
   };
 }

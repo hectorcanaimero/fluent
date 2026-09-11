@@ -215,6 +215,8 @@ export interface Session {
   chat_model_used: string | null;
   callback_fact_id: string | null;
   brief_job_status: BriefJobStatus;
+  /** MAL-24: corre con la credencial del owner del grupo. */
+  courtesy: boolean;
 }
 
 /**

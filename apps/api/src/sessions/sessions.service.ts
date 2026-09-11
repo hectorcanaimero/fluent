@@ -6,7 +6,7 @@ import type { Env } from '../config/env.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { getRoleplay } from '../content/index.js';
 import { CredentialsService } from '../credentials/credentials.service.js';
-import type { Fact, NewsItem, Profile, SessionKind } from '../db/schema.js';
+import type { Fact, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
@@ -162,13 +162,25 @@ export class SessionsService {
       }
     }
 
-    const session = await this.repository.createSession({
-      userId,
-      kind: dto.kind,
-      topic: scenario.topic,
-      newsItemId: scenario.newsItemId,
-      challengeFromUserId: dto.challengeFromUserId ?? null,
-    });
+    let session: Session;
+    try {
+      session = await this.repository.createSession({
+        userId,
+        kind: dto.kind,
+        topic: scenario.topic,
+        newsItemId: scenario.newsItemId,
+        challengeFromUserId: dto.challengeFromUserId ?? null,
+        courtesy: courtesy !== null,
+      });
+    } catch (error) {
+      // La cortesía ya está marcada: si la sesión no llega a existir, se
+      // devuelve. Si no, el usuario perdería su única sesión gratuita por un
+      // fallo nuestro sin haber hablado.
+      if (courtesy !== null) {
+        await this.repository.releaseCourtesySession(userId);
+      }
+      throw error;
+    }
 
     // En una sesión de cortesía **no** se aplica la preferencia de modelo: sin
     // ella, `ModelResolver` solo ofrece la cadena de `FALLBACK_MODELS`, que es
@@ -249,7 +261,7 @@ export class SessionsService {
     });
 
     return {
-      session: toSessionInfoDto(updated ?? session, { courtesy: courtesy !== null }),
+      session: toSessionInfoDto(updated ?? session),
       opening: { text: opening.text, callbackUsed },
     };
   }

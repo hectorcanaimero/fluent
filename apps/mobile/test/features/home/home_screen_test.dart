@@ -106,6 +106,40 @@ void main() {
     },
   );
 
+  testWidgets(
+    'MAL-27: sin `grace` en /progress (la API todavía no lo manda), no muestra nada',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await _pumpHome(tester, api);
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.streakGraceAvailable), findsNothing);
+      expect(find.text(l10n.streakGraceUsed), findsNothing);
+    },
+  );
+
+  testWidgets('MAL-27: grace "available" muestra el aviso correspondiente', (
+    tester,
+  ) async {
+    final api = FakeApi(artificialDelay: Duration.zero)..grace = 'available';
+    await _pumpHome(tester, api);
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.streakGraceAvailable), findsOneWidget);
+    expect(find.text(l10n.streakGraceUsed), findsNothing);
+  });
+
+  testWidgets('MAL-27: grace "used" muestra el aviso correspondiente', (
+    tester,
+  ) async {
+    final api = FakeApi(artificialDelay: Duration.zero)..grace = 'used';
+    await _pumpHome(tester, api);
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.streakGraceUsed), findsOneWidget);
+    expect(find.text(l10n.streakGraceAvailable), findsNothing);
+  });
+
   testWidgets('con boss pendiente, muestra el botón de Boss battle', (
     tester,
   ) async {

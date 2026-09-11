@@ -204,6 +204,15 @@ class _StreakCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final streak = data.progress.streak;
+    // MAL-27: antes se mostraba "día de gracia disponible" solo por tener
+    // racha > 0, sin importar si la gracia ya se había usado esta semana.
+    // Mientras la API no mande `grace` (campo ausente), no se muestra nada
+    // en vez de inventar un estado.
+    final graceText = switch (data.progress.grace) {
+      'available' => l10n.streakGraceAvailable,
+      'used' => l10n.streakGraceUsed,
+      _ => null,
+    };
     return Container(
       padding: const EdgeInsets.all(AppSpacing.lg),
       decoration: BoxDecoration(
@@ -226,9 +235,9 @@ class _StreakCard extends StatelessWidget {
                   l10n.homeStreakDays(streak),
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
-                if (streak > 0)
+                if (graceText != null)
                   Text(
-                    l10n.homeGraceDayAvailable,
+                    graceText,
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
               ],

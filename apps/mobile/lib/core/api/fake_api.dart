@@ -17,11 +17,16 @@ import 'turn_stream_event.dart';
 /// El estado vive en memoria y se reinicia cada vez que se crea una nueva
 /// instancia (cada arranque de la app, o cada test).
 class FakeApi implements FluentApi {
-  FakeApi({this.artificialDelay = const Duration(milliseconds: 120)}) {
+  FakeApi({this.artificialDelay = const Duration(milliseconds: 120), this.grace}) {
     _seed();
   }
 
   final Duration artificialDelay;
+
+  /// MAL-27: `"available"` | `"used"` | `null` (la API no lo manda todavía).
+  /// Mutable para que los tests prueben los tres casos sin crear una
+  /// instancia nueva.
+  String? grace;
   final Random _random = Random(7);
 
   late Profile _profile;
@@ -740,6 +745,7 @@ class FakeApi implements FluentApi {
         ),
         CorrectionTrendItem(category: 'prepositions', count30d: 6, count7d: 2),
       ],
+      grace: grace,
     );
   }
 

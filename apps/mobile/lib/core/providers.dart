@@ -17,12 +17,18 @@ import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
 import 'share/share_service.dart';
+import 'http/caching_token_store.dart';
 import 'storage/token_store.dart';
 
 /// Providers raíz compartidos por toda la app. Cada feature agrega los
 /// suyos en su propio `providers.dart` y depende de estos.
 final tokenStoreProvider = Provider<TokenStore>((ref) {
-  return SecureTokenStore();
+  // `CachingTokenStore` envuelve al almacén real para que `ApiClient` no vaya
+  // al keychain/keystore en cada petición (MEJ-15). Tiene que ir aquí, en el
+  // provider compartido: si envolviera solo dentro de `ApiClient`, las
+  // escrituras de `AuthController` (login, logout) se saltarían la caché y
+  // quedaría vieja.
+  return CachingTokenStore(SecureTokenStore());
 });
 
 /// Cliente REST de auth contra InsForge (SPEC-06 §6). Login y registro lo

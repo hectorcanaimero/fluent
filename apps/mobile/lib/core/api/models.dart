@@ -441,6 +441,11 @@ abstract class ProgressResult with _$ProgressResult {
     required int sessionsThisWeek,
     @Default(<CorrectionTrendItem>[])
     List<CorrectionTrendItem> correctionsTrend,
+
+    /// MAL-27: `"available"` o `"used"` (semana ISO del usuario). La API
+    /// todavía no lo manda (lo agrega Opus en esta misma ola) — `null`
+    /// cubre esa ausencia; la UI no debe mostrar nada en ese caso.
+    String? grace,
   }) = _ProgressResult;
 
   factory ProgressResult.fromJson(Map<String, dynamic> json) =>

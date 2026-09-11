@@ -469,7 +469,10 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get homeGraceDayAvailable => 'Día de gracia disponible esta semana';
+  String get streakGraceAvailable => 'Día de gracia disponible esta semana';
+
+  @override
+  String get streakGraceUsed => 'Gracia usada esta semana: hoy no hay red';
 
   @override
   String homeXpToNextLevel(int amount) {
@@ -595,6 +598,27 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get conversationListeningHint => 'Escuchando…';
+
+  @override
+  String conversationListeningSecondsLeft(int seconds) {
+    return '${seconds}s';
+  }
+
+  @override
+  String get conversationThinkingHint => 'Pensando…';
+
+  @override
+  String get conversationSpeakingHint => 'Hablando…';
+
+  @override
+  String get conversationStopButton => 'Parar';
+
+  @override
+  String get conversationMicButtonSemantics => 'Micrófono, tocá para hablar';
+
+  @override
+  String get conversationMicButtonListeningSemantics =>
+      'Escuchando, tocá para terminar';
 
   @override
   String get conversationEditableHint => 'Editá tu respuesta antes de enviar';

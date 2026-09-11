@@ -109,6 +109,8 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 | SESSION_ALREADY_ACTIVE | 409 | intenta abrir otra con una activa; respuesta incluye `activeSessionId` |
 | LLM_UNAVAILABLE | 503 | agotada la cadena de fallback (RF-2.5) |
 | RATE_LIMITED | 429 | ver §7 |
+| CHALLENGE_NOT_AVAILABLE | 422 | `challengeFromUserId` que no corresponde a un desafío ofrecido (SPEC-07 §7) |
+| TURNS_DAILY_CAP | 429 | tope diario de turnos alcanzado; respuesta con `Retry-After` y `retryAfter` |
 | NOT_READY | 404 | resumen semanal aún no generado |
 | NOT_FOUND | 404 | ruta o recurso inexistente |
 | INTERNAL | 500 | error no controlado; sin detalles en producción |
@@ -118,6 +120,8 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 - 60 peticiones por minuto por usuario en general; 20 por minuto en `/sessions/:id/turns`.
 - Un turno como máximo cada 2 segundos por sesión.
 - Cuerpo de turno: 1 a 1 000 caracteres.
+- **Tope diario de turnos** (`TURNS_DAILY_CAP`, 120 por defecto; `0` lo desactiva): contador en Redis `turns:day:<userId>:<YYYY-MM-DD>` por **día natural del usuario** según `profiles.timezone`, no UTC. Al pasarse, `429 TURNS_DAILY_CAP` con la cabecera `Retry-After` y el campo `retryAfter` en el cuerpo, ambos con los segundos que faltan para su medianoche. Se comprueba antes de insertar el turno y antes de llamar al modelo, así que un turno rechazado no escribe nada ni gasta la key del aprendiz. Con Redis caído se deja pasar (fail-open), igual que el lock de turno.
+- El turno de conversación usa **2 intentos** de la cadena de fallback y no 3 (`TURN_MAX_ATTEMPTS`): el aprendiz espera delante de la pantalla y tres intentos de 25 s son 75 s de silencio. El brief y el resumen semanal, que corren en el worker, mantienen 3.
 
 ## 8. Validación y documentación
 

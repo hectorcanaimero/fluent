@@ -102,6 +102,33 @@ export class RedisService {
   }
 
   /**
+   * Incrementa un contador y, si es el primero, le pone TTL. Devuelve el
+   * valor tras incrementar, o `null` si Redis falló.
+   *
+   * `null` es «no lo sé», no «cero»: quien llama decide. El tope diario de
+   * turnos (MAL-23) lo trata como fail-open, igual que el lock de turno: con
+   * Redis caído es peor bloquear a todo el mundo que perder temporalmente el
+   * tope.
+   *
+   * El `EXPIRE` solo se aplica cuando el contador vale 1 —es decir, cuando
+   * esta llamada lo creó—, para no ir alargando la ventana con cada turno.
+   */
+  async increment(key: string, ttlSeconds: number): Promise<number | null> {
+    try {
+      const value = await this.cacheClient.incr(key);
+      if (value === 1) {
+        await this.cacheClient.expire(key, ttlSeconds);
+      }
+      return value;
+    } catch (error) {
+      this.logger.warn(
+        `Redis INCR '${key}' falló: ${(error as Error).message}. Se continúa sin contador (fail-open).`,
+      );
+      return null;
+    }
+  }
+
+  /**
    * Borra una clave. Devuelve `true` si se borró algo, `false` si la clave
    * no existía o si Redis falló.
    */

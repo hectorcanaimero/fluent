@@ -46,6 +46,13 @@ export const API_ERROR_STATUS = {
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */
   RATE_LIMITED: 429,
+  /**
+   * Tope diario de turnos alcanzado (MAL-23). 429 como `RATE_LIMITED`, pero
+   * con código propio: la respuesta lleva `Retry-After` con los segundos que
+   * faltan para la medianoche del usuario, y el mensaje de la app es otro
+   * («mañana seguimos», no «esperá un momento»).
+   */
+  TURNS_DAILY_CAP: 429,
   /** Resumen semanal aún no generado. */
   NOT_READY: 404,
   /**

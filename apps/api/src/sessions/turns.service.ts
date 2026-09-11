@@ -5,7 +5,12 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CredentialsService } from '../credentials/credentials.service.js';
 import type { Profile, Session } from '../db/schema.js';
-import { DEGRADED_REPLY, HISTORY_TURNS, MAX_FACTS_IN_PROMPT } from '../llm/config.js';
+import {
+  DEGRADED_REPLY,
+  HISTORY_TURNS,
+  MAX_FACTS_IN_PROMPT,
+  TURN_MAX_ATTEMPTS,
+} from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
 import type { HistoryTurn } from '../llm/prompts/truncate.js';
@@ -23,12 +28,15 @@ import {
   turnPaceKey,
 } from './sessions.constants.js';
 import { roundLatency, toCorrectionDto } from './sessions.mapper.js';
+import { secondsUntilUserMidnight, turnsDayKey, userDay } from './user-day.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { CorrectionDto, TurnResultDto } from './sessions.types.js';
 import { TurnsRepository, type InsertCorrectionRow } from './turns.repository.js';
 
 const SESSION_NOT_ACTIVE_MESSAGE = 'Esta sesión ya no está activa.';
 const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar otro turno.';
+const TURNS_DAILY_CAP_MESSAGE =
+  'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.';
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de seguir la conversación.';
@@ -149,6 +157,40 @@ export class TurnsService {
   }
 
   /**
+   * Cuenta el turno del día y rechaza con `429 TURNS_DAILY_CAP` al pasarse
+   * (MAL-23).
+   *
+   * El día es el **natural del aprendiz** (`profiles.timezone`), no UTC: a
+   * alguien en Buenos Aires no se le puede reiniciar el cupo a las 21:00 de
+   * su tarde. `Retry-After` lleva los segundos que faltan para su medianoche,
+   * que es cuando el contador caduca de verdad.
+   *
+   * Con `TURNS_DAILY_CAP=0` el tope queda desactivado. Con Redis caído
+   * `increment` devuelve `null` y se deja pasar (fail-open), igual que el
+   * lock de turno: bloquear a todo el mundo durante una caída de Redis es
+   * peor que perder temporalmente el tope.
+   */
+  private async requireDailyTurnsBudget(userId: string, profile: Profile): Promise<void> {
+    const cap = this.configService.get('TURNS_DAILY_CAP', { infer: true });
+    if (cap <= 0) {
+      return;
+    }
+
+    const now = new Date();
+    const retryAfter = secondsUntilUserMidnight(profile.timezone, now);
+    const key = turnsDayKey(userId, userDay(profile.timezone, now));
+
+    const used = await this.redis.increment(key, retryAfter);
+    if (used === null || used <= cap) {
+      return;
+    }
+
+    throw ApiException.of('TURNS_DAILY_CAP', TURNS_DAILY_CAP_MESSAGE, {
+      extra: { retryAfter },
+    });
+  }
+
+  /**
    * `403 FORBIDDEN` si la sesión no existe o es de otro usuario, o si el
    * `:id` ni siquiera tiene forma de UUID (`findOwnedSessionOrThrow`,
    * compartida con T3 — PEND-42 de PR-02 y ver docs/specs/pendientes/PR-04.md).
@@ -174,6 +216,11 @@ export class TurnsService {
     if (profile === null || profile.onboarded_at === null) {
       throw ApiException.of('NOT_ONBOARDED', NOT_ONBOARDED_MESSAGE);
     }
+
+    // 2.b Tope diario de turnos (MAL-23). Va **antes** de insertar el turno
+    // del usuario y de llamar al modelo: pasado el tope no se escribe nada ni
+    // se gasta un céntimo de la key del aprendiz.
+    await this.requireDailyTurnsBudget(userId, profile);
 
     const credentials = await this.credentials.listActive(userId);
     if (credentials.length === 0) {
@@ -284,6 +331,9 @@ export class TurnsService {
         credentials,
         preference: await this.findPreference(userId),
         promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
+        // Dos intentos y no tres (MAL-23): el aprendiz está esperando delante
+        // de la pantalla y 3 × 25 s son 75 s de silencio antes de rendirse.
+        maxAttempts: TURN_MAX_ATTEMPTS,
         // Solo lo manda el endpoint SSE (T4): sin `onToken` la llamada es
         // exactamente la de siempre, sin `stream: true`.
         onToken,

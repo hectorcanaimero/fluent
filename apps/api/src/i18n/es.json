@@ -15,6 +15,7 @@
   "CHALLENGE_NOT_AVAILABLE": "Ese desafío ya no está disponible.",
   "LLM_UNAVAILABLE": "El asistente no está disponible en este momento. Probá de nuevo en unos minutos.",
   "RATE_LIMITED": "Hiciste demasiadas peticiones. Esperá un momento y volvé a intentarlo.",
+  "TURNS_DAILY_CAP": "Por hoy alcanzaste el máximo de turnos. Mañana seguimos.",
   "NOT_READY": "Todavía no está listo.",
   "NOT_FOUND": "El recurso solicitado no existe.",
   "INTERNAL": "Ocurrió un error inesperado. Probá de nuevo en unos minutos."

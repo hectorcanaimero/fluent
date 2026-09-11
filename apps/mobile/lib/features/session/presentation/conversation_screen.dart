@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -53,8 +54,23 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   String? _errorMessage;
 
   Timer? _timer;
-  late int _remainingSeconds;
+
+  /// MEJ-17: el timer tiqueaba cada segundo con un `setState` de pantalla
+  /// completa (AppBar, lista de mensajes y controles de abajo). Con esto
+  /// solo repinta el `Text` del AppBar envuelto en `ValueListenableBuilder`.
+  late final ValueNotifier<int> _remainingSecondsNotifier = ValueNotifier(
+    widget.sessionDuration.inSeconds,
+  );
+  int get _remainingSeconds => _remainingSecondsNotifier.value;
   bool _warningShown = false;
+
+  /// MEJ-17: la burbuja del tutor mientras llegan tokens del streaming
+  /// actualizaba `_messages` con un `setState` por delta. Ahora solo el
+  /// texto en vivo (mientras `_liveIndex` apunta a esa burbuja) pasa por
+  /// este notifier; `_AssistantBubble` lo escucha con
+  /// `ValueListenableBuilder` en vez de que reconstruya toda la pantalla.
+  final ValueNotifier<String> _liveText = ValueNotifier('');
+  int? _liveIndex;
 
   bool _micAvailable = true;
   bool _micHasEnUsLocale = true;
@@ -67,7 +83,6 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
   @override
   void initState() {
     super.initState();
-    _remainingSeconds = widget.sessionDuration.inSeconds;
     _bootstrap();
   }
 
@@ -77,6 +92,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     _draftController.dispose();
     _scrollController.dispose();
     _speech.cancel();
+    _remainingSecondsNotifier.dispose();
+    _liveText.dispose();
     super.dispose();
   }
 
@@ -127,11 +144,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
   void _onTick() {
     if (!mounted) return;
-    setState(
-      () => _remainingSeconds = (_remainingSeconds - 1).clamp(
-        0,
-        widget.sessionDuration.inSeconds,
-      ),
+    _remainingSecondsNotifier.value = (_remainingSeconds - 1).clamp(
+      0,
+      widget.sessionDuration.inSeconds,
     );
 
     if (!_warningShown &&
@@ -153,9 +168,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
     }
   }
 
-  String get _formattedTime {
-    final m = (_remainingSeconds ~/ 60).toString().padLeft(2, '0');
-    final s = (_remainingSeconds % 60).toString().padLeft(2, '0');
+  String _formatTime(int seconds) {
+    final m = (seconds ~/ 60).toString().padLeft(2, '0');
+    final s = (seconds % 60).toString().padLeft(2, '0');
     return '$m:$s';
   }
 
@@ -306,22 +321,23 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
 
     int? assistantIndex;
     final liveReply = StringBuffer();
+    // MEJ-17: solo el primer token reconstruye la pantalla (agrega la
+    // burbuja a `_messages`); los siguientes deltas solo tocan `_liveText`,
+    // que únicamente escucha la burbuja en vivo (`ValueListenableBuilder`
+    // en `_AssistantBubble`).
     void onToken(String delta) {
       liveReply.write(delta);
       if (!mounted) return;
-      setState(() {
-        final aIdx = assistantIndex;
-        if (aIdx == null) {
+      if (assistantIndex == null) {
+        setState(() {
           assistantIndex = _messages.length;
+          _liveIndex = assistantIndex;
           _messages.add(
             ChatMessage(role: 'assistant', text: liveReply.toString()),
           );
-        } else {
-          _messages[aIdx] = _messages[aIdx].copyWith(
-            text: liveReply.toString(),
-          );
-        }
-      });
+        });
+      }
+      _liveText.value = liveReply.toString();
       _scrollToBottom();
     }
 
@@ -353,6 +369,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
             degraded: result.degraded,
           );
         }
+        _liveIndex = null;
         _draftController.clear();
         _state = ConvState.speaking;
       });
@@ -375,6 +392,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
         final aIdx = assistantIndex;
         if (aIdx != null) _messages.removeAt(aIdx);
         _messages.removeAt(userIndex);
+        _liveIndex = null;
         _state = ConvState.reviewing;
         _errorMessage = l10nForApiError(e.code, l10n);
       });
@@ -533,7 +551,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
             child: Center(
-              child: Text(_formattedTime, key: const Key('conversation_timer')),
+              child: ValueListenableBuilder<int>(
+                valueListenable: _remainingSecondsNotifier,
+                builder: (context, seconds, _) => Text(
+                  _formatTime(seconds),
+                  key: const Key('conversation_timer'),
+                ),
+              ),
             ),
           ),
           IconButton(
@@ -560,6 +584,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen> {
                         rate: _ttsRate,
                         onSetRate: _setRate,
                         onReplay: () => _replay(message.text),
+                        liveText: index == _liveIndex ? _liveText : null,
                       )
                     : _UserBubble(message: message);
               },
@@ -589,6 +614,7 @@ class _AssistantBubble extends StatelessWidget {
     required this.rate,
     required this.onSetRate,
     required this.onReplay,
+    this.liveText,
   });
 
   final ChatMessage message;
@@ -596,9 +622,15 @@ class _AssistantBubble extends StatelessWidget {
   final ValueChanged<double> onSetRate;
   final VoidCallback onReplay;
 
+  /// MEJ-17: mientras esta burbuja es la que está recibiendo tokens del
+  /// streaming, el texto viene de acá (actualizado sin reconstruir el
+  /// resto de la pantalla) en vez de `message.text`.
+  final ValueListenable<String>? liveText;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final live = liveText;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Column(
@@ -611,7 +643,12 @@ class _AssistantBubble extends StatelessWidget {
               borderRadius: BorderRadius.circular(AppRadius.md),
               border: Border.all(color: AppColors.border),
             ),
-            child: Text(message.text),
+            child: live == null
+                ? Text(message.text)
+                : ValueListenableBuilder<String>(
+                    valueListenable: live,
+                    builder: (context, value, _) => Text(value),
+                  ),
           ),
           Row(
             children: [

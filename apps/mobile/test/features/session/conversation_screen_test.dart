@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/api/turn_stream_event.dart';
@@ -11,6 +13,26 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+
+/// Deja emitir eventos del stream a mano, para poder aislar el rebuild que
+/// dispara un único token (MEJ-17).
+class _ControlledStreamApi extends FakeApi {
+  _ControlledStreamApi({super.artificialDelay});
+
+  final _controller = StreamController<TurnStreamEvent>();
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+  }) {
+    return _controller.stream;
+  }
+
+  void emit(TurnStreamEvent event) => _controller.add(event);
+
+  Future<void> closeStream() => _controller.close();
+}
 
 /// Simula un stream que arranca bien (algunos `token`) y se corta antes de
 /// `done` (conexión perdida, o el `error` SSE de PEND-55 de PR-04.md): la
@@ -419,5 +441,69 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('HOME_SCREEN'), findsOneWidget);
+  });
+
+  testWidgets('MEJ-17: un token de streaming no reconstruye el AppBar', (
+    tester,
+  ) async {
+    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
+
+    // El primer token todavía hace un `setState` (crea la burbuja en
+    // `_messages`), así que se descarta antes de medir.
+    api.emit(const TurnStreamToken('Hi'));
+    await tester.pump();
+    expect(find.text('Hi'), findsOneWidget);
+
+    final rebuiltLines = <String>[];
+    final previousDebugPrint = debugPrint;
+    debugPrint = (String? message, {int? wrapWidth}) {
+      if (message != null) rebuiltLines.add(message);
+    };
+    debugPrintRebuildDirtyWidgets = true;
+    try {
+      api.emit(const TurnStreamToken(' there'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 1));
+    } finally {
+      debugPrintRebuildDirtyWidgets = false;
+      debugPrint = previousDebugPrint;
+    }
+
+    expect(find.text('Hi there'), findsOneWidget);
+    final rebuilt = rebuiltLines.join('\n');
+    expect(rebuilt.contains('AppBar'), isFalse);
+    expect(rebuilt.contains('ListView'), isFalse);
+
+    await api.closeStream();
   });
 }

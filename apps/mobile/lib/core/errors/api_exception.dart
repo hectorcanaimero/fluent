@@ -20,6 +20,22 @@ enum ApiErrorCode {
   notReady,
   notFound,
   internal,
+
+  /// SPEC-07 §7 (P0 MAL-19): el `challengeFromUserId` no corresponde a un
+  /// desafío real ofrecido a este usuario.
+  challengeNotAvailable,
+
+  /// P1 MAL-23: tope diario de turnos alcanzado (429, con `Retry-After`
+  /// hasta medianoche en la zona del usuario). La API todavía no lo manda
+  /// (lo agrega Opus en esta misma ola); se mapea desde ya para no
+  /// depender de otro despliegue del móvil.
+  turnsDailyCap,
+
+  /// P1 MAL-08: no llegó ningún evento del stream dentro de la ventana
+  /// esperada (proxy/conexión colgada). No lo manda la API — lo genera el
+  /// cliente al envolver el stream con `.timeout()` — así que no tiene caso
+  /// en [fromWire].
+  streamTimeout,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {
@@ -60,6 +76,10 @@ enum ApiErrorCode {
         return ApiErrorCode.notFound;
       case 'INTERNAL':
         return ApiErrorCode.internal;
+      case 'CHALLENGE_NOT_AVAILABLE':
+        return ApiErrorCode.challengeNotAvailable;
+      case 'TURNS_DAILY_CAP':
+        return ApiErrorCode.turnsDailyCap;
       default:
         return ApiErrorCode.unknown;
     }

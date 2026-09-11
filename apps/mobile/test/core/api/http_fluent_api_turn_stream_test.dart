@@ -1,4 +1,5 @@
 import 'package:dio/dio.dart';
+import 'package:fake_async/fake_async.dart';
 import 'package:fluent_mobile/core/api/http_fluent_api.dart';
 import 'package:fluent_mobile/core/api/turn_stream_event.dart';
 import 'package:fluent_mobile/core/errors/api_exception.dart';
@@ -75,6 +76,35 @@ void main() {
     },
   );
 
+  // MEJ-18: el estándar SSE permite varias líneas `data:` seguidas para un
+  // mismo evento, unidas con `\n` — un proxy o el propio Node puede partir
+  // un JSON largo así. Concatenarlas sin separador corrompe el JSON.
+  test('POST /sessions/:id/turns/stream une líneas `data:` multilínea con \\n', () async {
+    const sse =
+        'event: done\n'
+        'data: {"turnIdx":1,"reply":"Nice one",\n'
+        'data: "corrections":[],"modelUsed":"openrouter/gpt-4o-mini",\n'
+        'data: "degraded":false}\n\n';
+
+    adapter.onPost(
+      '/sessions/session-1/turns/stream',
+      (server) => server.reply(
+        200,
+        sse,
+        headers: {
+          Headers.contentTypeHeader: ['text/event-stream'],
+        },
+      ),
+      data: Matchers.any,
+    );
+
+    final events = await api.sendTurnStream(sessionId: 'session-1', text: 'hi').toList();
+
+    expect(events, hasLength(1));
+    final done = events[0] as TurnStreamDone;
+    expect(done.result.reply, 'Nice one');
+  });
+
   // SPEC-03 §6 / PEND-57 de PR-04.md: si no se emitió ningún token, el
   // `reply` degradado llega igual como un único `token` antes de `done`.
   test('POST /sessions/:id/turns/stream degradado: un solo token con el reply completo', () async {
@@ -126,6 +156,41 @@ void main() {
         () => api.sendTurnStream(sessionId: 'session-1', text: 'hi').toList(),
         throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.sessionNotActive)),
       );
+    },
+  );
+
+  // MAL-08: un proxy/conexión colgada nunca corta el socket ni manda un
+  // evento — sin un timeout, `await for` de quien consuma el stream se
+  // queda esperando para siempre. `fakeAsync` avanza el reloj virtual sin
+  // esperar los 30 s reales.
+  test(
+    'POST /sessions/:id/turns/stream: sin eventos por 30s emite streamTimeout',
+    () {
+      fakeAsync((async) {
+        adapter.onPost(
+          '/sessions/session-1/turns/stream',
+          (server) => server.reply(
+            200,
+            'event: token\ndata: {"text":"too late"}\n\n',
+            delay: const Duration(seconds: 45),
+            headers: {
+              Headers.contentTypeHeader: ['text/event-stream'],
+            },
+          ),
+          data: Matchers.any,
+        );
+
+        final events = <TurnStreamEvent>[];
+        api
+            .sendTurnStream(sessionId: 'session-1', text: 'hi')
+            .listen(events.add);
+
+        async.elapse(const Duration(seconds: 30));
+
+        expect(events, hasLength(1));
+        final error = events.single as TurnStreamError;
+        expect(error.exception.code, ApiErrorCode.streamTimeout);
+      });
     },
   );
 }

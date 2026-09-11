@@ -293,7 +293,9 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(api.calls, 1);
-      expect(find.text(l10n.providersErrorGeneric), findsOneWidget);
+      // MEJ-10: el catch genérico ahora usa l10nForApiError en vez de un
+      // texto fijo — FORBIDDEN tiene su propio mensaje.
+      expect(find.text(l10n.errorForbidden), findsOneWidget);
       expect(find.text(l10n.providersStatusConnected), findsNothing);
     });
   });

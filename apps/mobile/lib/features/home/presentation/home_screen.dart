@@ -3,7 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
-import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -19,54 +20,14 @@ class HomeScreen extends ConsumerStatefulWidget {
 }
 
 class _HomeScreenState extends ConsumerState<HomeScreen> {
-  late Future<HomeData> _future;
-
-  @override
-  void initState() {
-    super.initState();
-    _future = _load();
-  }
-
-  Future<HomeData> _load() async {
-    final api = ref.read(fluentApiProvider);
-    final me = await api.getMe();
-    final results = await Future.wait([
-      api.getProgress(),
-      api.getSessionSuggestions(),
-      api.getMemory(),
-      api.getSessions(limit: 20),
-      if (me.group != null) api.getGroup(),
-    ]);
-    final progress = results[0] as ProgressResult;
-    final suggestions = results[1] as SessionSuggestions;
-    final memory = results[2] as MemoryResult;
-    final sessions = results[3] as SessionListResult;
-    final group = me.group != null ? results[4] as GroupResponse : null;
-
-    final today = DateTime.now();
-    final sessionsToday = sessions.items.where((s) {
-      final started = DateTime.tryParse(s.startedAt);
-      return started != null &&
-          started.year == today.year &&
-          started.month == today.month &&
-          started.day == today.day;
-    }).length;
-
-    return HomeData(
-      me: me,
-      progress: progress,
-      group: group,
-      suggestions: suggestions,
-      pendingFactsCount: memory.facts.pending.length,
-      sessionsToday: sessionsToday,
-    );
-  }
+  /// MEJ-20: sin esto, dos toques rápidos en el boss o en un chip de tema
+  /// (sin el guard que ya tiene `new_session_screen._start`) creaban dos
+  /// sesiones seguidas.
+  bool _starting = false;
 
   void _reload() {
     ref.invalidate(canPracticeProvider);
-    setState(() {
-      _future = _load();
-    });
+    ref.invalidate(homeDataProvider);
   }
 
   /// [kind] es siempre el `kind` real de `POST /sessions` (SPEC-04 §3.2):
@@ -78,8 +39,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   /// genérico). El CTA principal ya se deshabilita en ese caso, pero los
   /// chips de temas rápidos pasan por acá también.
   Future<void> _startSession({required String kind, String? topic}) async {
+    if (_starting) return;
     final l10n = AppLocalizations.of(context);
-    final data = await _future;
+    final data = await ref.read(homeDataProvider.future);
     if (!mounted) return;
     if (!data.canPractice) {
       context.push('/providers');
@@ -87,82 +49,100 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
           .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
       return;
     }
+    setState(() => _starting = true);
     try {
       final result = await ref
           .read(fluentApiProvider)
           .createSession(kind: kind, topic: topic);
       if (!mounted) return;
       context.push('/session/${result.session.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      // MEJ-10: ya hay una sesión abierta (por ejemplo, en otra pestaña o
+      // dispositivo) — vamos directo a ella en vez de mostrar un error.
+      if (e.code == ApiErrorCode.sessionAlreadyActive &&
+          e.activeSessionId != null) {
+        context.push('/session/${e.activeSessionId}');
+        return;
+      }
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10n.homeLoadError)));
+    } finally {
+      if (mounted) setState(() => _starting = false);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final asyncData = ref.watch(homeDataProvider);
+    final snapshot = asyncData.when(
+      data: (d) => AsyncSnapshot<HomeData>.withData(ConnectionState.done, d),
+      error: (e, st) =>
+          AsyncSnapshot<HomeData>.withError(ConnectionState.done, e, st),
+      loading: () => const AsyncSnapshot<HomeData>.waiting(),
+    );
     return Scaffold(
       body: SafeArea(
-        child: FutureBuilder<HomeData>(
-          future: _future,
-          builder: (context, snapshot) {
-            return AsyncBody<HomeData>(
-              snapshot: snapshot,
-              onRetry: _reload,
-              builder: (data) => RefreshIndicator(
-                onRefresh: () async {
-                  _reload();
-                  await _future;
-                },
-                child: ListView(
-                  padding: const EdgeInsets.all(AppSpacing.screenPad),
-                  children: [
-                    _HeaderRow(data: data),
-                    const SizedBox(height: AppSpacing.lg),
-                    _StreakCard(data: data),
-                    const SizedBox(height: AppSpacing.lg),
-                    _LevelCard(data: data),
-                    const SizedBox(height: AppSpacing.xl),
-                    if (!data.hasActiveProvider) ...[
-                      _NoProviderBanner(),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    if (data.hasWeeklySummaryCredentialPending) ...[
-                      _PendingActionBanner(),
-                      const SizedBox(height: AppSpacing.lg),
-                    ],
-                    _PrimaryCta(
-                      data: data,
-                      onPractice: () => context.push('/session/new'),
-                      onBoss: () => _startSession(kind: 'boss'),
-                    ),
-                    const SizedBox(height: AppSpacing.sm),
-                    Text(
-                      l10n.homeSessionsTodayStatus(data.sessionsToday),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                    if (data.pendingFactsCount > 0) ...[
-                      const SizedBox(height: AppSpacing.lg),
-                      _PendingFactsCard(count: data.pendingFactsCount),
-                    ],
-                    if (data.group != null) ...[
-                      const SizedBox(height: AppSpacing.lg),
-                      _GroupCard(data: data),
-                    ],
-                    const SizedBox(height: AppSpacing.xl),
-                    _QuickTopics(
-                      data: data,
-                      onTopic: (topic) =>
-                          _startSession(kind: 'free_topic', topic: topic),
-                    ),
-                  ],
+        child: AsyncBody<HomeData>(
+          snapshot: snapshot,
+          onRetry: _reload,
+          builder: (data) => RefreshIndicator(
+            onRefresh: () async {
+              _reload();
+              await ref.read(homeDataProvider.future);
+            },
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.screenPad),
+              children: [
+                _HeaderRow(data: data),
+                const SizedBox(height: AppSpacing.lg),
+                _StreakCard(data: data),
+                const SizedBox(height: AppSpacing.lg),
+                _LevelCard(data: data),
+                const SizedBox(height: AppSpacing.xl),
+                if (!data.hasActiveProvider) ...[
+                  _NoProviderBanner(),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                if (data.hasWeeklySummaryCredentialPending) ...[
+                  _PendingActionBanner(),
+                  const SizedBox(height: AppSpacing.lg),
+                ],
+                _PrimaryCta(
+                  data: data,
+                  starting: _starting,
+                  onPractice: () => context.push('/session/new'),
+                  onBoss: () => _startSession(kind: 'boss'),
                 ),
-              ),
-            );
-          },
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.homeSessionsTodayStatus(data.sessionsToday),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                if (data.pendingFactsCount > 0) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _PendingFactsCard(count: data.pendingFactsCount),
+                ],
+                if (data.group != null) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  _GroupCard(data: data),
+                ],
+                const SizedBox(height: AppSpacing.xl),
+                _QuickTopics(
+                  data: data,
+                  starting: _starting,
+                  onTopic: (topic) =>
+                      _startSession(kind: 'free_topic', topic: topic),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
@@ -373,18 +353,20 @@ class _PendingActionBanner extends StatelessWidget {
 class _PrimaryCta extends StatelessWidget {
   const _PrimaryCta({
     required this.data,
+    required this.starting,
     required this.onPractice,
     required this.onBoss,
   });
 
   final HomeData data;
+  final bool starting;
   final VoidCallback onPractice;
   final VoidCallback onBoss;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final blocked = !data.canPractice;
+    final blocked = !data.canPractice || starting;
     if (data.suggestions.bossPending) {
       return Column(
         children: [
@@ -497,9 +479,14 @@ class _GroupCard extends StatelessWidget {
 }
 
 class _QuickTopics extends StatelessWidget {
-  const _QuickTopics({required this.data, required this.onTopic});
+  const _QuickTopics({
+    required this.data,
+    required this.starting,
+    required this.onTopic,
+  });
 
   final HomeData data;
+  final bool starting;
   final ValueChanged<String> onTopic;
 
   @override
@@ -532,7 +519,7 @@ class _QuickTopics extends StatelessWidget {
               ActionChip(
                 label: Text(topic),
                 backgroundColor: AppColors.primarySoft,
-                onPressed: () => onTopic(topic),
+                onPressed: starting ? null : () => onTopic(topic),
               ),
           ],
         ),

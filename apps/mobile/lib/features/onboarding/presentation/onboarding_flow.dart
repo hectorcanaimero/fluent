@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
+import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -89,9 +92,10 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
       await ref.read(authControllerProvider.notifier).refresh();
       if (!mounted) return;
       final me = ref.read(authControllerProvider).me;
-      final hasProvider =
-          me?.providers.any((p) => p.status == 'active') ?? false;
+      final hasProvider = me?.hasActiveProvider ?? false;
       context.go(hasProvider ? '/' : '/providers');
+    } on ApiException catch (e) {
+      setState(() => _errorMessage = l10nForApiError(e.code, l10n));
     } catch (_) {
       setState(() => _errorMessage = l10n.onboardingErrorGeneric);
     } finally {

@@ -225,6 +225,12 @@ class AppLocalizationsPt extends AppLocalizations {
       'Confira o e-mail e a senha: pode ser que esse e-mail já esteja cadastrado ou que a senha seja curta demais.';
 
   @override
+  String get registerPasswordTooShort => 'Use pelo menos 10 caracteres.';
+
+  @override
+  String get registerPasswordHelper => 'Mínimo de 10 caracteres';
+
+  @override
   String get notFoundTitle => 'Essa tela não existe';
 
   @override

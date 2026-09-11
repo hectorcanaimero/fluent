@@ -224,6 +224,12 @@ class AppLocalizationsEs extends AppLocalizations {
       'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.';
 
   @override
+  String get registerPasswordTooShort => 'Usá al menos 10 caracteres.';
+
+  @override
+  String get registerPasswordHelper => 'Mínimo 10 caracteres';
+
+  @override
   String get notFoundTitle => 'Esa pantalla no existe';
 
   @override

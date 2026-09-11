@@ -65,6 +65,8 @@
   "loginShowPassword": "Mostrar senha",
   "loginHidePassword": "Ocultar senha",
   "registerErrorInvalidData": "Confira o e-mail e a senha: pode ser que esse e-mail já esteja cadastrado ou que a senha seja curta demais.",
+  "registerPasswordTooShort": "Use pelo menos 10 caracteres.",
+  "registerPasswordHelper": "Mínimo de 10 caracteres",
   "notFoundTitle": "Essa tela não existe",
   "notFoundBody": "O link que você abriu não leva a lugar nenhum.",
   "notFoundGoHome": "Ir para o início",

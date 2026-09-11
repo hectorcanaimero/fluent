@@ -488,6 +488,18 @@ abstract class AppLocalizations {
   /// **'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.'**
   String get registerErrorInvalidData;
 
+  /// No description provided for @registerPasswordTooShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Usá al menos 10 caracteres.'**
+  String get registerPasswordTooShort;
+
+  /// No description provided for @registerPasswordHelper.
+  ///
+  /// In es, this message translates to:
+  /// **'Mínimo 10 caracteres'**
+  String get registerPasswordHelper;
+
   /// No description provided for @notFoundTitle.
   ///
   /// In es, this message translates to:

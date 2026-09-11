@@ -70,7 +70,7 @@ Future<void> _fillAccountForm(WidgetTester tester, {required String code}) async
   );
   await tester.enterText(
     find.byKey(const Key('register_password_field')),
-    'secret123',
+    'secret12345',
   );
   await tester.enterText(find.byKey(const Key('register_code_field')), code);
   await tester.ensureVisible(find.byKey(const Key('register_submit_button')));

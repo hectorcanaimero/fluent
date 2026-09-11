@@ -213,6 +213,34 @@ void main() {
       expect(controller.state.status, AuthStatus.authenticated);
     });
   });
+
+  group('AuthController · limpiar la sesión activa (MAL-04)', () {
+    test('clearActiveSession borra el id que coincide', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(tokenStore: store);
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+      controller.state = controller.state.copyWith(activeSessionId: 's-1');
+
+      controller.clearActiveSession('s-1');
+
+      expect(controller.state.activeSessionId, isNull);
+    });
+
+    test('no borra una sesión activa distinta', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(tokenStore: store);
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+      controller.state = controller.state.copyWith(activeSessionId: 's-2');
+
+      controller.clearActiveSession('s-1');
+
+      expect(controller.state.activeSessionId, 's-2');
+    });
+  });
 }
 
 /// `getMe()` falla o no según el interruptor que se le pase.

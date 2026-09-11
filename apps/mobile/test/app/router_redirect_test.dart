@@ -41,6 +41,20 @@ void main() {
       expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
     });
 
+    test('estando en el resumen no vuelve a empujar a la conversación (MAL-04)', () {
+      const auth = AuthState(
+        status: AuthStatus.authenticated,
+        onboarded: true,
+        activeSessionId: 'session-42',
+      );
+      expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
+
+      // Y una vez que el resumen limpia la sesión activa, se puede volver al
+      // inicio sin que el router rebote.
+      const cleared = AuthState(status: AuthStatus.authenticated, onboarded: true);
+      expect(computeRedirect(cleared, '/'), isNull);
+    });
+
     test('en error se queda en /splash y no manda a /login (MAL-03)', () {
       const auth = AuthState(status: AuthStatus.error);
       expect(computeRedirect(auth, '/splash'), isNull);

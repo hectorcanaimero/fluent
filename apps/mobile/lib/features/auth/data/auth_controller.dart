@@ -98,6 +98,17 @@ class AuthController extends StateNotifier<AuthState> {
   /// empezar el arranque con los tokens que se conservaron.
   Future<void> retry() => bootstrap();
 
+  /// Olvida la sesión activa [id] si es la que está en el estado (MAL-04).
+  ///
+  /// El router empuja a `/session/:id` mientras `activeSessionId` no sea
+  /// null; sin esto, al llegar al resumen de una sesión ya cerrada volvía a
+  /// empujar a la conversación y no se podía salir sin reiniciar. Se compara
+  /// el id para no borrar por error una sesión distinta abierta entretanto.
+  void clearActiveSession(String id) {
+    if (state.activeSessionId != id) return;
+    state = state.copyWith(clearActiveSessionId: true);
+  }
+
   Future<void> logout() async {
     // Revocar el refresh token en InsForge **antes** de borrarlo: después ya
     // no se sabría cuál era (MAL-02). Un fallo de red aquí no puede impedir

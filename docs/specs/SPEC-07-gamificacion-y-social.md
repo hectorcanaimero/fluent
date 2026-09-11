@@ -79,7 +79,7 @@ Calculado en `daily-streaks`. Miembro "activo" = onboarded y con al menos una se
 
 ## 7. Desafíos cruzados (RF-6.4)
 
-Sin LLM. `GET /challenges` devuelve, para cada miembro del grupo distinto del usuario, su sesión válida más reciente de los últimos 7 días cuyo `topic` el usuario no haya practicado en 14 días. Máximo 3. Al aceptar, la app abre `POST /sessions` con `kind` y `topic` iguales y `challengeFromUserId`; el cierre aplica `XP_CHALLENGE_BONUS`. Un desafío por miembro por semana. El servidor valida el desafío al abrir la sesión: `challengeFromUserId` solo se acepta si ese usuario aparece en la lista que `GET /challenges` devolvería en ese momento, con el mismo `kind` y el mismo `topic`; si no, `422 CHALLENGE_NOT_AVAILABLE` (sin esa comprobación el bono sería auto-otorgable).
+Sin LLM. `GET /challenges` devuelve, para cada miembro del grupo distinto del usuario, su sesión válida más reciente de los últimos 7 días cuyo `topic` el usuario no haya practicado en 14 días. Máximo 3. Al aceptar, la app abre `POST /sessions` con `kind` y `topic` iguales y `challengeFromUserId`; el cierre aplica `XP_CHALLENGE_BONUS`. Un desafío por miembro por semana. El servidor valida el desafío al abrir la sesión: `challengeFromUserId` solo se acepta si ese usuario aparece en la lista que `GET /challenges` devolvería en ese momento y con el mismo `topic`; si no, `422 CHALLENGE_NOT_AVAILABLE` (sin esa comprobación el bono sería auto-otorgable). **No** se exige que el `kind` coincida: la respuesta de `GET /challenges` no lleva `roleplayId` ni `newsItemId`, así que la app reabre todo desafío como `free_topic` con el `topic` legible, y para `boss` el servidor elige el tema por su cuenta.
 
 ## 8. Resumen semanal (RF-6.3)
 

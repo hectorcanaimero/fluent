@@ -34,10 +34,14 @@ final tokenRefresherProvider = Provider<TokenRefresher>((ref) {
 });
 
 final apiClientProvider = Provider<ApiClient>((ref) {
-  return ApiClient(
+  final client = ApiClient(
     tokenStore: ref.watch(tokenStoreProvider),
     tokenRefresher: ref.watch(tokenRefresherProvider),
   );
+  // Cierra el stream de `onSessionExpired` (MAL-02). En la app el cliente vive
+  // lo que la app, pero los tests crean y tiran contenedores a pares.
+  ref.onDispose(client.dispose);
+  return client;
 });
 
 /// La app entera depende de esta interfaz, nunca de `FakeApi` o

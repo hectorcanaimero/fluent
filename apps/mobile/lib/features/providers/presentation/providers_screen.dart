@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../../app/theme.dart';
@@ -85,7 +86,10 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             message: 'missing authorization code',
           );
         }
-        await api.completeOpenRouterPkce(code: code, codeVerifierId: pkce.codeVerifierId);
+        await api.completeOpenRouterPkce(
+          code: code,
+          codeVerifierId: pkce.codeVerifierId,
+        );
       }
       await ref.read(authControllerProvider.notifier).refresh();
       _reload();
@@ -121,10 +125,9 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
     } on ApiException catch (e) {
       if (mounted) {
         setState(() {
-          _error =
-              e.code == ApiErrorCode.providerKeyInvalid
-                  ? l10n.providersGeminiKeyInvalid
-                  : l10n.providersErrorGeneric;
+          _error = e.code == ApiErrorCode.providerKeyInvalid
+              ? l10n.providersGeminiKeyInvalid
+              : l10n.providersErrorGeneric;
         });
       }
     } finally {
@@ -144,29 +147,50 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
             left: AppSpacing.screenPad,
             right: AppSpacing.screenPad,
             top: AppSpacing.screenPad,
-            bottom: MediaQuery.of(context).viewInsets.bottom + AppSpacing.screenPad,
+            bottom:
+                MediaQuery.of(context).viewInsets.bottom + AppSpacing.screenPad,
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              Text(l10n.providersGeminiKeyDialogTitle, style: Theme.of(context).textTheme.titleLarge),
+              Text(
+                l10n.providersGeminiKeyDialogTitle,
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
               const SizedBox(height: AppSpacing.md),
-              Text(l10n.providersGeminiKeyHelpStep1, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                l10n.providersGeminiKeyHelpStep1,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               InkWell(
-                onTap: () => launchUrl(Uri.parse(_kGeminiHelpUrl), mode: LaunchMode.externalApplication),
+                onTap: () => launchUrl(
+                  Uri.parse(_kGeminiHelpUrl),
+                  mode: LaunchMode.externalApplication,
+                ),
                 child: Text(
                   l10n.providersGeminiKeyLink,
-                  style: const TextStyle(color: AppColors.primary, decoration: TextDecoration.underline),
+                  style: const TextStyle(
+                    color: AppColors.primary,
+                    decoration: TextDecoration.underline,
+                  ),
                 ),
               ),
-              Text(l10n.providersGeminiKeyHelpStep2, style: Theme.of(context).textTheme.bodyMedium),
-              Text(l10n.providersGeminiKeyHelpStep3, style: Theme.of(context).textTheme.bodyMedium),
+              Text(
+                l10n.providersGeminiKeyHelpStep2,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              Text(
+                l10n.providersGeminiKeyHelpStep3,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
               const SizedBox(height: AppSpacing.lg),
               TextField(
                 key: const Key('gemini_key_field'),
                 controller: controller,
-                decoration: InputDecoration(labelText: l10n.providersGeminiKeyLabel),
+                decoration: InputDecoration(
+                  labelText: l10n.providersGeminiKeyLabel,
+                ),
               ),
               const SizedBox(height: AppSpacing.lg),
               Row(
@@ -181,7 +205,8 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
                   Expanded(
                     child: ElevatedButton(
                       key: const Key('gemini_key_confirm_button'),
-                      onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+                      onPressed: () =>
+                          Navigator.of(context).pop(controller.text.trim()),
                       child: Text(l10n.providersGeminiKeyConfirm),
                     ),
                   ),
@@ -206,11 +231,12 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
     final result = await showModalBottomSheet<(String, String)>(
       context: context,
       isScrollControlled: true,
-      builder:
-          (context) => _ModelPickerSheet(
-            title: isChatRole ? l10n.providersModelChatTitle : l10n.providersModelBriefTitle,
-            data: data,
-          ),
+      builder: (context) => _ModelPickerSheet(
+        title: isChatRole
+            ? l10n.providersModelChatTitle
+            : l10n.providersModelBriefTitle,
+        data: data,
+      ),
     );
     if (result == null) return;
     final (providerId, modelId) = result;
@@ -218,9 +244,13 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
       await ref
           .read(fluentApiProvider)
           .putModelPreference(
-            chatProvider: isChatRole ? providerId : (pref?.chatProvider ?? providerId),
+            chatProvider: isChatRole
+                ? providerId
+                : (pref?.chatProvider ?? providerId),
             chatModel: isChatRole ? modelId : (pref?.chatModel ?? modelId),
-            briefProvider: !isChatRole ? providerId : (pref?.briefProvider ?? providerId),
+            briefProvider: !isChatRole
+                ? providerId
+                : (pref?.briefProvider ?? providerId),
             briefModel: !isChatRole ? modelId : (pref?.briefModel ?? modelId),
           );
       _reload();
@@ -233,7 +263,10 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.providersTitle)),
+      appBar: AppBar(
+        title: Text(l10n.providersTitle),
+        leading: context.canPop() ? const BackButton() : null,
+      ),
       body: SafeArea(
         child: FutureBuilder<ProvidersData>(
           future: _future,
@@ -245,52 +278,84 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
               return const Center(child: CircularProgressIndicator());
             }
             final data = snapshot.data!;
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.screenPad),
+            return Column(
               children: [
-                if (_error != null) ...[
-                  Text(_error!, style: const TextStyle(color: AppColors.error)),
-                  const SizedBox(height: AppSpacing.md),
-                ],
-                _ProviderCard(
-                  key: const Key('provider_card_openrouter'),
-                  title: l10n.providersOpenRouterTitle,
-                  info: data.providerInfo('openrouter'),
-                  status: data.statuses['openrouter'],
-                  connecting: _connectingOpenRouter,
-                  onConnect: _connectOpenRouter,
-                  onDisconnect: () => _disconnect('openrouter'),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.all(AppSpacing.screenPad),
+                    children: [
+                      if (_error != null) ...[
+                        Text(
+                          _error!,
+                          style: const TextStyle(color: AppColors.error),
+                        ),
+                        const SizedBox(height: AppSpacing.md),
+                      ],
+                      _ProviderCard(
+                        key: const Key('provider_card_openrouter'),
+                        title: l10n.providersOpenRouterTitle,
+                        info: data.providerInfo('openrouter'),
+                        status: data.statuses['openrouter'],
+                        connecting: _connectingOpenRouter,
+                        onConnect: _connectOpenRouter,
+                        onDisconnect: () => _disconnect('openrouter'),
+                      ),
+                      const SizedBox(height: AppSpacing.md),
+                      _ProviderCard(
+                        key: const Key('provider_card_gemini'),
+                        title: l10n.providersGeminiTitle,
+                        info: data.providerInfo('gemini'),
+                        status: data.statuses['gemini'],
+                        connecting: _connectingGemini,
+                        recommended: true,
+                        onConnect: _openGeminiKeySheet,
+                        onDisconnect: () => _disconnect('gemini'),
+                        connectLabel: l10n.providersGeminiPasteKeyButton,
+                      ),
+                      const SizedBox(height: AppSpacing.xl),
+                      Text(
+                        l10n.providersModelChatTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      _ModelSummaryTile(
+                        key: const Key('model_picker_chat'),
+                        data: data,
+                        providerId: data.me.modelPreference?.chatProvider,
+                        modelId: data.me.modelPreference?.chatModel,
+                        onTap: () => _pickModel(data: data, isChatRole: true),
+                      ),
+                      const SizedBox(height: AppSpacing.lg),
+                      Text(
+                        l10n.providersModelBriefTitle,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      _ModelSummaryTile(
+                        key: const Key('model_picker_brief'),
+                        data: data,
+                        providerId: data.me.modelPreference?.briefProvider,
+                        modelId: data.me.modelPreference?.briefModel,
+                        onTap: () => _pickModel(data: data, isChatRole: false),
+                      ),
+                    ],
+                  ),
                 ),
-                const SizedBox(height: AppSpacing.md),
-                _ProviderCard(
-                  key: const Key('provider_card_gemini'),
-                  title: l10n.providersGeminiTitle,
-                  info: data.providerInfo('gemini'),
-                  status: data.statuses['gemini'],
-                  connecting: _connectingGemini,
-                  recommended: true,
-                  onConnect: _openGeminiKeySheet,
-                  onDisconnect: () => _disconnect('gemini'),
-                  connectLabel: l10n.providersGeminiPasteKeyButton,
-                ),
-                const SizedBox(height: AppSpacing.xl),
-                Text(l10n.providersModelChatTitle, style: Theme.of(context).textTheme.titleMedium),
-                _ModelSummaryTile(
-                  key: const Key('model_picker_chat'),
-                  data: data,
-                  providerId: data.me.modelPreference?.chatProvider,
-                  modelId: data.me.modelPreference?.chatModel,
-                  onTap: () => _pickModel(data: data, isChatRole: true),
-                ),
-                const SizedBox(height: AppSpacing.lg),
-                Text(l10n.providersModelBriefTitle, style: Theme.of(context).textTheme.titleMedium),
-                _ModelSummaryTile(
-                  key: const Key('model_picker_brief'),
-                  data: data,
-                  providerId: data.me.modelPreference?.briefProvider,
-                  modelId: data.me.modelPreference?.briefModel,
-                  onTap: () => _pickModel(data: data, isChatRole: false),
-                ),
+                if (data.hasActiveProvider)
+                  SafeArea(
+                    top: false,
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(
+                        AppSpacing.screenPad,
+                        0,
+                        AppSpacing.screenPad,
+                        AppSpacing.md,
+                      ),
+                      child: ElevatedButton(
+                        key: const Key('providers_go_practice_button'),
+                        onPressed: () => context.go('/'),
+                        child: Text(l10n.providersGoPractice),
+                      ),
+                    ),
+                  ),
               ],
             );
           },
@@ -341,36 +406,44 @@ class _ProviderCard extends StatelessWidget {
           Row(
             children: [
               Expanded(
-                child: Text(title, style: Theme.of(context).textTheme.titleMedium),
+                child: Text(
+                  title,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
               ),
               if (recommended)
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm, vertical: 2),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: AppSpacing.sm,
+                    vertical: 2,
+                  ),
                   decoration: BoxDecoration(
                     color: AppColors.goldSoft,
                     borderRadius: BorderRadius.circular(AppRadius.pill),
                   ),
                   child: Text(
                     l10n.providersGeminiRecommendedBadge,
-                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: AppColors.gold),
+                    style: const TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.gold,
+                    ),
                   ),
                 ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
-          Text(
-            switch (statusText) {
-              'active' => l10n.providersStatusConnected,
-              'error' => l10n.providersStatusError,
-              _ => l10n.providersStatusNotConnected,
-            },
-            style: Theme.of(context).textTheme.bodySmall,
-          ),
+          Text(switch (statusText) {
+            'active' => l10n.providersStatusConnected,
+            'error' => l10n.providersStatusError,
+            _ => l10n.providersStatusNotConnected,
+          }, style: Theme.of(context).textTheme.bodySmall),
           if (isConnected && status?.credits != null) ...[
             const SizedBox(height: AppSpacing.xs),
             Text(
               l10n.providersCreditsRemaining(
-                (status!.credits!.total - status!.credits!.used).toStringAsFixed(2),
+                (status!.credits!.total - status!.credits!.used)
+                    .toStringAsFixed(2),
               ),
               style: Theme.of(context).textTheme.bodySmall,
             ),
@@ -378,23 +451,24 @@ class _ProviderCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.md),
           SizedBox(
             width: double.infinity,
-            child:
-                isConnected
-                    ? OutlinedButton(
-                      onPressed: onDisconnect,
-                      child: Text(l10n.providersDisconnectButton),
-                    )
-                    : ElevatedButton(
-                      onPressed: connecting ? null : onConnect,
-                      child:
-                          connecting
-                              ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white),
-                              )
-                              : Text(connectLabel ?? l10n.providersConnectButton),
-                    ),
+            child: isConnected
+                ? OutlinedButton(
+                    onPressed: onDisconnect,
+                    child: Text(l10n.providersDisconnectButton),
+                  )
+                : ElevatedButton(
+                    onPressed: connecting ? null : onConnect,
+                    child: connecting
+                        ? const SizedBox(
+                            height: 20,
+                            width: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : Text(connectLabel ?? l10n.providersConnectButton),
+                  ),
           ),
         ],
       ),
@@ -487,8 +561,8 @@ class _ModelPickerSheet extends StatelessWidget {
                         groups: data.catalog.providers[providerId]!,
                         estimatePerSession: data.catalog.estimatePerSession,
                         connected: data.isConnected(providerId),
-                        onSelected:
-                            (modelId) => Navigator.of(context).pop((providerId, modelId)),
+                        onSelected: (modelId) =>
+                            Navigator.of(context).pop((providerId, modelId)),
                       ),
                   ],
                 ),
@@ -523,8 +597,14 @@ class _ProviderModelGroup extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.md, bottom: AppSpacing.xs),
-          child: Text(providerId.toUpperCase(), style: Theme.of(context).textTheme.labelSmall),
+          padding: const EdgeInsets.only(
+            top: AppSpacing.md,
+            bottom: AppSpacing.xs,
+          ),
+          child: Text(
+            providerId.toUpperCase(),
+            style: Theme.of(context).textTheme.labelSmall,
+          ),
         ),
         if (!connected)
           Padding(
@@ -586,7 +666,8 @@ class _TierSection extends StatelessWidget {
       children: [
         Text(
           label,
-          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontWeight: FontWeight.w700),
+          style: Theme.of(context).textTheme.bodySmall
+              ?.copyWith(fontWeight: FontWeight.w700),
         ),
         for (final model in models)
           ListTile(
@@ -597,8 +678,8 @@ class _TierSection extends StatelessWidget {
             subtitle: Text(
               (estimatePerSession[model.id] ?? 0) > 0
                   ? l10n.providersModelEstimatePaid(
-                    (estimatePerSession[model.id] ?? 0).toStringAsFixed(3),
-                  )
+                      (estimatePerSession[model.id] ?? 0).toStringAsFixed(3),
+                    )
                   : l10n.providersModelEstimateFree,
             ),
             onTap: enabled ? () => onSelected(model.id) : null,

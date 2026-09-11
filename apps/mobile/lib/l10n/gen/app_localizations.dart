@@ -590,6 +590,12 @@ abstract class AppLocalizations {
   /// **'Proveedores y modelos'**
   String get providersTitle;
 
+  /// No description provided for @providersGoPractice.
+  ///
+  /// In es, this message translates to:
+  /// **'Listo, ir a practicar'**
+  String get providersGoPractice;
+
   /// No description provided for @providersOpenRouterTitle.
   ///
   /// In es, this message translates to:

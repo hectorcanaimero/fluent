@@ -272,6 +272,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get providersTitle => 'Proveedores y modelos';
 
   @override
+  String get providersGoPractice => 'Listo, ir a practicar';
+
+  @override
   String get providersOpenRouterTitle => 'OpenRouter';
 
   @override

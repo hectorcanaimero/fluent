@@ -1,4 +1,6 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
+import 'package:fluent_mobile/core/api/fluent_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/providers/data/oauth_launcher.dart';
 import 'package:fluent_mobile/features/providers/presentation/providers_screen.dart';
@@ -7,25 +9,50 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
-Future<void> _pumpProvidersScreen(WidgetTester tester) async {
+/// FakeApi sin ningún proveedor activo, para probar que el CTA "Ir a
+/// practicar" (MAL-11) no aparece cuando no hay nada conectado.
+class _NoActiveProviderApi extends FakeApi {
+  _NoActiveProviderApi() : super(artificialDelay: Duration.zero);
+
+  @override
+  Future<MeResponse> getMe() async {
+    final me = await super.getMe();
+    return me.copyWith(
+      providers: [
+        for (final p in me.providers) ProviderInfo(provider: p.provider, status: 'not_connected'),
+      ],
+    );
+  }
+}
+
+/// ProvidersScreen siempre vive bajo un GoRouter en la app real
+/// (`app/router.dart`): `context.canPop()`/`context.go()` (MAL-11) lo
+/// exigen, así que los tests también la envuelven en uno.
+Future<void> _pumpProvidersScreen(WidgetTester tester, {FluentApi? api}) async {
+  final router = GoRouter(
+    initialLocation: '/providers',
+    routes: [
+      GoRoute(path: '/', builder: (context, state) => const Text('HOME_SCREEN')),
+      GoRoute(path: '/providers', builder: (context, state) => const ProvidersScreen()),
+    ],
+  );
   await tester.pumpWidget(
     ProviderScope(
       overrides: [
-        fluentApiProvider.overrideWith(
-          (ref) => FakeApi(artificialDelay: Duration.zero),
-        ),
+        fluentApiProvider.overrideWith((ref) => api ?? FakeApi(artificialDelay: Duration.zero)),
         oauthLauncherProvider.overrideWith((ref) => FakeOAuthLauncher()),
       ],
-      child: const MaterialApp(
-        localizationsDelegates: [
+      child: MaterialApp.router(
+        routerConfig: router,
+        localizationsDelegates: const [
           AppLocalizations.delegate,
           GlobalMaterialLocalizations.delegate,
           GlobalWidgetsLocalizations.delegate,
           GlobalCupertinoLocalizations.delegate,
         ],
         supportedLocales: AppLocalizations.supportedLocales,
-        home: ProvidersScreen(),
       ),
     ),
   );
@@ -83,5 +110,22 @@ void main() {
       find.byKey(const Key('model_option_meta-llama/llama-3.1-8b-instruct:free')),
     );
     expect(openRouterModelTile.enabled, isTrue);
+  });
+
+  testWidgets('con un proveedor activo muestra "Ir a practicar" y navega a Home', (tester) async {
+    await _pumpProvidersScreen(tester);
+
+    expect(find.byKey(const Key('providers_go_practice_button')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('providers_go_practice_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('HOME_SCREEN'), findsOneWidget);
+  });
+
+  testWidgets('sin proveedores activos no muestra "Ir a practicar"', (tester) async {
+    await _pumpProvidersScreen(tester, api: _NoActiveProviderApi());
+
+    expect(find.byKey(const Key('providers_go_practice_button')), findsNothing);
   });
 }

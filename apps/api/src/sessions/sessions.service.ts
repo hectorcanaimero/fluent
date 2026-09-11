@@ -96,12 +96,14 @@ export class SessionsService {
     // 4. Validación por `kind` (SPEC-04 §3.2).
     const scenario = await this.resolveScenario(userId, dto, profile);
 
-    // 4.b El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
+    // 4.b El desafío se valida contra la lista real del usuario (SPEC-07 §7).
+    // Va **antes** del rechazo de boss: si esto falla con 422, la petición no
+    // debe haber quemado la oferta de boss del día.
+    await this.requireOfferedChallenge(userId, dto, scenario);
+
+    // 4.c El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
     // otra cosa, se registra el rechazo de hoy (SPEC-04 §3.2, SPEC-07 §4).
     await this.recordBossSkipIfDeclined(userId, dto.kind, profile);
-
-    // 4.c El desafío se valida contra la lista real del usuario (SPEC-07 §7).
-    await this.requireOfferedChallenge(userId, dto, scenario);
 
     // 5. Callback (RF-4.4, SPEC-04 §3.3). Se elige **antes** de la llamada al
     // LLM porque el hecho va dentro del prompt (`opening_rule` de SPEC-03
@@ -265,8 +267,8 @@ export class SessionsService {
 
   /**
    * SPEC-07 §7: `challengeFromUserId` solo vale si ese usuario aparece **hoy**
-   * en los desafíos que `GET /challenges` le ofrece a quien abre la sesión, y
-   * con el mismo `kind` y el mismo tema.
+   * en los desafíos que `GET /challenges` le ofrece a quien abre la sesión,
+   * con el mismo tema.
    *
    * Sin esta comprobación el campo era auto-otorgable: bastaba con mandar el
    * `id` de cualquier compañero de grupo para marcar la sesión como desafío y
@@ -277,6 +279,14 @@ export class SessionsService {
    * `ChallengesService` devuelve como `topic` del candidato, y para `roleplay`
    * y `news` el cliente manda `roleplayId`/`newsItemId` en vez del texto.
    *
+   * **No** se exige que el `kind` coincida.  `GET /challenges` ofrece desafíos
+   * de los cuatro `kind`, pero no expone el `roleplayId` ni el `newsItemId`
+   * del original, así que la app los reabre todos como `free_topic` con el
+   * tema legible (ver `group_screen.dart._acceptChallenge`). Exigir el `kind`
+   * dejaba sin aceptar todo desafío que no fuera `free_topic`, y para `boss`
+   * era imposible por construcción: `resolveBoss` ignora el tema que mande el
+   * cliente y elige el siguiente del propio solicitante.
+   *
    * Un usuario sin grupo no tiene desafíos posibles: `listChallenges` responde
    * `NOT_ONBOARDED` y aquí se traduce al mismo 422 que cualquier otro desafío
    * inexistente, para no filtrar por qué falló.
@@ -286,7 +296,10 @@ export class SessionsService {
     dto: CreateSessionDto,
     scenario: SessionScenario,
   ): Promise<void> {
-    if (dto.challengeFromUserId === undefined) {
+    // `== null` y no `=== undefined`: `@IsOptional()` deja pasar un `null`
+    // explícito, y `createSession` más abajo ya lo trata como "sin desafío"
+    // (`dto.challengeFromUserId ?? null`).
+    if (dto.challengeFromUserId == null) {
       return;
     }
 
@@ -302,9 +315,7 @@ export class SessionsService {
 
     const match = offered.items.some(
       (item) =>
-        item.fromUserId === dto.challengeFromUserId &&
-        item.kind === dto.kind &&
-        item.topic === scenario.topic,
+        item.fromUserId === dto.challengeFromUserId && item.topic === scenario.topic,
     );
 
     if (!match) {

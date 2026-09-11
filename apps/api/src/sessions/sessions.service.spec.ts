@@ -518,11 +518,51 @@ describe('SessionsService.openSession · validación del desafío (SPEC-07 §7, 
     ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
   });
 
-  it('rechaza el desafío correcto con otro kind', async () => {
+  it('acepta un desafío de otro kind reabierto como free_topic', async () => {
+    // `GET /challenges` ofrece los cuatro kind pero no expone `roleplayId` ni
+    // `newsItemId`, así que la app los reabre todos como `free_topic` con el
+    // tema legible. Exigir que el `kind` coincidiera dejaba sin aceptar todo
+    // desafío que no fuera `free_topic`.
     const challenges = fakeChallenges({
       items: [challengeFixture({ kind: 'roleplay', topic: 'Viajes' })],
     });
-    const { service } = buildService({ challenges });
+    const { service, repository } = buildService({ challenges });
+
+    await service.openSession(USER_ID, {
+      kind: 'free_topic',
+      topic: 'Viajes',
+      challengeFromUserId: CHALLENGER_ID,
+    });
+
+    expect(repository.created).toEqual([
+      expect.objectContaining({ challengeFromUserId: CHALLENGER_ID }),
+    ]);
+  });
+
+  it('un challengeFromUserId null explícito es "sin desafío"', async () => {
+    const challenges = fakeChallenges();
+    const { service, repository } = buildService({ challenges });
+
+    await service.openSession(USER_ID, {
+      kind: 'free_topic',
+      topic: 'Viajes',
+      challengeFromUserId: undefined as unknown as string,
+    });
+
+    expect(challenges.calls).toEqual([]);
+    expect(repository.created).toEqual([
+      expect.objectContaining({ challengeFromUserId: null }),
+    ]);
+  });
+
+  it('un desafío rechazado no quema la oferta de boss del día', async () => {
+    const boss = fakeBoss();
+    const challenges = fakeChallenges({ items: [] });
+    const { service } = buildService({
+      profile: profileFixture({ sessions_count: 6 }),
+      boss,
+      challenges,
+    });
 
     await expect(
       service.openSession(USER_ID, {
@@ -531,6 +571,8 @@ describe('SessionsService.openSession · validación del desafío (SPEC-07 §7, 
         challengeFromUserId: CHALLENGER_ID,
       }),
     ).rejects.toMatchObject({ code: 'CHALLENGE_NOT_AVAILABLE' });
+
+    expect(boss.recordSkipCalls).toEqual([]);
   });
 
   it('traduce el NOT_ONBOARDED de un usuario sin grupo al mismo 422', async () => {

@@ -64,7 +64,6 @@ describe('isValidCallbackUrl · lista blanca (MAL-18)', () => {
   it('accepts the configured callback, normalised', () => {
     expect(isValidCallbackUrl(CONFIGURED, CONFIGURED)).toBe(true);
     expect(isValidCallbackUrl(`  ${CONFIGURED}  `, CONFIGURED)).toBe(true);
-    expect(isValidCallbackUrl(CONFIGURED.replace('https://', 'https://'), CONFIGURED)).toBe(true);
   });
 
   it('rejects any other https URL: era una redirección abierta', () => {

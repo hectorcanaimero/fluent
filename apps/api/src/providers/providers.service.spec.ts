@@ -402,6 +402,24 @@ describe('ProvidersService', () => {
 
       expect(result).toMatchObject({ ok: false, redirectTo: `${DEFAULT_CALLBACK}?error=expired` });
     });
+
+    it('un segundo callback no puede pisar el code ya guardado', async () => {
+      const { service, redis } = createHarness(openRouterExchangeOk());
+
+      const started = await service.startOpenRouterPkce(USER_A, DEFAULT_CALLBACK);
+      await service.completeOpenRouterPkceFromBrowser(started.codeVerifierId, FAKE_AUTH_CODE);
+
+      // El callback es público: sin esto, cualquiera que conociera el id
+      // podía dejar el `code` de *su* cuenta y que la víctima lo canjeara.
+      const second = await service.completeOpenRouterPkceFromBrowser(
+        started.codeVerifierId,
+        'CODE-DEL-ATACANTE',
+      );
+
+      expect(second.ok).toBe(false);
+      const entry = JSON.parse([...redis.store.values()][0] as string) as { code?: string };
+      expect(entry.code).toBe(FAKE_AUTH_CODE);
+    });
   });
 
   describe('POST /pkce/complete tras el callback (MAL-18)', () => {

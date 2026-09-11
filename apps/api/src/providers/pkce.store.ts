@@ -103,10 +103,25 @@ export class PkceStore {
    * Conserva el vencimiento original en vez de reiniciar el TTL: la ventana
    * de 10 minutos se cuenta desde `start`, así que volver del navegador no
    * puede alargarla. Si ya venció, no escribe nada y devuelve `null`.
+   *
+   * **Un solo código por intento.** Si ya hay uno guardado se rechaza: esta
+   * ruta es pública y el `codeVerifierId` viaja dentro de la URL de callback
+   * (historial del navegador, `Referer`, la respuesta de `start`). Sin esto,
+   * cualquiera que lo conociera podía pisar el código de la víctima con uno
+   * de *su* cuenta de OpenRouter antes de que ella llamara a `complete`, y
+   * dejarle su propia key —cobrándole el consumo y viéndole el tráfico—, que
+   * es la misma familia de CSRF que MAL-18 venía a cerrar.
    */
   async attachCode(codeVerifierId: string, code: string): Promise<PkceEntry | null> {
     const entry = await this.find(codeVerifierId);
     if (entry === null) {
+      return null;
+    }
+
+    if (entry.code !== undefined) {
+      this.logger.warn(
+        `Intento de PKCE ${codeVerifierId}: ya tenía un código guardado; se ignora el nuevo.`,
+      );
       return null;
     }
 

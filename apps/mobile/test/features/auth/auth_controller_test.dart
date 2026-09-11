@@ -26,22 +26,31 @@ class _FailingMeApi extends FakeApi {
 
 /// `InsforgeAuthClient` que anota los logout remotos que recibe.
 class _RecordingAuthClient extends InsforgeAuthClient {
-  _RecordingAuthClient({required Dio dio, this.fails = false}) : super(dio: dio);
+  _RecordingAuthClient({required Dio dio, this.fails = false, this.hangs = false})
+    : super(dio: dio);
 
   final bool fails;
+  final bool hangs;
   final List<String> logouts = [];
+  final Completer<void> _hang = Completer<void>();
+
+  /// Desbloquea un [logout] colgado, para que el test no deje futuros vivos.
+  void release() {
+    if (!_hang.isCompleted) _hang.complete();
+  }
 
   @override
   Future<void> logout(String accessToken) async {
     logouts.add(accessToken);
+    if (hangs) await _hang.future;
     if (fails) throw DioException(requestOptions: RequestOptions(path: '/'));
   }
 }
 
-_RecordingAuthClient _authClient({bool fails = false}) {
+_RecordingAuthClient _authClient({bool fails = false, bool hangs = false}) {
   final dio = Dio(BaseOptions(baseUrl: 'https://insforge.local'));
   dio.httpClientAdapter = DioAdapter(dio: dio);
-  return _RecordingAuthClient(dio: dio, fails: fails);
+  return _RecordingAuthClient(dio: dio, fails: fails, hangs: hangs);
 }
 
 AuthController _controller({
@@ -99,6 +108,7 @@ void main() {
       addTearDown(controller.dispose);
 
       await controller.logout();
+      await Future<void>.delayed(Duration.zero);
 
       expect(client.logouts, [_tokens.accessToken]);
       expect(await store.read(), isNull);
@@ -114,6 +124,7 @@ void main() {
       addTearDown(controller.dispose);
 
       await controller.logout();
+      await Future<void>.delayed(Duration.zero);
 
       expect(client.logouts, isEmpty);
       expect(controller.state.status, AuthStatus.unauthenticated);
@@ -212,6 +223,71 @@ void main() {
 
       expect(controller.state.status, AuthStatus.authenticated);
     });
+  });
+
+  group('AuthController · refresh en caliente no expulsa al splash', () {
+    test('un /me fallido en refresh() no deja el estado en error', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      var failing = false;
+      final controller = AuthController(
+        tokenStore: store,
+        api: _ToggleMeApi(() => failing),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+      expect(controller.state.status, AuthStatus.authenticated);
+
+      // Un refresco tras conectar un proveedor o terminar el onboarding: si
+      // falla, el usuario se queda donde estaba, no en un splash de error.
+      failing = true;
+      await controller.refresh();
+
+      expect(controller.state.status, AuthStatus.authenticated);
+      expect(await store.read(), isNotNull);
+    });
+
+    test('un 401 en refresh() sí cierra la sesión', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(tokenStore: store);
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+      expect(controller.state.status, AuthStatus.authenticated);
+
+      final expired = _controller(
+        tokenStore: store,
+        api: _FailingMeApi(
+          const ApiException(
+            code: ApiErrorCode.unauthenticated,
+            message: 'token vencido',
+            statusCode: 401,
+          ),
+        ),
+      );
+      addTearDown(expired.dispose);
+      await expired.bootstrap();
+
+      expect(expired.state.status, AuthStatus.unauthenticated);
+      expect(await store.read(), isNull);
+    });
+  });
+
+  test('logout() no espera a la revocación remota', () async {
+    final store = InMemoryTokenStore()..write(_tokens);
+    final client = _authClient(hangs: true);
+    final controller = _controller(tokenStore: store, authClient: client);
+    addTearDown(() {
+      controller.dispose();
+      client.release();
+    });
+
+    // Con el remoto colgado (sin red, 15 s de timeout), el cierre local tiene
+    // que completarse igual.
+    await controller.logout().timeout(const Duration(seconds: 1));
+
+    expect(controller.state.status, AuthStatus.unauthenticated);
+    expect(await store.read(), isNull);
   });
 
   group('AuthController · limpiar la sesión activa (MAL-04)', () {

@@ -153,6 +153,50 @@ class _StreamTimeoutApi extends FakeApi {
   }
 }
 
+/// MEJ-04: resuelve el turno en un único evento `done`, sin partirlo en
+/// palabras — para probar los estados `sending`/`speaking` sin depender de
+/// cuántos `pump()` hacen falta para drenar el streaming palabra por
+/// palabra de [FakeApi.sendTurnStream].
+class _InstantReplyApi extends FakeApi {
+  _InstantReplyApi({super.artificialDelay, this.turnDelay = Duration.zero});
+
+  /// Retraso solo del turno. `artificialDelay` afecta también a
+  /// `createSession`, que el helper `pumpConversation` espera **antes** de
+  /// montar el widget: dentro de la zona de tiempo simulado de `testWidgets`
+  /// ese `Future.delayed` nunca vence y el test se cuelga.
+  final Duration turnDelay;
+
+  @override
+  Future<TurnResult> sendTurn({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async {
+    if (turnDelay > Duration.zero) {
+      await Future<void>.delayed(turnDelay);
+    }
+    return super.sendTurn(
+      sessionId: sessionId,
+      text: text,
+      cancelToken: cancelToken,
+    );
+  }
+
+  @override
+  Stream<TurnStreamEvent> sendTurnStream({
+    required String sessionId,
+    required String text,
+    CancelToken? cancelToken,
+  }) async* {
+    final result = await sendTurn(
+      sessionId: sessionId,
+      text: text,
+      cancelToken: cancelToken,
+    );
+    yield TurnStreamDone(result);
+  }
+}
+
 /// Simula un `getSession` que falla siempre en la primera llamada (MAL-09):
 /// la pantalla debe mostrar el error de arranque con Reintentar/Volver en
 /// vez de girar para siempre.
@@ -589,6 +633,73 @@ void main() {
     await api.closeStream();
   });
 
+  testWidgets('MAL-22: event: reset vacía la burbuja viva', (tester) async {
+    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
+
+    api.emit(const TurnStreamToken('Partial answer'));
+    await tester.pump();
+    expect(find.text('Partial answer'), findsOneWidget);
+
+    // La API descarta el intento (va a reintentar con otro modelo): el
+    // texto parcial ya pintado no forma parte de la respuesta final.
+    // El reset solo toca el `ValueNotifier` (sin `setState`), así que —
+    // igual que los tokens sucesivos en el test de MEJ-17 — hace falta más
+    // de un `pump()` para que se propague hasta el `ValueListenableBuilder`.
+    api.emit(const TurnStreamReset());
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(find.text('Partial answer'), findsNothing);
+
+    api.emit(const TurnStreamToken('Fresh answer'));
+    await tester.pump();
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 1));
+    expect(find.text('Fresh answer'), findsOneWidget);
+    expect(find.textContaining('Partial'), findsNothing);
+
+    api.emit(
+      const TurnStreamDone(
+        TurnResult(turnIdx: 1, reply: 'Fresh answer', corrections: []),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Fresh answer'), findsOneWidget);
+    // La pantalla ya canceló la suscripción al recibir `done`: el `close()`
+    // del controlador no tiene a quién avisar y su future no completa.
+    unawaited(api.closeStream());
+  });
+
   Future<void> pumpConversation(
     WidgetTester tester, {
     required FakeApi api,
@@ -852,4 +963,160 @@ void main() {
     },
   );
 
+  testWidgets('MEJ-04: la cuenta regresiva de escucha arranca en 45s y baja', (
+    tester,
+  ) async {
+    final speech = FakeSpeechService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: speech,
+    );
+
+    await tester.tap(find.byKey(const Key('conversation_mic_button')));
+    await tester.pump();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.conversationListeningSecondsLeft(45)), findsOneWidget);
+
+    await tester.pump(const Duration(seconds: 1));
+    expect(find.text(l10n.conversationListeningSecondsLeft(44)), findsOneWidget);
+
+    speech.emit('hello', isFinal: true);
+    await tester.pump();
+  });
+
+  testWidgets(
+    'MEJ-04: el nivel de sonido del micrófono no reconstruye toda la pantalla',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+
+      // No debería tirar ni dejar el anillo en un estado roto con niveles
+      // fuera del rango típico de `speech_to_text` (-2..10).
+      speech.emitSoundLevel(-2);
+      await tester.pump();
+      speech.emitSoundLevel(8.5);
+      await tester.pump();
+      speech.emitSoundLevel(15);
+      await tester.pump();
+
+      expect(find.byKey(const Key('conversation_mic_button')), findsOneWidget);
+
+      speech.emit('hello', isFinal: true);
+      await tester.pump();
+    },
+  );
+
+  testWidgets(
+    'MEJ-04: el botón de mic tiene un Semantics distinto en idle y escuchando',
+    (tester) async {
+      final speech = FakeSpeechService();
+      final semantics = tester.ensureSemantics();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(
+        find.bySemanticsLabel(l10n.conversationMicButtonSemantics),
+        findsOneWidget,
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+
+      expect(
+        find.bySemanticsLabel(l10n.conversationMicButtonListeningSemantics),
+        findsOneWidget,
+      );
+
+      speech.emit('hello', isFinal: true);
+      await tester.pump();
+      semantics.dispose();
+    },
+  );
+
+  testWidgets('MEJ-04: al enviar el turno muestra "Pensando…"', (
+    tester,
+  ) async {
+    final api = _InstantReplyApi(
+      artificialDelay: Duration.zero,
+      turnDelay: const Duration(milliseconds: 50),
+    );
+    final speech = FakeSpeechService();
+    await pumpConversation(tester, api: api, speech: speech);
+
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.conversationThinkingHint), findsOneWidget);
+
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets(
+    'MEJ-04: "Hablando…" muestra Parar, que corta el audio y vuelve a idle',
+    (tester) async {
+      final api = _InstantReplyApi(artificialDelay: Duration.zero);
+      final speech = FakeSpeechService();
+      final tts = FakeTtsService(
+        speakDelay: const Duration(milliseconds: 300),
+      );
+      await pumpConversation(tester, api: api, speech: speech, tts: tts);
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      // `_InstantReplyApi` con delay cero solo tiene un `await` de por
+      // medio: un par de `pump()` alcanza para llegar a `speaking` sin
+      // arriesgarse a que `pumpAndSettle` avance el reloj virtual y
+      // termine también el `speakDelay` del TTS.
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationSpeakingHint), findsOneWidget);
+      expect(
+        find.byKey(const Key('conversation_stop_speaking_button')),
+        findsOneWidget,
+      );
+
+      await tester.tap(
+        find.byKey(const Key('conversation_stop_speaking_button')),
+      );
+      await tester.pump();
+
+      expect(tts.stopCalled, isTrue);
+      expect(
+        find.byKey(const Key('conversation_stop_speaking_button')),
+        findsNothing,
+      );
+
+      // Deja completar el `speakDelay` pendiente del fake para no dejar un
+      // temporizador colgado entre tests.
+      await tester.pump(const Duration(milliseconds: 400));
+    },
+  );
 }

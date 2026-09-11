@@ -16,6 +16,10 @@ import 'models.dart';
 /// - [TurnStreamError]: solo puede llegar después de al menos un `token`
 ///   (un error anterior sale como excepción HTTP normal, nunca como evento
 ///   SSE); quien lo reciba debe tratar el turno como fallido.
+/// - [TurnStreamReset] (MAL-22): la API lo manda antes de reintentar el
+///   turno con otro modelo de la cadena de fallback (`llm.service.ts`); el
+///   texto acumulado hasta ahora no sirve — hay que vaciar la burbuja viva y
+///   seguir acumulando desde cero con los `token` que vengan después.
 sealed class TurnStreamEvent {
   const TurnStreamEvent();
 }
@@ -42,4 +46,8 @@ final class TurnStreamError extends TurnStreamEvent {
   const TurnStreamError(this.exception);
 
   final ApiException exception;
+}
+
+final class TurnStreamReset extends TurnStreamEvent {
+  const TurnStreamReset();
 }

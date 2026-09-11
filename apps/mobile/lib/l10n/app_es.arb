@@ -165,7 +165,8 @@
       "count": {"type": "int"}
     }
   },
-  "homeGraceDayAvailable": "Día de gracia disponible esta semana",
+  "streakGraceAvailable": "Día de gracia disponible esta semana",
+  "streakGraceUsed": "Gracia usada esta semana: hoy no hay red",
   "homeXpToNextLevel": "{amount} XP para subir de nivel",
   "@homeXpToNextLevel": {
     "placeholders": {
@@ -223,6 +224,17 @@
   "conversationTwoMinutesWarning": "2 minutos",
   "conversationTapToSpeak": "Tocá el micrófono y hablá, te vamos a escuchar",
   "conversationListeningHint": "Escuchando…",
+  "conversationListeningSecondsLeft": "{seconds}s",
+  "@conversationListeningSecondsLeft": {
+    "placeholders": {
+      "seconds": {"type": "int"}
+    }
+  },
+  "conversationThinkingHint": "Pensando…",
+  "conversationSpeakingHint": "Hablando…",
+  "conversationStopButton": "Parar",
+  "conversationMicButtonSemantics": "Micrófono, tocá para hablar",
+  "conversationMicButtonListeningSemantics": "Escuchando, tocá para terminar",
   "conversationEditableHint": "Editá tu respuesta antes de enviar",
   "conversationSendButton": "Enviar",
   "conversationRetryButton": "Repetir",

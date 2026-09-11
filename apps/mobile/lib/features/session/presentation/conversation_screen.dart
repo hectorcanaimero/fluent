@@ -41,6 +41,11 @@ class ConversationScreen extends ConsumerStatefulWidget {
 
 class _ConversationScreenState extends ConsumerState<ConversationScreen>
     with WidgetsBindingObserver {
+  /// MEJ-04: igual al `listenFor` de `speech_service.dart` — el motor corta
+  /// solo a los 45 s, así que la cuenta regresiva visible debe arrancar del
+  /// mismo número para no desincronizarse con lo que realmente pasa.
+  static const _listenWindowSeconds = 45;
+
   ConvState _state = ConvState.idle;
   final List<ChatMessage> _messages = [];
   final _draftController = TextEditingController();
@@ -83,6 +88,19 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   /// reconocimiento de voz en absoluto" (diálogo genérico, ya existente).
   bool _micPermissionDenied = false;
 
+  /// MEJ-04: nivel de volumen del micrófono mientras escucha, para el
+  /// anillo alrededor del botón — en un `ValueNotifier` para no reconstruir
+  /// toda la pantalla en cada callback (llega muy seguido).
+  final ValueNotifier<double> _soundLevel = ValueNotifier(0);
+
+  /// MEJ-04: cuenta regresiva visible de los 45 s que dura `listenFor`
+  /// (`speech_service.dart`), para que quien practica sepa cuánto le queda
+  /// antes de que el motor corte solo.
+  final ValueNotifier<int> _listenSecondsLeft = ValueNotifier(
+    _listenWindowSeconds,
+  );
+  Timer? _listenCountdownTimer;
+
   // Se leen una sola vez: son `Provider` simples (sin `watch`), y así
   // `dispose()` puede usarlos sin tocar `ref` después de desmontar.
   late final SpeechService _speech = ref.read(speechServiceProvider);
@@ -105,6 +123,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     WidgetsBinding.instance.removeObserver(this);
     _turnCancelToken.cancel();
     _timer?.cancel();
+    _listenCountdownTimer?.cancel();
     _draftController.dispose();
     _scrollController.dispose();
     _speech.cancel();
@@ -113,6 +132,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     _tts.stop();
     _remainingSecondsNotifier.dispose();
     _liveText.dispose();
+    _soundLevel.dispose();
+    _listenSecondsLeft.dispose();
     super.dispose();
   }
 
@@ -126,6 +147,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     switch (state) {
       case AppLifecycleState.paused:
         _timer?.cancel();
+        _listenCountdownTimer?.cancel();
         _speech.cancel();
         _tts.stop();
       case AppLifecycleState.resumed:
@@ -286,6 +308,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       _state = ConvState.listening;
       _partialText = '';
     });
+    _soundLevel.value = 0;
+    _startListenCountdown();
     await _speech.listen(
       onResult: (text, isFinal) {
         if (!mounted) return;
@@ -296,11 +320,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
             _state = ConvState.reviewing;
           }
         });
+        if (isFinal) _listenCountdownTimer?.cancel();
       },
       // MAL-05: el motor puede terminar solo sin `isFinal` (45 s, una
       // llamada entrante) — se pasa a revisar con lo que ya se transcribió
       // en vez de dejar el mic "escuchando" para siempre.
       onDoneWithoutResult: () {
+        _listenCountdownTimer?.cancel();
         if (!mounted) return;
         setState(() {
           _draftController.text = _partialText;
@@ -310,6 +336,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       // MAL-05: un error del motor (sin coincidencia, timeout) vuelve a
       // `idle` con un aviso, en vez de quedarse "escuchando".
       onError: (errorCode) {
+        _listenCountdownTimer?.cancel();
         if (!mounted) return;
         final l10n = AppLocalizations.of(context);
         setState(() {
@@ -324,11 +351,45 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         ScaffoldMessenger.of(context)
             .showSnackBar(SnackBar(content: Text(message)));
       },
+      // MEJ-04: nivel de volumen del micrófono, para el anillo alrededor
+      // del botón mientras escucha.
+      onSoundLevelChange: (level) {
+        if (!mounted) return;
+        _soundLevel.value = level;
+      },
     );
   }
 
+  /// MEJ-04: cuenta regresiva visible de los 45 s de `listenFor`. Vive
+  /// aparte de `_listen` porque es puramente de UI — el motor nativo corta
+  /// solo sin depender de esto.
+  void _startListenCountdown() {
+    _listenCountdownTimer?.cancel();
+    _listenSecondsLeft.value = _listenWindowSeconds;
+    _listenCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
+      timer,
+    ) {
+      final next = _listenSecondsLeft.value - 1;
+      if (next <= 0) {
+        timer.cancel();
+        _listenSecondsLeft.value = 0;
+        return;
+      }
+      _listenSecondsLeft.value = next;
+    });
+  }
+
   Future<void> _stopListening() async {
+    _listenCountdownTimer?.cancel();
     await _speech.stop();
+  }
+
+  /// MEJ-04: botón **Parar** visible mientras el tutor habla, para no
+  /// esperar a que termine todo el audio para poder actuar de nuevo.
+  Future<void> _stopSpeaking() async {
+    await _tts.stop();
+    if (!mounted) return;
+    setState(() => _state = ConvState.idle);
   }
 
   Future<void> _showMicPermissionDeniedDialog() async {
@@ -444,10 +505,20 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       _scrollToBottom();
     }
 
+    // MAL-22: `event: reset` llega cuando la API descarta el intento actual
+    // para reintentar con otro modelo de la cadena de fallback — el texto
+    // parcial pintado hasta ahora no forma parte de la respuesta final.
+    void onReset() {
+      liveReply.clear();
+      if (!mounted) return;
+      _liveText.value = '';
+    }
+
     try {
       final result = await _sendTurnWithStreamFallback(
         text: text,
         onToken: onToken,
+        onReset: onReset,
       );
       _unavailableCount = result.unavailable ? _unavailableCount + 1 : 0;
       if (!mounted) return;
@@ -521,6 +592,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   Future<TurnResult> _sendTurnWithStreamFallback({
     required String text,
     required void Function(String delta) onToken,
+    required void Function() onReset,
   }) async {
     final api = ref.read(fluentApiProvider);
     var sawEvent = false;
@@ -531,17 +603,22 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         cancelToken: _turnCancelToken,
       );
       await for (final event in stream) {
-        sawEvent = true;
         switch (event) {
           case TurnStreamToken(text: final delta):
+            sawEvent = true;
             onToken(delta);
           case TurnStreamCorrections():
             // `done` trae la misma lista: no hace falta pintarla dos veces.
-            break;
+            sawEvent = true;
           case TurnStreamDone(result: final result):
             return result;
           case TurnStreamError(exception: final exception):
             throw exception;
+          case TurnStreamReset():
+            // MAL-22: la API está por reintentar con otro modelo de la
+            // cadena de fallback — el texto acumulado hasta ahora no sirve.
+            sawEvent = true;
+            onReset();
         }
       }
     } on ApiException catch (e) {
@@ -713,12 +790,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
               partialText: _partialText,
               draftController: _draftController,
               errorMessage: _errorMessage,
+              soundLevel: _soundLevel,
+              listenSecondsLeft: _listenSecondsLeft,
               onMicTap: _state == ConvState.listening
                   ? _stopListening
                   : _startListening,
               onSend: _send,
               onRetry: _retry,
               onTextMode: _enterTextMode,
+              onStopSpeaking: _stopSpeaking,
             ),
           ],
         ),
@@ -904,20 +984,26 @@ class _BottomControls extends StatelessWidget {
     required this.partialText,
     required this.draftController,
     required this.errorMessage,
+    required this.soundLevel,
+    required this.listenSecondsLeft,
     required this.onMicTap,
     required this.onSend,
     required this.onRetry,
     required this.onTextMode,
+    required this.onStopSpeaking,
   });
 
   final ConvState state;
   final String partialText;
   final TextEditingController draftController;
   final String? errorMessage;
+  final ValueListenable<double> soundLevel;
+  final ValueListenable<int> listenSecondsLeft;
   final VoidCallback onMicTap;
   final VoidCallback onSend;
   final VoidCallback onRetry;
   final VoidCallback onTextMode;
+  final VoidCallback onStopSpeaking;
 
   @override
   Widget build(BuildContext context) {
@@ -974,6 +1060,13 @@ class _BottomControls extends StatelessWidget {
           ),
           ConvState.listening => Column(
             children: [
+              ValueListenableBuilder<int>(
+                valueListenable: listenSecondsLeft,
+                builder: (context, seconds, _) => Text(
+                  l10n.conversationListeningSecondsLeft(seconds),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ),
               Text(partialText, textAlign: TextAlign.center),
               const SizedBox(height: AppSpacing.sm),
               Text(
@@ -981,11 +1074,40 @@ class _BottomControls extends StatelessWidget {
                 style: Theme.of(context).textTheme.bodySmall,
               ),
               const SizedBox(height: AppSpacing.md),
-              _MicButton(active: true, onTap: onMicTap),
+              _MicButton(active: true, onTap: onMicTap, soundLevel: soundLevel),
             ],
           ),
-          ConvState.sending || ConvState.speaking => Center(
-            child: _MicButton(active: false, onTap: null),
+          ConvState.sending => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _MicButton(active: false, onTap: null),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.conversationThinkingHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ),
+          ),
+          ConvState.speaking => Center(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const _MicButton(active: false, onTap: null),
+                const SizedBox(height: AppSpacing.sm),
+                Text(
+                  l10n.conversationSpeakingHint,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                OutlinedButton(
+                  key: const Key('conversation_stop_speaking_button'),
+                  onPressed: onStopSpeaking,
+                  child: Text(l10n.conversationStopButton),
+                ),
+              ],
+            ),
           ),
           ConvState.idle => Column(
             children: [
@@ -1017,25 +1139,66 @@ class _BottomControls extends StatelessWidget {
 }
 
 class _MicButton extends StatelessWidget {
-  const _MicButton({required this.active, required this.onTap});
+  const _MicButton({required this.active, required this.onTap, this.soundLevel});
 
   final bool active;
   final VoidCallback? onTap;
 
+  /// MEJ-04: nivel de volumen del micrófono mientras escucha, para dibujar
+  /// un anillo que reacciona a la voz. `null` fuera de `listening` (nada
+  /// que animar).
+  final ValueListenable<double>? soundLevel;
+
   @override
   Widget build(BuildContext context) {
-    return InkWell(
-      key: const Key('conversation_mic_button'),
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(999),
-      child: Container(
-        width: 72,
-        height: 72,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          color: active ? AppColors.accent : AppColors.primary,
-        ),
-        child: const Icon(Icons.mic, color: Colors.white, size: 32),
+    final l10n = AppLocalizations.of(context);
+    final button = Container(
+      width: 72,
+      height: 72,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        color: active ? AppColors.accent : AppColors.primary,
+      ),
+      child: const Icon(Icons.mic, color: Colors.white, size: 32),
+    );
+
+    final level = soundLevel;
+    final visual = level == null
+        ? button
+        : ValueListenableBuilder<double>(
+            valueListenable: level,
+            builder: (context, value, child) {
+              // `speech_to_text` no normaliza `onSoundLevelChange` (suele
+              // moverse entre -2 y 10 aprox.): se recorta a 0-10 y se
+              // escala a un anillo cuyo grosor/opacidad crece con la voz.
+              final normalized = (value / 10).clamp(0.0, 1.0);
+              return Container(
+                padding: const EdgeInsets.all(6),
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  border: Border.all(
+                    color: AppColors.accent.withValues(
+                      alpha: 0.3 + normalized * 0.7,
+                    ),
+                    width: 3 + normalized * 5,
+                  ),
+                ),
+                child: child,
+              );
+            },
+            child: button,
+          );
+
+    return Semantics(
+      button: true,
+      label: active
+          ? l10n.conversationMicButtonListeningSemantics
+          : l10n.conversationMicButtonSemantics,
+      child: InkWell(
+        key: const Key('conversation_mic_button'),
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(999),
+        child: visual,
       ),
     );
   }

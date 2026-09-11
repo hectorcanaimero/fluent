@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
@@ -10,6 +11,7 @@ import '../../../core/widgets/async_body.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
+import '../data/reminder_prefs.dart';
 
 /// Ajustes (Pen "10 Profile" -> `/settings`). Perfil, zona horaria,
 /// recordatorios locales (SPEC-06 §8), idioma, cuenta y borrar cuenta.
@@ -24,10 +26,15 @@ class SettingsScreen extends ConsumerStatefulWidget {
 
 class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   late Future<MeResponse> _future;
-  TimeOfDay _morning = const TimeOfDay(hour: 8, minute: 30);
-  TimeOfDay _evening = const TimeOfDay(hour: 20, minute: 30);
-  bool _streakAlert = true;
-  bool _soundEffects = true;
+  // MAL-10: valores por defecto compartidos con `reminder_prefs.dart` —
+  // se pisan en cuanto `_loadReminderPrefs` resuelve, si había algo guardado.
+  TimeOfDay _morning = kReminderMorningDefault;
+  TimeOfDay _evening = kReminderEveningDefault;
+
+  // MAL-10: "Alerta de racha" y "Sonido" quedan deshabilitados con la
+  // etiqueta "Pronto" — el valor ya no importa hasta que existan de verdad.
+  final bool _streakAlert = false;
+  final bool _soundEffects = false;
 
   // MAL-14: código de invitación para quien se registró sin grupo.
   final _invitationCodeController = TextEditingController();
@@ -38,6 +45,16 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   void initState() {
     super.initState();
     _loadProfile();
+    _loadReminderPrefs();
+  }
+
+  Future<void> _loadReminderPrefs() async {
+    final (morning, evening) = await loadReminderTimes();
+    if (!mounted) return;
+    setState(() {
+      _morning = morning;
+      _evening = evening;
+    });
   }
 
   @override
@@ -100,9 +117,19 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         _evening = picked;
       }
     });
-    await ref
-        .read(reminderServiceProvider)
-        .scheduleDaily(morning: _morning, evening: _evening);
+    await saveReminderTimes(morning: _morning, evening: _evening);
+    // MAL-10: sin el permiso, `scheduleDaily` "funciona" pero la
+    // notificación nunca aparece — pedirlo acá, al activar un recordatorio,
+    // en vez de esperar a que alguien se pregunte por qué nunca sonó.
+    await Permission.notification.request();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    await ref.read(reminderServiceProvider).scheduleDaily(
+      morning: _morning,
+      evening: _evening,
+      title: l10n.settingsReminderNotificationTitle,
+      body: l10n.settingsReminderNotificationBody,
+    );
   }
 
   void _setLocale(Locale? locale) {
@@ -258,17 +285,22 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: Text(_evening.format(context)),
                     onTap: () => _pickTime(morning: false),
                   ),
+                  // MAL-10: ninguno de los dos existe todavía de verdad
+                  // (no hay detección de racha en riesgo ni sonidos) — antes
+                  // el switch prometía algo que tocarlo no hacía nada.
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.settingsStreakAlert),
+                    subtitle: Text(l10n.commonComingSoon),
                     value: _streakAlert,
-                    onChanged: (v) => setState(() => _streakAlert = v),
+                    onChanged: null,
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.settingsSoundEffects),
+                    subtitle: Text(l10n.commonComingSoon),
                     value: _soundEffects,
-                    onChanged: (v) => setState(() => _soundEffects = v),
+                    onChanged: null,
                   ),
                   const SizedBox(height: AppSpacing.xl),
                   OutlinedButton(

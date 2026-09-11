@@ -39,11 +39,15 @@ class HomeData {
 
   bool get hasActiveProvider => me.hasActiveProvider;
 
+  /// MAL-24: sin proveedor propio, la sesión de cortesía (credencial del
+  /// owner del grupo, modelos gratis) también habilita practicar.
+  bool get hasCourtesySession => me.courtesySessionAvailable;
+
   /// MAL-13: única fuente de verdad de "se puede empezar una sesión ahora"
   /// para el CTA de Home, los chips de temas rápidos y la pestaña
   /// Practicar — antes cada uno lo derivaba (o no) por su cuenta y quedaban
   /// inconsistentes entre sí.
-  bool get canPractice => hasActiveProvider;
+  bool get canPractice => hasActiveProvider || hasCourtesySession;
 
   /// `pendingActions` de `GET /me` (SPEC-02 §4.1) solo llega poblado al
   /// owner del grupo (la API la calcula por `userId` de quien pide `/me`,

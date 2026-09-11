@@ -9,6 +9,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 
 void main() {
   testWidgets('muestra XP, streak, duración y el aviso de boss battle', (
@@ -146,6 +147,95 @@ void main() {
       final l10n = await AppLocalizations.delegate.load(const Locale('es'));
       expect(find.text(l10n.summaryNextIsBossBanner), findsNothing);
       expect(find.text(l10n.summaryDoubleDayBadge), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'MAL-24: al terminar una sesión de cortesía, invita a conectar la cuenta',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      await api.disconnectProvider('openrouter');
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      expect(created.session.courtesy, isTrue);
+      await api.endSession(sessionId: created.session.id, reason: 'user');
+
+      final router = GoRouter(
+        initialLocation: '/session/${created.session.id}/summary',
+        routes: [
+          GoRoute(
+            path: '/session/:id/summary',
+            builder: (context, state) =>
+                SessionSummaryScreen(sessionId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: '/providers',
+            builder: (context, state) => const Text('PROVIDERS_SCREEN'),
+          ),
+          GoRoute(path: '/', builder: (context, state) => const Text('HOME_SCREEN')),
+        ],
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [fluentApiProvider.overrideWith((ref) => api)],
+          child: MaterialApp.router(
+            routerConfig: router,
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.summaryCourtesyBanner), findsOneWidget);
+
+      await tester.tap(
+        find.byKey(const Key('summary_connect_provider_button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('PROVIDERS_SCREEN'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    'una sesión normal (con proveedor) no muestra la invitación de cortesía',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      await api.endSession(sessionId: created.session.id, reason: 'user');
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [fluentApiProvider.overrideWith((ref) => api)],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SessionSummaryScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.summaryCourtesyBanner), findsNothing);
     },
   );
 }

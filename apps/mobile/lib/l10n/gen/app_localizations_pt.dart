@@ -218,16 +218,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get onboardingErrorGeneric => 'Algo deu errado. Tente de novo.';
 
   @override
-  String get onboardingNameHeadline => 'Como podemos te chamar?';
-
-  @override
-  String get onboardingNameSubtitle =>
-      'É assim que seus colegas de grupo vão te ver.';
-
-  @override
-  String get onboardingNameLabel => 'Nome';
-
-  @override
   String get onboardingLevelHeadline => 'Como está seu inglês agora?';
 
   @override
@@ -1020,4 +1010,47 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get summaryShareStreakButton => 'Compartilhar sua sequência';
+
+  @override
+  String get commonComingSoon => 'Em breve';
+
+  @override
+  String get settingsReminderNotificationTitle => 'Fluent';
+
+  @override
+  String get settingsReminderNotificationBody =>
+      'Hora da sua prática de inglês de 10 minutos.';
+
+  @override
+  String onboardingStepIndicator(int step, int total) {
+    return 'Passo $step de $total';
+  }
+
+  @override
+  String onboardingXpAwarded(int amount) {
+    return 'Perfil completo! +$amount XP';
+  }
+
+  @override
+  String get homeChecklistTitle => 'Para começar';
+
+  @override
+  String get homeChecklistProfile => 'Perfil pronto';
+
+  @override
+  String get homeChecklistProvider => 'Conectar IA';
+
+  @override
+  String get homeChecklistFirstSession => 'Primeira sessão de 3 min';
+
+  @override
+  String get homeCourtesyPracticeButton =>
+      'Experimente sua primeira sessão sem conectar nada';
+
+  @override
+  String get summaryCourtesyBanner => 'Essa foi sua sessão de cortesia.';
+
+  @override
+  String get summaryCourtesyConnectButton =>
+      'Para continuar, conecte sua conta grátis (2 minutos)';
 }

@@ -5,8 +5,30 @@ import 'package:timezone/timezone.dart' as tz;
 
 /// Recordatorios locales sin backend (SPEC-06 §8): dos notificaciones
 /// diarias configurables, sin sincronizar con la API.
+///
+/// MAL-10: `title`/`body` los resuelve quien llama (`AppLocalizations` no
+/// está disponible acá, un `ReminderService` no tiene `BuildContext`), así
+/// que viajan como parámetro en vez de vivir hardcodeados en español.
 abstract class ReminderService {
-  Future<void> scheduleDaily({required TimeOfDay morning, required TimeOfDay evening});
+  Future<void> scheduleDaily({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  });
+
+  /// MAL-10: al cerrar la 2ª sesión válida del día, los recordatorios de
+  /// HOY ya no tienen sentido — pero mañana sí deben sonar de nuevo. Cancela
+  /// las notificaciones ya programadas y reprograma forzando la próxima
+  /// ocurrencia a partir de mañana (`scheduleDaily` podría reprogramar para
+  /// hoy mismo si la hora todavía no pasó).
+  Future<void> skipToday({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  });
+
   Future<void> cancelAll();
 }
 
@@ -32,7 +54,7 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
     _initialized = true;
   }
 
-  tz.TZDateTime _nextInstanceOf(TimeOfDay time) {
+  tz.TZDateTime _nextInstanceOf(TimeOfDay time, {bool skipToday = false}) {
     final now = tz.TZDateTime.now(tz.local);
     var scheduled = tz.TZDateTime(
       tz.local,
@@ -42,14 +64,19 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
       time.hour,
       time.minute,
     );
-    if (scheduled.isBefore(now)) {
+    if (scheduled.isBefore(now) || skipToday) {
       scheduled = scheduled.add(const Duration(days: 1));
     }
     return scheduled;
   }
 
-  @override
-  Future<void> scheduleDaily({required TimeOfDay morning, required TimeOfDay evening}) async {
+  Future<void> _scheduleBoth({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+    required bool skipToday,
+  }) async {
     await _ensureInitialized();
     const details = NotificationDetails(
       android: AndroidNotificationDetails('fluent_reminders', 'Recordatorios de práctica'),
@@ -57,9 +84,9 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
     );
     await _plugin.zonedSchedule(
       _morningId,
-      'Fluent',
-      'Es hora de tu práctica de inglés de 10 minutos.',
-      _nextInstanceOf(morning),
+      title,
+      body,
+      _nextInstanceOf(morning, skipToday: skipToday),
       details,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
@@ -67,13 +94,46 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
     );
     await _plugin.zonedSchedule(
       _eveningId,
-      'Fluent',
-      'Es hora de tu práctica de inglés de 10 minutos.',
-      _nextInstanceOf(evening),
+      title,
+      body,
+      _nextInstanceOf(evening, skipToday: skipToday),
       details,
       androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
       matchDateTimeComponents: DateTimeComponents.time,
       uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+    );
+  }
+
+  @override
+  Future<void> scheduleDaily({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  }) => _scheduleBoth(
+    morning: morning,
+    evening: evening,
+    title: title,
+    body: body,
+    skipToday: false,
+  );
+
+  @override
+  Future<void> skipToday({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  }) async {
+    await _ensureInitialized();
+    await _plugin.cancel(_morningId);
+    await _plugin.cancel(_eveningId);
+    await _scheduleBoth(
+      morning: morning,
+      evening: evening,
+      title: title,
+      body: body,
+      skipToday: true,
     );
   }
 
@@ -88,13 +148,38 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
 class FakeReminderService implements ReminderService {
   TimeOfDay? lastMorning;
   TimeOfDay? lastEvening;
+  String? lastTitle;
+  String? lastBody;
   bool cancelled = false;
+  bool skippedToday = false;
 
   @override
-  Future<void> scheduleDaily({required TimeOfDay morning, required TimeOfDay evening}) async {
+  Future<void> scheduleDaily({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  }) async {
     lastMorning = morning;
     lastEvening = evening;
+    lastTitle = title;
+    lastBody = body;
     cancelled = false;
+    skippedToday = false;
+  }
+
+  @override
+  Future<void> skipToday({
+    required TimeOfDay morning,
+    required TimeOfDay evening,
+    required String title,
+    required String body,
+  }) async {
+    lastMorning = morning;
+    lastEvening = evening;
+    lastTitle = title;
+    lastBody = body;
+    skippedToday = true;
   }
 
   @override

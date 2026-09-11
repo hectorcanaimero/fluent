@@ -482,24 +482,6 @@ abstract class AppLocalizations {
   /// **'Algo salió mal. Probá de nuevo.'**
   String get onboardingErrorGeneric;
 
-  /// No description provided for @onboardingNameHeadline.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Cómo te llamamos?'**
-  String get onboardingNameHeadline;
-
-  /// No description provided for @onboardingNameSubtitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Así te van a ver tus compañeros de grupo.'**
-  String get onboardingNameSubtitle;
-
-  /// No description provided for @onboardingNameLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Nombre'**
-  String get onboardingNameLabel;
-
   /// No description provided for @onboardingLevelHeadline.
   ///
   /// In es, this message translates to:
@@ -1927,6 +1909,78 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Compartir tu racha'**
   String get summaryShareStreakButton;
+
+  /// No description provided for @commonComingSoon.
+  ///
+  /// In es, this message translates to:
+  /// **'Pronto'**
+  String get commonComingSoon;
+
+  /// No description provided for @settingsReminderNotificationTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Fluent'**
+  String get settingsReminderNotificationTitle;
+
+  /// No description provided for @settingsReminderNotificationBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Es hora de tu práctica de inglés de 10 minutos.'**
+  String get settingsReminderNotificationBody;
+
+  /// No description provided for @onboardingStepIndicator.
+  ///
+  /// In es, this message translates to:
+  /// **'Paso {step} de {total}'**
+  String onboardingStepIndicator(int step, int total);
+
+  /// No description provided for @onboardingXpAwarded.
+  ///
+  /// In es, this message translates to:
+  /// **'¡Perfil completo! +{amount} XP'**
+  String onboardingXpAwarded(int amount);
+
+  /// No description provided for @homeChecklistTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Para arrancar'**
+  String get homeChecklistTitle;
+
+  /// No description provided for @homeChecklistProfile.
+  ///
+  /// In es, this message translates to:
+  /// **'Perfil listo'**
+  String get homeChecklistProfile;
+
+  /// No description provided for @homeChecklistProvider.
+  ///
+  /// In es, this message translates to:
+  /// **'Conectar IA'**
+  String get homeChecklistProvider;
+
+  /// No description provided for @homeChecklistFirstSession.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera sesión de 3 min'**
+  String get homeChecklistFirstSession;
+
+  /// No description provided for @homeCourtesyPracticeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Probá tu primera sesión sin conectar nada'**
+  String get homeCourtesyPracticeButton;
+
+  /// No description provided for @summaryCourtesyBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Esa fue tu sesión de cortesía.'**
+  String get summaryCourtesyBanner;
+
+  /// No description provided for @summaryCourtesyConnectButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Para seguir, conectá tu cuenta gratis (2 minutos)'**
+  String get summaryCourtesyConnectButton;
 }
 
 class _AppLocalizationsDelegate

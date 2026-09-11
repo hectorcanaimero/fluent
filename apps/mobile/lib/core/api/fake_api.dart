@@ -27,6 +27,11 @@ class FakeApi implements FluentApi {
   /// Mutable para que los tests prueben los tres casos sin crear una
   /// instancia nueva.
   String? grace;
+
+  /// MAL-24: `true` una vez que se abrió una sesión sin proveedor propio
+  /// (con la sesión de cortesía). Mutable para que los tests simulen "ya
+  /// gastó su cortesía" sin tener que abrir una sesión de verdad primero.
+  bool courtesyUsed = false;
   final Random _random = Random(7);
 
   late Profile _profile;
@@ -169,6 +174,7 @@ class FakeApi implements FluentApi {
   @override
   Future<MeResponse> getMe() async {
     await _delay();
+    final hasProvider = _providers.any((p) => p.status == 'active');
     return MeResponse(
       profile: _profile,
       group: _group,
@@ -178,11 +184,14 @@ class FakeApi implements FluentApi {
       activeSessionId: _activeSessionId,
       interestsCatalog: kFallbackInterests,
       pendingActions: _pendingActions,
+      courtesySessionAvailable: !hasProvider && !courtesyUsed,
     );
   }
 
+  bool _xpAwardedForOnboarding = false;
+
   @override
-  Future<Profile> putProfile({
+  Future<PutProfileResult> putProfile({
     required String displayName,
     required String level,
     required List<String> interests,
@@ -193,6 +202,13 @@ class FakeApi implements FluentApi {
     if (interests.length < 3 || interests.length > 5) {
       _fail(ApiErrorCode.validation, 'interests must have 3 to 5 items');
     }
+    // MEJ-14: +20 XP por completar el onboarding, una sola vez.
+    final wasOnboarded = _onboarded;
+    final awardXp = !wasOnboarded && !_xpAwardedForOnboarding;
+    if (awardXp) {
+      _xpAwardedForOnboarding = true;
+      _profile = _profile.copyWith(xp: _profile.xp + 20);
+    }
     _profile = _profile.copyWith(
       displayName: displayName,
       level: level,
@@ -201,7 +217,10 @@ class FakeApi implements FluentApi {
       locale: locale,
     );
     _onboarded = true;
-    return _profile;
+    return PutProfileResult(
+      profile: _profile,
+      xpAwarded: awardXp ? 20 : null,
+    );
   }
 
   @override
@@ -473,13 +492,17 @@ class FakeApi implements FluentApi {
       );
     }
     final providerConnected = _providers.any((p) => p.status == 'active');
-    if (!providerConnected) {
+    // MAL-24: sin proveedor propio, la sesión de cortesía (credencial del
+    // owner del grupo, una sola vez) también habilita abrir sesión.
+    if (!providerConnected && courtesyUsed) {
       _fail(
         ApiErrorCode.providerNotConnected,
-        'no provider connected',
+        'no provider connected and courtesy session already used',
         statusCode: 409,
       );
     }
+    final courtesy = !providerConnected;
+    if (courtesy) courtesyUsed = true;
     _sessionCounter++;
     final id = 'session-$_sessionCounter';
     final resolvedTopic = topic ?? roleplayId ?? newsItemId ?? 'Free talk';
@@ -488,6 +511,7 @@ class FakeApi implements FluentApi {
       kind: kind,
       topic: resolvedTopic,
       startedAt: DateTime.now().toIso8601String(),
+      courtesy: courtesy,
     );
     _sessions[id] = session;
     _sessionTurns[id] = [];

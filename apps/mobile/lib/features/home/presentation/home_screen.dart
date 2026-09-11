@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/errors/api_exception.dart';
@@ -8,6 +9,7 @@ import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../features/session/domain/session_prefs.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/home_data.dart';
 
@@ -103,11 +105,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
               children: [
                 _HeaderRow(data: data),
                 const SizedBox(height: AppSpacing.lg),
+                _OnboardingChecklist(data: data),
                 _StreakCard(data: data),
                 const SizedBox(height: AppSpacing.lg),
                 _LevelCard(data: data),
                 const SizedBox(height: AppSpacing.xl),
-                if (!data.hasActiveProvider) ...[
+                // MAL-24: con la sesión de cortesía disponible, el banner de
+                // "conectá un proveedor" no aplica — la promesa es
+                // justamente que se puede practicar sin conectar nada.
+                if (!data.hasActiveProvider && !data.hasCourtesySession) ...[
                   _NoProviderBanner(),
                   const SizedBox(height: AppSpacing.lg),
                 ],
@@ -230,6 +236,97 @@ class _HeaderRow extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+/// MEJ-14: checklist de arranque (perfil, proveedor, primera sesión) —
+/// desaparece en cuanto los 3 están listos, no se queda ocupando lugar para
+/// siempre. "Primera sesión de 3 min" reusa el mismo flag de
+/// `SharedPreferences` que MAL-28 usa para "primera sesión válida".
+class _OnboardingChecklist extends StatelessWidget {
+  const _OnboardingChecklist({required this.data});
+
+  final HomeData data;
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<bool>(
+      future: _hasFirstValidSession(),
+      builder: (context, snapshot) {
+        final firstSessionDone = snapshot.data ?? false;
+        final providerConnected = data.hasActiveProvider;
+        if (providerConnected && firstSessionDone) {
+          return const SizedBox.shrink();
+        }
+        final l10n = AppLocalizations.of(context);
+        return Padding(
+          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+          child: Container(
+            padding: const EdgeInsets.all(AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.lg),
+              border: Border.all(color: AppColors.border),
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  l10n.homeChecklistTitle,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+                const SizedBox(height: AppSpacing.sm),
+                _ChecklistItem(label: l10n.homeChecklistProfile, done: true),
+                _ChecklistItem(
+                  label: l10n.homeChecklistProvider,
+                  done: providerConnected,
+                ),
+                _ChecklistItem(
+                  label: l10n.homeChecklistFirstSession,
+                  done: firstSessionDone,
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  static Future<bool> _hasFirstValidSession() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(kFirstValidSessionPrefsKey) ?? false;
+  }
+}
+
+class _ChecklistItem extends StatelessWidget {
+  const _ChecklistItem({required this.label, required this.done});
+
+  final String label;
+  final bool done;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        children: [
+          Icon(
+            done ? Icons.check_circle : Icons.radio_button_unchecked,
+            size: 18,
+            color: done ? AppColors.primary : AppColors.textMuted,
+          ),
+          const SizedBox(width: AppSpacing.sm),
+          Text(
+            label,
+            style: TextStyle(
+              color: done ? AppColors.textPrimary : AppColors.textMuted,
+              decoration: done ? TextDecoration.lineThrough : null,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -428,10 +525,16 @@ class _PrimaryCta extends StatelessWidget {
         ],
       );
     }
+    // MAL-24: sin proveedor propio pero con cortesía disponible, el botón
+    // adelanta la promesa ("no hace falta conectar nada") en vez de mostrar
+    // el texto genérico de siempre.
+    final label = (!data.hasActiveProvider && data.hasCourtesySession)
+        ? l10n.homeCourtesyPracticeButton
+        : l10n.homePracticeButton;
     return ElevatedButton(
       key: const Key('home_practice_button'),
       onPressed: blocked ? null : onPractice,
-      child: Text(l10n.homePracticeButton),
+      child: Text(label),
     );
   }
 }

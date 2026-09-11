@@ -64,9 +64,6 @@
   "onboardingContinueButton": "Continuar",
   "onboardingFinishButton": "Concluir",
   "onboardingErrorGeneric": "Algo deu errado. Tente de novo.",
-  "onboardingNameHeadline": "Como podemos te chamar?",
-  "onboardingNameSubtitle": "É assim que seus colegas de grupo vão te ver.",
-  "onboardingNameLabel": "Nome",
   "onboardingLevelHeadline": "Como está seu inglês agora?",
   "onboardingLevelSubtitle": "Sem pressão. Vamos ajustar aos poucos, isso só define seu ponto de partida.",
   "onboardingLevelBeginnerTitle": "Iniciante",
@@ -304,5 +301,17 @@
   "correctionCategoryModal": "Verbo modal",
   "correctionCategoryOther": "Outro",
   "summaryLevelUpBanner": "Você subiu de nível! Agora você é {level}.",
-  "summaryShareStreakButton": "Compartilhar sua sequência"
+  "summaryShareStreakButton": "Compartilhar sua sequência",
+  "commonComingSoon": "Em breve",
+  "settingsReminderNotificationTitle": "Fluent",
+  "settingsReminderNotificationBody": "Hora da sua prática de inglês de 10 minutos.",
+  "onboardingStepIndicator": "Passo {step} de {total}",
+  "onboardingXpAwarded": "Perfil completo! +{amount} XP",
+  "homeChecklistTitle": "Para começar",
+  "homeChecklistProfile": "Perfil pronto",
+  "homeChecklistProvider": "Conectar IA",
+  "homeChecklistFirstSession": "Primeira sessão de 3 min",
+  "homeCourtesyPracticeButton": "Experimente sua primeira sessão sem conectar nada",
+  "summaryCourtesyBanner": "Essa foi sua sessão de cortesia.",
+  "summaryCourtesyConnectButton": "Para continuar, conecte sua conta grátis (2 minutos)"
 }

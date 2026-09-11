@@ -64,9 +64,6 @@
   "onboardingContinueButton": "Continuar",
   "onboardingFinishButton": "Terminar",
   "onboardingErrorGeneric": "Algo salió mal. Probá de nuevo.",
-  "onboardingNameHeadline": "¿Cómo te llamamos?",
-  "onboardingNameSubtitle": "Así te van a ver tus compañeros de grupo.",
-  "onboardingNameLabel": "Nombre",
   "onboardingLevelHeadline": "¿Cómo está tu inglés ahora mismo?",
   "onboardingLevelSubtitle": "Sin presión. Nos vamos a ajustar sobre la marcha, esto solo marca tu punto de partida.",
   "onboardingLevelBeginnerTitle": "Principiante",
@@ -396,5 +393,28 @@
       "level": {"type": "String"}
     }
   },
-  "summaryShareStreakButton": "Compartir tu racha"
+  "summaryShareStreakButton": "Compartir tu racha",
+  "commonComingSoon": "Pronto",
+  "settingsReminderNotificationTitle": "Fluent",
+  "settingsReminderNotificationBody": "Es hora de tu práctica de inglés de 10 minutos.",
+  "onboardingStepIndicator": "Paso {step} de {total}",
+  "@onboardingStepIndicator": {
+    "placeholders": {
+      "step": {"type": "int"},
+      "total": {"type": "int"}
+    }
+  },
+  "onboardingXpAwarded": "¡Perfil completo! +{amount} XP",
+  "@onboardingXpAwarded": {
+    "placeholders": {
+      "amount": {"type": "int"}
+    }
+  },
+  "homeChecklistTitle": "Para arrancar",
+  "homeChecklistProfile": "Perfil listo",
+  "homeChecklistProvider": "Conectar IA",
+  "homeChecklistFirstSession": "Primera sesión de 3 min",
+  "homeCourtesyPracticeButton": "Probá tu primera sesión sin conectar nada",
+  "summaryCourtesyBanner": "Esa fue tu sesión de cortesía.",
+  "summaryCourtesyConnectButton": "Para seguir, conectá tu cuenta gratis (2 minutos)"
 }

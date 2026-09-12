@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -5,6 +6,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:permission_handler/permission_handler.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
@@ -102,6 +104,104 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
       evening: evening,
       title: l10n.settingsReminderNotificationTitle,
       body: l10n.settingsReminderNotificationBody,
+    );
+  }
+
+  /// MEJ-38: tras la primera sesión válida, ofrecer el recordatorio diario
+  /// opt-in a "esta misma hora". Se pregunta una sola vez en la vida de la
+  /// instalación (se acepte o no) — persistido por
+  /// `markFirstSessionReminderAsked`. Memoizado por instancia, igual que
+  /// `_isFirstValidSession`.
+  Future<void>? _maybeShowFirstSessionReminderDialogFuture;
+
+  Future<void> _maybeShowFirstSessionReminderDialog(int xpEarned) {
+    return _maybeShowFirstSessionReminderDialogFuture ??=
+        _computeMaybeShowFirstSessionReminderDialog(xpEarned);
+  }
+
+  Future<void> _computeMaybeShowFirstSessionReminderDialog(
+    int xpEarned,
+  ) async {
+    final isFirst = await _isFirstValidSession(xpEarned);
+    if (!isFirst) return;
+    if (await hasAskedFirstSessionReminder()) return;
+    await markFirstSessionReminderAsked();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final accepted = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text(l10n.firstSessionReminderDialogTitle),
+        content: Text(l10n.firstSessionReminderDialogBody),
+        actions: [
+          TextButton(
+            key: const Key('first_session_reminder_decline_button'),
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text(l10n.firstSessionReminderDecline),
+          ),
+          ElevatedButton(
+            key: const Key('first_session_reminder_accept_button'),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: Text(l10n.firstSessionReminderAccept),
+          ),
+        ],
+      ),
+    );
+    if (accepted != true) return;
+    if (!mounted) return;
+    // MAL-10: pedir el permiso no debería bloquear programar el
+    // recordatorio — si el plugin tarda o no está disponible (por ejemplo,
+    // en tests), igual se programa; sin permiso, el SO simplemente no lo
+    // mostrará.
+    unawaited(
+      Permission.notification.request().catchError(
+        (_) => PermissionStatus.denied,
+      ),
+    );
+    await ref
+        .read(reminderServiceProvider)
+        .scheduleAtHour(
+          time: TimeOfDay.now(),
+          title: l10n.settingsReminderNotificationTitle,
+          body: l10n.settingsReminderNotificationBody,
+        );
+  }
+
+  /// MEJ-39: al cerrar cada sesión válida, cancelar el aviso de "racha en
+  /// riesgo" de hoy (ya no hace falta) y programar el de mañana 20:30 con
+  /// el streak/gracia actuales. Controlado por el switch "Alerta de racha"
+  /// de Ajustes (`loadStreakAlertEnabled`).
+  Future<void>? _maybeScheduleStreakDangerFuture;
+
+  Future<void> _maybeScheduleStreakDanger(int xpEarned) {
+    return _maybeScheduleStreakDangerFuture ??=
+        _computeMaybeScheduleStreakDanger(xpEarned);
+  }
+
+  Future<void> _computeMaybeScheduleStreakDanger(int xpEarned) async {
+    if (xpEarned <= 0) return;
+    if (!await loadStreakAlertEnabled()) return;
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    final progress = await _progressFuture;
+    if (!mounted) return;
+    final reminder = ref.read(reminderServiceProvider);
+    await reminder.cancelStreakDanger();
+    final now = DateTime.now();
+    final fireAt = DateTime(
+      now.year,
+      now.month,
+      now.day,
+      20,
+      30,
+    ).add(const Duration(days: 1));
+    final body = progress.grace == 'available'
+        ? l10n.streakDangerGraceBody
+        : l10n.streakDangerBody(progress.streak);
+    await reminder.scheduleStreakDanger(
+      fireAt: fireAt,
+      title: l10n.settingsReminderNotificationTitle,
+      body: body,
     );
   }
 
@@ -309,6 +409,18 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
               // `ReminderService.skipToday` si corresponde.
               FutureBuilder<void>(
                 future: _maybeSkipTodayReminder(summary.xpEarned),
+                builder: (context, snapshot) => const SizedBox.shrink(),
+              ),
+              // MEJ-38: efecto sin UI propia — el diálogo opt-in se muestra
+              // con `showDialog`, no como parte de este árbol.
+              FutureBuilder<void>(
+                future: _maybeShowFirstSessionReminderDialog(summary.xpEarned),
+                builder: (context, snapshot) => const SizedBox.shrink(),
+              ),
+              // MEJ-39: efecto sin UI propia — reprograma el aviso de racha
+              // en riesgo para mañana.
+              FutureBuilder<void>(
+                future: _maybeScheduleStreakDanger(summary.xpEarned),
                 builder: (context, snapshot) => const SizedBox.shrink(),
               ),
               // MAL-28: la primera sesión que sí sumó XP ancla la promesa de

@@ -36,6 +36,14 @@ enum ApiErrorCode {
   /// cliente al envolver el stream con `.timeout()` — así que no tiene caso
   /// en [fromWire].
   streamTimeout,
+
+  /// P1 MEJ-41: `POST /groups/invitations` con 5 invitaciones sin usar ya
+  /// creadas por este miembro.
+  invitationLimitReached,
+
+  /// P1 MEJ-33/MEJ-41: la cuenta todavía no tiene grupo (crear invitación,
+  /// o abrir sesión sin grupo).
+  groupRequired,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {
@@ -80,6 +88,10 @@ enum ApiErrorCode {
         return ApiErrorCode.challengeNotAvailable;
       case 'TURNS_DAILY_CAP':
         return ApiErrorCode.turnsDailyCap;
+      case 'INVITATION_LIMIT_REACHED':
+        return ApiErrorCode.invitationLimitReached;
+      case 'GROUP_REQUIRED':
+        return ApiErrorCode.groupRequired;
       default:
         return ApiErrorCode.unknown;
     }

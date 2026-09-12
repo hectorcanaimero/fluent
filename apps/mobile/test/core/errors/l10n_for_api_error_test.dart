@@ -41,4 +41,15 @@ void main() {
       l10n.errorChallengeNotAvailable,
     );
   });
+
+  test('MEJ-41: invitationLimitReached y groupRequired tienen texto propio', () {
+    expect(
+      l10nForApiError(ApiErrorCode.invitationLimitReached, l10n),
+      l10n.errorInvitationLimitReached,
+    );
+    expect(
+      l10nForApiError(ApiErrorCode.groupRequired, l10n),
+      l10n.errorGroupRequired,
+    );
+  });
 }

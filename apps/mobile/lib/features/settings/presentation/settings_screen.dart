@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:permission_handler/permission_handler.dart';
@@ -31,9 +33,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
   TimeOfDay _morning = kReminderMorningDefault;
   TimeOfDay _evening = kReminderEveningDefault;
 
-  // MAL-10: "Alerta de racha" y "Sonido" quedan deshabilitados con la
-  // etiqueta "Pronto" — el valor ya no importa hasta que existan de verdad.
-  final bool _streakAlert = false;
+  // MEJ-39: "Alerta de racha" ya funciona (controla la notificación de
+  // racha en riesgo que programa `SessionSummaryScreen`). "Sonido" sigue
+  // sin existir de verdad.
+  bool _streakAlert = true;
   final bool _soundEffects = false;
 
   // MAL-14: código de invitación para quien se registró sin grupo.
@@ -50,11 +53,30 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
 
   Future<void> _loadReminderPrefs() async {
     final (morning, evening) = await loadReminderTimes();
+    final streakAlert = await loadStreakAlertEnabled();
     if (!mounted) return;
     setState(() {
       _morning = morning;
       _evening = evening;
+      _streakAlert = streakAlert;
     });
+  }
+
+  Future<void> _setStreakAlert(bool value) async {
+    setState(() => _streakAlert = value);
+    await saveStreakAlertEnabled(value);
+    if (value) {
+      // MAL-10: pedirlo al activar, no antes de que haga falta de verdad.
+      // No se espera la respuesta: sin permiso la notificación simplemente
+      // no aparece, y no hay nada más que bloquear en este flujo.
+      unawaited(
+        Permission.notification.request().catchError(
+          (_) => PermissionStatus.denied,
+        ),
+      );
+    } else {
+      await ref.read(reminderServiceProvider).cancelStreakDanger();
+    }
   }
 
   @override
@@ -285,15 +307,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: Text(_evening.format(context)),
                     onTap: () => _pickTime(morning: false),
                   ),
-                  // MAL-10: ninguno de los dos existe todavía de verdad
-                  // (no hay detección de racha en riesgo ni sonidos) — antes
-                  // el switch prometía algo que tocarlo no hacía nada.
+                  // MEJ-39: ya controla la notificación de racha en riesgo
+                  // (programada por `SessionSummaryScreen` al cerrar una
+                  // sesión válida).
                   SwitchListTile(
+                    key: const Key('settings_streak_alert_switch'),
                     contentPadding: EdgeInsets.zero,
                     title: Text(l10n.settingsStreakAlert),
-                    subtitle: Text(l10n.commonComingSoon),
                     value: _streakAlert,
-                    onChanged: null,
+                    onChanged: (value) => _setStreakAlert(value),
                   ),
                   SwitchListTile(
                     contentPadding: EdgeInsets.zero,

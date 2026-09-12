@@ -249,6 +249,29 @@ class FakeApi implements FluentApi {
     );
   }
 
+  /// MEJ-41: contador de invitaciones sin usar creadas desde la app (tope
+  /// 5). El fake no simula canje ajeno, así que nunca baja.
+  int _groupInvitationsIssued = 0;
+
+  @override
+  Future<GroupInvitationResult> createGroupInvitation() async {
+    await _delay();
+    if (_group == null) {
+      _fail(ApiErrorCode.groupRequired, 'account has no group');
+    }
+    if (_groupInvitationsIssued >= 5) {
+      _fail(
+        ApiErrorCode.invitationLimitReached,
+        'too many unused invitations',
+      );
+    }
+    _groupInvitationsIssued += 1;
+    return GroupInvitationResult(
+      code: 'FLUENT-${_random.nextInt(9000) + 1000}',
+      expiresAt: DateTime.now().add(const Duration(days: 7)).toIso8601String(),
+    );
+  }
+
   @override
   Future<GroupResponse> getGroup() async {
     await _delay();

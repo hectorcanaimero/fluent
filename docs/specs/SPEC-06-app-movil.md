@@ -103,7 +103,7 @@ XP ganado con animación, streak, correcciones agrupadas por categoría, "Termin
 - Selector "Modelo para conversar" y "Modelo para el coach": listas agrupadas Gratis / Económico / Premium con precio por millón y "≈ 0,004 USD por sesión". Los modelos de un proveedor no conectado aparecen deshabilitados.
 
 ### 4.7 Grupo
-Leaderboard semanal con medalla al primero, streak grupal, desafíos ("Ana practicó sobre viajes, ¿te animás?" → abre nueva sesión con ese tema), y tarjeta del resumen semanal con botón "Compartir en WhatsApp" (`share_plus`).
+Leaderboard semanal con medalla al primero, streak grupal, desafíos ("Ana practicó sobre viajes, ¿te animás?" → abre nueva sesión con ese tema), botón "Invitar a un amigo" para cualquier miembro (`POST /groups/invitations`, mensaje prellenado con el código, `share_plus`; tope de 5 invitaciones sin usar), y tarjeta del resumen semanal con botón "Compartir" (`share_plus`).
 
 ## 5. Voz (ADR 0003)
 
@@ -140,6 +140,10 @@ El `code_verifier` nunca está en el dispositivo; lo genera y guarda la API (SPE
 ## 8. Recordatorios locales
 
 Dos notificaciones diarias configurables en ajustes (por defecto 08:30 y 20:30 hora local), programadas con `flutter_local_notifications`, canceladas el día en que ya se hicieron dos sesiones. Sin backend.
+
+Tras la primera sesión válida de la instalación, un diálogo opt-in ofrece un recordatorio diario adicional a esa misma hora ("¿Te aviso mañana a esta misma hora?"); se pregunta una sola vez, se acepte o no (MEJ-38).
+
+Al cerrar cada sesión válida se reprograma una notificación puntual de "racha en riesgo" para el día siguiente a las 20:30, con el streak actual (o el aviso de día de gracia si `grace == 'available'`); se cancela y reemplaza en cada cierre para no avisar de un día ya practicado. La controla el switch "Alerta de racha" de Ajustes, encendido por defecto (MEJ-39).
 
 ## 9. Seguridad y privacidad
 

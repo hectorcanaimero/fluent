@@ -24,6 +24,35 @@ Future<void> saveReminderTimes({
   await prefs.setInt(_prefsEveningMinute, evening.minute);
 }
 
+const _prefsFirstSessionReminderAsked = 'first_session_reminder_asked';
+
+/// MEJ-38: si ya se preguntó "¿te aviso mañana a esta misma hora?" — se
+/// pregunta una sola vez en la vida de la instalación, se acepte o no.
+Future<bool> hasAskedFirstSessionReminder() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool(_prefsFirstSessionReminderAsked) ?? false;
+}
+
+Future<void> markFirstSessionReminderAsked() async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_prefsFirstSessionReminderAsked, true);
+}
+
+const _prefsStreakAlertEnabled = 'streak_alert_enabled';
+
+/// MEJ-39: switch "Alerta de racha" de Ajustes. Encendido por defecto — es
+/// la red de contención de una racha, no un recordatorio genérico como los
+/// de arriba (esos sí son opt-in).
+Future<bool> loadStreakAlertEnabled() async {
+  final prefs = await SharedPreferences.getInstance();
+  return prefs.getBool(_prefsStreakAlertEnabled) ?? true;
+}
+
+Future<void> saveStreakAlertEnabled(bool value) async {
+  final prefs = await SharedPreferences.getInstance();
+  await prefs.setBool(_prefsStreakAlertEnabled, value);
+}
+
 Future<(TimeOfDay morning, TimeOfDay evening)> loadReminderTimes() async {
   final prefs = await SharedPreferences.getInstance();
   final morningHour = prefs.getInt(_prefsMorningHour);

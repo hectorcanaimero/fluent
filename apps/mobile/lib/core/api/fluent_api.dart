@@ -22,6 +22,13 @@ abstract class FluentApi {
   });
   Future<GroupInfo> redeemInvitation(String code);
   Future<List<String>> createInvitations({int count = 1});
+
+  /// MEJ-41: `POST /groups/invitations` — a diferencia de
+  /// [createInvitations] (solo el owner, `/admin/invitations`), cualquier
+  /// miembro puede invitar. Tope de 5 invitaciones sin usar por miembro
+  /// (`ApiErrorCode.invitationLimitReached`); sin grupo,
+  /// `ApiErrorCode.groupRequired`.
+  Future<GroupInvitationResult> createGroupInvitation();
   Future<GroupResponse> getGroup();
 
   /// Borra la cuenta en cascada (SPEC-06 §9). Después de esto la app debe

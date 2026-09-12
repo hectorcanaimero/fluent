@@ -2418,6 +2418,279 @@ $GroupInfoCopyWith<$Res> get group {
 
 
 /// @nodoc
+mixin _$GroupInvitationResult {
+
+ String get code; String get expiresAt;
+/// Create a copy of GroupInvitationResult
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$GroupInvitationResultCopyWith<GroupInvitationResult> get copyWith => _$GroupInvitationResultCopyWithImpl<GroupInvitationResult>(this as GroupInvitationResult, _$identity);
+
+  /// Serializes this GroupInvitationResult to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as GroupInvitationResult;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupInvitationResult&&(identical(other.code, _this.code) || other.code == _this.code)&&(identical(other.expiresAt, _this.expiresAt) || other.expiresAt == _this.expiresAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as GroupInvitationResult;
+  return Object.hash(runtimeType,_this.code,_this.expiresAt);
+}
+
+@override
+String toString() {
+  final _this = this as GroupInvitationResult;
+  return 'GroupInvitationResult(code: ${_this.code}, expiresAt: ${_this.expiresAt})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $GroupInvitationResultCopyWith<$Res>  {
+  factory $GroupInvitationResultCopyWith(GroupInvitationResult value, $Res Function(GroupInvitationResult) _then) = _$GroupInvitationResultCopyWithImpl;
+@useResult
+$Res call({
+ String code, String expiresAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$GroupInvitationResultCopyWithImpl<$Res>
+    implements $GroupInvitationResultCopyWith<$Res> {
+  _$GroupInvitationResultCopyWithImpl(this._self, this._then);
+
+  final GroupInvitationResult _self;
+  final $Res Function(GroupInvitationResult) _then;
+
+/// Create a copy of GroupInvitationResult
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? code = null,Object? expiresAt = null,}) {
+  return _then(GroupInvitationResult(
+code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,expiresAt: null == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [GroupInvitationResult].
+extension GroupInvitationResultPatterns on GroupInvitationResult {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _GroupInvitationResult value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _GroupInvitationResult() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _GroupInvitationResult value)  $default,){
+final _that = this;
+switch (_that) {
+case _GroupInvitationResult():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _GroupInvitationResult value)?  $default,){
+final _that = this;
+switch (_that) {
+case _GroupInvitationResult() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String code,  String expiresAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _GroupInvitationResult() when $default != null:
+return $default(_that.code,_that.expiresAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String code,  String expiresAt)  $default,) {final _that = this;
+switch (_that) {
+case _GroupInvitationResult():
+return $default(_that.code,_that.expiresAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String code,  String expiresAt)?  $default,) {final _that = this;
+switch (_that) {
+case _GroupInvitationResult() when $default != null:
+return $default(_that.code,_that.expiresAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _GroupInvitationResult implements GroupInvitationResult {
+  const _GroupInvitationResult({required this.code, required this.expiresAt});
+  factory _GroupInvitationResult.fromJson(Map<String, dynamic> json) => _$GroupInvitationResultFromJson(json);
+
+@override final  String code;
+@override final  String expiresAt;
+
+/// Create a copy of GroupInvitationResult
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$GroupInvitationResultCopyWith<_GroupInvitationResult> get copyWith => __$GroupInvitationResultCopyWithImpl<_GroupInvitationResult>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$GroupInvitationResultToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupInvitationResult&&(identical(other.code, code) || other.code == code)&&(identical(other.expiresAt, expiresAt) || other.expiresAt == expiresAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,code,expiresAt);
+}
+
+@override
+String toString() {
+    return 'GroupInvitationResult(code: $code, expiresAt: $expiresAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$GroupInvitationResultCopyWith<$Res> implements $GroupInvitationResultCopyWith<$Res> {
+  factory _$GroupInvitationResultCopyWith(_GroupInvitationResult value, $Res Function(_GroupInvitationResult) _then) = __$GroupInvitationResultCopyWithImpl;
+@override @useResult
+$Res call({
+ String code, String expiresAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$GroupInvitationResultCopyWithImpl<$Res>
+    implements _$GroupInvitationResultCopyWith<$Res> {
+  __$GroupInvitationResultCopyWithImpl(this._self, this._then);
+
+  final _GroupInvitationResult _self;
+  final $Res Function(_GroupInvitationResult) _then;
+
+/// Create a copy of GroupInvitationResult
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? code = null,Object? expiresAt = null,}) {
+  return _then(_GroupInvitationResult(
+code: null == code ? _self.code : code // ignore: cast_nullable_to_non_nullable
+as String,expiresAt: null == expiresAt ? _self.expiresAt : expiresAt // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$PkceStartResult {
 
  String get authUrl; String get codeVerifierId;

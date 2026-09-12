@@ -853,7 +853,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get groupWeeklySummaryTitle => 'Resumo semanal';
 
   @override
-  String get groupShareButton => 'Compartilhar no WhatsApp';
+  String get groupShareButton => 'Compartilhar';
 
   @override
   String get progressTitle => 'Seu progresso';
@@ -1078,4 +1078,43 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get summaryCourtesyConnectButton =>
       'Para continuar, conecte sua conta grátis (2 minutos)';
+
+  @override
+  String get firstSessionReminderDialogTitle =>
+      'Posso te avisar amanhã nesse mesmo horário?';
+
+  @override
+  String get firstSessionReminderDialogBody =>
+      '3 minutos bastam pra manter sua sequência.';
+
+  @override
+  String get firstSessionReminderAccept => 'Sim, me avisa';
+
+  @override
+  String get firstSessionReminderDecline => 'Agora não';
+
+  @override
+  String streakDangerBody(int days) {
+    return 'Sua sequência de $days dias vence à meia-noite. 3 minutos bastam.';
+  }
+
+  @override
+  String get streakDangerGraceBody =>
+      'Hoje o dia de graça te salva; amanhã não.';
+
+  @override
+  String get groupInviteFriendButton => 'Convidar um amigo';
+
+  @override
+  String groupInviteMessage(String code) {
+    return 'Te convido pro meu grupo de inglês no Fluent. Código: $code. 10 minutos por dia, com sua conta grátis de IA.';
+  }
+
+  @override
+  String get errorInvitationLimitReached =>
+      'Você já tem 5 convites sem usar. Espere alguém entrar pra criar outro.';
+
+  @override
+  String get errorGroupRequired =>
+      'Entre em um grupo com seu código de convite pra praticar.';
 }

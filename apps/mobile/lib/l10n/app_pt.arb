@@ -252,7 +252,7 @@
   "groupChallengeText": "{name} praticou sobre {topic}, topa?",
   "groupChallengeAccept": "Aceitar",
   "groupWeeklySummaryTitle": "Resumo semanal",
-  "groupShareButton": "Compartilhar no WhatsApp",
+  "groupShareButton": "Compartilhar",
   "progressTitle": "Seu progresso",
   "progressXpLabel": "XP",
   "progressStreakLabel": "Sequência",
@@ -320,5 +320,15 @@
   "homeChecklistFirstSession": "Primeira sessão de 3 min",
   "homeCourtesyPracticeButton": "Experimente sua primeira sessão sem conectar nada",
   "summaryCourtesyBanner": "Essa foi sua sessão de cortesia.",
-  "summaryCourtesyConnectButton": "Para continuar, conecte sua conta grátis (2 minutos)"
+  "summaryCourtesyConnectButton": "Para continuar, conecte sua conta grátis (2 minutos)",
+  "firstSessionReminderDialogTitle": "Posso te avisar amanhã nesse mesmo horário?",
+  "firstSessionReminderDialogBody": "3 minutos bastam pra manter sua sequência.",
+  "firstSessionReminderAccept": "Sim, me avisa",
+  "firstSessionReminderDecline": "Agora não",
+  "streakDangerBody": "Sua sequência de {days} dias vence à meia-noite. 3 minutos bastam.",
+  "streakDangerGraceBody": "Hoje o dia de graça te salva; amanhã não.",
+  "groupInviteFriendButton": "Convidar um amigo",
+  "groupInviteMessage": "Te convido pro meu grupo de inglês no Fluent. Código: {code}. 10 minutos por dia, com sua conta grátis de IA.",
+  "errorInvitationLimitReached": "Você já tem 5 convites sem usar. Espere alguém entrar pra criar outro.",
+  "errorGroupRequired": "Entre em um grupo com seu código de convite pra praticar."
 }

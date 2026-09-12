@@ -24,6 +24,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
+import { appendWeeklyFooter } from '../../common/weekly-footer.js';
 import type { Env } from '../../config/env.js';
 import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
 import { LlmService } from '../../llm/llm.service.js';
@@ -191,10 +192,13 @@ export class WeeklySummaryService {
       promptVersion: this.promptVersion,
     });
 
+    // El pie de marca lo pone el código, no el LLM (MEJ-41): ver
+    // `common/weekly-footer.ts`. Se guarda ya con él para que compartir el
+    // texto tal cual —que es lo que hace la app— lleve siempre la marca.
     await this.repository.insertWeeklySummary({
       group_id: groupId,
       week_start: weekStart,
-      text: result.data.text,
+      text: appendWeeklyFooter(result.data.text, ownerLocale ?? FALLBACK_OWNER_LOCALE),
       stats: { members, groupStreak: group.group_streak, weekStart },
     });
 

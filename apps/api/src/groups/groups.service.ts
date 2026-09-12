@@ -5,14 +5,22 @@ import { OwnerService } from '../common/owner.service.js';
 import { toGroupDto, toGroupMemberDto } from '../profiles/profile.mapper.js';
 import { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { GroupDto, GroupMemberDto } from '../profiles/profiles.types.js';
-import { GroupsRepository } from './groups.repository.js';
+import { GroupsRepository, type CreatedInvitation } from './groups.repository.js';
 import type { Group } from '../db/schema.js';
 
 export const DEFAULT_INVITATIONS_COUNT = 1;
 
 /**
+ * Invitaciones vivas (sin canjear y sin caducar) que puede tener a la vez un
+ * miembro (MEJ-41). El tope es por **miembro** (`invitations.created_by`), no
+ * por grupo: cada uno responde de los códigos que reparte, y cinco pendientes
+ * es más de lo que nadie manda de una sentada.
+ */
+export const MAX_LIVE_INVITATIONS_PER_MEMBER = 5;
+
+/**
  * `GroupsModule` (SPEC-02 §4.1): `POST /invitations/redeem`,
- * `POST /admin/invitations`, `GET /group`.
+ * `POST /admin/invitations`, `POST /groups/invitations`, `GET /group`.
  */
 @Injectable()
 export class GroupsService {
@@ -68,6 +76,41 @@ export class GroupsService {
     return { codes };
   }
 
+  /**
+   * `POST /groups/invitations` (MEJ-41): **cualquier** miembro del grupo
+   * genera un código para invitar a un amigo, no solo el owner (que sigue
+   * teniendo `POST /admin/invitations` para crear varios de una vez).
+   *
+   * Sin grupo → `422 GROUP_REQUIRED` (y no el `409 NOT_ONBOARDED` de los
+   * otros endpoints de grupo): el perfil está completo, lo que falta es
+   * canjear una invitación, y la app lleva a pantallas distintas en cada
+   * caso. Con más de `MAX_LIVE_INVITATIONS_PER_MEMBER` vivas →
+   * `422 INVITATION_LIMIT_REACHED`.
+   */
+  async createInvitation(
+    userId: string,
+    acceptLanguageHeader?: string,
+  ): Promise<CreatedInvitation> {
+    const { profile, group, locale } = await this.requireOwnGroup(
+      userId,
+      acceptLanguageHeader,
+      'GROUP_REQUIRED',
+    );
+
+    const live = await this.groupsRepository.countLiveInvitations(
+      profile.user_id,
+      MAX_LIVE_INVITATIONS_PER_MEMBER,
+    );
+    if (live >= MAX_LIVE_INVITATIONS_PER_MEMBER) {
+      throw ApiException.of(
+        'INVITATION_LIMIT_REACHED',
+        this.i18n.translate('INVITATION_LIMIT_REACHED', locale),
+      );
+    }
+
+    return this.groupsRepository.createInvitation(group.id, profile.user_id);
+  }
+
   /** `GET /group` (RF-6.5): grupo y miembros, solo las columnas permitidas. */
   async getGroup(
     userId: string,
@@ -82,18 +125,28 @@ export class GroupsService {
     };
   }
 
-  /** Perfil + su grupo, o `409 NOT_ONBOARDED` si no tiene uno todavía. */
-  private async requireOwnGroup(userId: string, acceptLanguageHeader?: string) {
+  /**
+   * Perfil + su grupo. Sin grupo lanza `missingGroupCode`: `NOT_ONBOARDED`
+   * (409) en los endpoints de siempre y `GROUP_REQUIRED` (422) en los que
+   * añadió MEJ-33/MEJ-41.
+   */
+  private async requireOwnGroup(
+    userId: string,
+    acceptLanguageHeader?: string,
+    missingGroupCode: 'NOT_ONBOARDED' | 'GROUP_REQUIRED' = 'NOT_ONBOARDED',
+  ) {
     const profile = await this.profilesRepository.ensureProfile(userId);
     const locale = this.i18n.resolveLocale(profile.locale, acceptLanguageHeader);
+    const missingGroup = () =>
+      ApiException.of(missingGroupCode, this.i18n.translate(missingGroupCode, locale));
 
     if (!profile.group_id) {
-      throw ApiException.of('NOT_ONBOARDED', this.i18n.translate('NOT_ONBOARDED', locale));
+      throw missingGroup();
     }
 
     const group = await this.groupsRepository.findById(profile.group_id);
     if (!group) {
-      throw ApiException.of('NOT_ONBOARDED', this.i18n.translate('NOT_ONBOARDED', locale));
+      throw missingGroup();
     }
 
     return { profile, group, locale };

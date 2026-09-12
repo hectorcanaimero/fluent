@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ApiException } from '../common/api-error.js';
 import { resolveWeekStart } from '../common/iso-week.js';
+import { appendWeeklyFooter } from '../common/weekly-footer.js';
 import { I18nService } from '../i18n/i18n.service.js';
 import { GroupAccessService } from './group-access.service.js';
 import type { WeeklySummaryResultDto } from './social.types.js';
@@ -44,6 +45,12 @@ export class WeeklySummaryService {
       throw ApiException.of('NOT_READY', this.i18n.translate('NOT_READY', locale));
     }
 
-    return { text: summary.text, weekStart: summary.week_start };
+    // El job ya guarda el pie de marca (MEJ-41), pero se vuelve a asegurar
+    // aquí —`appendWeeklyFooter` es idempotente— para que los resúmenes
+    // escritos antes de MEJ-41 salgan también con marca.
+    return {
+      text: appendWeeklyFooter(summary.text, locale),
+      weekStart: summary.week_start,
+    };
   }
 }

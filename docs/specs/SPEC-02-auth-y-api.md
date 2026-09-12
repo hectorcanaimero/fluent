@@ -34,6 +34,7 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 | PUT `/me/profile` | `{ displayName, level, interests[], timezone, locale }` | `profile` | valida 3 a 5 intereses del catálogo; `locale` en `es` o `pt-BR` |
 | POST `/invitations/redeem` | `{ code }` | `{ group }` | RPC `redeem_invitation`; errores `INVITATION_INVALID`, `INVITATION_USED`, `INVITATION_EXPIRED`, `ALREADY_IN_GROUP` |
 | POST `/admin/invitations` | `{ count?: 1..10 }` | `{ codes: [] }` | solo `owner_id` del grupo; RF-8.1 |
+| POST `/groups/invitations` | — | `{ code, expiresAt }` | cualquier miembro; máximo 5 vivas por miembro (`INVITATION_LIMIT_REACHED`), sin grupo `GROUP_REQUIRED`; MEJ-41 y SPEC-07 §8.b |
 | GET `/group` | | `{ group, members: [{userId, displayName, level, xp, streak, lastSessionDay}] }` | RF-6.5 |
 
 ### 4.2 Proveedores y modelos (RF-2.x)
@@ -114,6 +115,7 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 | RATE_LIMITED | 429 | ver §7 |
 | CHALLENGE_NOT_AVAILABLE | 422 | `challengeFromUserId` que no corresponde a un desafío ofrecido (SPEC-07 §7) |
 | GROUP_REQUIRED | 422 | la acción exige pertenecer a un grupo y el perfil no tiene `group_id` (MEJ-33) |
+| INVITATION_LIMIT_REACHED | 422 | el miembro ya tiene 5 invitaciones vivas sin canjear (MEJ-41) |
 | TURNS_DAILY_CAP | 429 | tope diario de turnos alcanzado; respuesta con `Retry-After` y `retryAfter` |
 | NOT_READY | 404 | resumen semanal aún no generado |
 | NOT_FOUND | 404 | ruta o recurso inexistente |

@@ -337,7 +337,31 @@ maybeDescribe('Progreso, leaderboard, desafíos y resumen semanal (e2e, InsForge
         .set(authHeader(m0.user.accessToken))
         .expect(200);
 
-      expect(response.body).toEqual({ text: '¡Buena semana practicando!', weekStart: thisWeekStart });
+      // MEJ-41: el pie de marca lo añade la API, no el LLM, y también a los
+      // resúmenes que ya estaban guardados sin él.
+      expect(response.body).toEqual({
+        text: '¡Buena semana practicando!\n\n— Fluent · practicá inglés con tus amigos',
+        weekStart: thisWeekStart,
+      });
+    });
+
+    it('no duplica el pie de marca si el resumen guardado ya lo trae (MEJ-41)', async () => {
+      const group = await newGroup(1, 'Weekly Summary Footer');
+      const [m0] = group.members;
+      const text = '¡Buena semana!\n\n— Fluent · practicá inglés con tus amigos';
+
+      await seedWeeklySummary(admin, {
+        groupId: group.groupId,
+        weekStart: thisWeekStart,
+        text,
+      });
+
+      const response = await request(app.getHttpServer())
+        .get('/v1/weekly-summary')
+        .set(authHeader(m0.user.accessToken))
+        .expect(200);
+
+      expect(response.body.text).toBe(text);
     });
 
     it('sin weekly_summaries para esa semana -> 404 NOT_READY', async () => {

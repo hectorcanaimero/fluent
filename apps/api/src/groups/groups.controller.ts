@@ -4,11 +4,13 @@ import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { GroupDto, GroupMemberDto } from '../profiles/profiles.types.js';
 import { CreateInvitationsDto } from './dto/create-invitations.dto.js';
 import { RedeemInvitationDto } from './dto/redeem-invitation.dto.js';
+import type { CreatedInvitation } from './groups.repository.js';
 import { DEFAULT_INVITATIONS_COUNT, GroupsService } from './groups.service.js';
 
 /**
- * `POST /invitations/redeem`, `POST /admin/invitations`, `GET /group`
- * (SPEC-02 §4.1). Todas exigen bearer (guard global de PR-02/T1).
+ * `POST /invitations/redeem`, `POST /admin/invitations`,
+ * `POST /groups/invitations` y `GET /group` (SPEC-02 §4.1). Todas exigen
+ * bearer (guard global de PR-02/T1).
  */
 @ApiTags('Groups')
 @ApiBearerAuth()
@@ -36,6 +38,18 @@ export class GroupsController {
       dto.count ?? DEFAULT_INVITATIONS_COUNT,
       acceptLanguage,
     );
+  }
+
+  /**
+   * MEJ-41: invitar desde la app. Cualquier miembro, un código por llamada.
+   * `POST /admin/invitations` sigue siendo del owner y crea varios de una vez.
+   */
+  @Post('groups/invitations')
+  createInvitation(
+    @CurrentUser('id') userId: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<CreatedInvitation> {
+    return this.groupsService.createInvitation(userId, acceptLanguage);
   }
 
   @Get('group')

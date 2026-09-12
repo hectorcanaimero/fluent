@@ -31,6 +31,13 @@ export function generateInvitationCode(): string {
   return code;
 }
 
+/** Invitación recién creada (MEJ-41): lo que devuelve `POST /groups/invitations`. */
+export interface CreatedInvitation {
+  readonly code: string;
+  /** ISO 8601; `now + INVITATION_EXPIRES_IN_DAYS`. */
+  readonly expiresAt: string;
+}
+
 export interface GroupMemberRow {
   user_id: string;
   display_name: string;
@@ -110,12 +117,38 @@ export class GroupsRepository {
   ): Promise<string[]> {
     const codes: string[] = [];
     for (let i = 0; i < count; i += 1) {
-      codes.push(await this.insertOneInvitation(groupId, createdBy));
+      codes.push((await this.insertOneInvitation(groupId, createdBy)).code);
     }
     return codes;
   }
 
-  private async insertOneInvitation(groupId: string, createdBy: string): Promise<string> {
+  /** Una sola invitación, con su vencimiento (MEJ-41, `POST /groups/invitations`). */
+  createInvitation(groupId: string, createdBy: string): Promise<CreatedInvitation> {
+    return this.insertOneInvitation(groupId, createdBy);
+  }
+
+  /**
+   * Cuántas invitaciones vivas creó `createdBy`: sin canjear (`used_by` nulo)
+   * y sin caducar (MEJ-41). Una caducada ya no sirve a nadie, así que no
+   * cuenta para el límite. Lee como mucho `limit` filas porque quien llama
+   * solo necesita saber si se pasó del tope, no el total exacto.
+   */
+  async countLiveInvitations(createdBy: string, limit: number, now: Date = new Date()): Promise<number> {
+    const result = await this.admin.database
+      .from(TABLES.invitations)
+      .select('code')
+      .eq('created_by', createdBy)
+      .is('used_by', null)
+      .gt('expires_at', now.toISOString())
+      .limit(limit);
+
+    return (unwrapInsforge<{ code: string }[]>(result) ?? []).length;
+  }
+
+  private async insertOneInvitation(
+    groupId: string,
+    createdBy: string,
+  ): Promise<CreatedInvitation> {
     const expiresAt = new Date(
       Date.now() + INVITATION_EXPIRES_IN_DAYS * 24 * 60 * 60 * 1000,
     ).toISOString();
@@ -130,7 +163,7 @@ export class GroupsRepository {
       });
 
       if (!result.error) {
-        return code;
+        return { code, expiresAt };
       }
 
       if (result.error.code !== POSTGRES_UNIQUE_VIOLATION) {

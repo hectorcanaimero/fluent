@@ -50,6 +50,13 @@ export const API_ERROR_STATUS = {
    * distingue los dos casos con pantallas distintas.
    */
   GROUP_REQUIRED: 422,
+  /**
+   * El miembro ya tiene el máximo de invitaciones vivas (sin canjear y sin
+   * caducar) que puede repartir (MEJ-41). 422 por la misma razón que
+   * `GROUP_REQUIRED`: la petición está bien formada y es la regla de negocio
+   * la que la rechaza.
+   */
+  INVITATION_LIMIT_REACHED: 422,
   /** Agotada la cadena de fallback de proveedores (RF-2.5). */
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */

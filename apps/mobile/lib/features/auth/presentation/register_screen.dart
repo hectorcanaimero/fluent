@@ -168,6 +168,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             textInputAction: TextInputAction.next,
             decoration: InputDecoration(
               labelText: l10n.registerPasswordLabel,
+              helperText: l10n.registerPasswordHelper,
               suffixIcon: IconButton(
                 key: const Key('register_toggle_password'),
                 tooltip: _obscurePassword
@@ -182,8 +183,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                     setState(() => _obscurePassword = !_obscurePassword),
               ),
             ),
-            validator:
-                (v) => (v == null || v.isEmpty) ? l10n.formFieldRequired : null,
+            validator: (v) {
+              if (v == null || v.isEmpty) return l10n.formFieldRequired;
+              // MEJ-33: mismo mínimo que `insforge.toml` (min_length = 10).
+              return v.length < 10 ? l10n.registerPasswordTooShort : null;
+            },
           ),
           const SizedBox(height: AppSpacing.md),
           TextFormField(

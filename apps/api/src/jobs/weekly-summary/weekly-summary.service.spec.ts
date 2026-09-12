@@ -204,7 +204,8 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     expect(repository.insertWeeklySummary).toHaveBeenCalledWith({
       group_id: GROUP_ID,
       week_start: WEEK_START,
-      text: 'GG team! Ana crushed it this week 🎉',
+      // El pie de marca lo añade el código, no el LLM (MEJ-41).
+      text: 'GG team! Ana crushed it this week 🎉\n\n— Fluent · practicá inglés con tus amigos',
       stats: {
         weekStart: WEEK_START,
         groupStreak: 5,
@@ -239,5 +240,52 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       LlmUnavailableError,
     );
     expect(repository.insertWeeklySummary).not.toHaveBeenCalled();
+  });
+});
+
+describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
+  function buildService(
+    repository: ReturnType<typeof makeRepository>,
+    llm: LlmService = makeLlm(),
+  ) {
+    return new WeeklySummaryService(
+      repository as unknown as WeeklySummaryRepository,
+      makeCipher(),
+      llm,
+      makePendingStore() as unknown as WeeklySummaryPendingCredentialStore,
+      makeConfig(),
+    );
+  }
+
+  it('guarda el pie en pt-BR cuando el owner es de pt-BR', async () => {
+    const repository = makeRepository();
+    repository.loadOwnerLocale = vi.fn(async () => 'pt-BR' as const);
+
+    await buildService(repository).run(GROUP_ID, WEEK_START);
+
+    const [row] = repository.insertWeeklySummary.mock.calls[0]! as [{ text: string }];
+    expect(row.text).toBe(
+      'GG team! Ana crushed it this week 🎉\n\n— Fluent · pratique inglês com seus amigos',
+    );
+  });
+
+  it('recorta el texto del LLM, no el pie, si el resumen viene al máximo', async () => {
+    const repository = makeRepository();
+    const llm = makeLlm({
+      complete: vi.fn(async () => ({
+        data: { text: 'a'.repeat(1200) },
+        modelUsed: 'anthropic/claude-3.5-sonnet',
+        provider: 'openrouter' as const,
+        usage: { tokensIn: 80, tokensOut: 40 },
+        degraded: false,
+        attempts: [],
+      })),
+    });
+
+    await buildService(repository, llm).run(GROUP_ID, WEEK_START);
+
+    const [row] = repository.insertWeeklySummary.mock.calls[0]! as [{ text: string }];
+    expect(row.text.length).toBeLessThanOrEqual(1200);
+    expect(row.text.endsWith('— Fluent · practicá inglés con tus amigos')).toBe(true);
   });
 });

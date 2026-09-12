@@ -33,6 +33,13 @@ import type { CreateSessionResultDto } from './sessions.types.js';
 
 const NOT_ONBOARDED_MESSAGE =
   'Completa tu perfil antes de empezar una sesión de conversación.';
+/**
+ * MEJ-33: practicar exige pertenecer a un grupo. El texto es el mismo de
+ * `i18n/es.json`, repetido aquí porque este servicio no traduce (ver el
+ * comentario de la clase).
+ */
+const GROUP_REQUIRED_MESSAGE =
+  'Unite a un grupo con tu código de invitación para practicar.';
 const SESSION_ALREADY_ACTIVE_MESSAGE =
   'Ya tienes una sesión abierta. Retómala o ciérrala antes de empezar otra.';
 const PROVIDER_NOT_CONNECTED_MESSAGE =
@@ -86,6 +93,13 @@ export class SessionsService {
     const profile = await this.repository.findProfile(userId);
     if (profile === null || profile.onboarded_at === null) {
       throw ApiException.of('NOT_ONBOARDED', NOT_ONBOARDED_MESSAGE);
+    }
+
+    // 1.b Grupo obligatorio para practicar (MEJ-33, SPEC-02 §4.2). Va antes
+    // que todo lo demás, así que **también** cierra la sesión de cortesía: sin
+    // grupo no hay owner del que tomar prestada la key.
+    if (profile.group_id === null) {
+      throw ApiException.of('GROUP_REQUIRED', GROUP_REQUIRED_MESSAGE);
     }
 
     // 2. Una sola sesión activa por usuario (SPEC-04 §2).

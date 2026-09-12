@@ -13,6 +13,8 @@
   "SESSION_NOT_ACTIVE": "Esta sessão já está encerrada.",
   "SESSION_ALREADY_ACTIVE": "Você já tem uma sessão ativa.",
   "CHALLENGE_NOT_AVAILABLE": "Esse desafio não está mais disponível.",
+  "GROUP_REQUIRED": "Entre em um grupo com seu código de convite para praticar.",
+  "INVITATION_LIMIT_REACHED": "Você já tem cinco convites sem uso. Espere alguém usá-los ou que expirem.",
   "LLM_UNAVAILABLE": "O assistente não está disponível no momento. Tente novamente em alguns minutos.",
   "RATE_LIMITED": "Você fez muitas solicitações. Aguarde um momento e tente novamente.",
   "TURNS_DAILY_CAP": "Por hoje você atingiu o máximo de turnos. Amanhã continuamos.",

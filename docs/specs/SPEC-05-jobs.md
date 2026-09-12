@@ -53,7 +53,7 @@ Entrada: `{ groupId, weekStart }` (lunes de la semana que acaba de terminar).
 1. Si existe fila en `weekly_summaries` salir.
 2. `stats` por miembro con `weekly_leaderboard` más top 3 temas por miembro, `groupStreak`.
 3. Elegir credencial: la del **owner del grupo** para el rol `brief` (una llamada por grupo y semana, RF-6.3). Si el owner no tiene credencial activa, marcar `failed` y avisar al owner por `GET /me` (`pendingActions`).
-4. `LlmClient` con SPEC-03 §4.3, guardar `text` y `stats`.
+4. `LlmClient` con SPEC-03 §4.3, añadir el pie de marca de SPEC-07 §8 al texto (lo pone el código, no el prompt) y guardar `text` y `stats`.
 
 Se encola un job por grupo el lunes 07:00 UTC.
 

@@ -85,6 +85,15 @@ Sin LLM. `GET /challenges` devuelve, para cada miembro del grupo distinto del us
 
 Generado por el job (SPEC-05 §4) con la credencial del owner. La app lo muestra en Grupo el lunes y permite compartirlo. Si no está listo, "Se está cocinando" y reintento al volver.
 
+El texto termina **siempre** en el pie de marca `— Fluent · practicá inglés con tus amigos` (pt-BR: `— Fluent · pratique inglês com seus amigos`), según el locale del owner del grupo (MEJ-41). Lo añade el código, nunca el prompt: se compara y se recorta en `common/weekly-footer.ts`, y se aplica tanto al guardar el resumen como al devolverlo por `GET /weekly-summary`, así que los resúmenes anteriores a MEJ-41 también salen con marca y ninguno lo lleva dos veces. Si el texto del modelo llega al tope de 1200 caracteres, se recorta el texto —con «…»— y no el pie: el resumen se comparte fuera de la app como texto plano y sin el pie nada dice de dónde salió.
+
+## 8.b Invitar a un amigo (MEJ-41)
+
+`POST /v1/groups/invitations` lo puede llamar **cualquier miembro** del grupo, no solo el owner, y devuelve `201 { code, expiresAt }` con un único código (14 días de vigencia, mismo alfabeto y misma tabla que los del owner). `POST /admin/invitations` sigue siendo del owner y crea varios de una vez.
+
+- Límite: **5 invitaciones vivas por miembro** (`invitations.created_by`), entendiendo por viva la que no se canjeó (`used_by` nulo) y no caducó. Al pasarse, `422 INVITATION_LIMIT_REACHED`. Una caducada deja hueco: ya no sirve a nadie.
+- Sin grupo, `422 GROUP_REQUIRED` (SPEC-02 §6) y no el `409 NOT_ONBOARDED` del resto de rutas de grupo: el perfil está completo y lo que falta es canjear un código.
+
 ## 9. Visibilidad (RF-6.5)
 
 Los miembros ven de otros: nombre, nivel, XP, streak, último día con sesión y temas de sesiones (solo `topic` y `kind`, vía `/challenges`). Nunca turnos, correcciones, hechos ni briefs. Aplicado por RLS (SPEC-01 §3) y por los DTOs de la API, que no exponen esos campos en rutas de grupo.

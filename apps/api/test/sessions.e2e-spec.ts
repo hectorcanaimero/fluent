@@ -14,6 +14,7 @@ import {
   createE2eAdminClient,
   loadInsforgeE2eCredentials,
   registerE2eUser,
+  createE2eGroup,
   type E2eTestUser,
   type InsforgeE2eCredentials,
 } from './insforge-e2e.js';
@@ -86,7 +87,15 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
   let admin: InsForgeClient;
 
   const seededUserIds: string[] = [];
+  const seededGroupIds: string[] = [];
   const seededSessionIds: string[] = [];
+  /**
+   * MEJ-33: practicar exige grupo, así que todos los usuarios de esta suite
+   * comparten uno (basta una fila en `groups`; el owner es irrelevante aquí
+   * porque nadie usa la cortesía). `withGroup: false` siembra el caso sin
+   * grupo para probar el `422 GROUP_REQUIRED`.
+   */
+  let sharedGroupId: string;
   const seededFactIds: string[] = [];
   const seededNewsIds: string[] = [];
 
@@ -98,6 +107,8 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
     readonly sessionsCount?: number;
     readonly withCredential?: boolean;
     readonly onboarded?: boolean;
+    /** `false` siembra el perfil sin `group_id` (MEJ-33). */
+    readonly withGroup?: boolean;
   }
 
   /** Usuario registrado + perfil onboarded + credencial de OpenRouter cifrada. */
@@ -113,6 +124,7 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       level: options.level ?? 'B1',
       sessionsCount: options.sessionsCount ?? 0,
       onboardedAt: options.onboarded === false ? null : undefined,
+      groupId: options.withGroup === false ? null : sharedGroupId,
     });
 
     if (options.withCredential !== false) {
@@ -263,6 +275,10 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
   beforeAll(async () => {
     admin = createE2eAdminClient(credentials!);
 
+    const group = await createE2eGroup(admin, 'Sessions E2E');
+    sharedGroupId = group.id;
+    seededGroupIds.push(group.id);
+
     const { AppModule } = await import('../src/app.module.js');
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -295,7 +311,7 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       await admin.database.from('facts').delete().eq('user_id', userId);
       await admin.database.from('provider_credentials').delete().eq('user_id', userId);
     }
-    await cleanupE2eData(admin, { userIds: seededUserIds });
+    await cleanupE2eData(admin, { userIds: seededUserIds, groupIds: seededGroupIds });
     await app.close();
   }, 60_000);
 
@@ -468,5 +484,14 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
     const response = await openSession(user, { kind: 'free_topic', topic: 'Sin perfil' }, 409);
 
     expect(response.body).toMatchObject({ error: 'NOT_ONBOARDED', statusCode: 409 });
+  }, 60_000);
+
+  it('perfil completo pero sin grupo → 422 GROUP_REQUIRED (MEJ-33)', async () => {
+    const user = await newReadyUser('S nogrp', { withGroup: false });
+
+    const response = await openSession(user, { kind: 'free_topic', topic: 'Sin grupo' }, 422);
+
+    expect(response.body).toMatchObject({ error: 'GROUP_REQUIRED', statusCode: 422 });
+    expect(response.body.message).toContain('grupo');
   }, 60_000);
 });

@@ -339,6 +339,106 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
     seededInvitationCodes.push(...ownerResponse.body.codes);
   });
 
+  it('POST /v1/groups/invitations: cualquier miembro invita y recibe code + expiresAt (MEJ-41)', async () => {
+    const owner = await newUser('Owner Inv');
+    const group = await newGroup('Grupo invitar', owner.id);
+    const memberCode = await newInvitation(group.id, owner.id);
+    const member = await newUser('Member Inv');
+
+    await request(app.getHttpServer())
+      .post('/v1/invitations/redeem')
+      .set(authHeader(member.accessToken))
+      .send({ code: memberCode })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    // El mismo miembro al que `POST /admin/invitations` le responde 403.
+    await request(app.getHttpServer())
+      .post('/v1/admin/invitations')
+      .set(authHeader(member.accessToken))
+      .send({ count: 1 })
+      .expect(403);
+
+    const response = await request(app.getHttpServer())
+      .post('/v1/groups/invitations')
+      .set(authHeader(member.accessToken))
+      .send({});
+
+    expect([200, 201]).toContain(response.status);
+    expect(response.body.code).toMatch(/^[A-HJ-NP-Z2-9]{8}$/);
+    expect(Number.isNaN(Date.parse(response.body.expiresAt))).toBe(false);
+    expect(Date.parse(response.body.expiresAt)).toBeGreaterThan(Date.now());
+    seededInvitationCodes.push(response.body.code);
+
+    // El código sirve de verdad: otro usuario entra al mismo grupo con él.
+    const friend = await newUser('Friend Inv');
+    const redeemed = await request(app.getHttpServer())
+      .post('/v1/invitations/redeem')
+      .set(authHeader(friend.accessToken))
+      .send({ code: response.body.code });
+
+    expect([200, 201]).toContain(redeemed.status);
+    expect(redeemed.body.group.id).toBe(group.id);
+  }, 90_000);
+
+  it('POST /v1/groups/invitations: 422 INVITATION_LIMIT_REACHED con cinco vivas (MEJ-41)', async () => {
+    const owner = await newUser('Owner Limit');
+    const group = await newGroup('Grupo límite', owner.id);
+    const code = await newInvitation(group.id, owner.id);
+    const member = await newUser('Member Limit');
+
+    await request(app.getHttpServer())
+      .post('/v1/invitations/redeem')
+      .set(authHeader(member.accessToken))
+      .send({ code })
+      .expect((res) => expect([200, 201]).toContain(res.status));
+
+    for (let i = 0; i < 5; i += 1) {
+      const created = await request(app.getHttpServer())
+        .post('/v1/groups/invitations')
+        .set(authHeader(member.accessToken))
+        .send({});
+      expect([200, 201]).toContain(created.status);
+      seededInvitationCodes.push(created.body.code);
+    }
+
+    const response = await request(app.getHttpServer())
+      .post('/v1/groups/invitations')
+      .set(authHeader(member.accessToken))
+      .send({})
+      .expect(422);
+
+    expect(response.body).toMatchObject({
+      error: 'INVITATION_LIMIT_REACHED',
+      statusCode: 422,
+    });
+
+    // Una caducada no cuenta: al vencer una de las cinco, vuelve a poder.
+    await admin.database
+      .from('invitations')
+      .update({ expires_at: new Date(Date.now() - 60_000).toISOString() })
+      .eq('code', seededInvitationCodes.at(-1)!);
+
+    const again = await request(app.getHttpServer())
+      .post('/v1/groups/invitations')
+      .set(authHeader(member.accessToken))
+      .send({});
+
+    expect([200, 201]).toContain(again.status);
+    seededInvitationCodes.push(again.body.code);
+  }, 120_000);
+
+  it('POST /v1/groups/invitations: 422 GROUP_REQUIRED sin grupo (MEJ-41)', async () => {
+    const user = await newUser('Sin Grupo Inv');
+
+    const response = await request(app.getHttpServer())
+      .post('/v1/groups/invitations')
+      .set(authHeader(user.accessToken))
+      .send({})
+      .expect(422);
+
+    expect(response.body).toMatchObject({ error: 'GROUP_REQUIRED', statusCode: 422 });
+  }, 60_000);
+
   it('DELETE /v1/me deja GET /v1/me con un perfil recién creado de cero', async () => {
     const owner = await newUser('Owner Delete');
     const group = await newGroup('Grupo delete', owner.id);

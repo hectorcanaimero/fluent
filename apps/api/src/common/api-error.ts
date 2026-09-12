@@ -42,6 +42,14 @@ export const API_ERROR_STATUS = {
    * formado: lo que falla es la regla de negocio. Ver MAL-19.
    */
   CHALLENGE_NOT_AVAILABLE: 422,
+  /**
+   * Acción que exige pertenecer a un grupo y el perfil no tiene `group_id`
+   * (MEJ-33): abrir una sesión —incluida la de cortesía— o invitar a un
+   * amigo. 422 y no 409 `NOT_ONBOARDED` porque el perfil sí está completo:
+   * lo único que falta es canjear un código de invitación, y la app
+   * distingue los dos casos con pantallas distintas.
+   */
+  GROUP_REQUIRED: 422,
   /** Agotada la cadena de fallback de proveedores (RF-2.5). */
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */

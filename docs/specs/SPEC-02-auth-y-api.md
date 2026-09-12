@@ -6,6 +6,7 @@ Estado: borrador v0.1 · Cubre: RF-1.x, RF-2.1 a RF-2.9, RF-8.x · ADR 0001, 000
 
 - La app se registra e inicia sesión **directamente contra InsForge** por REST (no hay SDK Dart): `POST /api/auth/users?client_type=mobile` y `POST /api/auth/sessions?client_type=mobile`. Recibe `accessToken` (JWT, corto) y `refreshToken` (rotativo). Detalle en SPEC-06 §6.
 - La API NestJS **no emite tokens**. Acepta el `accessToken` de InsForge en `Authorization: Bearer`.
+- **Política de contraseña** (`apps/api/insforge.toml`, `[auth.password]`): mínimo **10 caracteres**, sin exigir mayúsculas, dígitos ni símbolos (MEJ-33). El archivo es la fuente de verdad, pero InsForge Cloud solo lo aplica cuando se despliega con su CLI: hasta entonces el proyecto sigue con el valor anterior. La verificación de email queda para P2 (cambia el alta en el móvil y exige configurar SMTP).
 
 ## 2. Verificación del token en la API
 
@@ -58,6 +59,8 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 | POST `/sessions/:id/turns/stream` | `{ text }` | SSE: eventos `token`, `corrections`, `done` (RF-3.8, P1) |
 | POST `/sessions/:id/end` | `{ reason: 'timer'|'user' }` | `{ summary: { xpEarned, streak, isDoubleDay, correctionsCount, durationSec, nextIsBoss } }` |
 | GET `/sessions` | `?limit&cursor` | `{ items: [session], nextCursor }` |
+
+**Grupo obligatorio para practicar (MEJ-33).** `POST /sessions` exige que el perfil tenga `group_id`; si no, `422 GROUP_REQUIRED` («Unite a un grupo con tu código de invitación para practicar.»). Se comprueba antes que la sesión activa, la credencial y el `kind`, así que también cierra la sesión de cortesía (SPEC-04 §3.1): sin grupo no hay owner del que tomar prestada la key. La invitación deja así de gatear solo el grupo y pasa a gatear el uso.
 | GET `/sessions/:id` | | `{ session, turns: [], corrections: [] }` |
 
 ### 4.4 Memoria (RF-4.x)
@@ -110,6 +113,7 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 | LLM_UNAVAILABLE | 503 | agotada la cadena de fallback (RF-2.5) |
 | RATE_LIMITED | 429 | ver §7 |
 | CHALLENGE_NOT_AVAILABLE | 422 | `challengeFromUserId` que no corresponde a un desafío ofrecido (SPEC-07 §7) |
+| GROUP_REQUIRED | 422 | la acción exige pertenecer a un grupo y el perfil no tiene `group_id` (MEJ-33) |
 | TURNS_DAILY_CAP | 429 | tope diario de turnos alcanzado; respuesta con `Retry-After` y `retryAfter` |
 | NOT_READY | 404 | resumen semanal aún no generado |
 | NOT_FOUND | 404 | ruta o recurso inexistente |

@@ -21,6 +21,7 @@ import {
   createE2eAdminClient,
   loadInsforgeE2eCredentials,
   registerE2eUser,
+  createE2eGroup,
   type E2eTestUser,
   type InsforgeE2eCredentials,
 } from './insforge-e2e.js';
@@ -146,7 +147,10 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
   let admin: InsForgeClient;
 
   const seededUserIds: string[] = [];
+  const seededGroupIds: string[] = [];
   const seededSessionIds: string[] = [];
+  /** Grupo compartido: desde MEJ-33 `POST /sessions` lo exige. */
+  let sharedGroupId: string;
 
   /** Llamadas que recibió el doble de `LlmService`, en orden. */
   let llmCalls: LlmCallRecord[] = [];
@@ -205,7 +209,11 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
   async function newReadyUser(namePrefix: string): Promise<E2eTestUser> {
     const user = await registerE2eUser(credentials!, namePrefix);
     seededUserIds.push(user.id);
-    await seedProfile(admin, user.id, { displayName: namePrefix, level: 'B1' });
+    await seedProfile(admin, user.id, {
+      displayName: namePrefix,
+      level: 'B1',
+      groupId: sharedGroupId,
+    });
     // La cifra con la clave maestra de `.env.test`; nunca es una key real.
     await app.get(CredentialsService).saveApiKey(user.id, 'openrouter', 'clave-falsa');
     return user;
@@ -287,6 +295,10 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
   beforeAll(async () => {
     admin = createE2eAdminClient(credentials!);
 
+    const group = await createE2eGroup(admin, 'Turns E2E');
+    sharedGroupId = group.id;
+    seededGroupIds.push(group.id);
+
     const { AppModule } = await import('../src/app.module.js');
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
@@ -315,7 +327,7 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
       await admin.database.from('sessions').delete().eq('user_id', userId);
       await admin.database.from('provider_credentials').delete().eq('user_id', userId);
     }
-    await cleanupE2eData(admin, { userIds: seededUserIds });
+    await cleanupE2eData(admin, { userIds: seededUserIds, groupIds: seededGroupIds });
     await app.close();
   }, 60_000);
 

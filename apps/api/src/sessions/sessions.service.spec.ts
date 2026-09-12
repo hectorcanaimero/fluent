@@ -31,7 +31,9 @@ const CATALOG_TOPIC = TOPICS[0]!;
 function profileFixture(overrides: Partial<Profile> = {}): Profile {
   return {
     user_id: USER_ID,
-    group_id: null,
+    // MEJ-33: sin grupo no se puede practicar, así que el caso normal del
+    // fixture es "con grupo"; los tests de `GROUP_REQUIRED` pasan `null`.
+    group_id: 'group-1',
     display_name: 'Ana',
     level: 'B1',
     suggested_level: null,
@@ -361,6 +363,33 @@ describe('SessionsService.openSession · validación previa (SPEC-04 §3.1, §2)
     await expect(
       service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
     ).rejects.toMatchObject({ code: 'NOT_ONBOARDED' });
+  });
+
+  it('con el perfil completo pero sin grupo → 422 GROUP_REQUIRED (MEJ-33)', async () => {
+    const { service } = buildService({ profile: profileFixture({ group_id: null }) });
+
+    const error = await service
+      .openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' })
+      .catch((e: unknown) => e);
+
+    expect(error).toBeInstanceOf(ApiException);
+    expect((error as ApiException).getApiBody()).toMatchObject({
+      error: 'GROUP_REQUIRED',
+      statusCode: 422,
+    });
+  });
+
+  it('sin grupo no llega a crear la sesión ni a llamar al LLM (MEJ-33)', async () => {
+    const { service, repository, llm } = buildService({
+      profile: profileFixture({ group_id: null }),
+    });
+
+    await expect(
+      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
+    ).rejects.toMatchObject({ code: 'GROUP_REQUIRED' });
+
+    expect(repository.created).toHaveLength(0);
+    expect(llm.calls).toHaveLength(0);
   });
 
   it('con una sesión activa → 409 SESSION_ALREADY_ACTIVE con `activeSessionId` en el cuerpo', async () => {
@@ -1005,14 +1034,14 @@ describe('SessionsService.openSession · sesión de cortesía (MAL-24)', () => {
     ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
   });
 
-  it('sin grupo no hay cortesía', async () => {
+  it('sin grupo no hay cortesía: ni siquiera se llega a mirar la credencial (MEJ-33)', async () => {
     const { service } = buildService(
       courtesyOptions({ profile: profileFixture({ group_id: null }) }),
     );
 
     await expect(
       service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
+    ).rejects.toMatchObject({ code: 'GROUP_REQUIRED' });
   });
 
   it('si el owner tampoco tiene credencial, no hay cortesía', async () => {

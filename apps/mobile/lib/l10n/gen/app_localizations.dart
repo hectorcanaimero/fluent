@@ -1625,7 +1625,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupShareButton.
   ///
   /// In es, this message translates to:
-  /// **'Compartir en WhatsApp'**
+  /// **'Compartir'**
   String get groupShareButton;
 
   /// No description provided for @progressTitle.
@@ -2035,6 +2035,66 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Para seguir, conectá tu cuenta gratis (2 minutos)'**
   String get summaryCourtesyConnectButton;
+
+  /// No description provided for @firstSessionReminderDialogTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'¿Te aviso mañana a esta misma hora?'**
+  String get firstSessionReminderDialogTitle;
+
+  /// No description provided for @firstSessionReminderDialogBody.
+  ///
+  /// In es, this message translates to:
+  /// **'3 minutos alcanzan para mantener la racha.'**
+  String get firstSessionReminderDialogBody;
+
+  /// No description provided for @firstSessionReminderAccept.
+  ///
+  /// In es, this message translates to:
+  /// **'Sí, avisame'**
+  String get firstSessionReminderAccept;
+
+  /// No description provided for @firstSessionReminderDecline.
+  ///
+  /// In es, this message translates to:
+  /// **'Ahora no'**
+  String get firstSessionReminderDecline;
+
+  /// No description provided for @streakDangerBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu racha de {days} días vence a medianoche. 3 minutos alcanzan.'**
+  String streakDangerBody(int days);
+
+  /// No description provided for @streakDangerGraceBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy te salva el día de gracia; mañana no.'**
+  String get streakDangerGraceBody;
+
+  /// No description provided for @groupInviteFriendButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Invitar a un amigo'**
+  String get groupInviteFriendButton;
+
+  /// No description provided for @groupInviteMessage.
+  ///
+  /// In es, this message translates to:
+  /// **'Te invito a mi grupo de inglés en Fluent. Código: {code}. 10 minutos por día, con tu cuenta gratis de IA.'**
+  String groupInviteMessage(String code);
+
+  /// No description provided for @errorInvitationLimitReached.
+  ///
+  /// In es, this message translates to:
+  /// **'Ya tenés 5 invitaciones sin usar. Esperá a que alguien se sume para crear otra.'**
+  String get errorInvitationLimitReached;
+
+  /// No description provided for @errorGroupRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Unite a un grupo con tu código de invitación para practicar.'**
+  String get errorGroupRequired;
 }
 
 class _AppLocalizationsDelegate

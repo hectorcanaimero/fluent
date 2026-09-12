@@ -1,15 +1,18 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
+import 'package:fluent_mobile/core/api/fluent_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/core/storage/token_store.dart';
 import 'package:fluent_mobile/features/auth/domain/auth_state.dart';
 import 'package:fluent_mobile/features/session/presentation/session_summary_screen.dart';
+import 'package:fluent_mobile/features/settings/data/reminder_service.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   testWidgets('muestra XP, streak, duración y el aviso de boss battle', (
@@ -238,4 +241,344 @@ void main() {
       expect(find.text(l10n.summaryCourtesyBanner), findsNothing);
     },
   );
+
+  group('MEJ-38: opt-in de recordatorio tras la primera sesión válida', () {
+    Widget wrap(
+      Widget child, {
+      required FluentApi api,
+      required FakeReminderService reminder,
+    }) {
+      return ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          reminderServiceProvider.overrideWith((ref) => reminder),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: child,
+        ),
+      );
+    }
+
+    testWidgets('primera sesión válida muestra el diálogo opt-in', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 10,
+        streak: 1,
+        correctionsCount: 0,
+        durationSec: 60,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          api: api,
+          reminder: reminder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.firstSessionReminderDialogTitle), findsOneWidget);
+    });
+
+    testWidgets('aceptar programa el recordatorio y no vuelve a preguntar', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 10,
+        streak: 1,
+        correctionsCount: 0,
+        durationSec: 60,
+      );
+      final now = TimeOfDay.now();
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          api: api,
+          reminder: reminder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('first_session_reminder_accept_button')),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(reminder.lastOptInHour?.hour, now.hour);
+      expect(reminder.lastOptInHour?.minute, now.minute);
+      expect(reminder.lastOptInTitle, l10n.settingsReminderNotificationTitle);
+      expect(reminder.lastOptInBody, l10n.settingsReminderNotificationBody);
+
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('first_session_reminder_asked'), isTrue);
+    });
+
+    testWidgets('rechazar no programa nada pero persiste que ya se preguntó', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({});
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 10,
+        streak: 1,
+        correctionsCount: 0,
+        durationSec: 60,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          api: api,
+          reminder: reminder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(
+        find.byKey(const Key('first_session_reminder_decline_button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reminder.lastOptInHour, isNull);
+      final prefs = await SharedPreferences.getInstance();
+      expect(prefs.getBool('first_session_reminder_asked'), isTrue);
+    });
+
+    testWidgets('si ya se preguntó antes, no vuelve a mostrar el diálogo', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'first_session_reminder_asked': true,
+      });
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 10,
+        streak: 1,
+        correctionsCount: 0,
+        durationSec: 60,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          api: api,
+          reminder: reminder,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.firstSessionReminderDialogTitle), findsNothing);
+    });
+  });
+
+  group('MEJ-39: notificación de racha en riesgo', () {
+    Widget wrap(
+      Widget child, {
+      required FakeReminderService reminder,
+      required FluentApi api,
+    }) {
+      return ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          reminderServiceProvider.overrideWith((ref) => reminder),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: child,
+        ),
+      );
+    }
+
+    testWidgets('al cerrar una sesión válida programa el aviso de mañana', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'first_session_reminder_asked': true,
+      });
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 30,
+        streak: 12,
+        correctionsCount: 0,
+        durationSec: 200,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          reminder: reminder,
+          api: api,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      final tomorrow = DateTime.now().add(const Duration(days: 1));
+      expect(reminder.lastStreakDangerFireAt?.year, tomorrow.year);
+      expect(reminder.lastStreakDangerFireAt?.month, tomorrow.month);
+      expect(reminder.lastStreakDangerFireAt?.day, tomorrow.day);
+      expect(reminder.lastStreakDangerFireAt?.hour, 20);
+      expect(reminder.lastStreakDangerFireAt?.minute, 30);
+      expect(reminder.lastStreakDangerBody, l10n.streakDangerBody(12));
+      expect(reminder.streakDangerCancelled, isFalse);
+    });
+
+    testWidgets('con día de gracia disponible usa el texto de gracia', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'first_session_reminder_asked': true,
+      });
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero, grace: 'available');
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 30,
+        streak: 12,
+        correctionsCount: 0,
+        durationSec: 200,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          reminder: reminder,
+          api: api,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(reminder.lastStreakDangerBody, l10n.streakDangerGraceBody);
+    });
+
+    testWidgets('con la alerta de racha apagada no programa nada', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'first_session_reminder_asked': true,
+        'streak_alert_enabled': false,
+      });
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 30,
+        streak: 12,
+        correctionsCount: 0,
+        durationSec: 200,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          reminder: reminder,
+          api: api,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reminder.lastStreakDangerFireAt, isNull);
+    });
+
+    testWidgets('una sesión demasiado corta no programa el aviso', (
+      tester,
+    ) async {
+      SharedPreferences.setMockInitialValues({
+        'first_session_reminder_asked': true,
+      });
+      final reminder = FakeReminderService();
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      const summary = SessionSummary(
+        xpEarned: 0,
+        streak: 0,
+        correctionsCount: 0,
+        durationSec: 20,
+      );
+      await tester.pumpWidget(
+        wrap(
+          SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+          reminder: reminder,
+          api: api,
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      expect(reminder.lastStreakDangerFireAt, isNull);
+    });
+  });
 }

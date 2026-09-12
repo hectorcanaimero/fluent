@@ -30,6 +30,27 @@ abstract class ReminderService {
   });
 
   Future<void> cancelAll();
+
+  /// MEJ-38: recordatorio diario recurrente a una hora arbitraria (la de la
+  /// primera sesión válida), con id propio para no pisar los dos horarios
+  /// configurables en Ajustes (`scheduleDaily`/`skipToday` de arriba).
+  Future<void> scheduleAtHour({
+    required TimeOfDay time,
+    required String title,
+    required String body,
+  });
+
+  /// MEJ-39: notificación puntual de "racha en riesgo". No es recurrente
+  /// (`matchDateTimeComponents`) porque el streak y la gracia cambian cada
+  /// día — se reprograma con contenido nuevo cada vez que se cierra una
+  /// sesión válida.
+  Future<void> scheduleStreakDanger({
+    required DateTime fireAt,
+    required String title,
+    required String body,
+  });
+
+  Future<void> cancelStreakDanger();
 }
 
 class FlutterLocalNotificationsReminderService implements ReminderService {
@@ -39,6 +60,8 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
 
   static const _morningId = 1001;
   static const _eveningId = 1002;
+  static const _firstSessionOptInId = 1003;
+  static const _streakDangerId = 1004;
 
   final _plugin = FlutterLocalNotificationsPlugin();
   bool _initialized = false;
@@ -143,6 +166,55 @@ class FlutterLocalNotificationsReminderService implements ReminderService {
     await _plugin.cancel(_morningId);
     await _plugin.cancel(_eveningId);
   }
+
+  @override
+  Future<void> scheduleAtHour({
+    required TimeOfDay time,
+    required String title,
+    required String body,
+  }) async {
+    await _ensureInitialized();
+    await _plugin.zonedSchedule(
+      _firstSessionOptInId,
+      title,
+      body,
+      _nextInstanceOf(time),
+      const NotificationDetails(
+        android: AndroidNotificationDetails('fluent_reminders', 'Recordatorios de práctica'),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      matchDateTimeComponents: DateTimeComponents.time,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+    );
+  }
+
+  @override
+  Future<void> scheduleStreakDanger({
+    required DateTime fireAt,
+    required String title,
+    required String body,
+  }) async {
+    await _ensureInitialized();
+    await _plugin.zonedSchedule(
+      _streakDangerId,
+      title,
+      body,
+      tz.TZDateTime.from(fireAt, tz.local),
+      const NotificationDetails(
+        android: AndroidNotificationDetails('fluent_reminders', 'Recordatorios de práctica'),
+        iOS: DarwinNotificationDetails(),
+      ),
+      androidScheduleMode: AndroidScheduleMode.inexactAllowWhileIdle,
+      uiLocalNotificationDateInterpretation: UILocalNotificationDateInterpretation.wallClockTime,
+    );
+  }
+
+  @override
+  Future<void> cancelStreakDanger() async {
+    await _ensureInitialized();
+    await _plugin.cancel(_streakDangerId);
+  }
 }
 
 class FakeReminderService implements ReminderService {
@@ -185,5 +257,42 @@ class FakeReminderService implements ReminderService {
   @override
   Future<void> cancelAll() async {
     cancelled = true;
+  }
+
+  TimeOfDay? lastOptInHour;
+  String? lastOptInTitle;
+  String? lastOptInBody;
+
+  @override
+  Future<void> scheduleAtHour({
+    required TimeOfDay time,
+    required String title,
+    required String body,
+  }) async {
+    lastOptInHour = time;
+    lastOptInTitle = title;
+    lastOptInBody = body;
+  }
+
+  DateTime? lastStreakDangerFireAt;
+  String? lastStreakDangerTitle;
+  String? lastStreakDangerBody;
+  bool streakDangerCancelled = false;
+
+  @override
+  Future<void> scheduleStreakDanger({
+    required DateTime fireAt,
+    required String title,
+    required String body,
+  }) async {
+    lastStreakDangerFireAt = fireAt;
+    lastStreakDangerTitle = title;
+    lastStreakDangerBody = body;
+    streakDangerCancelled = false;
+  }
+
+  @override
+  Future<void> cancelStreakDanger() async {
+    streakDangerCancelled = true;
   }
 }

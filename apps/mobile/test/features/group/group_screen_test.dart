@@ -66,6 +66,78 @@ void main() {
     expect(share.shared, [expectedSummary!.text]);
   });
 
+  testWidgets(
+    'MEJ-41: invitar a un amigo comparte el código prellenado',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final share = FakeShareService();
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            shareServiceProvider.overrideWith((ref) => share),
+          ],
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: GroupScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('group_invite_friend_button')));
+      await tester.pumpAndSettle();
+
+      expect(share.shared, hasLength(1));
+      final text = share.shared.single;
+      expect(
+        text,
+        startsWith('Te invito a mi grupo de inglés en Fluent. Código: FLUENT-'),
+      );
+      expect(text, endsWith('con tu cuenta gratis de IA.'));
+    },
+  );
+
+  testWidgets(
+    'MEJ-41: al llegar al tope de invitaciones muestra el error mapeado',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      for (var i = 0; i < 5; i++) {
+        await api.createGroupInvitation();
+      }
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [fluentApiProvider.overrideWith((ref) => api)],
+          child: const MaterialApp(
+            localizationsDelegates: [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: GroupScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('group_invite_friend_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.errorInvitationLimitReached), findsOneWidget);
+    },
+  );
+
   testWidgets('muestra el leaderboard con medalla para el primer puesto', (
     tester,
   ) async {

@@ -160,6 +160,17 @@ _GroupResponse _$GroupResponseFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$GroupResponseToJson(_GroupResponse instance) =>
     <String, dynamic>{'group': instance.group, 'members': instance.members};
 
+_GroupInvitationResult _$GroupInvitationResultFromJson(
+  Map<String, dynamic> json,
+) => _GroupInvitationResult(
+  code: json['code'] as String,
+  expiresAt: json['expiresAt'] as String,
+);
+
+Map<String, dynamic> _$GroupInvitationResultToJson(
+  _GroupInvitationResult instance,
+) => <String, dynamic>{'code': instance.code, 'expiresAt': instance.expiresAt};
+
 _PkceStartResult _$PkceStartResultFromJson(Map<String, dynamic> json) =>
     _PkceStartResult(
       authUrl: json['authUrl'] as String,

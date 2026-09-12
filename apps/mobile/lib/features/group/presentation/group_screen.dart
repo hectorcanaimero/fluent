@@ -24,6 +24,7 @@ class GroupScreen extends ConsumerStatefulWidget {
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   late Future<GroupScreenData> _future;
   bool _startingChallenge = false;
+  bool _invitingFriend = false;
 
   @override
   void initState() {
@@ -89,6 +90,31 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
     await ref.read(shareServiceProvider).shareText(text);
   }
 
+  /// MEJ-41: cualquier miembro invita desde la app (antes solo el owner,
+  /// por `/admin/invitations`). El texto sale prellenado en el share sheet.
+  Future<void> _inviteFriend() async {
+    if (_invitingFriend) return;
+    setState(() => _invitingFriend = true);
+    try {
+      final invitation = await ref
+          .read(fluentApiProvider)
+          .createGroupInvitation();
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      await ref
+          .read(shareServiceProvider)
+          .shareText(l10n.groupInviteMessage(invitation.code));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      final l10n = AppLocalizations.of(context);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+    } finally {
+      if (mounted) setState(() => _invitingFriend = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -129,6 +155,13 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.sm),
+                  OutlinedButton.icon(
+                    key: const Key('group_invite_friend_button'),
+                    onPressed: _invitingFriend ? null : _inviteFriend,
+                    icon: const Icon(Icons.person_add_alt),
+                    label: Text(l10n.groupInviteFriendButton),
+                  ),
+                  const SizedBox(height: AppSpacing.md),
                   for (var i = 0; i < data.leaderboard.rows.length; i++)
                     _LeaderboardRowTile(
                       key: Key('leaderboard_row_$i'),

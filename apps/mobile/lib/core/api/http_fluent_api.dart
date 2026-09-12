@@ -68,6 +68,15 @@ class HttpFluentApi implements FluentApi {
       });
 
   @override
+  Future<GroupInvitationResult> createGroupInvitation() =>
+      _client.guard(() async {
+        final res = await _client.dio.post('/groups/invitations');
+        return GroupInvitationResult.fromJson(
+          res.data as Map<String, dynamic>,
+        );
+      });
+
+  @override
   Future<GroupResponse> getGroup() => _client.guard(() async {
     final res = await _client.dio.get('/group');
     return GroupResponse.fromJson(res.data as Map<String, dynamic>);

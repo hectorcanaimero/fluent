@@ -137,6 +137,19 @@ abstract class GroupResponse with _$GroupResponse {
       _$GroupResponseFromJson(json);
 }
 
+/// MEJ-41: `POST /groups/invitations`, disponible para cualquier miembro
+/// (no solo el owner, a diferencia de `createInvitations`/`/admin/invitations`).
+@freezed
+abstract class GroupInvitationResult with _$GroupInvitationResult {
+  const factory GroupInvitationResult({
+    required String code,
+    required String expiresAt,
+  }) = _GroupInvitationResult;
+
+  factory GroupInvitationResult.fromJson(Map<String, dynamic> json) =>
+      _$GroupInvitationResultFromJson(json);
+}
+
 @freezed
 abstract class PkceStartResult with _$PkceStartResult {
   const factory PkceStartResult({

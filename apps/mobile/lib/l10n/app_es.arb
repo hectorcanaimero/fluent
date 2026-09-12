@@ -325,7 +325,7 @@
   },
   "groupChallengeAccept": "Aceptar",
   "groupWeeklySummaryTitle": "Resumen semanal",
-  "groupShareButton": "Compartir en WhatsApp",
+  "groupShareButton": "Compartir",
   "progressTitle": "Tu progreso",
   "progressXpLabel": "XP",
   "progressStreakLabel": "Racha",
@@ -425,5 +425,25 @@
   "homeChecklistFirstSession": "Primera sesión de 3 min",
   "homeCourtesyPracticeButton": "Probá tu primera sesión sin conectar nada",
   "summaryCourtesyBanner": "Esa fue tu sesión de cortesía.",
-  "summaryCourtesyConnectButton": "Para seguir, conectá tu cuenta gratis (2 minutos)"
+  "summaryCourtesyConnectButton": "Para seguir, conectá tu cuenta gratis (2 minutos)",
+  "firstSessionReminderDialogTitle": "¿Te aviso mañana a esta misma hora?",
+  "firstSessionReminderDialogBody": "3 minutos alcanzan para mantener la racha.",
+  "firstSessionReminderAccept": "Sí, avisame",
+  "firstSessionReminderDecline": "Ahora no",
+  "streakDangerBody": "Tu racha de {days} días vence a medianoche. 3 minutos alcanzan.",
+  "@streakDangerBody": {
+    "placeholders": {
+      "days": {"type": "int"}
+    }
+  },
+  "streakDangerGraceBody": "Hoy te salva el día de gracia; mañana no.",
+  "groupInviteFriendButton": "Invitar a un amigo",
+  "groupInviteMessage": "Te invito a mi grupo de inglés en Fluent. Código: {code}. 10 minutos por día, con tu cuenta gratis de IA.",
+  "@groupInviteMessage": {
+    "placeholders": {
+      "code": {"type": "String"}
+    }
+  },
+  "errorInvitationLimitReached": "Ya tenés 5 invitaciones sin usar. Esperá a que alguien se sume para crear otra.",
+  "errorGroupRequired": "Unite a un grupo con tu código de invitación para practicar."
 }

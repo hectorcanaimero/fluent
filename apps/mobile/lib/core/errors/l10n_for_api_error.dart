@@ -33,6 +33,8 @@ String l10nForApiError(ApiErrorCode code, AppLocalizations l10n) {
     // escapa (por ejemplo, el propio endpoint de caída vuelve a colgarse),
     // tiene su propio texto en vez de cae en el genérico.
     ApiErrorCode.streamTimeout => l10n.errorStreamTimeout,
+    ApiErrorCode.invitationLimitReached => l10n.errorInvitationLimitReached,
+    ApiErrorCode.groupRequired => l10n.errorGroupRequired,
     ApiErrorCode.unknown => l10n.errorGeneric,
   };
 }

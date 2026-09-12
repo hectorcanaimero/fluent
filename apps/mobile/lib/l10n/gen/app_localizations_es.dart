@@ -857,7 +857,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get groupWeeklySummaryTitle => 'Resumen semanal';
 
   @override
-  String get groupShareButton => 'Compartir en WhatsApp';
+  String get groupShareButton => 'Compartir';
 
   @override
   String get progressTitle => 'Tu progreso';
@@ -1082,4 +1082,43 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get summaryCourtesyConnectButton =>
       'Para seguir, conectá tu cuenta gratis (2 minutos)';
+
+  @override
+  String get firstSessionReminderDialogTitle =>
+      '¿Te aviso mañana a esta misma hora?';
+
+  @override
+  String get firstSessionReminderDialogBody =>
+      '3 minutos alcanzan para mantener la racha.';
+
+  @override
+  String get firstSessionReminderAccept => 'Sí, avisame';
+
+  @override
+  String get firstSessionReminderDecline => 'Ahora no';
+
+  @override
+  String streakDangerBody(int days) {
+    return 'Tu racha de $days días vence a medianoche. 3 minutos alcanzan.';
+  }
+
+  @override
+  String get streakDangerGraceBody =>
+      'Hoy te salva el día de gracia; mañana no.';
+
+  @override
+  String get groupInviteFriendButton => 'Invitar a un amigo';
+
+  @override
+  String groupInviteMessage(String code) {
+    return 'Te invito a mi grupo de inglés en Fluent. Código: $code. 10 minutos por día, con tu cuenta gratis de IA.';
+  }
+
+  @override
+  String get errorInvitationLimitReached =>
+      'Ya tenés 5 invitaciones sin usar. Esperá a que alguien se sume para crear otra.';
+
+  @override
+  String get errorGroupRequired =>
+      'Unite a un grupo con tu código de invitación para practicar.';
 }

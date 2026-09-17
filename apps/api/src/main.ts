@@ -37,6 +37,11 @@ async function bootstrap() {
   // que el cliente puede inventarse. Ver MEJ-30.
   app.set('trust proxy', 1);
 
+  // CORS para la build web de Flutter, servida desde otro origen. `*` sin
+  // credenciales es seguro aquí: la API no usa cookies, todo va por Bearer, y
+  // el navegador no adjunta ese token a peticiones de terceros.
+  app.enableCors();
+
   app.setGlobalPrefix('v1');
 
   // Bull Board (SPEC-05 §9): panel de las 4 colas de BullMQ en

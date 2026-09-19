@@ -132,39 +132,26 @@ void main() {
     expect(find.text(l10n.providersStatusNotConnected), findsNothing);
   });
 
-  testWidgets('modelos de un proveedor no conectado aparecen deshabilitados', (
+  testWidgets('el selector solo lista modelos de proveedores conectados', (
     tester,
   ) async {
     await _pumpProvidersScreen(tester);
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
 
     await tester.tap(find.byKey(const Key('model_picker_chat')));
     await tester.pumpAndSettle();
 
-    // El proveedor Gemini está más abajo en la hoja de selección.
-    await tester.dragUntilVisible(
+    // Gemini no está conectado en los datos de ejemplo: sus modelos no salen.
+    expect(
       find.byKey(const Key('model_option_gemini-1.5-flash')),
-      find.byKey(const Key('model_picker_list')),
-      const Offset(0, -200),
+      findsNothing,
     );
-    await tester.pumpAndSettle();
-
-    // Gemini todavía no está conectado: su modelo gratis debe verse pero
-    // deshabilitado.
-    final geminiModelTile = tester.widget<ListTile>(
-      find.byKey(const Key('model_option_gemini-1.5-flash')),
-    );
-    expect(geminiModelTile.enabled, isFalse);
-    expect(geminiModelTile.onTap, isNull);
-    expect(find.text(l10n.providersModelProviderDisabledHint), findsOneWidget);
-
-    // OpenRouter sí está conectado en los datos de ejemplo.
-    final openRouterModelTile = tester.widget<ListTile>(
+    // OpenRouter sí está conectado.
+    expect(
       find.byKey(
         const Key('model_option_meta-llama/llama-3.1-8b-instruct:free'),
       ),
+      findsOneWidget,
     );
-    expect(openRouterModelTile.enabled, isTrue);
   });
 
   testWidgets(

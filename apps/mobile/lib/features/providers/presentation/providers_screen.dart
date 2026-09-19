@@ -618,6 +618,11 @@ class _ModelPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Solo los proveedores conectados: listar los demás deshabilitados
+    // confundía (con Gemini conectado aparecía todo OpenRouter apagado).
+    final connected = data.catalog.providers.keys
+        .where(data.isConnected)
+        .toList();
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.7,
@@ -634,12 +639,16 @@ class _ModelPickerSheet extends StatelessWidget {
                   key: const Key('model_picker_list'),
                   controller: scrollController,
                   children: [
-                    for (final providerId in data.catalog.providers.keys)
+                    if (connected.isEmpty)
+                      Text(
+                        AppLocalizations.of(context).homeNeedProviderHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    for (final providerId in connected)
                       _ProviderModelGroup(
                         providerId: providerId,
                         groups: data.catalog.providers[providerId]!,
                         estimatePerSession: data.catalog.estimatePerSession,
-                        connected: data.isConnected(providerId),
                         onSelected: (modelId) =>
                             Navigator.of(context).pop((providerId, modelId)),
                       ),
@@ -659,14 +668,12 @@ class _ProviderModelGroup extends StatelessWidget {
     required this.providerId,
     required this.groups,
     required this.estimatePerSession,
-    required this.connected,
     required this.onSelected,
   });
 
   final String providerId;
   final ModelTierGroups groups;
   final Map<String, double> estimatePerSession;
-  final bool connected;
   final ValueChanged<String> onSelected;
 
   @override
@@ -685,20 +692,11 @@ class _ProviderModelGroup extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall,
           ),
         ),
-        if (!connected)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              l10n.providersModelProviderDisabledHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
         if (groups.free.isNotEmpty)
           _TierSection(
             label: l10n.providersModelTierFree,
             models: groups.free,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
         if (groups.budget.isNotEmpty)
@@ -706,7 +704,6 @@ class _ProviderModelGroup extends StatelessWidget {
             label: l10n.providersModelTierBudget,
             models: groups.budget,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
         if (groups.premium.isNotEmpty)
@@ -714,7 +711,6 @@ class _ProviderModelGroup extends StatelessWidget {
             label: l10n.providersModelTierPremium,
             models: groups.premium,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
       ],
@@ -727,14 +723,12 @@ class _TierSection extends StatelessWidget {
     required this.label,
     required this.models,
     required this.estimatePerSession,
-    required this.enabled,
     required this.onSelected,
   });
 
   final String label;
   final List<ModelOption> models;
   final Map<String, double> estimatePerSession;
-  final bool enabled;
   final ValueChanged<String> onSelected;
 
   @override
@@ -752,7 +746,6 @@ class _TierSection extends StatelessWidget {
           ListTile(
             key: Key('model_option_${model.id}'),
             contentPadding: EdgeInsets.zero,
-            enabled: enabled,
             title: Text(model.name),
             subtitle: Text(
               (estimatePerSession[model.id] ?? 0) > 0
@@ -761,7 +754,7 @@ class _TierSection extends StatelessWidget {
                     )
                   : l10n.providersModelEstimateFree,
             ),
-            onTap: enabled ? () => onSelected(model.id) : null,
+            onTap: () => onSelected(model.id),
           ),
       ],
     );

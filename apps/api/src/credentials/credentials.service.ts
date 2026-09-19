@@ -23,6 +23,9 @@ import {
  * un endpoint y nunca la mete en el mensaje de una excepción; solo la entrega
  * a quien va a llamar al proveedor (`LlmClient`).
  */
+/** `last_error` de una credencial cifrada con otra clave maestra. */
+export const DECRYPT_FAILED = 'DECRYPT_FAILED';
+
 @Injectable()
 export class CredentialsService implements CredentialsSource {
   private readonly logger = new Logger(CredentialsService.name);
@@ -124,8 +127,14 @@ export class CredentialsService implements CredentialsSource {
       return this.crypto.decrypt(row.user_id, row.provider, row);
     } catch {
       this.logger.warn(
-        `No se pudo descifrar la credencial de '${row.provider}' del usuario ${row.user_id}; se ignora.`,
+        `No se pudo descifrar la credencial de '${row.provider}' del usuario ${row.user_id}; se marca como error.`,
       );
+      // Sin esto la fila seguía `active`: la app mostraba "Conectado" pero la
+      // API no podía usarla y respondía PROVIDER_NOT_CONNECTED. Marcarla
+      // `error` hace que la app pida volver a conectarla.
+      void this.repository
+        .markError(row.user_id, row.provider, DECRYPT_FAILED)
+        .catch(() => undefined);
       return null;
     }
   }

@@ -35,6 +35,7 @@ import type { Locale } from '../../db/schema.js';
 import { WeeklySummaryPendingCredentialStore } from './pending-credential.store.js';
 import { computeTopTopics } from './top-topics.js';
 import { WeeklySummaryRepository } from './weekly-summary.repository.js';
+import { PushService } from '../../push/push.service.js';
 
 /**
  * SPEC-03 §4.3 escribe `{summary_language}` según el locale del owner (ver
@@ -86,6 +87,7 @@ export class WeeklySummaryService {
     private readonly llm: LlmService,
     private readonly pendingCredentials: WeeklySummaryPendingCredentialStore,
     configService: ConfigService<Env, true>,
+    private readonly push: PushService,
   ) {
     this.promptVersion = String(
       configService.get('PROMPT_VERSION', { infer: true }),
@@ -205,6 +207,9 @@ export class WeeklySummaryService {
     // Limpieza tras éxito (ver pending-credential.store.ts): si quedaba una
     // clave pendiente de una semana anterior, ya no aplica.
     await this.pendingCredentials.clear(ownerId);
+
+    // Aviso al grupo: nunca lanza, así que no puede reintentar el job.
+    await this.push.notifyWeeklySummary(groupId);
 
     return {
       status: 'applied',

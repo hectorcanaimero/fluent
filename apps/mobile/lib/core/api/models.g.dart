@@ -141,6 +141,7 @@ _GroupMember _$GroupMemberFromJson(Map<String, dynamic> json) => _GroupMember(
   xp: (json['xp'] as num).toInt(),
   streak: (json['streak'] as num).toInt(),
   lastSessionDay: json['lastSessionDay'] as String?,
+  avatarUrl: json['avatarUrl'] as String?,
 );
 
 Map<String, dynamic> _$GroupMemberToJson(_GroupMember instance) =>
@@ -151,6 +152,7 @@ Map<String, dynamic> _$GroupMemberToJson(_GroupMember instance) =>
       'xp': instance.xp,
       'streak': instance.streak,
       'lastSessionDay': instance.lastSessionDay,
+      'avatarUrl': instance.avatarUrl,
     };
 
 _GroupResponse _$GroupResponseFromJson(Map<String, dynamic> json) =>
@@ -630,6 +632,7 @@ _LeaderboardRow _$LeaderboardRowFromJson(Map<String, dynamic> json) =>
       xpWeek: (json['xpWeek'] as num).toInt(),
       sessionsWeek: (json['sessionsWeek'] as num).toInt(),
       streak: (json['streak'] as num).toInt(),
+      avatarUrl: json['avatarUrl'] as String?,
     );
 
 Map<String, dynamic> _$LeaderboardRowToJson(_LeaderboardRow instance) =>
@@ -639,6 +642,7 @@ Map<String, dynamic> _$LeaderboardRowToJson(_LeaderboardRow instance) =>
       'xpWeek': instance.xpWeek,
       'sessionsWeek': instance.sessionsWeek,
       'streak': instance.streak,
+      'avatarUrl': instance.avatarUrl,
     };
 
 _LeaderboardResult _$LeaderboardResultFromJson(Map<String, dynamic> json) =>
@@ -664,6 +668,7 @@ _ChallengeItem _$ChallengeItemFromJson(Map<String, dynamic> json) =>
       topic: json['topic'] as String,
       kind: json['kind'] as String,
       sessionId: json['sessionId'] as String,
+      avatarUrl: json['avatarUrl'] as String?,
     );
 
 Map<String, dynamic> _$ChallengeItemToJson(_ChallengeItem instance) =>
@@ -673,6 +678,7 @@ Map<String, dynamic> _$ChallengeItemToJson(_ChallengeItem instance) =>
       'topic': instance.topic,
       'kind': instance.kind,
       'sessionId': instance.sessionId,
+      'avatarUrl': instance.avatarUrl,
     };
 
 _WeeklySummaryResult _$WeeklySummaryResultFromJson(Map<String, dynamic> json) =>

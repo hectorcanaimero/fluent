@@ -90,6 +90,7 @@ describe('ChallengesService.listChallenges', () => {
           topic: 'economy',
           kind: 'free_topic',
           sessionId: 'session-1',
+          avatarUrl: null,
         },
       ],
     });
@@ -168,7 +169,7 @@ describe('ChallengesService.listChallenges', () => {
     expect(result).toEqual({ items: [] });
   });
 
-  it('no expone endedAt: el DTO tiene exactamente los 5 campos de SPEC-02 §4.5', async () => {
+  it('no expone endedAt: el DTO tiene los 5 campos de SPEC-02 §4.5 más avatarUrl', async () => {
     const members = [
       { user_id: 'me', display_name: 'Me' },
       { user_id: 'friend-1', display_name: 'Beto' },
@@ -188,6 +189,7 @@ describe('ChallengesService.listChallenges', () => {
     const result = await service.listChallenges('me', undefined, NOW);
 
     expect(Object.keys(result.items[0]!).sort()).toEqual([
+      'avatarUrl',
       'displayName',
       'fromUserId',
       'kind',

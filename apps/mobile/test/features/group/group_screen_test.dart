@@ -4,6 +4,7 @@ import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/core/share/share_service.dart';
 import 'package:fluent_mobile/features/group/presentation/group_screen.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
+import 'package:fluent_mobile/core/widgets/user_avatar.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -161,6 +162,14 @@ void main() {
 
     expect(find.byKey(const Key('leaderboard_row_0')), findsOneWidget);
     expect(find.byIcon(Icons.emoji_events), findsOneWidget);
+    // Cada fila del ranking lleva la foto del miembro (o su inicial).
+    expect(
+      find.descendant(
+        of: find.byKey(const Key('leaderboard_row_0')),
+        matching: find.byType(UserAvatar),
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('aceptar un desafío crea una sesión con ese tema', (

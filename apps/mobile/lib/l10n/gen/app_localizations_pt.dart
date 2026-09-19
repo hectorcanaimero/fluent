@@ -339,7 +339,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providersStatusNotConnected => 'Não conectado';
 
   @override
-  String get providersStatusError => 'Com erro';
+  String get providersStatusError => 'Não está funcionando: conecte de novo';
 
   @override
   String get providersConnectButton => 'Conectar';
@@ -555,7 +555,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get micPermissionBody =>
-      'O Open Fluent usa o microfone do celular para te ouvir durante a conversa. A transcrição é processada no seu aparelho e você revisa antes de enviar.';
+      'O Open Fluent usa o microfone para te ouvir durante a conversa. Sua voz vira texto, nunca guardamos o áudio, e você revisa o texto antes de enviar.';
 
   @override
   String get micPermissionContinue => 'Continuar';
@@ -941,6 +941,9 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get commonUndo => 'Desfazer';
+
+  @override
+  String get pushOpenAction => 'Ver';
 
   @override
   String get memoryFactDeleted => 'Fato apagado.';

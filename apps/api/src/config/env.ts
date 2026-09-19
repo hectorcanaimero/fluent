@@ -37,6 +37,12 @@ export const envSchema = z.object({
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),
+  // Cuenta de servicio de Firebase (JSON en base64) para enviar push por
+  // FCM. Sin ella el envío queda desactivado y la API arranca igual.
+  FIREBASE_SERVICE_ACCOUNT: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

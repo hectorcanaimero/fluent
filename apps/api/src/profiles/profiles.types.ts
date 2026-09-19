@@ -100,4 +100,5 @@ export interface GroupMemberDto {
   xp: number;
   streak: number;
   lastSessionDay: string | null;
+  avatarUrl: string | null;
 }

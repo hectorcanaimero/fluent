@@ -67,6 +67,7 @@ export class LeaderboardService {
     // fuente que `GET /group` (RF-6.5, SPEC-07 §9: streak es visible a los
     // demás miembros).
     const streakByUserId = new Map(members.map((member) => [member.user_id, member.streak]));
+    const avatarByUserId = new Map(members.map((member) => [member.user_id, member.avatar_url]));
 
     return {
       weekStart: summary.weekStart,
@@ -78,6 +79,7 @@ export class LeaderboardService {
         xpWeek: entry.xp,
         sessionsWeek: entry.sessions,
         streak: streakByUserId.get(entry.user_id) ?? 0,
+        avatarUrl: avatarByUserId.get(entry.user_id) ?? null,
       })),
       groupStreak: summary.groupStreak,
     };

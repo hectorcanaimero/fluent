@@ -1,3 +1,4 @@
+import type { PushService } from '../push/push.service.js';
 import { ApiException } from '../common/api-error.js';
 import type { CloseSessionResult } from '../db/rpc.js';
 import type { Session } from '../db/schema.js';
@@ -77,12 +78,17 @@ function fakeSessionCloser(closeResult: CloseSessionResult = closeResultFixture(
   return { closer: closer as unknown as SessionCloserService, calls };
 }
 
+/** PushService falso: registra los avisos de desafío. */
+function fakePush() {
+  return { notifyChallenge: vi.fn(async () => undefined) } as unknown as PushService;
+}
+
 describe('EndSessionService', () => {
   it('sesión de otro usuario o inexistente → 403 FORBIDDEN, sin llamar al closer', async () => {
     const turns = fakeTurnsRepository({ session: null });
     const { repo } = fakeEndSessionRepository();
     const { closer, calls } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer);
+    const service = new EndSessionService(turns, repo, closer, fakePush());
 
     await expect(service.endSession(OTHER_USER_ID, SESSION_ID, DTO)).rejects.toMatchObject({
       code: 'FORBIDDEN',
@@ -94,7 +100,7 @@ describe('EndSessionService', () => {
     const turns = fakeTurnsRepository();
     const { repo } = fakeEndSessionRepository();
     const { closer } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer);
+    const service = new EndSessionService(turns, repo, closer, fakePush());
 
     await expect(service.endSession(USER_ID, 'no-es-un-uuid', DTO)).rejects.toBeInstanceOf(
       ApiException,
@@ -108,7 +114,7 @@ describe('EndSessionService', () => {
     const { closer, calls } = fakeSessionCloser(
       closeResultFixture({ xp_earned: 90, streak: 4, is_double_day: true, next_is_boss: true }),
     );
-    const service = new EndSessionService(turns, repo, closer);
+    const service = new EndSessionService(turns, repo, closer, fakePush());
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
@@ -128,6 +134,24 @@ describe('EndSessionService', () => {
     expect(result.summary.durationSec).toBeGreaterThanOrEqual(0);
   });
 
+  it('una sesión válida recién cerrada avisa al grupo; una sin XP o ya cerrada, no', async () => {
+    const run = async (status: 'active' | 'ended', xp: number) => {
+      const push = fakePush();
+      const service = new EndSessionService(
+        fakeTurnsRepository({ session: sessionFixture({ status, turns_count: 5 }) }),
+        fakeEndSessionRepository(0).repo,
+        fakeSessionCloser(closeResultFixture({ xp_earned: xp })).closer,
+        push,
+      );
+      await service.endSession(USER_ID, SESSION_ID, DTO);
+      return push.notifyChallenge as unknown as ReturnType<typeof vi.fn>;
+    };
+
+    expect(await run('active', 90)).toHaveBeenCalledWith(USER_ID, expect.any(String));
+    expect(await run('active', 0)).not.toHaveBeenCalled();
+    expect(await run('ended', 90)).not.toHaveBeenCalled();
+  });
+
   it('sesión ya `ended` (idempotente): delega con decideBrief=false y responde el resumen guardado', async () => {
     const session = sessionFixture({
       status: 'ended',
@@ -142,7 +166,7 @@ describe('EndSessionService', () => {
     const { closer, calls } = fakeSessionCloser(
       closeResultFixture({ xp_earned: 60, streak: 2, is_double_day: false, next_is_boss: false }),
     );
-    const service = new EndSessionService(turns, repo, closer);
+    const service = new EndSessionService(turns, repo, closer, fakePush());
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
@@ -158,7 +182,7 @@ describe('EndSessionService', () => {
     const turns = fakeTurnsRepository({ session });
     const { repo } = fakeEndSessionRepository();
     const { closer } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer);
+    const service = new EndSessionService(turns, repo, closer, fakePush());
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
     expect(result.summary.durationSec).toBe(0);

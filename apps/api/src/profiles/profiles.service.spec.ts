@@ -62,6 +62,7 @@ function createService(
     getActiveSessionId: vi.fn().mockResolvedValue(null),
     awardProfileCompleted: vi.fn().mockResolvedValue(20),
     purgeAppData: vi.fn().mockResolvedValue(undefined),
+    refreshAvatar: vi.fn().mockResolvedValue(null),
   };
 
   const groupsRepository = {
@@ -154,6 +155,36 @@ describe('ProfilesService.getMe', () => {
     const me = await service.getMe('user-1');
 
     expect(me.onboarded).toBe(true);
+  });
+
+  it('completa la foto del proveedor vinculado si el perfil no la tiene', async () => {
+    const { service, profilesRepository } = createService(makeProfile({ avatar_url: null }));
+    profilesRepository.refreshAvatar.mockResolvedValue('https://lh3.googleusercontent.com/a/x');
+
+    const me = await service.getMe('user-1');
+
+    expect(profilesRepository.refreshAvatar).toHaveBeenCalledWith('user-1');
+    expect(me.profile.avatarUrl).toBe('https://lh3.googleusercontent.com/a/x');
+  });
+
+  it('no consulta la foto de nuevo si el perfil ya la tiene', async () => {
+    const { service, profilesRepository } = createService(
+      makeProfile({ avatar_url: 'https://lh3.googleusercontent.com/a/y' }),
+    );
+
+    const me = await service.getMe('user-1');
+
+    expect(profilesRepository.refreshAvatar).not.toHaveBeenCalled();
+    expect(me.profile.avatarUrl).toBe('https://lh3.googleusercontent.com/a/y');
+  });
+
+  it('si refrescar la foto falla, GET /me responde igual', async () => {
+    const { service, profilesRepository } = createService(makeProfile({ avatar_url: null }));
+    profilesRepository.refreshAvatar.mockRejectedValue(new Error('rpc caída'));
+
+    const me = await service.getMe('user-1');
+
+    expect(me.profile.avatarUrl).toBeNull();
   });
 
   it('reports onboarded: false when onboarded_at is null', async () => {

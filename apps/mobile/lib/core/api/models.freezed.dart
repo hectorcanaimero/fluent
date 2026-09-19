@@ -1850,7 +1850,8 @@ $ModelPreferenceCopyWith<$Res>? get modelPreference {
 /// @nodoc
 mixin _$GroupMember {
 
- String get userId; String get displayName; String get level; int get xp; int get streak; String? get lastSessionDay;
+ String get userId; String get displayName; String get level; int get xp; int get streak; String? get lastSessionDay;/// Foto del login social del miembro; `null` muestra la inicial.
+ String? get avatarUrl;
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -1864,20 +1865,20 @@ $GroupMemberCopyWith<GroupMember> get copyWith => _$GroupMemberCopyWithImpl<Grou
 @override
 bool operator ==(Object other) {
   final _this = this as GroupMember;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupMember&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.level, _this.level) || other.level == _this.level)&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.lastSessionDay, _this.lastSessionDay) || other.lastSessionDay == _this.lastSessionDay));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupMember&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.level, _this.level) || other.level == _this.level)&&(identical(other.xp, _this.xp) || other.xp == _this.xp)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.lastSessionDay, _this.lastSessionDay) || other.lastSessionDay == _this.lastSessionDay)&&(identical(other.avatarUrl, _this.avatarUrl) || other.avatarUrl == _this.avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as GroupMember;
-  return Object.hash(runtimeType,_this.userId,_this.displayName,_this.level,_this.xp,_this.streak,_this.lastSessionDay);
+  return Object.hash(runtimeType,_this.userId,_this.displayName,_this.level,_this.xp,_this.streak,_this.lastSessionDay,_this.avatarUrl);
 }
 
 @override
 String toString() {
   final _this = this as GroupMember;
-  return 'GroupMember(userId: ${_this.userId}, displayName: ${_this.displayName}, level: ${_this.level}, xp: ${_this.xp}, streak: ${_this.streak}, lastSessionDay: ${_this.lastSessionDay})';
+  return 'GroupMember(userId: ${_this.userId}, displayName: ${_this.displayName}, level: ${_this.level}, xp: ${_this.xp}, streak: ${_this.streak}, lastSessionDay: ${_this.lastSessionDay}, avatarUrl: ${_this.avatarUrl})';
 }
 
 
@@ -1888,7 +1889,7 @@ abstract mixin class $GroupMemberCopyWith<$Res>  {
   factory $GroupMemberCopyWith(GroupMember value, $Res Function(GroupMember) _then) = _$GroupMemberCopyWithImpl;
 @useResult
 $Res call({
- String userId, String displayName, String level, int xp, int streak, String? lastSessionDay
+ String userId, String displayName, String level, int xp, int streak, String? lastSessionDay, String? avatarUrl
 });
 
 
@@ -1905,7 +1906,7 @@ class _$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? displayName = null,Object? level = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? displayName = null,Object? level = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,Object? avatarUrl = freezed,}) {
   return _then(GroupMember(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
@@ -1913,6 +1914,7 @@ as String,level: null == level ? _self.level : level // ignore: cast_nullable_to
 as String,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
 as int,lastSessionDay: freezed == lastSessionDay ? _self.lastSessionDay : lastSessionDay // ignore: cast_nullable_to_non_nullable
+as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -1998,10 +2000,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay,  String? avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
-return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay,_that.avatarUrl);case _:
   return orElse();
 
 }
@@ -2019,10 +2021,10 @@ return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay,  String? avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember():
-return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay,_that.avatarUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -2039,10 +2041,10 @@ return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String displayName,  String level,  int xp,  int streak,  String? lastSessionDay,  String? avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupMember() when $default != null:
-return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay);case _:
+return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak,_that.lastSessionDay,_that.avatarUrl);case _:
   return null;
 
 }
@@ -2054,7 +2056,7 @@ return $default(_that.userId,_that.displayName,_that.level,_that.xp,_that.streak
 @JsonSerializable()
 
 class _GroupMember implements GroupMember {
-  const _GroupMember({required this.userId, required this.displayName, required this.level, required this.xp, required this.streak, this.lastSessionDay});
+  const _GroupMember({required this.userId, required this.displayName, required this.level, required this.xp, required this.streak, this.lastSessionDay, this.avatarUrl});
   factory _GroupMember.fromJson(Map<String, dynamic> json) => _$GroupMemberFromJson(json);
 
 @override final  String userId;
@@ -2063,6 +2065,8 @@ class _GroupMember implements GroupMember {
 @override final  int xp;
 @override final  int streak;
 @override final  String? lastSessionDay;
+/// Foto del login social del miembro; `null` muestra la inicial.
+@override final  String? avatarUrl;
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
@@ -2077,18 +2081,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.lastSessionDay, lastSessionDay) || other.lastSessionDay == lastSessionDay));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupMember&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.level, level) || other.level == level)&&(identical(other.xp, xp) || other.xp == xp)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.lastSessionDay, lastSessionDay) || other.lastSessionDay == lastSessionDay)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,userId,displayName,level,xp,streak,lastSessionDay);
+    return Object.hash(runtimeType,userId,displayName,level,xp,streak,lastSessionDay,avatarUrl);
 }
 
 @override
 String toString() {
-    return 'GroupMember(userId: $userId, displayName: $displayName, level: $level, xp: $xp, streak: $streak, lastSessionDay: $lastSessionDay)';
+    return 'GroupMember(userId: $userId, displayName: $displayName, level: $level, xp: $xp, streak: $streak, lastSessionDay: $lastSessionDay, avatarUrl: $avatarUrl)';
 }
 
 
@@ -2099,7 +2103,7 @@ abstract mixin class _$GroupMemberCopyWith<$Res> implements $GroupMemberCopyWith
   factory _$GroupMemberCopyWith(_GroupMember value, $Res Function(_GroupMember) _then) = __$GroupMemberCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String displayName, String level, int xp, int streak, String? lastSessionDay
+ String userId, String displayName, String level, int xp, int streak, String? lastSessionDay, String? avatarUrl
 });
 
 
@@ -2116,7 +2120,7 @@ class __$GroupMemberCopyWithImpl<$Res>
 
 /// Create a copy of GroupMember
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? displayName = null,Object? level = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? displayName = null,Object? level = null,Object? xp = null,Object? streak = null,Object? lastSessionDay = freezed,Object? avatarUrl = freezed,}) {
   return _then(_GroupMember(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
@@ -2124,6 +2128,7 @@ as String,level: null == level ? _self.level : level // ignore: cast_nullable_to
 as String,xp: null == xp ? _self.xp : xp // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
 as int,lastSessionDay: freezed == lastSessionDay ? _self.lastSessionDay : lastSessionDay // ignore: cast_nullable_to_non_nullable
+as String?,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
 as String?,
   ));
 }
@@ -10464,7 +10469,8 @@ $LevelInfoCopyWith<$Res> get level {
 /// @nodoc
 mixin _$LeaderboardRow {
 
- String get userId; String get displayName; int get xpWeek; int get sessionsWeek; int get streak;
+ String get userId; String get displayName; int get xpWeek; int get sessionsWeek; int get streak;/// Foto del login social del miembro; `null` muestra la inicial.
+ String? get avatarUrl;
 /// Create a copy of LeaderboardRow
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -10478,20 +10484,20 @@ $LeaderboardRowCopyWith<LeaderboardRow> get copyWith => _$LeaderboardRowCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as LeaderboardRow;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is LeaderboardRow&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.xpWeek, _this.xpWeek) || other.xpWeek == _this.xpWeek)&&(identical(other.sessionsWeek, _this.sessionsWeek) || other.sessionsWeek == _this.sessionsWeek)&&(identical(other.streak, _this.streak) || other.streak == _this.streak));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is LeaderboardRow&&(identical(other.userId, _this.userId) || other.userId == _this.userId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.xpWeek, _this.xpWeek) || other.xpWeek == _this.xpWeek)&&(identical(other.sessionsWeek, _this.sessionsWeek) || other.sessionsWeek == _this.sessionsWeek)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.avatarUrl, _this.avatarUrl) || other.avatarUrl == _this.avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as LeaderboardRow;
-  return Object.hash(runtimeType,_this.userId,_this.displayName,_this.xpWeek,_this.sessionsWeek,_this.streak);
+  return Object.hash(runtimeType,_this.userId,_this.displayName,_this.xpWeek,_this.sessionsWeek,_this.streak,_this.avatarUrl);
 }
 
 @override
 String toString() {
   final _this = this as LeaderboardRow;
-  return 'LeaderboardRow(userId: ${_this.userId}, displayName: ${_this.displayName}, xpWeek: ${_this.xpWeek}, sessionsWeek: ${_this.sessionsWeek}, streak: ${_this.streak})';
+  return 'LeaderboardRow(userId: ${_this.userId}, displayName: ${_this.displayName}, xpWeek: ${_this.xpWeek}, sessionsWeek: ${_this.sessionsWeek}, streak: ${_this.streak}, avatarUrl: ${_this.avatarUrl})';
 }
 
 
@@ -10502,7 +10508,7 @@ abstract mixin class $LeaderboardRowCopyWith<$Res>  {
   factory $LeaderboardRowCopyWith(LeaderboardRow value, $Res Function(LeaderboardRow) _then) = _$LeaderboardRowCopyWithImpl;
 @useResult
 $Res call({
- String userId, String displayName, int xpWeek, int sessionsWeek, int streak
+ String userId, String displayName, int xpWeek, int sessionsWeek, int streak, String? avatarUrl
 });
 
 
@@ -10519,14 +10525,15 @@ class _$LeaderboardRowCopyWithImpl<$Res>
 
 /// Create a copy of LeaderboardRow
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? displayName = null,Object? xpWeek = null,Object? sessionsWeek = null,Object? streak = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? userId = null,Object? displayName = null,Object? xpWeek = null,Object? sessionsWeek = null,Object? streak = null,Object? avatarUrl = freezed,}) {
   return _then(LeaderboardRow(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,xpWeek: null == xpWeek ? _self.xpWeek : xpWeek // ignore: cast_nullable_to_non_nullable
 as int,sessionsWeek: null == sessionsWeek ? _self.sessionsWeek : sessionsWeek // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
-as int,
+as int,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -10611,10 +10618,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak,  String? avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _LeaderboardRow() when $default != null:
-return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak);case _:
+return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak,_that.avatarUrl);case _:
   return orElse();
 
 }
@@ -10632,10 +10639,10 @@ return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak,  String? avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _LeaderboardRow():
-return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak);case _:
+return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak,_that.avatarUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -10652,10 +10659,10 @@ return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String userId,  String displayName,  int xpWeek,  int sessionsWeek,  int streak,  String? avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _LeaderboardRow() when $default != null:
-return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak);case _:
+return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_that.streak,_that.avatarUrl);case _:
   return null;
 
 }
@@ -10667,7 +10674,7 @@ return $default(_that.userId,_that.displayName,_that.xpWeek,_that.sessionsWeek,_
 @JsonSerializable()
 
 class _LeaderboardRow implements LeaderboardRow {
-  const _LeaderboardRow({required this.userId, required this.displayName, required this.xpWeek, required this.sessionsWeek, required this.streak});
+  const _LeaderboardRow({required this.userId, required this.displayName, required this.xpWeek, required this.sessionsWeek, required this.streak, this.avatarUrl});
   factory _LeaderboardRow.fromJson(Map<String, dynamic> json) => _$LeaderboardRowFromJson(json);
 
 @override final  String userId;
@@ -10675,6 +10682,8 @@ class _LeaderboardRow implements LeaderboardRow {
 @override final  int xpWeek;
 @override final  int sessionsWeek;
 @override final  int streak;
+/// Foto del login social del miembro; `null` muestra la inicial.
+@override final  String? avatarUrl;
 
 /// Create a copy of LeaderboardRow
 /// with the given fields replaced by the non-null parameter values.
@@ -10689,18 +10698,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LeaderboardRow&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.xpWeek, xpWeek) || other.xpWeek == xpWeek)&&(identical(other.sessionsWeek, sessionsWeek) || other.sessionsWeek == sessionsWeek)&&(identical(other.streak, streak) || other.streak == streak));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _LeaderboardRow&&(identical(other.userId, userId) || other.userId == userId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.xpWeek, xpWeek) || other.xpWeek == xpWeek)&&(identical(other.sessionsWeek, sessionsWeek) || other.sessionsWeek == sessionsWeek)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,userId,displayName,xpWeek,sessionsWeek,streak);
+    return Object.hash(runtimeType,userId,displayName,xpWeek,sessionsWeek,streak,avatarUrl);
 }
 
 @override
 String toString() {
-    return 'LeaderboardRow(userId: $userId, displayName: $displayName, xpWeek: $xpWeek, sessionsWeek: $sessionsWeek, streak: $streak)';
+    return 'LeaderboardRow(userId: $userId, displayName: $displayName, xpWeek: $xpWeek, sessionsWeek: $sessionsWeek, streak: $streak, avatarUrl: $avatarUrl)';
 }
 
 
@@ -10711,7 +10720,7 @@ abstract mixin class _$LeaderboardRowCopyWith<$Res> implements $LeaderboardRowCo
   factory _$LeaderboardRowCopyWith(_LeaderboardRow value, $Res Function(_LeaderboardRow) _then) = __$LeaderboardRowCopyWithImpl;
 @override @useResult
 $Res call({
- String userId, String displayName, int xpWeek, int sessionsWeek, int streak
+ String userId, String displayName, int xpWeek, int sessionsWeek, int streak, String? avatarUrl
 });
 
 
@@ -10728,14 +10737,15 @@ class __$LeaderboardRowCopyWithImpl<$Res>
 
 /// Create a copy of LeaderboardRow
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? displayName = null,Object? xpWeek = null,Object? sessionsWeek = null,Object? streak = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? userId = null,Object? displayName = null,Object? xpWeek = null,Object? sessionsWeek = null,Object? streak = null,Object? avatarUrl = freezed,}) {
   return _then(_LeaderboardRow(
 userId: null == userId ? _self.userId : userId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,xpWeek: null == xpWeek ? _self.xpWeek : xpWeek // ignore: cast_nullable_to_non_nullable
 as int,sessionsWeek: null == sessionsWeek ? _self.sessionsWeek : sessionsWeek // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
-as int,
+as int,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -11028,7 +11038,8 @@ as int,
 /// @nodoc
 mixin _$ChallengeItem {
 
- String get fromUserId; String get displayName; String get topic; String get kind; String get sessionId;
+ String get fromUserId; String get displayName; String get topic; String get kind; String get sessionId;/// Foto del miembro que originó el desafío; `null` muestra la inicial.
+ String? get avatarUrl;
 /// Create a copy of ChallengeItem
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -11042,20 +11053,20 @@ $ChallengeItemCopyWith<ChallengeItem> get copyWith => _$ChallengeItemCopyWithImp
 @override
 bool operator ==(Object other) {
   final _this = this as ChallengeItem;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChallengeItem&&(identical(other.fromUserId, _this.fromUserId) || other.fromUserId == _this.fromUserId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.topic, _this.topic) || other.topic == _this.topic)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.sessionId, _this.sessionId) || other.sessionId == _this.sessionId));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is ChallengeItem&&(identical(other.fromUserId, _this.fromUserId) || other.fromUserId == _this.fromUserId)&&(identical(other.displayName, _this.displayName) || other.displayName == _this.displayName)&&(identical(other.topic, _this.topic) || other.topic == _this.topic)&&(identical(other.kind, _this.kind) || other.kind == _this.kind)&&(identical(other.sessionId, _this.sessionId) || other.sessionId == _this.sessionId)&&(identical(other.avatarUrl, _this.avatarUrl) || other.avatarUrl == _this.avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as ChallengeItem;
-  return Object.hash(runtimeType,_this.fromUserId,_this.displayName,_this.topic,_this.kind,_this.sessionId);
+  return Object.hash(runtimeType,_this.fromUserId,_this.displayName,_this.topic,_this.kind,_this.sessionId,_this.avatarUrl);
 }
 
 @override
 String toString() {
   final _this = this as ChallengeItem;
-  return 'ChallengeItem(fromUserId: ${_this.fromUserId}, displayName: ${_this.displayName}, topic: ${_this.topic}, kind: ${_this.kind}, sessionId: ${_this.sessionId})';
+  return 'ChallengeItem(fromUserId: ${_this.fromUserId}, displayName: ${_this.displayName}, topic: ${_this.topic}, kind: ${_this.kind}, sessionId: ${_this.sessionId}, avatarUrl: ${_this.avatarUrl})';
 }
 
 
@@ -11066,7 +11077,7 @@ abstract mixin class $ChallengeItemCopyWith<$Res>  {
   factory $ChallengeItemCopyWith(ChallengeItem value, $Res Function(ChallengeItem) _then) = _$ChallengeItemCopyWithImpl;
 @useResult
 $Res call({
- String fromUserId, String displayName, String topic, String kind, String sessionId
+ String fromUserId, String displayName, String topic, String kind, String sessionId, String? avatarUrl
 });
 
 
@@ -11083,14 +11094,15 @@ class _$ChallengeItemCopyWithImpl<$Res>
 
 /// Create a copy of ChallengeItem
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? fromUserId = null,Object? displayName = null,Object? topic = null,Object? kind = null,Object? sessionId = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? fromUserId = null,Object? displayName = null,Object? topic = null,Object? kind = null,Object? sessionId = null,Object? avatarUrl = freezed,}) {
   return _then(ChallengeItem(
 fromUserId: null == fromUserId ? _self.fromUserId : fromUserId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,topic: null == topic ? _self.topic : topic // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
-as String,
+as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 
@@ -11175,10 +11187,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId,  String? avatarUrl)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _ChallengeItem() when $default != null:
-return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId);case _:
+return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId,_that.avatarUrl);case _:
   return orElse();
 
 }
@@ -11196,10 +11208,10 @@ return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId,  String? avatarUrl)  $default,) {final _that = this;
 switch (_that) {
 case _ChallengeItem():
-return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId);case _:
+return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId,_that.avatarUrl);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -11216,10 +11228,10 @@ return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String fromUserId,  String displayName,  String topic,  String kind,  String sessionId,  String? avatarUrl)?  $default,) {final _that = this;
 switch (_that) {
 case _ChallengeItem() when $default != null:
-return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId);case _:
+return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.sessionId,_that.avatarUrl);case _:
   return null;
 
 }
@@ -11231,7 +11243,7 @@ return $default(_that.fromUserId,_that.displayName,_that.topic,_that.kind,_that.
 @JsonSerializable()
 
 class _ChallengeItem implements ChallengeItem {
-  const _ChallengeItem({required this.fromUserId, required this.displayName, required this.topic, required this.kind, required this.sessionId});
+  const _ChallengeItem({required this.fromUserId, required this.displayName, required this.topic, required this.kind, required this.sessionId, this.avatarUrl});
   factory _ChallengeItem.fromJson(Map<String, dynamic> json) => _$ChallengeItemFromJson(json);
 
 @override final  String fromUserId;
@@ -11239,6 +11251,8 @@ class _ChallengeItem implements ChallengeItem {
 @override final  String topic;
 @override final  String kind;
 @override final  String sessionId;
+/// Foto del miembro que originó el desafío; `null` muestra la inicial.
+@override final  String? avatarUrl;
 
 /// Create a copy of ChallengeItem
 /// with the given fields replaced by the non-null parameter values.
@@ -11253,18 +11267,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChallengeItem&&(identical(other.fromUserId, fromUserId) || other.fromUserId == fromUserId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _ChallengeItem&&(identical(other.fromUserId, fromUserId) || other.fromUserId == fromUserId)&&(identical(other.displayName, displayName) || other.displayName == displayName)&&(identical(other.topic, topic) || other.topic == topic)&&(identical(other.kind, kind) || other.kind == kind)&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId)&&(identical(other.avatarUrl, avatarUrl) || other.avatarUrl == avatarUrl));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,fromUserId,displayName,topic,kind,sessionId);
+    return Object.hash(runtimeType,fromUserId,displayName,topic,kind,sessionId,avatarUrl);
 }
 
 @override
 String toString() {
-    return 'ChallengeItem(fromUserId: $fromUserId, displayName: $displayName, topic: $topic, kind: $kind, sessionId: $sessionId)';
+    return 'ChallengeItem(fromUserId: $fromUserId, displayName: $displayName, topic: $topic, kind: $kind, sessionId: $sessionId, avatarUrl: $avatarUrl)';
 }
 
 
@@ -11275,7 +11289,7 @@ abstract mixin class _$ChallengeItemCopyWith<$Res> implements $ChallengeItemCopy
   factory _$ChallengeItemCopyWith(_ChallengeItem value, $Res Function(_ChallengeItem) _then) = __$ChallengeItemCopyWithImpl;
 @override @useResult
 $Res call({
- String fromUserId, String displayName, String topic, String kind, String sessionId
+ String fromUserId, String displayName, String topic, String kind, String sessionId, String? avatarUrl
 });
 
 
@@ -11292,14 +11306,15 @@ class __$ChallengeItemCopyWithImpl<$Res>
 
 /// Create a copy of ChallengeItem
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? fromUserId = null,Object? displayName = null,Object? topic = null,Object? kind = null,Object? sessionId = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? fromUserId = null,Object? displayName = null,Object? topic = null,Object? kind = null,Object? sessionId = null,Object? avatarUrl = freezed,}) {
   return _then(_ChallengeItem(
 fromUserId: null == fromUserId ? _self.fromUserId : fromUserId // ignore: cast_nullable_to_non_nullable
 as String,displayName: null == displayName ? _self.displayName : displayName // ignore: cast_nullable_to_non_nullable
 as String,topic: null == topic ? _self.topic : topic // ignore: cast_nullable_to_non_nullable
 as String,kind: null == kind ? _self.kind : kind // ignore: cast_nullable_to_non_nullable
 as String,sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
-as String,
+as String,avatarUrl: freezed == avatarUrl ? _self.avatarUrl : avatarUrl // ignore: cast_nullable_to_non_nullable
+as String?,
   ));
 }
 

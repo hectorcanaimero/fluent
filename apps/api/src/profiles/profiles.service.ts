@@ -75,6 +75,7 @@ export class ProfilesService {
       activeSessionId,
       pendingActions,
       sessionsToday,
+      avatarUrl,
     ] = await Promise.all([
       profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
       this.credentialsRepository.listStatuses(userId),
@@ -82,6 +83,11 @@ export class ProfilesService {
       this.profilesRepository.getActiveSessionId(userId),
       this.pendingActions.listFor(userId),
       this.sessionsQuery.countValidSessionsSince(userId, since),
+      // Quien vinculó Google después de tener perfil no tiene la foto
+      // copiada: se completa acá. Un fallo no debe tumbar GET /me.
+      profile.avatar_url !== null
+        ? Promise.resolve(profile.avatar_url)
+        : this.profilesRepository.refreshAvatar(userId).catch(() => null),
     ]);
 
     // La cortesía necesita saber si el owner del grupo tiene credencial
@@ -94,7 +100,7 @@ export class ProfilesService {
         : [];
 
     return {
-      profile: toProfileDto(profile),
+      profile: toProfileDto({ ...profile, avatar_url: avatarUrl }),
       group: group ? toGroupDto(group) : null,
       providers,
       modelPreference: toModelPreferenceDto(modelPreference),

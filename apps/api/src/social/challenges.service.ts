@@ -57,6 +57,8 @@ export class ChallengesService {
       this.repositoryFor(members),
     ).listFor(userId, now);
 
+    const avatarByUserId = new Map(members.map((member) => [member.user_id, member.avatar_url]));
+
     // Se recorta `endedAt`: ordena los candidatos en `src/game/`, pero SPEC-02
     // §4.5 no lo incluye en la respuesta.
     return {
@@ -66,6 +68,7 @@ export class ChallengesService {
         topic: candidate.topic,
         kind: candidate.kind,
         sessionId: candidate.sessionId,
+        avatarUrl: avatarByUserId.get(candidate.fromUserId) ?? null,
       })),
     };
   }

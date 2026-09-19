@@ -130,6 +130,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     _turnCancelToken.cancel();
     _timer?.cancel();
     _listenCountdownTimer?.cancel();
+    _restartTimer?.cancel();
     _draftController.dispose();
     _scrollController.dispose();
     _speech.cancel();
@@ -156,6 +157,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         _listenCountdownTimer?.cancel();
         _speech.cancel();
         _tts.stop();
+        // Sin reinicios en segundo plano; lo dicho queda para revisar.
+        if (_turnActive) {
+          _chunkId++;
+          _chunkClosed = true;
+          _finishTurn();
+        }
       case AppLifecycleState.resumed:
         if (!_loading && !_bootError && _remainingSeconds > 0) {
           _startTimer();
@@ -295,6 +302,46 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     }
   }
 
+  // --- Un turno de voz = varios fragmentos del motor -------------------
+  //
+  // El reconocedor nativo de Android corta solo tras unos segundos de
+  // silencio (y en muchos equipos no se puede configurar). Para que un
+  // turno sea todo lo que el estudiante dice hasta que ÉL decide terminar,
+  // cuando el motor corta por su cuenta se vuelve a escuchar y el texto
+  // nuevo se agrega al ya transcripto.
+
+  /// Errores "blandos" del motor: silencio o nada reconocido. Se reintenta.
+  /// Cualquier otro (permiso, motor ocupado o no disponible, red) corta el
+  /// turno como siempre.
+  static const _softSttErrors = {'error_no_match', 'error_speech_timeout'};
+
+  /// Reinicios seguidos sin texto antes de rendirse.
+  static const _maxEmptyRestarts = 3;
+
+  /// Pausa antes de reabrir el micrófono: el motor nativo necesita
+  /// terminar de cerrar la sesión anterior.
+  static const _restartDelay = Duration(milliseconds: 250);
+
+  /// Texto de los fragmentos ya cerrados de este turno.
+  String _turnText = '';
+
+  /// El turno sigue escuchando (aunque el motor esté entre fragmentos).
+  bool _turnActive = false;
+
+  /// El usuario tocó "parar" o se acabó la ventana: el próximo cierre de
+  /// fragmento termina el turno en vez de reiniciar.
+  bool _turnEnding = false;
+  int _emptyRestarts = 0;
+
+  /// Identifica el fragmento en curso: los eventos de uno viejo (el motor
+  /// a veces avisa el cierre dos veces: error + `done`) se ignoran.
+  int _chunkId = 0;
+  bool _chunkClosed = true;
+  Timer? _restartTimer;
+
+  String _joinTurn(String chunk) =>
+      [_turnText, chunk.trim()].where((t) => t.isNotEmpty).join(' ');
+
   Future<void> _startListening() async {
     if (!_micAvailable) {
       if (_micPermissionDenied) {
@@ -310,65 +357,142 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     }
     // Ducking: cortar cualquier audio del tutor antes de escuchar.
     await _tts.stop();
+    _turnText = '';
+    _turnActive = true;
+    _turnEnding = false;
+    _emptyRestarts = 0;
     setState(() {
       _state = ConvState.listening;
       _partialText = '';
     });
-    _soundLevel.value = 0;
     _startListenCountdown();
+    await _listenChunk();
+  }
+
+  Future<void> _listenChunk() async {
+    final id = ++_chunkId;
+    _chunkClosed = false;
+    var chunkText = '';
+    _soundLevel.value = 0;
     await _speech.listen(
       onResult: (text, isFinal) {
-        if (!mounted) return;
-        setState(() {
-          _partialText = text;
-          if (isFinal) {
-            _draftController.text = text;
-            _state = ConvState.reviewing;
-          }
-        });
-        if (isFinal) _listenCountdownTimer?.cancel();
+        if (!mounted || id != _chunkId || _chunkClosed) return;
+        chunkText = text;
+        setState(() => _partialText = _joinTurn(text));
+        if (isFinal) _closeChunk(chunkText);
       },
-      // MAL-05: el motor puede terminar solo sin `isFinal` (45 s, una
-      // llamada entrante) — se pasa a revisar con lo que ya se transcribió
-      // en vez de dejar el mic "escuchando" para siempre.
+      // MAL-05: el motor puede terminar solo sin `isFinal`: se conserva lo
+      // que ya se transcribió de este fragmento.
       onDoneWithoutResult: () {
-        _listenCountdownTimer?.cancel();
-        if (!mounted) return;
-        setState(() {
-          _draftController.text = _partialText;
-          _state = ConvState.reviewing;
-        });
+        if (!mounted || id != _chunkId || _chunkClosed) return;
+        _closeChunk(chunkText);
       },
-      // MAL-05: un error del motor (sin coincidencia, timeout) vuelve a
-      // `idle` con un aviso, en vez de quedarse "escuchando".
       onError: (errorCode) {
-        _listenCountdownTimer?.cancel();
-        if (!mounted) return;
-        final l10n = AppLocalizations.of(context);
-        setState(() {
-          _state = ConvState.idle;
-          _partialText = '';
-        });
-        final message = switch (errorCode) {
-          'error_no_match' => l10n.conversationSttErrorNoMatch,
-          'error_speech_timeout' => l10n.conversationSttErrorTimeout,
-          _ => l10n.conversationSttErrorGeneric,
-        };
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(message)));
+        if (!mounted || id != _chunkId || _chunkClosed) return;
+        if (_softSttErrors.contains(errorCode)) {
+          _closeChunk(chunkText);
+        } else {
+          _chunkClosed = true;
+          _failTurn(errorCode);
+        }
       },
-      // MEJ-04: nivel de volumen del micrófono, para el anillo alrededor
-      // del botón mientras escucha.
+      // MEJ-04: nivel de volumen del micrófono, para el halo del botón.
       onSoundLevelChange: (level) {
-        if (!mounted) return;
+        if (!mounted || id != _chunkId) return;
         _soundLevel.value = level;
       },
     );
   }
 
-  /// MEJ-04: cuenta regresiva visible de los 45 s de `listenFor`. Vive
-  /// aparte de `_listen` porque es puramente de UI — el motor nativo corta
-  /// solo sin depender de esto.
+  /// El motor cerró el fragmento en curso: se suma su texto al turno y se
+  /// decide si seguir escuchando.
+  void _closeChunk(String chunkText) {
+    _chunkClosed = true;
+    _turnText = _joinTurn(chunkText);
+    if (!_turnActive) return;
+    if (_turnEnding) {
+      _finishTurn();
+      return;
+    }
+    _emptyRestarts = chunkText.trim().isEmpty ? _emptyRestarts + 1 : 0;
+    if (_emptyRestarts >= _maxEmptyRestarts) {
+      if (_turnText.isEmpty) {
+        _failTurn('error_no_match');
+      } else {
+        _finishTurn();
+      }
+      return;
+    }
+    // Sigue en `listening` (sin cambio de UI) mientras se reabre el mic.
+    _restartTimer?.cancel();
+    _restartTimer = Timer(_restartDelay, () {
+      if (mounted && _turnActive && !_turnEnding) _listenChunk();
+    });
+  }
+
+  /// Termina el turno: a revisar con todo lo acumulado.
+  void _finishTurn() {
+    _turnActive = false;
+    _restartTimer?.cancel();
+    _listenCountdownTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _partialText = _turnText;
+      _draftController.text = _turnText;
+      _state = ConvState.reviewing;
+    });
+  }
+
+  /// MAL-05: un error real del motor corta el turno. Si ya había texto,
+  /// se pasa a revisarlo en vez de perderlo; si no, vuelve a `idle` con un
+  /// aviso.
+  void _failTurn(String errorCode) {
+    if (_turnText.isNotEmpty) {
+      _finishTurn();
+      return;
+    }
+    _turnActive = false;
+    _restartTimer?.cancel();
+    _listenCountdownTimer?.cancel();
+    if (!mounted) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _state = ConvState.idle;
+      _partialText = '';
+    });
+    final message = switch (errorCode) {
+      'error_no_match' => l10n.conversationSttErrorNoMatch,
+      'error_speech_timeout' => l10n.conversationSttErrorTimeout,
+      _ => l10n.conversationSttErrorGeneric,
+    };
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Cierra el turno a pedido (el usuario o la ventana): si el motor está
+  /// escuchando, `stop()` entrega el último fragmento; si está entre
+  /// fragmentos, se termina ya.
+  Future<void> _endTurn() async {
+    if (!_turnActive) return;
+    _turnEnding = true;
+    _restartTimer?.cancel();
+    _listenCountdownTimer?.cancel();
+    if (_chunkClosed || !_speech.isListening) {
+      _chunkClosed = true;
+      _finishTurn();
+      return;
+    }
+    await _speech.stop();
+    // Si el motor no avisó el cierre (no emitió nada), se cierra igual.
+    if (mounted && _turnActive && !_chunkClosed) {
+      _chunkClosed = true;
+      _finishTurn();
+    }
+  }
+
+  /// MEJ-04: cuenta regresiva de la ventana del TURNO completo (no de cada
+  /// fragmento del motor). Al llegar a 0 cierra el turno.
   void _startListenCountdown() {
     _listenCountdownTimer?.cancel();
     _listenSecondsLeft.value = _listenWindowSeconds;
@@ -377,16 +501,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       if (next <= 0) {
         timer.cancel();
         _listenSecondsLeft.value = 0;
+        _endTurn();
         return;
       }
       _listenSecondsLeft.value = next;
     });
   }
 
-  Future<void> _stopListening() async {
-    _listenCountdownTimer?.cancel();
-    await _speech.stop();
-  }
+  Future<void> _stopListening() => _endTurn();
 
   /// MEJ-04: botón **Parar** visible mientras el tutor habla, para no
   /// esperar a que termine todo el audio para poder actuar de nuevo.
@@ -445,6 +567,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
 
   void _enterTextMode() {
     _speech.cancel();
+    // Si estaba escuchando, que no se reabra el micrófono.
+    _turnActive = false;
+    _chunkId++;
+    _restartTimer?.cancel();
+    _listenCountdownTimer?.cancel();
     setState(() {
       _draftController.clear();
       _state = ConvState.reviewing;

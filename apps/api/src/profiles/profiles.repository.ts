@@ -145,6 +145,18 @@ export class ProfilesRepository {
     return created;
   }
 
+  /**
+   * RPC `refresh_avatar`: copia al perfil la foto del login social (de
+   * auth.users o del proveedor vinculado) si todavía no tiene una.
+   */
+  async refreshAvatar(userId: string): Promise<string | null> {
+    const result = await this.admin.database.rpc('refresh_avatar', { p_user_id: userId });
+    if (result.error) {
+      throw new Error(`refresh_avatar: ${result.error.message}`);
+    }
+    return (result.data as unknown as string | null) ?? null;
+  }
+
   async update(userId: string, patch: ProfilePatch): Promise<Profile> {
     const result = await this.admin.database
       .from(TABLES.profiles)

@@ -45,6 +45,8 @@ export interface GroupMemberRow {
   xp: number;
   streak: number;
   last_session_day: string | null;
+  /** Foto del login social (https) o null. Visible para el grupo. */
+  avatar_url: string | null;
 }
 
 /**
@@ -76,7 +78,7 @@ export class GroupsRepository {
   async listMembers(groupId: string): Promise<GroupMemberRow[]> {
     const result = await this.admin.database
       .from(TABLES.profiles)
-      .select('user_id, display_name, level, xp, streak, last_session_day')
+      .select('user_id, display_name, level, xp, streak, last_session_day, avatar_url')
       .eq('group_id', groupId)
       .order('xp', { ascending: false });
 

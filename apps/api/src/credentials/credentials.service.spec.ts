@@ -5,7 +5,7 @@ import type { Env } from '../config/env.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
 import { CredentialsCrypto, decodeBytea, MASTER_KEY_BYTES } from './credentials.crypto.js';
 import type { CredentialRowInput, CredentialsRepository } from './credentials.repository.js';
-import { CredentialsService } from './credentials.service.js';
+import { CredentialsService, DECRYPT_FAILED } from './credentials.service.js';
 
 /** Claves de juguete, generadas en el test. Nunca claves reales. */
 function fakeMasterKeyBase64(): string {
@@ -199,6 +199,23 @@ describe('CredentialsService', () => {
 
     // Sin la clave anterior: la fila se ignora (con warn), no se rompe la petición.
     await expect(createService(repository, current).listActive(USER_A)).resolves.toEqual([]);
+  });
+
+  it('una credencial que no se puede descifrar queda marcada como error (la app pide reconectar)', async () => {
+    const repository = createFakeRepository();
+    await createService(repository, fakeMasterKeyBase64()).saveApiKey(
+      USER_A,
+      'gemini',
+      FAKE_OPENROUTER_KEY,
+    );
+
+    // Otra clave maestra: la de otra instancia de la API.
+    await expect(
+      createService(repository, fakeMasterKeyBase64()).getActiveApiKey(USER_A, 'gemini'),
+    ).resolves.toBeNull();
+    await Promise.resolve();
+
+    expect(repository.markError).toHaveBeenCalledWith(USER_A, 'gemini', DECRYPT_FAILED);
   });
 
   it('always encrypts with the CURRENT key, even when a previous one is configured', async () => {

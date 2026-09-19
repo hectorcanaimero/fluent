@@ -383,4 +383,5 @@ export const TABLES = {
   weeklySummaries: 'weekly_summaries',
   badges: 'badges',
   userBadges: 'user_badges',
+  pushTokens: 'push_tokens',
 } as const;

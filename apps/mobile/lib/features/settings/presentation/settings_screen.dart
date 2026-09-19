@@ -2,10 +2,12 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_error_snack_bar.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
@@ -200,7 +202,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+      ).showSnackBar(apiErrorSnackBar(context, e.code));
       return;
     }
     await ref.read(authControllerProvider.notifier).logout();
@@ -279,6 +281,25 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                       child: Text(l10n.settingsInvitationSubmit),
                     ),
                   ],
+                  const SizedBox(height: AppSpacing.lg),
+                  // Entradas fijas: antes solo se llegaba a estas pantallas
+                  // desde avisos que aparecen a veces.
+                  ListTile(
+                    key: const Key('settings_ai_account'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.key_outlined),
+                    title: Text(l10n.providersTitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/providers'),
+                  ),
+                  ListTile(
+                    key: const Key('settings_memory'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.psychology_outlined),
+                    title: Text(l10n.memoryTitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/memory'),
+                  ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     l10n.settingsLanguageTitle,

@@ -68,7 +68,15 @@ describe('LeaderboardService.getLeaderboard', () => {
     ];
     const members = [
       { user_id: 'u1', display_name: 'Ana', level: 'B1', xp: 900, streak: 5, last_session_day: null },
-      { user_id: 'u2', display_name: 'Bea', level: 'B2', xp: 1200, streak: 2, last_session_day: null },
+      {
+        user_id: 'u2',
+        display_name: 'Bea',
+        level: 'B2',
+        xp: 1200,
+        streak: 2,
+        last_session_day: null,
+        avatar_url: 'https://lh3.googleusercontent.com/a/bea',
+      },
     ];
     const { service } = createService({ entries, members, group: { id: 'group-1', group_streak: 7 } });
 
@@ -77,8 +85,15 @@ describe('LeaderboardService.getLeaderboard', () => {
     expect(result).toEqual({
       weekStart: '2026-09-07',
       rows: [
-        { userId: 'u2', displayName: 'Bea', xpWeek: 100, sessionsWeek: 3, streak: 2 },
-        { userId: 'u1', displayName: 'Ana', xpWeek: 90, sessionsWeek: 4, streak: 5 },
+        {
+          userId: 'u2',
+          displayName: 'Bea',
+          xpWeek: 100,
+          sessionsWeek: 3,
+          streak: 2,
+          avatarUrl: 'https://lh3.googleusercontent.com/a/bea',
+        },
+        { userId: 'u1', displayName: 'Ana', xpWeek: 90, sessionsWeek: 4, streak: 5, avatarUrl: null },
       ],
       groupStreak: 7,
     });
@@ -91,7 +106,7 @@ describe('LeaderboardService.getLeaderboard', () => {
     const result = await service.getLeaderboard('user-1', undefined, undefined, NOW);
 
     expect(result.rows).toEqual([
-      { userId: 'u3', displayName: 'Cato', xpWeek: 10, sessionsWeek: 1, streak: 0 },
+      { userId: 'u3', displayName: 'Cato', xpWeek: 10, sessionsWeek: 1, streak: 0, avatarUrl: null },
     ]);
   });
 

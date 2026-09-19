@@ -1,0 +1,2 @@
+"NSMicrophoneUsageDescription" = "O Open Fluent usa o microfone para você conversar com seu tutor. Sua voz vira texto; nunca guardamos o áudio.";
+"NSSpeechRecognitionUsageDescription" = "O Open Fluent transforma o que você fala em texto para seu tutor responder e te corrigir. Nunca guardamos o áudio.";

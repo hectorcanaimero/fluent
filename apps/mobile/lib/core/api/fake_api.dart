@@ -287,6 +287,24 @@ class FakeApi implements FluentApi {
     accountDeleted = true;
   }
 
+  /// Tokens de push registrados (token → plataforma), para los tests.
+  final Map<String, String> pushTokens = {};
+
+  @override
+  Future<void> registerPushToken({
+    required String token,
+    required String platform,
+  }) async {
+    await _delay();
+    pushTokens[token] = platform;
+  }
+
+  @override
+  Future<void> unregisterPushToken(String token) async {
+    await _delay();
+    pushTokens.remove(token);
+  }
+
   // ---- 4.2 Proveedores y modelos ------------------------------------------
 
   @override

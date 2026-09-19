@@ -68,26 +68,11 @@ flutter test
 
 Ambos deben pasar sin avisos antes de cualquier commit (ver `docs/tasks/PR-06-app-movil.md`).
 
-## Firma de release (Android)
+## Release y tiendas
 
-El build release firma con la clave de debug hasta que exista `android/key.properties`
-(ignorado por git, nunca se commitea). Generar el keystore en la Mac:
-
-```bash
-keytool -genkey -v -keystore ~/fluent-release.jks -keyalg RSA -keysize 2048 -validity 10000 -alias fluent
-```
-
-Y crear `android/key.properties`:
-
-```properties
-storeFile=/ruta/absoluta/a/fluent-release.jks
-storePassword=<la que pusiste en keytool>
-keyAlias=fluent
-keyPassword=<la que pusiste en keytool>
-```
-
-Con ese archivo presente, `flutter build apk --release` y `flutter build appbundle --release`
-firman con esa clave; sin él, cae a la clave de debug con un aviso en el log de Gradle.
+Firma de Android (`android/key.properties` + keystore de subida, ambos fuera del repo), builds
+de release, Firebase y los pasos en Play Console y App Store Connect:
+`docs/runbooks/stores.md`.
 
 ## Checklist de prueba manual en dispositivo
 

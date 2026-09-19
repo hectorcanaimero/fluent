@@ -1,0 +1,163 @@
+# Codemagic: builds de release de la app móvil (apps/mobile) para Google
+# Play y App Store. Se disparan con un tag `v*` (por ejemplo v1.0.0) o a
+# mano desde Codemagic. La configuración de la cuenta (grupo de variables,
+# keystore, integración con App Store Connect) está en
+# docs/runbooks/stores.md.
+
+definitions:
+  android_versions: &android_versions
+    flutter: stable
+  ios_versions: &ios_versions
+    flutter: stable
+    xcode: latest
+
+  triggering: &triggering
+    events:
+      - tag
+    tag_patterns:
+      - pattern: "v*"
+        include: true
+
+  cache: &cache
+    cache_paths:
+      - $HOME/.pub-cache
+      - $HOME/.gradle/caches
+
+  scripts:
+    # Los archivos de Firebase: si no están en el repo, salen de variables
+    # (base64) del grupo `fluent_prod`.
+    - &firebase_config
+      name: Archivos de Firebase
+      script: |
+        if [ ! -f android/app/google-services.json ] && [ -n "$GOOGLE_SERVICES_JSON" ]; then
+          echo "$GOOGLE_SERVICES_JSON" | base64 --decode > android/app/google-services.json
+        fi
+        if [ ! -f ios/Runner/GoogleService-Info.plist ] && [ -n "$GOOGLE_SERVICE_INFO_PLIST" ]; then
+          echo "$GOOGLE_SERVICE_INFO_PLIST" | base64 --decode > ios/Runner/GoogleService-Info.plist
+        fi
+    - &pub_get
+      name: Dependencias
+      script: flutter pub get
+    - &tests
+      name: Análisis y tests
+      script: |
+        flutter analyze
+        flutter test
+    # Variables de producción, siempre del grupo `fluent_prod` (nunca de
+    # defines.json). La versión visible sale de `version:` en pubspec.yaml.
+    - &release_defines
+      name: Defines de producción y versión
+      script: |
+        for var in API_URL INSFORGE_URL INSFORGE_ANON_KEY; do
+          if [ -z "${!var}" ]; then echo "Falta $var en el grupo fluent_prod"; exit 1; fi
+        done
+        echo "DART_DEFINES=--dart-define=API_URL=$API_URL --dart-define=INSFORGE_URL=$INSFORGE_URL --dart-define=INSFORGE_ANON_KEY=$INSFORGE_ANON_KEY --dart-define=USE_FAKE_API=false" >> $CM_ENV
+        echo "BUILD_NAME=$(grep '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')" >> $CM_ENV
+
+workflows:
+  android-release:
+    name: Android · Google Play (internal)
+    instance_type: linux_x2
+    max_build_duration: 60
+    working_directory: apps/mobile
+    triggering: *triggering
+    cache: *cache
+    environment:
+      <<: *android_versions
+      android_signing:
+        # Referencia al keystore de subida cargado en Codemagic
+        # (Team settings → Code signing identities → Android keystores).
+        - open_fluent_upload
+      groups:
+        - fluent_prod
+      vars:
+        PACKAGE_NAME: com.guria.openfluent
+        GOOGLE_PLAY_TRACK: internal
+    scripts:
+      - *firebase_config
+      - *pub_get
+      - *tests
+      - *release_defines
+      - name: Build del AAB
+        script: |
+          # versionCode: uno más que el último subido a Play; si todavía no
+          # hay ninguno (o falla la consulta), el contador de Codemagic.
+          LATEST=$(google-play get-latest-build-number \
+            --package-name "$PACKAGE_NAME" 2>/dev/null || echo "")
+          if [ -n "$LATEST" ]; then NEXT=$((LATEST + 1)); else NEXT=$BUILD_NUMBER; fi
+          flutter build appbundle --release \
+            --build-name="$BUILD_NAME" \
+            --build-number="$NEXT" \
+            $DART_DEFINES
+    artifacts:
+      - build/app/outputs/bundle/release/*.aab
+      - build/app/outputs/mapping/release/mapping.txt
+    publishing:
+      google_play:
+        credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
+        track: internal
+      email:
+        recipients:
+          - $NOTIFY_EMAIL
+        notify:
+          success: true
+          failure: true
+
+  ios-release:
+    name: iOS · TestFlight
+    instance_type: mac_mini_m2
+    max_build_duration: 90
+    working_directory: apps/mobile
+    triggering: *triggering
+    cache: *cache
+    integrations:
+      # Clave de la API de App Store Connect, cargada como integración del
+      # equipo con este nombre.
+      app_store_connect: Open Fluent ASC
+    environment:
+      <<: *ios_versions
+      ios_signing:
+        distribution_type: app_store
+        bundle_identifier: com.guria.openfluent
+      groups:
+        - fluent_prod
+    scripts:
+      - *firebase_config
+      # El proyecto usa Swift Package Manager (no hay Podfile): nada de
+      # `pod install`.
+      - name: Swift Package Manager
+        script: flutter config --enable-swift-package-manager
+      - *pub_get
+      - *tests
+      - *release_defines
+      - name: Perfiles de firma
+        script: xcode-project use-profiles
+      - name: Build del IPA
+        script: |
+          # Número de build: uno más que el último en TestFlight; si falla la
+          # consulta (app nueva), el contador de Codemagic.
+          LATEST=""
+          if [ -n "$APP_STORE_APPLE_ID" ]; then
+            LATEST=$(app-store-connect get-latest-testflight-build-number \
+              "$APP_STORE_APPLE_ID" 2>/dev/null || echo "")
+          fi
+          if [ -n "$LATEST" ]; then NEXT=$((LATEST + 1)); else NEXT=$BUILD_NUMBER; fi
+          flutter build ipa --release \
+            --build-name="$BUILD_NAME" \
+            --build-number="$NEXT" \
+            --export-options-plist=/Users/builder/export_options.plist \
+            $DART_DEFINES
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+      - $HOME/Library/Developer/Xcode/DerivedData/**/Build/**/*.dSYM
+    publishing:
+      app_store_connect:
+        auth: integration
+        submit_to_testflight: true
+      email:
+        recipients:
+          - $NOTIFY_EMAIL
+        notify:
+          success: true
+          failure: true

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/push/push_service.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../badges/domain/badge_labels.dart';
@@ -162,10 +163,14 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     // recordatorio — si el plugin tarda o no está disponible (por ejemplo,
     // en tests), igual se programa; sin permiso, el SO simplemente no lo
     // mostrará.
+    // Un solo pedido de permiso para recordatorios y push: el sistema
+    // pregunta una vez y `enable()` ya no vuelve a preguntar.
     unawaited(
-      Permission.notification.request().catchError(
-        (_) => PermissionStatus.denied,
-      ),
+      Permission.notification
+          .request()
+          .catchError((_) => PermissionStatus.denied)
+          .then((_) => ref.read(pushServiceProvider).enable())
+          .catchError((_) {}),
     );
     await ref
         .read(reminderServiceProvider)

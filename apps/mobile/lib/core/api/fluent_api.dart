@@ -36,6 +36,17 @@ abstract class FluentApi {
   /// interfaz.
   Future<void> deleteAccount();
 
+  /// `POST /me/push-token`: registra (o mueve a este usuario) el token de
+  /// Firebase Messaging del dispositivo. Idempotente.
+  Future<void> registerPushToken({
+    required String token,
+    required String platform,
+  });
+
+  /// `DELETE /me/push-token`: deja de mandar push a este dispositivo. Se
+  /// llama al cerrar sesión, antes de borrar los tokens de auth.
+  Future<void> unregisterPushToken(String token);
+
   // 4.2 Proveedores y modelos
   Future<PkceStartResult> startOpenRouterPkce(String callbackUrl);
   Future<ProviderStatusResult> completeOpenRouterPkce({

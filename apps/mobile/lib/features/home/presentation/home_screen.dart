@@ -618,6 +618,12 @@ class _GroupCard extends StatelessWidget {
               padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
               child: Row(
                 children: [
+                  UserAvatar(
+                    name: row.displayName,
+                    imageUrl: row.avatarUrl,
+                    size: 28,
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
                   Expanded(child: Text(row.displayName)),
                   Text(l10n.commonXpAmount(row.xpWeek)),
                 ],

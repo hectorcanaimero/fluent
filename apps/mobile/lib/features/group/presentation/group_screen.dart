@@ -9,6 +9,7 @@ import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/button_spinner.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/group_data.dart';
@@ -203,6 +204,12 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                         ),
                         child: Row(
                           children: [
+                            UserAvatar(
+                              name: challenge.displayName,
+                              imageUrl: challenge.avatarUrl,
+                              size: 36,
+                            ),
+                            const SizedBox(width: AppSpacing.sm),
                             Expanded(
                               child: Text(
                                 l10n.groupChallengeText(
@@ -315,6 +322,8 @@ class _LeaderboardRowTile extends StatelessWidget {
                   )
                 : Text('$rank', textAlign: TextAlign.center),
           ),
+          UserAvatar(name: row.displayName, imageUrl: row.avatarUrl, size: 36),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(child: Text(row.displayName)),
           Text(l10n.commonXpAmount(row.xpWeek)),
         ],

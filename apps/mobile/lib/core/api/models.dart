@@ -127,6 +127,9 @@ abstract class GroupMember with _$GroupMember {
     required int xp,
     required int streak,
     String? lastSessionDay,
+
+    /// Foto del login social del miembro; `null` muestra la inicial.
+    String? avatarUrl,
   }) = _GroupMember;
 
   factory GroupMember.fromJson(Map<String, dynamic> json) =>
@@ -507,6 +510,9 @@ abstract class LeaderboardRow with _$LeaderboardRow {
     required int xpWeek,
     required int sessionsWeek,
     required int streak,
+
+    /// Foto del login social del miembro; `null` muestra la inicial.
+    String? avatarUrl,
   }) = _LeaderboardRow;
 
   factory LeaderboardRow.fromJson(Map<String, dynamic> json) =>
@@ -533,6 +539,9 @@ abstract class ChallengeItem with _$ChallengeItem {
     required String topic,
     required String kind,
     required String sessionId,
+
+    /// Foto del miembro que originó el desafío; `null` muestra la inicial.
+    String? avatarUrl,
   }) = _ChallengeItem;
 
   factory ChallengeItem.fromJson(Map<String, dynamic> json) =>

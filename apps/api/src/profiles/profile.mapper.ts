@@ -35,6 +35,7 @@ export function toGroupMemberDto(row: {
   xp: number;
   streak: number;
   last_session_day: string | null;
+  avatar_url: string | null;
 }): GroupMemberDto {
   return {
     userId: row.user_id,
@@ -43,6 +44,7 @@ export function toGroupMemberDto(row: {
     xp: row.xp,
     streak: row.streak,
     lastSessionDay: row.last_session_day,
+    avatarUrl: row.avatar_url,
   };
 }
 

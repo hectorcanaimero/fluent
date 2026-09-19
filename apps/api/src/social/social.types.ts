@@ -11,6 +11,8 @@ export interface LeaderboardRowDto {
   readonly xpWeek: number;
   readonly sessionsWeek: number;
   readonly streak: number;
+  /** Foto del login social del miembro, o null (la app muestra la inicial). */
+  readonly avatarUrl: string | null;
 }
 
 /** Respuesta de `GET /leaderboard` (SPEC-02 §4.5). */
@@ -36,6 +38,8 @@ export interface ChallengeItemDto {
   readonly topic: string;
   readonly kind: SessionKind;
   readonly sessionId: string;
+  /** Foto del miembro que originó el desafío, o null. */
+  readonly avatarUrl: string | null;
 }
 
 /** Respuesta de `GET /challenges`: envuelta en `items` (contrato exacto de la app). */

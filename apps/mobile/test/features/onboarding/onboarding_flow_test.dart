@@ -197,4 +197,17 @@ void main() {
       expect(me.profile.timezone, 'America/Sao_Paulo');
     },
   );
+
+  testWidgets('los chips de intereses tienen al menos 48 dp de alto', (
+    tester,
+  ) async {
+    final container = await _authenticatedContainer();
+    addTearDown(container.dispose);
+    await _pumpOnboarding(tester, container);
+    await _goThroughLevel(tester);
+
+    final chip = find.byKey(const Key('onboarding_interest_technology'));
+    expect(chip, findsOneWidget);
+    expect(tester.getSize(chip).height, greaterThanOrEqualTo(48));
+  });
 }

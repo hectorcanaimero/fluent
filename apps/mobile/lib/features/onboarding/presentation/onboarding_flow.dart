@@ -7,6 +7,8 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/button_spinner.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/interests_catalog.dart';
 import '../domain/interest_labels.dart';
@@ -179,11 +181,14 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
           padding: const EdgeInsets.all(AppSpacing.screenPad),
           child: Column(
             mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               if (_errorMessage != null) ...[
                 Text(
                   _errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                    color: AppColors.errorText,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -193,14 +198,7 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
                     ? _onPrimaryPressed
                     : null,
                 child: _submitting
-                    ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
-                      )
+                    ? const ButtonSpinner()
                     : Text(
                         _step == _totalSteps - 1
                             ? l10n.onboardingFinishButton
@@ -287,11 +285,13 @@ class _LevelCard extends StatelessWidget {
         button: true,
         selected: isSelected,
         label: '$title. $subtitle',
+        excludeSemantics: true,
         child: InkWell(
           key: Key('onboarding_level_${level.name}'),
           onTap: () => onSelected(level),
           borderRadius: BorderRadius.circular(AppRadius.lg),
-          child: Container(
+          // `Ink` (no `Container`): el relleno se pinta debajo del ripple.
+          child: Ink(
             padding: const EdgeInsets.all(AppSpacing.lg),
             decoration: BoxDecoration(
               color: isSelected ? AppColors.primarySoft : AppColors.surface,
@@ -342,6 +342,7 @@ class _InterestsStep extends StatelessWidget {
         return AsyncBody<List<String>>(
           snapshot: snapshot,
           onRetry: onRetry,
+          skeleton: (context) => const _InterestsSkeleton(),
           builder: (catalog) {
             final visible = showAll
                 ? catalog
@@ -361,8 +362,10 @@ class _InterestsStep extends StatelessWidget {
                 const SizedBox(height: AppSpacing.md),
                 Text(
                   l10n.onboardingInterestsSelectedCount(selected.length),
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: AppColors.primary),
+                  // `primary` como texto no llega a AA (MEJ-01).
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Wrap(
@@ -395,6 +398,37 @@ class _InterestsStep extends StatelessWidget {
   }
 }
 
+/// Forma del paso de intereses mientras carga el catálogo: título,
+/// subtítulo y chips.
+class _InterestsSkeleton extends StatelessWidget {
+  const _InterestsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      children: [
+        const SizedBox(height: AppSpacing.xl),
+        const SkeletonBox(width: 220, height: 28),
+        const SizedBox(height: AppSpacing.sm),
+        const SkeletonBox(height: 16),
+        const SizedBox(height: AppSpacing.xl),
+        Wrap(
+          spacing: AppSpacing.sm,
+          runSpacing: AppSpacing.sm,
+          children: [
+            for (final width in const [96.0, 120.0, 84.0, 132.0, 104.0, 90.0])
+              SkeletonBox(
+                width: width,
+                height: 48,
+                borderRadius: AppRadius.pill,
+              ),
+          ],
+        ),
+      ],
+    );
+  }
+}
+
 class _InterestChip extends StatelessWidget {
   const _InterestChip({
     super.key,
@@ -413,29 +447,35 @@ class _InterestChip extends StatelessWidget {
       button: true,
       selected: isSelected,
       label: label,
+      excludeSemantics: true,
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.pill),
-        child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.lg,
-            vertical: AppSpacing.sm,
-          ),
-          decoration: BoxDecoration(
-            color: isSelected ? AppColors.primarySoft : AppColors.surface,
-            borderRadius: BorderRadius.circular(AppRadius.pill),
-            border: Border.all(
-              color: isSelected ? AppColors.primary : AppColors.border,
+        // Alto mínimo de 48 dp para el objetivo táctil; `Ink` para que se
+        // vea el ripple sobre el relleno.
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 48),
+          child: Ink(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
+            decoration: BoxDecoration(
+              color: isSelected ? AppColors.primarySoft : AppColors.surface,
+              borderRadius: BorderRadius.circular(AppRadius.pill),
+              border: Border.all(
+                color: isSelected ? AppColors.primary : AppColors.border,
+              ),
             ),
-          ),
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.w600,
-              color: isSelected
-                  ? AppColors.primaryDark
-                  : AppColors.textPrimary,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  label,
+                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: isSelected
+                        ? AppColors.primaryDark
+                        : AppColors.textPrimary,
+                  ),
+                ),
+              ],
             ),
           ),
         ),

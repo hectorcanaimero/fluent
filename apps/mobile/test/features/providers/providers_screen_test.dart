@@ -65,6 +65,20 @@ class _NoActiveProviderApi extends FakeApi {
 /// ProvidersScreen siempre vive bajo un GoRouter en la app real
 /// (`app/router.dart`): `context.canPop()`/`context.go()` (MAL-11) lo
 /// exigen, así que los tests también la envuelven en uno.
+/// Falla la primera carga del catálogo de modelos (sin red al abrir).
+class _ModelsFailOnceApi extends FakeApi {
+  _ModelsFailOnceApi() : super(artificialDelay: Duration.zero);
+
+  var _calls = 0;
+
+  @override
+  Future<ModelsCatalog> getModels() {
+    _calls += 1;
+    if (_calls == 1) return Future.error(Exception('offline'));
+    return super.getModels();
+  }
+}
+
 Future<void> _pumpProvidersScreen(
   WidgetTester tester, {
   FluentApi? api,
@@ -109,6 +123,21 @@ Future<void> _pumpProvidersScreen(
 }
 
 void main() {
+  testWidgets('si falla la carga ofrece Reintentar y recupera', (
+    tester,
+  ) async {
+    await _pumpProvidersScreen(tester, api: _ModelsFailOnceApi());
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+
+    await tester.tap(find.text(l10n.commonRetry));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+    expect(find.byKey(const Key('provider_card_openrouter')), findsOneWidget);
+  });
+
   testWidgets('flujo completo de Gemini: pegar key conecta el proveedor', (
     tester,
   ) async {

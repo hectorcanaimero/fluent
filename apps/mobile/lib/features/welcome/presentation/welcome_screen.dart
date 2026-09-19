@@ -537,19 +537,23 @@ class _PageDots extends StatelessWidget {
               key: Key('welcome_dot_$i'),
               behavior: HitTestBehavior.opaque,
               onTap: () => onTap(i),
-              child: Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.xs,
-                  vertical: AppSpacing.md,
-                ),
-                child: AnimatedContainer(
-                  duration: duration,
-                  curve: Curves.easeOutCubic,
-                  width: i == current ? 24 : 8,
-                  height: 8,
-                  decoration: BoxDecoration(
-                    color: i == current ? AppColors.primary : AppColors.border,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+              // Área táctil de 32×48 (WCAG 2.2 pide ≥24) con el punto
+              // centrado; 48 de ancho separaba demasiado los puntos.
+              child: SizedBox(
+                width: 32,
+                height: 48,
+                child: Center(
+                  child: AnimatedContainer(
+                    duration: duration,
+                    curve: Curves.easeOutCubic,
+                    width: i == current ? 24 : 8,
+                    height: 8,
+                    decoration: BoxDecoration(
+                      color: i == current
+                          ? AppColors.primary
+                          : AppColors.border,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
                   ),
                 ),
               ),

@@ -13,6 +13,7 @@ import '../../../core/api/turn_stream_event.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/speech_service.dart';
 import '../data/tts_service.dart';
@@ -711,7 +712,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     final l10n = AppLocalizations.of(context);
 
     if (_loading) {
-      return const Scaffold(body: Center(child: CircularProgressIndicator()));
+      return const _ConversationSkeleton();
     }
 
     if (_bootError) {
@@ -721,6 +722,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
             padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 Text(
                   l10n.commonLoadErrorTitle,
@@ -888,9 +890,10 @@ class _AssistantBubble extends StatelessWidget {
                   TextButton(
                     onPressed: () => onSetRate(r),
                     style: TextButton.styleFrom(
+                      // AA en ambos estados (MEJ-01).
                       foregroundColor: rate == r
-                          ? AppColors.primary
-                          : AppColors.textMuted,
+                          ? AppColors.primaryDark
+                          : AppColors.textSecondary,
                     ),
                     child: Text(l10n.conversationSpeedButtonLabel(r.toString())),
                   ),
@@ -906,7 +909,9 @@ class _AssistantBubble extends StatelessWidget {
                     ),
                     child: Text(
                       l10n.conversationDegradedChip,
-                      style: Theme.of(context).textTheme.labelSmall,
+                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                        color: AppColors.textSecondary,
+                      ),
                     ),
                   ),
               ],
@@ -958,8 +963,9 @@ class _UserBubbleState extends State<_UserBubble> {
                     l10n.conversationCorrectionChip(
                       widget.message.corrections.length,
                     ),
+                    // `accent` como texto da 2.5:1 (MEJ-01).
                     style: const TextStyle(
-                      color: AppColors.accent,
+                      color: AppColors.accentText,
                       fontWeight: FontWeight.w600,
                     ),
                   ),
@@ -1058,9 +1064,14 @@ class _BottomControls extends StatelessWidget {
               ),
               if (errorMessage != null) ...[
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  errorMessage!,
-                  style: const TextStyle(color: AppColors.error),
+                Semantics(
+                  liveRegion: true,
+                  child: Text(
+                    errorMessage!,
+                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                      color: AppColors.errorText,
+                    ),
+                  ),
                 ),
               ],
               const SizedBox(height: AppSpacing.md),
@@ -1183,14 +1194,29 @@ class _MicButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final button = Container(
-      width: _buttonSize,
-      height: _buttonSize,
-      decoration: BoxDecoration(
-        shape: BoxShape.circle,
-        color: active ? AppColors.accent : AppColors.primary,
+    final enabled = onTap != null;
+    // Escuchando: `accentText` (blanco encima 5:1; `accent` da 2.7:1).
+    // Deshabilitado (enviando/hablando): gris, distinto del reposo.
+    final button = Material(
+      shape: const CircleBorder(),
+      color: !enabled
+          ? AppColors.locked
+          : active
+          ? AppColors.accentText
+          : AppColors.primaryDark,
+      child: InkWell(
+        key: const Key('conversation_mic_button'),
+        customBorder: const CircleBorder(),
+        onTap: onTap,
+        child: SizedBox.square(
+          dimension: _buttonSize,
+          child: Icon(
+            Icons.mic,
+            color: enabled ? Colors.white : AppColors.textMuted,
+            size: 32,
+          ),
+        ),
       ),
-      child: const Icon(Icons.mic, color: Colors.white, size: 32),
     );
 
     // Caja fija: el halo se dibuja con `Transform.scale` (solo pintura),
@@ -1235,14 +1261,49 @@ class _MicButton extends StatelessWidget {
 
     return Semantics(
       button: true,
+      enabled: enabled,
       label: active
           ? l10n.conversationMicButtonListeningSemantics
           : l10n.conversationMicButtonSemantics,
-      child: InkWell(
-        key: const Key('conversation_mic_button'),
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(999),
-        child: visual,
+      child: visual,
+    );
+  }
+}
+
+/// Forma de la conversación mientras arranca la sesión: encabezado, un par
+/// de burbujas y el micrófono.
+class _ConversationSkeleton extends StatelessWidget {
+  const _ConversationSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Scaffold(
+      key: Key('conversation_skeleton'),
+      body: SafeArea(
+        child: Padding(
+          padding: EdgeInsets.all(AppSpacing.screenPad),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              SkeletonBox(width: 160, height: 24),
+              SizedBox(height: AppSpacing.xl),
+              SkeletonBox(width: 260, height: 72, borderRadius: 18),
+              SizedBox(height: AppSpacing.md),
+              Align(
+                alignment: Alignment.centerRight,
+                child: SkeletonBox(width: 200, height: 48, borderRadius: 18),
+              ),
+              Spacer(),
+              Center(
+                child: SkeletonBox(
+                  width: 72,
+                  height: 72,
+                  borderRadius: AppRadius.pill,
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }

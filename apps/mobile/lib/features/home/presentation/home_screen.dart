@@ -7,6 +7,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/button_spinner.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../features/session/domain/session_prefs.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -215,20 +216,29 @@ class _HeaderRow extends StatelessWidget {
         Semantics(
           button: true,
           label: l10n.settingsTitle,
-          child: InkWell(
-            key: const Key('home_avatar_button'),
-            onTap: () => context.push('/settings'),
-            borderRadius: BorderRadius.circular(999),
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.primarySoft,
-              child: Text(
-                data.displayName.isNotEmpty
-                    ? data.displayName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
+          // 48 dp de área táctil y el fondo en el Material: sobre un
+          // CircleAvatar opaco el ripple quedaba tapado.
+          child: Material(
+            color: AppColors.primarySoft,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: const Key('home_avatar_button'),
+              onTap: () => context.push('/settings'),
+              child: SizedBox.square(
+                dimension: 48,
+                child: Center(
+                  child: ExcludeSemantics(
+                    child: Text(
+                      data.displayName.isNotEmpty
+                          ? data.displayName[0].toUpperCase()
+                          : '?',
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.primaryDark,
+                      ),
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -355,7 +365,7 @@ class _StreakCard extends StatelessWidget {
         children: [
           const Icon(
             Icons.local_fire_department,
-            color: AppColors.accent,
+            color: AppColors.accentText,
             size: 32,
           ),
           const SizedBox(width: AppSpacing.md),
@@ -442,7 +452,7 @@ class _NoProviderBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.gold),
+          const Icon(Icons.warning_amber_rounded, color: AppColors.goldText),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -473,7 +483,7 @@ class _PendingActionBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: AppColors.gold),
+          const Icon(Icons.info_outline, color: AppColors.goldText),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -510,14 +520,22 @@ class _PrimaryCta extends StatelessWidget {
     final blocked = !data.canPractice || starting;
     if (data.suggestions.bossPending) {
       return Column(
+        // stretch: el ElevatedButton ya no ocupa todo el ancho por tema.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ElevatedButton(
             key: const Key('home_boss_button'),
             onPressed: blocked ? null : onBoss,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-            child: Text(l10n.homeBossButton),
+            // accentText de fondo: el blanco sobre `accent` daba 2,66:1.
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentText,
+            ),
+            child: starting ? const ButtonSpinner() : Text(l10n.homeBossButton),
           ),
-          TextButton(onPressed: onPractice, child: Text(l10n.homeBossSkip)),
+          TextButton(
+            onPressed: starting ? null : onPractice,
+            child: Text(l10n.homeBossSkip),
+          ),
         ],
       );
     }
@@ -530,7 +548,8 @@ class _PrimaryCta extends StatelessWidget {
     return ElevatedButton(
       key: const Key('home_practice_button'),
       onPressed: blocked ? null : onPractice,
-      child: Text(label),
+      // Al tocar solo se deshabilitaba: ahora muestra que está arrancando.
+      child: starting ? const ButtonSpinner() : Text(label),
     );
   }
 }
@@ -547,7 +566,8 @@ class _PendingFactsCard extends StatelessWidget {
       key: const Key('home_pending_facts_card'),
       onTap: () => context.push('/memory'),
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
+      // Ink y no Container: el fondo opaco tapaba el ripple.
+      child: Ink(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.primarySoft,

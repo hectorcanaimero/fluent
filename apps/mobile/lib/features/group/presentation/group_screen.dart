@@ -8,6 +8,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/button_spinner.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/group_data.dart';
@@ -23,7 +24,9 @@ class GroupScreen extends ConsumerStatefulWidget {
 
 class _GroupScreenState extends ConsumerState<GroupScreen> {
   late Future<GroupScreenData> _future;
-  bool _startingChallenge = false;
+  String? _startingChallengeId;
+
+  bool get _startingChallenge => _startingChallengeId != null;
   bool _invitingFriend = false;
 
   @override
@@ -60,7 +63,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
   /// real sin esos ids. Ver PEND de `docs/specs/pendientes/PR-06.md`.
   Future<void> _acceptChallenge(ChallengeItem challenge) async {
     if (_startingChallenge) return;
-    setState(() => _startingChallenge = true);
+    setState(() => _startingChallengeId = challenge.sessionId);
     try {
       final result = await ref
           .read(fluentApiProvider)
@@ -85,7 +88,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       // Sin red o timeout: antes fallaba en silencio.
       if (mounted) _showGenericError();
     } finally {
-      if (mounted) setState(() => _startingChallenge = false);
+      if (mounted) setState(() => _startingChallengeId = null);
     }
   }
 
@@ -157,7 +160,7 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                         children: [
                           const Icon(
                             Icons.local_fire_department,
-                            color: AppColors.accent,
+                            color: AppColors.accentText,
                             size: 18,
                           ),
                           const SizedBox(width: 4),
@@ -170,7 +173,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                   OutlinedButton.icon(
                     key: const Key('group_invite_friend_button'),
                     onPressed: _invitingFriend ? null : _inviteFriend,
-                    icon: const Icon(Icons.person_add_alt),
+                    icon: _invitingFriend
+                        ? const ButtonSpinner()
+                        : const Icon(Icons.person_add_alt),
                     label: Text(l10n.groupInviteFriendButton),
                   ),
                   const SizedBox(height: AppSpacing.md),
@@ -210,7 +215,14 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
                               onPressed: _startingChallenge
                                   ? null
                                   : () => _acceptChallenge(challenge),
-                              child: Text(l10n.groupChallengeAccept),
+                              // textPrimary: el primaryDark del tema sobre
+                              // primarySoft no llega a 4,5:1.
+                              style: TextButton.styleFrom(
+                                foregroundColor: AppColors.textPrimary,
+                              ),
+                              child: _startingChallengeId == challenge.sessionId
+                                  ? const ButtonSpinner()
+                                  : Text(l10n.groupChallengeAccept),
                             ),
                           ],
                         ),
@@ -293,10 +305,13 @@ class _LeaderboardRowTile extends StatelessWidget {
           SizedBox(
             width: 28,
             child: rank == 1
+                // goldText (el `gold` daba ~1,8:1) y semanticLabel: sin él,
+                // el lector de pantalla no anunciaba el primer puesto.
                 ? const Icon(
                     Icons.emoji_events,
-                    color: AppColors.gold,
+                    color: AppColors.goldText,
                     size: 20,
+                    semanticLabel: '1',
                   )
                 : Text('$rank', textAlign: TextAlign.center),
           ),

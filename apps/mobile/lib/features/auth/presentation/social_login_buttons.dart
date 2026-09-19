@@ -70,7 +70,9 @@ class _SocialLoginButtonsState extends ConsumerState<SocialLoginButtons> {
             _errorMessage!,
             key: const Key('social_login_error'),
             textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.error),
+            style: Theme.of(
+              context,
+            ).textTheme.bodyMedium?.copyWith(color: AppColors.errorText),
           ),
       ],
     );

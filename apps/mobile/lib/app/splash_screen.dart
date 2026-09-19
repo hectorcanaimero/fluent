@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:lottie/lottie.dart';
 
 import '../core/providers.dart';
+import 'theme.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../l10n/gen/app_localizations.dart';
 
@@ -44,18 +45,30 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
       return Scaffold(
         body: Center(
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(AppSpacing.xl),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
+                const Icon(
+                  Icons.cloud_off_outlined,
+                  size: 48,
+                  color: AppColors.textSecondary,
+                ),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   l10n.authOfflineTitle,
                   textAlign: TextAlign.center,
                   style: Theme.of(context).textTheme.headlineSmall,
                 ),
-                const SizedBox(height: 12),
-                Text(l10n.authOfflineBody, textAlign: TextAlign.center),
-                const SizedBox(height: 24),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  l10n.authOfflineBody,
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodyLarge?.copyWith(
+                    color: AppColors.textSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xl),
                 FilledButton(
                   key: const Key('splash_retry_button'),
                   onPressed: () =>
@@ -90,9 +103,17 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
               },
             ),
           ),
-          onLoaded: (composition) => _controller
-            ..duration = composition.duration
-            ..forward(),
+          // Con animaciones desactivadas se muestra el último cuadro y se
+          // sigue de inmediato.
+          onLoaded: (composition) {
+            _controller.duration = composition.duration;
+            if (MediaQuery.disableAnimationsOf(context)) {
+              _controller.value = 1;
+              _markDone();
+            } else {
+              _controller.forward();
+            }
+          },
           // Si el asset no carga, no dejar al usuario atrapado en el splash.
           errorBuilder: (context, error, stack) {
             WidgetsBinding.instance.addPostFrameCallback((_) => _markDone());

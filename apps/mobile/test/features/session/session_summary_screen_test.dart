@@ -28,6 +28,17 @@ class _DetailFailsOnceApi extends FakeApi {
   }
 }
 
+/// `GET /sessions/:id` tarda: para ver el estado de carga del resumen.
+class _SlowDetailApi extends FakeApi {
+  _SlowDetailApi() : super(artificialDelay: Duration.zero);
+
+  @override
+  Future<SessionDetailResult> getSession(String sessionId) async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    return super.getSession(sessionId);
+  }
+}
+
 void main() {
   testWidgets('sin extra, si falla la carga ofrece reintentar en vez de girar para siempre', (
     tester,
@@ -628,5 +639,36 @@ void main() {
 
       expect(reminder.lastStreakDangerFireAt, isNull);
     });
+  });
+
+  testWidgets('sin extra, mientras recupera la sesión muestra un skeleton', (
+    tester,
+  ) async {
+    final api = _SlowDetailApi();
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    await api.endSession(sessionId: created.session.id, reason: 'user');
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SessionSummaryScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('summary_skeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
   });
 }

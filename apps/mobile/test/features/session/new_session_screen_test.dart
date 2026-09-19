@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/errors/api_exception.dart';
@@ -81,7 +83,57 @@ class _LongNewsSourceApi extends FakeApi {
   }
 }
 
+/// `createSession` queda pendiente hasta que el test lo libera.
+class _SlowStartApi extends FakeApi {
+  _SlowStartApi() : super(artificialDelay: Duration.zero);
+
+  final pending = Completer<CreateSessionResult>();
+
+  @override
+  Future<CreateSessionResult> createSession({
+    required String kind,
+    String? topic,
+    String? roleplayId,
+    String? newsItemId,
+    String? challengeFromUserId,
+  }) => pending.future;
+}
+
 void main() {
+  testWidgets('al empezar una sesión muestra que está arrancando', (
+    tester,
+  ) async {
+    final api = _SlowStartApi();
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          micPrimerShownProvider.overrideWith((ref) => true),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: NewSessionScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    const indicator = Key('session_new_starting_indicator');
+    expect(find.byKey(indicator), findsNothing);
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    await tester.tap(find.byKey(const Key('session_new_surprise_me_button')));
+    await tester.pump();
+    expect(find.byKey(indicator), findsOneWidget);
+    expect(find.text(l10n.sessionNewTitle), findsOneWidget);
+  });
+
   testWidgets('una fuente larga en la tarjeta de noticia no desborda', (
     tester,
   ) async {

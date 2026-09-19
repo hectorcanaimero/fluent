@@ -144,50 +144,70 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
           ],
         ),
       ),
-      body: FutureBuilder<SessionSuggestions>(
-        future: _future,
-        builder: (context, snapshot) {
-          return AsyncBody<SessionSuggestions>(
-            snapshot: snapshot,
-            onRetry: () => setState(_loadSuggestions),
-            skeleton: (context) => const _NewSessionSkeleton(),
-            builder: (suggestions) => TabBarView(
-              controller: _tabController,
-              children: [
-                _TopicsTab(
-                  topics: suggestions.topics,
-                  freeTopicController: _freeTopicController,
-                  starting: _starting,
-                  onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
-                  // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
-                  // que "Surprise me" elige uno al azar de las sugerencias en
-                  // vez de mandar la petición sin tema (eso siempre daría
-                  // `400 VALIDATION`).
-                  onSurpriseMe: suggestions.topics.isEmpty
-                      ? null
-                      : () => _start(
-                          kind: 'free_topic',
-                          topic:
-                              suggestions.topics[Random().nextInt(
-                                suggestions.topics.length,
-                              )],
-                        ),
-                ),
-                _RoleplayTab(
-                  roleplays: suggestions.roleplays,
-                  starting: _starting,
-                  onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
-                ),
-                _NewsTab(
-                  news: suggestions.news,
-                  starting: _starting,
-                  onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
-                ),
-              ],
-            ),
-          );
-        },
+      body: Column(
+        children: [
+          // Cualquier tema, roleplay o noticia arranca la sesión: una sola
+          // barra arriba avisa que está en marcha (antes solo se
+          // deshabilitaba todo, sin ninguna señal).
+          SizedBox(
+            height: 3,
+            child: _starting
+                ? const LinearProgressIndicator(
+                    key: Key('session_new_starting_indicator'),
+                    minHeight: 3,
+                  )
+                : null,
+          ),
+          Expanded(child: _buildBody(context)),
+        ],
       ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return FutureBuilder<SessionSuggestions>(
+      future: _future,
+      builder: (context, snapshot) {
+        return AsyncBody<SessionSuggestions>(
+          snapshot: snapshot,
+          onRetry: () => setState(_loadSuggestions),
+          skeleton: (context) => const _NewSessionSkeleton(),
+          builder: (suggestions) => TabBarView(
+            controller: _tabController,
+            children: [
+              _TopicsTab(
+                topics: suggestions.topics,
+                freeTopicController: _freeTopicController,
+                starting: _starting,
+                onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
+                // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
+                // que "Surprise me" elige uno al azar de las sugerencias en
+                // vez de mandar la petición sin tema (eso siempre daría
+                // `400 VALIDATION`).
+                onSurpriseMe: suggestions.topics.isEmpty
+                    ? null
+                    : () => _start(
+                        kind: 'free_topic',
+                        topic:
+                            suggestions.topics[Random().nextInt(
+                              suggestions.topics.length,
+                            )],
+                      ),
+              ),
+              _RoleplayTab(
+                roleplays: suggestions.roleplays,
+                starting: _starting,
+                onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
+              ),
+              _NewsTab(
+                news: suggestions.news,
+                starting: _starting,
+                onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -267,7 +287,9 @@ class _TopicsTab extends StatelessWidget {
             final topic = value.text.trim();
             return ElevatedButton(
               key: const Key('session_new_free_topic_submit'),
-              onPressed: starting || topic.isEmpty ? null : () => onTopic(topic),
+              onPressed: starting || topic.isEmpty
+                  ? null
+                  : () => onTopic(topic),
               child: Text(l10n.sessionNewFreeTopicSubmit),
             );
           },
@@ -410,18 +432,20 @@ class _Card extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Container(
+        // Ink y no Container: el fondo opaco tapaba el ripple.
+        child: Ink(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: AppColors.border),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleSmall,
+          child: Center(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
         ),
       ),

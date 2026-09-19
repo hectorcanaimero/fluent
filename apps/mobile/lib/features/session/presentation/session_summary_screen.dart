@@ -13,6 +13,7 @@ import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../settings/data/reminder_prefs.dart';
 import '../domain/correction_labels.dart';
@@ -319,6 +320,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
             onRetry: () => setState(() {
               _detailFuture = _loadDetail();
             }),
+            skeleton: (context) => const _SummarySkeleton(),
             builder: (_) => const SizedBox.shrink(),
           ),
         );
@@ -397,7 +399,8 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                         children: [
                           const Icon(
                             Icons.local_fire_department,
-                            color: AppColors.accent,
+                            // Icono con significado: ≥3:1 (MEJ-01).
+                            color: AppColors.accentText,
                           ),
                           Text('${summary.streak}'),
                         ],
@@ -520,9 +523,8 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 builder: (context, snapshot) {
                   final corrections = snapshot.data ?? const <Correction>[];
                   if (snapshot.connectionState != ConnectionState.done) {
-                    return const Padding(
-                      padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-                      child: LinearProgressIndicator(),
+                    return const Column(
+                      children: [SkeletonListTile(), SkeletonListTile()],
                     );
                   }
                   if (corrections.isEmpty) {
@@ -569,6 +571,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: AppSpacing.md),
                     child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         _Banner(
                           text: l10n.summaryCourtesyBanner,
@@ -611,7 +614,7 @@ class _StatColumn extends StatelessWidget {
       children: [
         DefaultTextStyle(
           style: Theme.of(context).textTheme.headlineMedium!
-              .copyWith(color: AppColors.primary),
+              .copyWith(color: AppColors.primaryDark),
           child: valueBuilder(context),
         ),
         const SizedBox(height: AppSpacing.xs),
@@ -643,7 +646,8 @@ class _StreakShareCard extends StatelessWidget {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [AppColors.primary, AppColors.primaryDark],
+          // Desde `primaryDark`: el texto blanco sobre `primary` da 3.4:1.
+          colors: [AppColors.primaryDark, Color(0xFF075A51)],
         ),
         borderRadius: BorderRadius.circular(AppRadius.lg),
       ),
@@ -688,7 +692,7 @@ class _StreakShareCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             displayName,
-            style: const TextStyle(color: Colors.white70, fontSize: 14),
+            style: const TextStyle(color: Colors.white, fontSize: 14),
           ),
         ],
       ),
@@ -711,6 +715,36 @@ class _Banner extends StatelessWidget {
         borderRadius: BorderRadius.circular(AppRadius.md),
       ),
       child: Text(text, textAlign: TextAlign.center),
+    );
+  }
+}
+
+/// Forma del resumen mientras se recupera la sesión (ruta sin `extra`):
+/// título y tres estadísticas.
+class _SummarySkeleton extends StatelessWidget {
+  const _SummarySkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      key: const Key('summary_skeleton'),
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        Center(child: SkeletonBox(width: 200, height: 28)),
+        SizedBox(height: AppSpacing.xl),
+        Row(
+          children: [
+            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+            SizedBox(width: AppSpacing.md),
+            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+          ],
+        ),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

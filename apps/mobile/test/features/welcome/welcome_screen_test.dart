@@ -114,4 +114,14 @@ void main() {
     // Un overflow de layout haría fallar el test con una excepción.
     expect(tester.takeException(), isNull);
   });
+
+  testWidgets('los puntos de página tienen un área táctil de 32×48', (
+    tester,
+  ) async {
+    await _pumpWelcome(tester);
+    await tester.pumpAndSettle();
+    final size = tester.getSize(find.byKey(const Key('welcome_dot_0')));
+    expect(size.width, greaterThanOrEqualTo(32));
+    expect(size.height, greaterThanOrEqualTo(48));
+  });
 }

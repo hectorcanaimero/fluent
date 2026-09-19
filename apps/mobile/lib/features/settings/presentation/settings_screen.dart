@@ -10,6 +10,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -179,7 +180,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(l10n.settingsDeleteAccountCancel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.destructive,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.settingsDeleteAccountConfirm),
           ),
@@ -215,6 +218,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             return AsyncBody<MeResponse>(
               snapshot: snapshot,
               onRetry: () => setState(_loadProfile),
+              skeleton: (_) => const _SettingsSkeleton(),
               builder: (me) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
@@ -334,7 +338,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   OutlinedButton(
                     key: const Key('settings_delete_account_button'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
+                      foregroundColor: AppColors.errorText,
                     ),
                     onPressed: _deleteAccount,
                     child: Text(l10n.settingsDeleteAccount),
@@ -386,3 +390,28 @@ String _levelLabel(AppLocalizations l10n, String level) => switch (level) {
   'B2' => l10n.onboardingLevelAdvancedTitle,
   _ => level,
 };
+
+/// Forma de Ajustes mientras carga el perfil (antes, spinner pelado).
+class _SettingsSkeleton extends StatelessWidget {
+  const _SettingsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(width: 180, height: 28),
+        SizedBox(height: AppSpacing.sm),
+        SkeletonBox(width: 90, height: 14),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
+    );
+  }
+}

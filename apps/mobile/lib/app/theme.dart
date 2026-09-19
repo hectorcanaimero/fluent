@@ -29,6 +29,13 @@ abstract final class AppColors {
   static const locked = Color(0xFFF1EEE9);
   static const success = Color(0xFF2FA36B);
   static const error = Color(0xFFE2574C);
+
+  /// Texto de error sobre `bg`/`surface` (5.6:1); `error` puro da 3.5:1 y
+  /// queda para rellenos, bordes e iconos.
+  static const errorText = Color(0xFFB3372D);
+
+  /// Relleno de acciones destructivas con texto blanco (5.4:1).
+  static const destructive = Color(0xFFC0392F);
 }
 
 abstract final class AppRadius {
@@ -85,6 +92,12 @@ class AppTheme {
               fontWeight: FontWeight.w800,
               color: AppColors.textPrimary,
             ),
+            headlineSmall: const TextStyle(
+              fontFamily: _fontFamily,
+              fontSize: 20,
+              fontWeight: FontWeight.w800,
+              color: AppColors.textPrimary,
+            ),
             headlineMedium: const TextStyle(
               fontFamily: _fontFamily,
               fontSize: 22,
@@ -109,10 +122,18 @@ class AppTheme {
               fontWeight: FontWeight.w600,
               color: AppColors.textPrimary,
             ),
+            // Texto de lectura (subtítulos, burbujas, campos de texto).
+            bodyLarge: const TextStyle(
+              fontFamily: _fontFamily,
+              fontSize: 15,
+              fontWeight: FontWeight.w500,
+              color: AppColors.textPrimary,
+            ),
+            // Estilo por defecto de `Text`: w500, no semibold.
             bodyMedium: const TextStyle(
               fontFamily: _fontFamily,
               fontSize: 13,
-              fontWeight: FontWeight.w600,
+              fontWeight: FontWeight.w500,
               color: AppColors.textPrimary,
             ),
             bodySmall: const TextStyle(
@@ -120,6 +141,12 @@ class AppTheme {
               fontSize: 12,
               fontWeight: FontWeight.w500,
               color: AppColors.textSecondary,
+            ),
+            labelLarge: const TextStyle(
+              fontFamily: _fontFamily,
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+              color: AppColors.textPrimary,
             ),
             labelSmall: const TextStyle(
               fontFamily: _fontFamily,
@@ -149,7 +176,14 @@ class AppTheme {
           // el texto de 16 px del botón; sobre `primaryDark` da 5.0:1 (MEJ-01).
           backgroundColor: AppColors.primaryDark,
           foregroundColor: Colors.white,
-          minimumSize: const Size(double.infinity, 56),
+          // Deshabilitado (p. ej. mientras envía): primaryDark atenuado, así
+          // el spinner blanco de adentro se sigue viendo.
+          disabledBackgroundColor: AppColors.primaryDark.withValues(alpha: 0.5),
+          disabledForegroundColor: Colors.white,
+          // Ancho mínimo, no infinito: en los `actions` de un diálogo el
+          // ancho infinito apilaba los botones a lo ancho. Los CTA que deben
+          // ocupar todo el ancho lo piden con su contenedor (stretch).
+          minimumSize: const Size(64, 56),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(AppRadius.pill),
           ),
@@ -204,22 +238,154 @@ class AppTheme {
         thickness: 1,
         space: 1,
       ),
+      textButtonTheme: TextButtonThemeData(
+        style: TextButton.styleFrom(
+          // `primary` como texto da 3.2:1 sobre `bg` (MEJ-01).
+          foregroundColor: AppColors.primaryDark,
+          textStyle: const TextStyle(
+            fontFamily: _fontFamily,
+            fontSize: 15,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          backgroundColor: AppColors.primaryDark,
+          foregroundColor: Colors.white,
+          minimumSize: const Size(64, 56),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.pill),
+          ),
+          textStyle: const TextStyle(
+            fontFamily: _fontFamily,
+            fontSize: 16,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      dialogTheme: DialogThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        titleTextStyle: const TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          color: AppColors.textPrimary,
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 15,
+          fontWeight: FontWeight.w500,
+          height: 1.45,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      chipTheme: ChipThemeData(
+        backgroundColor: AppColors.surface,
+        selectedColor: AppColors.primarySoft,
+        disabledColor: AppColors.locked,
+        checkmarkColor: AppColors.primaryDark,
+        side: const BorderSide(color: AppColors.border),
+        shape: const StadiumBorder(),
+        labelStyle: const TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.sm,
+        ),
+      ),
+      switchTheme: SwitchThemeData(
+        thumbColor: const WidgetStatePropertyAll(Colors.white),
+        trackColor: WidgetStateProperty.resolveWith(
+          (states) => states.contains(WidgetState.selected)
+              ? AppColors.primary
+              : AppColors.border,
+        ),
+        trackOutlineColor: const WidgetStatePropertyAll(Colors.transparent),
+      ),
+      listTileTheme: const ListTileThemeData(
+        iconColor: AppColors.textSecondary,
+        minVerticalPadding: AppSpacing.md,
+        titleTextStyle: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 15,
+          fontWeight: FontWeight.w600,
+          color: AppColors.textPrimary,
+        ),
+        subtitleTextStyle: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 13,
+          fontWeight: FontWeight.w500,
+          color: AppColors.textSecondary,
+        ),
+      ),
+      bottomSheetTheme: const BottomSheetThemeData(
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
+        showDragHandle: true,
+        dragHandleColor: AppColors.border,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(
+            top: Radius.circular(AppRadius.lg),
+          ),
+        ),
+      ),
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.floating,
+        backgroundColor: AppColors.textPrimary,
+        actionTextColor: AppColors.primarySoft,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(AppRadius.md),
+        ),
+        contentTextStyle: const TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
+          color: Colors.white,
+        ),
+      ),
+      tabBarTheme: const TabBarThemeData(
+        labelColor: AppColors.textPrimary,
+        unselectedLabelColor: AppColors.textSecondary,
+        indicatorColor: AppColors.primaryDark,
+        dividerColor: AppColors.border,
+        labelStyle: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w700,
+        ),
+        unselectedLabelStyle: TextStyle(
+          fontFamily: _fontFamily,
+          fontSize: 14,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
         indicatorColor: AppColors.primarySoft,
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
+          // Etiquetas funcionales: AA en ambos estados (MEJ-01).
           return TextStyle(
-            fontSize: 11,
+            fontFamily: _fontFamily,
+            fontSize: 12,
             fontWeight: FontWeight.w700,
-            color: selected ? AppColors.primary : AppColors.textMuted,
+            color: selected ? AppColors.primaryDark : AppColors.textSecondary,
           );
         }),
         iconTheme: WidgetStateProperty.resolveWith((states) {
           final selected = states.contains(WidgetState.selected);
           return IconThemeData(
-            color: selected ? AppColors.primary : AppColors.textMuted,
+            color: selected ? AppColors.primaryDark : AppColors.textSecondary,
           );
         }),
       ),

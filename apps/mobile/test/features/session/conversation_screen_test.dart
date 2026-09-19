@@ -213,6 +213,17 @@ class _FailingGetSessionApi extends FakeApi {
   }
 }
 
+/// `getSession` tarda: para ver el estado de arranque de la pantalla.
+class _SlowGetSessionApi extends FakeApi {
+  _SlowGetSessionApi() : super(artificialDelay: Duration.zero);
+
+  @override
+  Future<SessionDetailResult> getSession(String sessionId) async {
+    await Future<void>.delayed(const Duration(seconds: 1));
+    return super.getSession(sessionId);
+  }
+}
+
 const _delegates = [
   AppLocalizations.delegate,
   GlobalMaterialLocalizations.delegate,
@@ -1294,4 +1305,56 @@ void main() {
       unawaited(api.closeStream());
     },
   );
+
+  testWidgets('mientras arranca la sesión muestra un skeleton, no un spinner', (
+    tester,
+  ) async {
+    final api = _SlowGetSessionApi();
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith((ref) => api),
+          speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+          ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+        ],
+        child: MaterialApp(
+          localizationsDelegates: _delegates,
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: ConversationScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pump();
+
+    expect(find.byKey(const Key('conversation_skeleton')), findsOneWidget);
+    expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('conversation_skeleton')), findsNothing);
+  });
+
+  testWidgets('mientras el tutor piensa, el micrófono se anuncia deshabilitado', (
+    tester,
+  ) async {
+    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+    await pumpConversation(tester, api: api, speech: FakeSpeechService());
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    final mic = find.bySemanticsLabel(l10n.conversationMicButtonSemantics);
+    expect(tester.getSemantics(mic), isSemantics(isEnabled: true));
+
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
+
+    expect(tester.getSemantics(mic), isSemantics(isEnabled: false));
+    unawaited(api.closeStream());
+  });
 }

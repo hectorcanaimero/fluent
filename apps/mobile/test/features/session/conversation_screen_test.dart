@@ -687,17 +687,23 @@ void main() {
     expect(find.text('Fresh answer'), findsOneWidget);
     expect(find.textContaining('Partial'), findsNothing);
 
+    // `done` trae un texto distinto del último token: así se comprueba que
+    // de verdad se procesa (es la fuente de verdad, reemplaza lo pintado).
     api.emit(
       const TurnStreamDone(
-        TurnResult(turnIdx: 1, reply: 'Fresh answer', corrections: []),
+        TurnResult(turnIdx: 1, reply: 'Final answer', corrections: []),
       ),
     );
+    // Al recibir `done` la pantalla cancela la suscripción; ese cancel
+    // termina fuera del reloj simulado del test, así que hace falta cerrar
+    // el fake y dejar correr un instante de async real.
+    unawaited(api.closeStream());
+    await tester.runAsync(() => Future<void>.delayed(Duration.zero));
     await tester.pumpAndSettle();
 
-    expect(find.text('Fresh answer'), findsOneWidget);
-    // La pantalla ya canceló la suscripción al recibir `done`: el `close()`
-    // del controlador no tiene a quién avisar y su future no completa.
-    unawaited(api.closeStream());
+    expect(find.text('Final answer'), findsOneWidget);
+    expect(find.text('Fresh answer'), findsNothing);
+    expect(find.textContaining('Partial'), findsNothing);
   });
 
   Future<void> pumpConversation(
@@ -1117,6 +1123,175 @@ void main() {
       // Deja completar el `speakDelay` pendiente del fake para no dejar un
       // temporizador colgado entre tests.
       await tester.pump(const Duration(milliseconds: 400));
+    },
+  );
+
+  testWidgets(
+    'en una pantalla angosta, los controles de una respuesta degradada no '
+    'desbordan',
+    (tester) async {
+      tester.view.physicalSize = const Size(360, 640);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final api = _UnavailableApi(artificialDelay: Duration.zero);
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => FakeSpeechService()),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationDegradedChip), findsOneWidget);
+      expect(tester.takeException(), isNull);
+    },
+  );
+
+  testWidgets(
+    'la burbuja en streaming no muestra reproducir ni velocidades hasta que '
+    'el mensaje es final',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      await pumpConversation(tester, api: api, speech: FakeSpeechService());
+      final replaysBefore =
+          find.byIcon(Icons.volume_up_outlined).evaluate().length;
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+
+      api.emit(const TurnStreamToken('Partial answer'));
+      await tester.pump();
+      await tester.pump();
+      expect(find.text('Partial answer'), findsOneWidget);
+      expect(
+        find.byIcon(Icons.volume_up_outlined).evaluate().length,
+        replaysBefore,
+      );
+
+      api.emit(
+        const TurnStreamDone(
+          TurnResult(turnIdx: 1, reply: 'Final answer', corrections: []),
+        ),
+      );
+      // Al recibir `done` la pantalla cancela la suscripción; ese cancel
+      // termina fuera del reloj simulado del test, así que hace falta
+      // cerrar el fake y dejar correr un instante de async real.
+      unawaited(api.closeStream());
+      await tester.runAsync(() => Future<void>.delayed(Duration.zero));
+      await tester.pumpAndSettle();
+      expect(find.text('Final answer'), findsOneWidget);
+      expect(
+        find.byIcon(Icons.volume_up_outlined).evaluate().length,
+        replaysBefore + 1,
+      );
+    },
+  );
+
+  testWidgets(
+    'el anillo del micrófono no cambia el tamaño del botón ni el alto del '
+    'chat',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
+      final box = find.byKey(const Key('conversation_mic_box'));
+      final chat = find.byType(ListView);
+      final idleBox = tester.getSize(box);
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      // Empezar a escuchar no agranda el botón (el halo es solo pintura).
+      expect(tester.getSize(box), idleBox);
+      final listeningChat = tester.getSize(chat);
+      for (final level in [0.0, 10.0, 4.0]) {
+        speech.emitSoundLevel(level);
+        await tester.pump();
+        expect(tester.getSize(box), idleBox);
+        expect(tester.getSize(chat), listeningChat);
+      }
+    },
+  );
+
+  testWidgets(
+    'el streaming sigue el final solo si el usuario ya estaba abajo',
+    (tester) async {
+      tester.view.physicalSize = const Size(390, 700);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      await pumpConversation(tester, api: api, speech: FakeSpeechService());
+
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+
+      ScrollPosition position() => tester
+          .state<ScrollableState>(
+            find.descendant(
+              of: find.byType(ListView),
+              matching: find.byType(Scrollable),
+            ),
+          )
+          .position;
+
+      // Un token largo desborda la lista; el usuario estaba abajo, así que
+      // la vista lo sigue.
+      api.emit(TurnStreamToken(List.filled(80, 'word').join(' ')));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(position().maxScrollExtent, greaterThan(0));
+      expect(position().pixels, position().maxScrollExtent);
+
+      // El usuario sube a releer: los tokens siguientes no lo arrastran.
+      await tester.drag(find.byType(ListView), const Offset(0, 300));
+      await tester.pumpAndSettle();
+      final readingAt = position().pixels;
+      expect(readingAt, lessThan(position().maxScrollExtent));
+
+      api.emit(TurnStreamToken(' ${List.filled(40, 'more').join(' ')}'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump();
+      expect(position().pixels, readingAt);
+      unawaited(api.closeStream());
     },
   );
 }

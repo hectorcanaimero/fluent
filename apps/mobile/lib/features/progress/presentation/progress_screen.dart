@@ -51,8 +51,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  _StatGrid(
                     children: [
                       _Stat(
                         label: l10n.progressXpLabel,
@@ -121,7 +120,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   }
 }
 
-/// MEJ-02: forma aproximada (título + fila de 3 stats + tendencia).
+/// MEJ-02: forma aproximada (título + grilla de 4 stats + tendencia).
 class _ProgressSkeleton extends StatelessWidget {
   const _ProgressSkeleton();
 
@@ -132,12 +131,12 @@ class _ProgressSkeleton extends StatelessWidget {
       children: const [
         SkeletonBox(width: 140, height: 28),
         SizedBox(height: AppSpacing.lg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        _StatGrid(
           children: [
-            SkeletonBox(width: 64, height: 48),
-            SkeletonBox(width: 64, height: 48),
-            SkeletonBox(width: 64, height: 48),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
           ],
         ),
         SizedBox(height: AppSpacing.xl),
@@ -151,6 +150,40 @@ class _ProgressSkeleton extends StatelessWidget {
   }
 }
 
+/// Grilla de 2×2: en una sola fila las 4 etiquetas no entran a 390 dp en
+/// es/pt ni con el texto del sistema agrandado. Cada fila toma el alto de
+/// su celda más alta.
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < children.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.md),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: children[i]),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: i + 1 < children.length
+                      ? children[i + 1]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value});
 
@@ -159,15 +192,32 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineMedium
-              ?.copyWith(color: AppColors.primary),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
+    final theme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Números grandes (XP) se achican en vez de desbordar la celda.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              style: theme.headlineMedium?.copyWith(
+                color: AppColors.primaryDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(label, style: theme.bodySmall),
+        ],
+      ),
     );
   }
 }

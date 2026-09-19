@@ -481,7 +481,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       _messages.add(ChatMessage(role: 'user', text: text));
     });
     final userIndex = _messages.length - 1;
-    _scrollToBottom();
+    _scrollToBottom(force: true);
 
     int? assistantIndex;
     final liveReply = StringBuffer();
@@ -502,7 +502,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         });
       }
       _liveText.value = liveReply.toString();
-      _scrollToBottom();
+      _scrollToBottom(animate: false);
     }
 
     // MAL-22: `event: reset` llega cuando la API descarta el intento actual
@@ -673,14 +673,36 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     setState(() => _ttsRate = rate);
   }
 
-  void _scrollToBottom() {
+  /// Distancia al final dentro de la cual se considera que el usuario está
+  /// "abajo" siguiendo la conversación.
+  static const _followThreshold = 48.0;
+  bool _scrollScheduled = false;
+
+  /// Baja al último mensaje solo si el usuario ya estaba abajo (o si
+  /// [force], cuando acaba de mandar su turno): no lo arrastra mientras
+  /// relee algo más arriba. Los tokens del streaming usan `jumpTo`
+  /// ([animate] en false) y se agrupan en un salto por frame, en vez de
+  /// encadenar un `animateTo` por token.
+  void _scrollToBottom({bool force = false, bool animate = true}) {
+    if (!_scrollController.hasClients || _scrollScheduled) return;
+    final position = _scrollController.position;
+    final nearBottom =
+        position.maxScrollExtent - position.pixels <= _followThreshold;
+    if (!force && !nearBottom) return;
+    _scrollScheduled = true;
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _scrollScheduled = false;
       if (!_scrollController.hasClients) return;
-      _scrollController.animateTo(
-        _scrollController.position.maxScrollExtent,
-        duration: const Duration(milliseconds: 250),
-        curve: Curves.easeOut,
-      );
+      final target = _scrollController.position.maxScrollExtent;
+      if (animate && !MediaQuery.disableAnimationsOf(context)) {
+        _scrollController.animateTo(
+          target,
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOut,
+        );
+      } else {
+        _scrollController.jumpTo(target);
+      }
     });
   }
 
@@ -849,41 +871,46 @@ class _AssistantBubble extends StatelessWidget {
                     builder: (context, value, _) => Text(value),
                   ),
           ),
-          Row(
-            children: [
-              IconButton(
-                key: Key('conversation_replay_${message.text.hashCode}'),
-                icon: const Icon(Icons.volume_up_outlined, size: 18),
-                tooltip: l10n.conversationReplayAudio,
-                onPressed: onReplay,
-              ),
-              for (final r in const [0.8, 1.0, 1.2])
-                TextButton(
-                  onPressed: () => onSetRate(r),
-                  style: TextButton.styleFrom(
-                    foregroundColor: rate == r
-                        ? AppColors.primary
-                        : AppColors.textMuted,
-                  ),
-                  child: Text(l10n.conversationSpeedButtonLabel(r.toString())),
+          // Wrap: con el chip de respuesta degradada no entra en una línea
+          // en pantallas angostas. Mientras llega el streaming no se
+          // muestran: `message.text` todavía es el primer token.
+          if (live == null)
+            Wrap(
+              crossAxisAlignment: WrapCrossAlignment.center,
+              children: [
+                IconButton(
+                  key: Key('conversation_replay_${message.text.hashCode}'),
+                  icon: const Icon(Icons.volume_up_outlined, size: 18),
+                  tooltip: l10n.conversationReplayAudio,
+                  onPressed: onReplay,
                 ),
-              if (message.degraded)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: AppSpacing.sm,
-                    vertical: 2,
+                for (final r in const [0.8, 1.0, 1.2])
+                  TextButton(
+                    onPressed: () => onSetRate(r),
+                    style: TextButton.styleFrom(
+                      foregroundColor: rate == r
+                          ? AppColors.primary
+                          : AppColors.textMuted,
+                    ),
+                    child: Text(l10n.conversationSpeedButtonLabel(r.toString())),
                   ),
-                  decoration: BoxDecoration(
-                    color: AppColors.locked,
-                    borderRadius: BorderRadius.circular(AppRadius.pill),
+                if (message.degraded)
+                  Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.sm,
+                      vertical: 2,
+                    ),
+                    decoration: BoxDecoration(
+                      color: AppColors.locked,
+                      borderRadius: BorderRadius.circular(AppRadius.pill),
+                    ),
+                    child: Text(
+                      l10n.conversationDegradedChip,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
                   ),
-                  child: Text(
-                    l10n.conversationDegradedChip,
-                    style: Theme.of(context).textTheme.labelSmall,
-                  ),
-                ),
-            ],
-          ),
+              ],
+            ),
         ],
       ),
     );
@@ -1149,12 +1176,16 @@ class _MicButton extends StatelessWidget {
   /// que animar).
   final ValueListenable<double>? soundLevel;
 
+  static const _buttonSize = 72.0;
+  static const _haloGrowth = 0.3;
+  static const _haloBox = _buttonSize * (1 + _haloGrowth);
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final button = Container(
-      width: 72,
-      height: 72,
+      width: _buttonSize,
+      height: _buttonSize,
       decoration: BoxDecoration(
         shape: BoxShape.circle,
         color: active ? AppColors.accent : AppColors.primary,
@@ -1162,32 +1193,45 @@ class _MicButton extends StatelessWidget {
       child: const Icon(Icons.mic, color: Colors.white, size: 32),
     );
 
+    // Caja fija: el halo se dibuja con `Transform.scale` (solo pintura),
+    // así el panel inferior no cambia de alto con la voz ni al empezar a
+    // escuchar.
     final level = soundLevel;
-    final visual = level == null
-        ? button
-        : ValueListenableBuilder<double>(
-            valueListenable: level,
-            builder: (context, value, child) {
-              // `speech_to_text` no normaliza `onSoundLevelChange` (suele
-              // moverse entre -2 y 10 aprox.): se recorta a 0-10 y se
-              // escala a un anillo cuyo grosor/opacidad crece con la voz.
-              final normalized = (value / 10).clamp(0.0, 1.0);
-              return Container(
-                padding: const EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: AppColors.accent.withValues(
-                      alpha: 0.3 + normalized * 0.7,
+    final visual = SizedBox.square(
+      key: const Key('conversation_mic_box'),
+      dimension: _haloBox,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          if (level != null)
+            ValueListenableBuilder<double>(
+              valueListenable: level,
+              builder: (context, value, _) {
+                // `speech_to_text` no normaliza `onSoundLevelChange` (suele
+                // moverse entre -2 y 10 aprox.): se recorta a 0-10. Con
+                // animaciones desactivadas el halo queda fijo.
+                final normalized = MediaQuery.disableAnimationsOf(context)
+                    ? 0.5
+                    : (value / 10).clamp(0.0, 1.0);
+                return Transform.scale(
+                  scale: 1 + normalized * _haloGrowth,
+                  child: Container(
+                    width: _buttonSize,
+                    height: _buttonSize,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.accent.withValues(
+                        alpha: 0.15 + normalized * 0.25,
+                      ),
                     ),
-                    width: 3 + normalized * 5,
                   ),
-                ),
-                child: child,
-              );
-            },
-            child: button,
-          );
+                );
+              },
+            ),
+          button,
+        ],
+      ),
+    );
 
     return Semantics(
       button: true,

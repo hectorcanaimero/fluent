@@ -1718,6 +1718,12 @@ abstract class AppLocalizations {
   /// **'Deshacer'**
   String get commonUndo;
 
+  /// No description provided for @pushOpenAction.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver'**
+  String get pushOpenAction;
+
   /// No description provided for @memoryFactDeleted.
   ///
   /// In es, this message translates to:

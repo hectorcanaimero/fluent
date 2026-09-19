@@ -13,6 +13,7 @@
 import { Module } from '@nestjs/common';
 
 import { LlmModule } from '../../llm/llm.module.js';
+import { PushCoreModule } from '../../push/push.module.js';
 import { WeeklySummaryPendingCredentialStore } from './pending-credential.store.js';
 import { WeeklySummaryDispatchRegistrar } from './weekly-summary-dispatch.registrar.js';
 import { WeeklySummaryDispatchService } from './weekly-summary-dispatch.service.js';
@@ -24,7 +25,7 @@ import {
 import { WeeklySummaryService } from './weekly-summary.service.js';
 
 @Module({
-  imports: [LlmModule],
+  imports: [LlmModule, PushCoreModule],
   providers: [
     {
       provide: WeeklySummaryRepository,

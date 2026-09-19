@@ -270,6 +270,7 @@
   "settingsInvitationSubmit": "Entrar no grupo",
   "settingsInvitationSuccess": "Pronto! Agora você faz parte do grupo.",
   "commonUndo": "Desfazer",
+  "pushOpenAction": "Ver",
   "memoryFactDeleted": "Fato apagado.",
   "commonXpAmount": "{amount} XP",
   "commonEmptyValue": "—",

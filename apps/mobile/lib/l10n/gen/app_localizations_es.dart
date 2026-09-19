@@ -939,6 +939,9 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonUndo => 'Deshacer';
 
   @override
+  String get pushOpenAction => 'Ver';
+
+  @override
   String get memoryFactDeleted => 'Dato borrado.';
 
   @override

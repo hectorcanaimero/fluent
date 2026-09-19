@@ -1,3 +1,4 @@
+import type { PushService } from '../../push/push.service.js';
 import { randomBytes, createCipheriv } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 
@@ -106,6 +107,11 @@ function makePendingStore() {
   };
 }
 
+/** PushService falso: registra los avisos del resumen semanal. */
+function fakePush() {
+  return { notifyWeeklySummary: vi.fn(async () => undefined) } as unknown as PushService;
+}
+
 describe('WeeklySummaryService (SPEC-05 §4)', () => {
   it('sale sin llamar al LLM si ya existe el resumen de la semana', async () => {
     const repository = makeRepository({ summaryExists: true });
@@ -117,6 +123,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       llm,
       pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
 
     const result = await service.run(GROUP_ID, WEEK_START);
@@ -136,6 +143,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       llm,
       pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
 
     await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
@@ -162,6 +170,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       llm,
       pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
 
     await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
@@ -181,6 +190,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       llm,
       pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
 
     const result = await service.run(GROUP_ID, WEEK_START);
@@ -234,6 +244,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       llm,
       pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
 
     await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
@@ -254,6 +265,7 @@ describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
       llm,
       makePendingStore() as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
+      fakePush(),
     );
   }
 

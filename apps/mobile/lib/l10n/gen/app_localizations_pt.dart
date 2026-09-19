@@ -943,6 +943,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonUndo => 'Desfazer';
 
   @override
+  String get pushOpenAction => 'Ver';
+
+  @override
   String get memoryFactDeleted => 'Fato apagado.';
 
   @override

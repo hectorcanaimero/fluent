@@ -1,3 +1,4 @@
+import { PushCoreModule } from '../push/push.module.js';
 import { Module } from '@nestjs/common';
 import { BossService } from '../game/boss.service.js';
 import { LlmModule } from '../llm/llm.module.js';
@@ -45,7 +46,7 @@ import { TurnsService } from './turns.service.js';
   // `SocialModule` exporta `ChallengesService`, que `SessionsService` usa para
   // comprobar que el `challengeFromUserId` recibido es un desafío realmente
   // ofrecido (MAL-19).
-  imports: [LlmModule, SocialModule],
+  imports: [LlmModule, SocialModule, PushCoreModule],
   controllers: [SessionsController],
   providers: [
     SessionsRepository,

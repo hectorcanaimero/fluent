@@ -344,6 +344,7 @@
   "settingsInvitationSubmit": "Unirme al grupo",
   "settingsInvitationSuccess": "¡Listo! Ya sos parte del grupo.",
   "commonUndo": "Deshacer",
+  "pushOpenAction": "Ver",
   "memoryFactDeleted": "Dato borrado.",
   "commonXpAmount": "{amount} XP",
   "@commonXpAmount": {

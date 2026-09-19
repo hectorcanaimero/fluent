@@ -1,3 +1,4 @@
+import { PushService } from '../push/push.service.js';
 import { Injectable } from '@nestjs/common';
 import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { EndSessionDto } from './dto/end-session.dto.js';
@@ -33,6 +34,7 @@ export class EndSessionService {
     private readonly turnsRepository: TurnsRepository,
     private readonly repository: EndSessionRepository,
     private readonly closer: SessionCloserService,
+    private readonly push: PushService,
   ) {}
 
   async endSession(
@@ -52,6 +54,12 @@ export class EndSessionService {
       turnsCount: session.turns_count,
       decideBrief: wasActive,
     });
+
+    // Sesión válida recién cerrada: aviso al resto del grupo ("X practicó
+    // hoy, ¿te animás?"). Sin esperar: el push nunca demora ni tumba el cierre.
+    if (wasActive && closeResult.xp_earned > 0) {
+      void this.push.notifyChallenge(userId, session.topic);
+    }
 
     const correctionsCount = await this.repository.countCorrections(session.id);
 

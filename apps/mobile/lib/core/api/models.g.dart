@@ -416,6 +416,11 @@ _SessionSummary _$SessionSummaryFromJson(Map<String, dynamic> json) =>
       correctionsCount: (json['correctionsCount'] as num).toInt(),
       durationSec: (json['durationSec'] as num).toInt(),
       nextIsBoss: json['nextIsBoss'] as bool? ?? false,
+      newBadges:
+          (json['newBadges'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
     );
 
 Map<String, dynamic> _$SessionSummaryToJson(_SessionSummary instance) =>
@@ -426,6 +431,7 @@ Map<String, dynamic> _$SessionSummaryToJson(_SessionSummary instance) =>
       'correctionsCount': instance.correctionsCount,
       'durationSec': instance.durationSec,
       'nextIsBoss': instance.nextIsBoss,
+      'newBadges': instance.newBadges,
     };
 
 _SessionEndResult _$SessionEndResultFromJson(Map<String, dynamic> json) =>
@@ -678,3 +684,22 @@ _WeeklySummaryResult _$WeeklySummaryResultFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$WeeklySummaryResultToJson(
   _WeeklySummaryResult instance,
 ) => <String, dynamic>{'text': instance.text, 'weekStart': instance.weekStart};
+
+_BadgeItem _$BadgeItemFromJson(Map<String, dynamic> json) => _BadgeItem(
+  id: json['id'] as String,
+  category: json['category'] as String,
+  imageUrl: json['imageUrl'] as String,
+  earnedAt: json['earnedAt'] as String?,
+  progressCurrent: (json['progressCurrent'] as num?)?.toInt(),
+  progressTarget: (json['progressTarget'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$BadgeItemToJson(_BadgeItem instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'category': instance.category,
+      'imageUrl': instance.imageUrl,
+      'earnedAt': instance.earnedAt,
+      'progressCurrent': instance.progressCurrent,
+      'progressTarget': instance.progressTarget,
+    };

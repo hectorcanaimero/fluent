@@ -150,4 +150,30 @@ void main() {
     );
     await tester.pumpAndSettle();
   });
+
+  testWidgets('muestra el acceso a Logros con las insignias ganadas', (
+    tester,
+  ) async {
+    final api = FakeApi(artificialDelay: Duration.zero);
+    final badges = await api.getBadges();
+    final earned = badges.where((b) => b.isEarned).length;
+    await pumpProgress(tester, api: api);
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    final entry = find.byKey(const Key('progress_badges_entry'));
+    await tester.scrollUntilVisible(entry, 200);
+    expect(
+      find.descendant(of: entry, matching: find.text(l10n.badgesSeeAll)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(
+        of: entry,
+        matching: find.text(
+          l10n.badgesEarnedCount(earned, badges.length),
+        ),
+      ),
+      findsOneWidget,
+    );
+  });
 }

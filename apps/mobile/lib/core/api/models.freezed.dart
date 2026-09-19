@@ -6711,7 +6711,8 @@ as bool,
 /// @nodoc
 mixin _$SessionSummary {
 
- int get xpEarned; int get streak; bool get isDoubleDay; int get correctionsCount; int get durationSec; bool get nextIsBoss;
+ int get xpEarned; int get streak; bool get isDoubleDay; int get correctionsCount; int get durationSec; bool get nextIsBoss;/// Ids de las insignias ganadas al cerrar esta sesión (ronda 4).
+ List<String> get newBadges;
 /// Create a copy of SessionSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -6725,20 +6726,20 @@ $SessionSummaryCopyWith<SessionSummary> get copyWith => _$SessionSummaryCopyWith
 @override
 bool operator ==(Object other) {
   final _this = this as SessionSummary;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionSummary&&(identical(other.xpEarned, _this.xpEarned) || other.xpEarned == _this.xpEarned)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.isDoubleDay, _this.isDoubleDay) || other.isDoubleDay == _this.isDoubleDay)&&(identical(other.correctionsCount, _this.correctionsCount) || other.correctionsCount == _this.correctionsCount)&&(identical(other.durationSec, _this.durationSec) || other.durationSec == _this.durationSec)&&(identical(other.nextIsBoss, _this.nextIsBoss) || other.nextIsBoss == _this.nextIsBoss));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is SessionSummary&&(identical(other.xpEarned, _this.xpEarned) || other.xpEarned == _this.xpEarned)&&(identical(other.streak, _this.streak) || other.streak == _this.streak)&&(identical(other.isDoubleDay, _this.isDoubleDay) || other.isDoubleDay == _this.isDoubleDay)&&(identical(other.correctionsCount, _this.correctionsCount) || other.correctionsCount == _this.correctionsCount)&&(identical(other.durationSec, _this.durationSec) || other.durationSec == _this.durationSec)&&(identical(other.nextIsBoss, _this.nextIsBoss) || other.nextIsBoss == _this.nextIsBoss)&&const DeepCollectionEquality().equals(other.newBadges, _this.newBadges));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as SessionSummary;
-  return Object.hash(runtimeType,_this.xpEarned,_this.streak,_this.isDoubleDay,_this.correctionsCount,_this.durationSec,_this.nextIsBoss);
+  return Object.hash(runtimeType,_this.xpEarned,_this.streak,_this.isDoubleDay,_this.correctionsCount,_this.durationSec,_this.nextIsBoss,const DeepCollectionEquality().hash(_this.newBadges));
 }
 
 @override
 String toString() {
   final _this = this as SessionSummary;
-  return 'SessionSummary(xpEarned: ${_this.xpEarned}, streak: ${_this.streak}, isDoubleDay: ${_this.isDoubleDay}, correctionsCount: ${_this.correctionsCount}, durationSec: ${_this.durationSec}, nextIsBoss: ${_this.nextIsBoss})';
+  return 'SessionSummary(xpEarned: ${_this.xpEarned}, streak: ${_this.streak}, isDoubleDay: ${_this.isDoubleDay}, correctionsCount: ${_this.correctionsCount}, durationSec: ${_this.durationSec}, nextIsBoss: ${_this.nextIsBoss}, newBadges: ${_this.newBadges})';
 }
 
 
@@ -6749,7 +6750,7 @@ abstract mixin class $SessionSummaryCopyWith<$Res>  {
   factory $SessionSummaryCopyWith(SessionSummary value, $Res Function(SessionSummary) _then) = _$SessionSummaryCopyWithImpl;
 @useResult
 $Res call({
- int xpEarned, int streak, bool isDoubleDay, int correctionsCount, int durationSec, bool nextIsBoss
+ int xpEarned, int streak, bool isDoubleDay, int correctionsCount, int durationSec, bool nextIsBoss, List<String> newBadges
 });
 
 
@@ -6766,7 +6767,7 @@ class _$SessionSummaryCopyWithImpl<$Res>
 
 /// Create a copy of SessionSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? xpEarned = null,Object? streak = null,Object? isDoubleDay = null,Object? correctionsCount = null,Object? durationSec = null,Object? nextIsBoss = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? xpEarned = null,Object? streak = null,Object? isDoubleDay = null,Object? correctionsCount = null,Object? durationSec = null,Object? nextIsBoss = null,Object? newBadges = null,}) {
   return _then(SessionSummary(
 xpEarned: null == xpEarned ? _self.xpEarned : xpEarned // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
@@ -6774,7 +6775,8 @@ as int,isDoubleDay: null == isDoubleDay ? _self.isDoubleDay : isDoubleDay // ign
 as bool,correctionsCount: null == correctionsCount ? _self.correctionsCount : correctionsCount // ignore: cast_nullable_to_non_nullable
 as int,durationSec: null == durationSec ? _self.durationSec : durationSec // ignore: cast_nullable_to_non_nullable
 as int,nextIsBoss: null == nextIsBoss ? _self.nextIsBoss : nextIsBoss // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,newBadges: null == newBadges ? _self.newBadges : newBadges // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -6859,10 +6861,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss,  List<String> newBadges)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _SessionSummary() when $default != null:
-return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss);case _:
+return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss,_that.newBadges);case _:
   return orElse();
 
 }
@@ -6880,10 +6882,10 @@ return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsC
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss,  List<String> newBadges)  $default,) {final _that = this;
 switch (_that) {
 case _SessionSummary():
-return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss);case _:
+return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss,_that.newBadges);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -6900,10 +6902,10 @@ return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsC
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int xpEarned,  int streak,  bool isDoubleDay,  int correctionsCount,  int durationSec,  bool nextIsBoss,  List<String> newBadges)?  $default,) {final _that = this;
 switch (_that) {
 case _SessionSummary() when $default != null:
-return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss);case _:
+return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsCount,_that.durationSec,_that.nextIsBoss,_that.newBadges);case _:
   return null;
 
 }
@@ -6915,7 +6917,7 @@ return $default(_that.xpEarned,_that.streak,_that.isDoubleDay,_that.correctionsC
 @JsonSerializable()
 
 class _SessionSummary implements SessionSummary {
-  const _SessionSummary({required this.xpEarned, required this.streak, this.isDoubleDay = false, required this.correctionsCount, required this.durationSec, this.nextIsBoss = false});
+  const _SessionSummary({required this.xpEarned, required this.streak, this.isDoubleDay = false, required this.correctionsCount, required this.durationSec, this.nextIsBoss = false,  List<String> newBadges = const <String>[]}): _newBadges = newBadges;
   factory _SessionSummary.fromJson(Map<String, dynamic> json) => _$SessionSummaryFromJson(json);
 
 @override final  int xpEarned;
@@ -6924,6 +6926,15 @@ class _SessionSummary implements SessionSummary {
 @override final  int correctionsCount;
 @override final  int durationSec;
 @override@JsonKey() final  bool nextIsBoss;
+/// Ids de las insignias ganadas al cerrar esta sesión (ronda 4).
+ final  List<String> _newBadges;
+/// Ids de las insignias ganadas al cerrar esta sesión (ronda 4).
+@override@JsonKey() List<String> get newBadges {
+  if (_newBadges is EqualUnmodifiableListView) return _newBadges;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_newBadges);
+}
+
 
 /// Create a copy of SessionSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -6938,18 +6949,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SessionSummary&&(identical(other.xpEarned, xpEarned) || other.xpEarned == xpEarned)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.isDoubleDay, isDoubleDay) || other.isDoubleDay == isDoubleDay)&&(identical(other.correctionsCount, correctionsCount) || other.correctionsCount == correctionsCount)&&(identical(other.durationSec, durationSec) || other.durationSec == durationSec)&&(identical(other.nextIsBoss, nextIsBoss) || other.nextIsBoss == nextIsBoss));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _SessionSummary&&(identical(other.xpEarned, xpEarned) || other.xpEarned == xpEarned)&&(identical(other.streak, streak) || other.streak == streak)&&(identical(other.isDoubleDay, isDoubleDay) || other.isDoubleDay == isDoubleDay)&&(identical(other.correctionsCount, correctionsCount) || other.correctionsCount == correctionsCount)&&(identical(other.durationSec, durationSec) || other.durationSec == durationSec)&&(identical(other.nextIsBoss, nextIsBoss) || other.nextIsBoss == nextIsBoss)&&const DeepCollectionEquality().equals(other.newBadges, _newBadges));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,xpEarned,streak,isDoubleDay,correctionsCount,durationSec,nextIsBoss);
+    return Object.hash(runtimeType,xpEarned,streak,isDoubleDay,correctionsCount,durationSec,nextIsBoss,const DeepCollectionEquality().hash(_newBadges));
 }
 
 @override
 String toString() {
-    return 'SessionSummary(xpEarned: $xpEarned, streak: $streak, isDoubleDay: $isDoubleDay, correctionsCount: $correctionsCount, durationSec: $durationSec, nextIsBoss: $nextIsBoss)';
+    return 'SessionSummary(xpEarned: $xpEarned, streak: $streak, isDoubleDay: $isDoubleDay, correctionsCount: $correctionsCount, durationSec: $durationSec, nextIsBoss: $nextIsBoss, newBadges: $newBadges)';
 }
 
 
@@ -6960,7 +6971,7 @@ abstract mixin class _$SessionSummaryCopyWith<$Res> implements $SessionSummaryCo
   factory _$SessionSummaryCopyWith(_SessionSummary value, $Res Function(_SessionSummary) _then) = __$SessionSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- int xpEarned, int streak, bool isDoubleDay, int correctionsCount, int durationSec, bool nextIsBoss
+ int xpEarned, int streak, bool isDoubleDay, int correctionsCount, int durationSec, bool nextIsBoss, List<String> newBadges
 });
 
 
@@ -6977,7 +6988,7 @@ class __$SessionSummaryCopyWithImpl<$Res>
 
 /// Create a copy of SessionSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? xpEarned = null,Object? streak = null,Object? isDoubleDay = null,Object? correctionsCount = null,Object? durationSec = null,Object? nextIsBoss = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? xpEarned = null,Object? streak = null,Object? isDoubleDay = null,Object? correctionsCount = null,Object? durationSec = null,Object? nextIsBoss = null,Object? newBadges = null,}) {
   return _then(_SessionSummary(
 xpEarned: null == xpEarned ? _self.xpEarned : xpEarned // ignore: cast_nullable_to_non_nullable
 as int,streak: null == streak ? _self.streak : streak // ignore: cast_nullable_to_non_nullable
@@ -6985,7 +6996,8 @@ as int,isDoubleDay: null == isDoubleDay ? _self.isDoubleDay : isDoubleDay // ign
 as bool,correctionsCount: null == correctionsCount ? _self.correctionsCount : correctionsCount // ignore: cast_nullable_to_non_nullable
 as int,durationSec: null == durationSec ? _self.durationSec : durationSec // ignore: cast_nullable_to_non_nullable
 as int,nextIsBoss: null == nextIsBoss ? _self.nextIsBoss : nextIsBoss // ignore: cast_nullable_to_non_nullable
-as bool,
+as bool,newBadges: null == newBadges ? _self._newBadges : newBadges // ignore: cast_nullable_to_non_nullable
+as List<String>,
   ));
 }
 
@@ -11561,6 +11573,299 @@ class __$WeeklySummaryResultCopyWithImpl<$Res>
 text: null == text ? _self.text : text // ignore: cast_nullable_to_non_nullable
 as String,weekStart: null == weekStart ? _self.weekStart : weekStart // ignore: cast_nullable_to_non_nullable
 as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$BadgeItem {
+
+ String get id;/// `level`, `streak`, `sessions` o `special`.
+ String get category; String get imageUrl;/// ISO 8601; `null` si todavía está bloqueada.
+ String? get earnedAt;/// Avance hacia la insignia (niveles, rachas, sesiones); `null` en las
+/// especiales.
+ int? get progressCurrent; int? get progressTarget;
+/// Create a copy of BadgeItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$BadgeItemCopyWith<BadgeItem> get copyWith => _$BadgeItemCopyWithImpl<BadgeItem>(this as BadgeItem, _$identity);
+
+  /// Serializes this BadgeItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as BadgeItem;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is BadgeItem&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.category, _this.category) || other.category == _this.category)&&(identical(other.imageUrl, _this.imageUrl) || other.imageUrl == _this.imageUrl)&&(identical(other.earnedAt, _this.earnedAt) || other.earnedAt == _this.earnedAt)&&(identical(other.progressCurrent, _this.progressCurrent) || other.progressCurrent == _this.progressCurrent)&&(identical(other.progressTarget, _this.progressTarget) || other.progressTarget == _this.progressTarget));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as BadgeItem;
+  return Object.hash(runtimeType,_this.id,_this.category,_this.imageUrl,_this.earnedAt,_this.progressCurrent,_this.progressTarget);
+}
+
+@override
+String toString() {
+  final _this = this as BadgeItem;
+  return 'BadgeItem(id: ${_this.id}, category: ${_this.category}, imageUrl: ${_this.imageUrl}, earnedAt: ${_this.earnedAt}, progressCurrent: ${_this.progressCurrent}, progressTarget: ${_this.progressTarget})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $BadgeItemCopyWith<$Res>  {
+  factory $BadgeItemCopyWith(BadgeItem value, $Res Function(BadgeItem) _then) = _$BadgeItemCopyWithImpl;
+@useResult
+$Res call({
+ String id, String category, String imageUrl, String? earnedAt, int? progressCurrent, int? progressTarget
+});
+
+
+
+
+}
+/// @nodoc
+class _$BadgeItemCopyWithImpl<$Res>
+    implements $BadgeItemCopyWith<$Res> {
+  _$BadgeItemCopyWithImpl(this._self, this._then);
+
+  final BadgeItem _self;
+  final $Res Function(BadgeItem) _then;
+
+/// Create a copy of BadgeItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? category = null,Object? imageUrl = null,Object? earnedAt = freezed,Object? progressCurrent = freezed,Object? progressTarget = freezed,}) {
+  return _then(BadgeItem(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,imageUrl: null == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String,earnedAt: freezed == earnedAt ? _self.earnedAt : earnedAt // ignore: cast_nullable_to_non_nullable
+as String?,progressCurrent: freezed == progressCurrent ? _self.progressCurrent : progressCurrent // ignore: cast_nullable_to_non_nullable
+as int?,progressTarget: freezed == progressTarget ? _self.progressTarget : progressTarget // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [BadgeItem].
+extension BadgeItemPatterns on BadgeItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _BadgeItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _BadgeItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _BadgeItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _BadgeItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _BadgeItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _BadgeItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String category,  String imageUrl,  String? earnedAt,  int? progressCurrent,  int? progressTarget)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _BadgeItem() when $default != null:
+return $default(_that.id,_that.category,_that.imageUrl,_that.earnedAt,_that.progressCurrent,_that.progressTarget);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String category,  String imageUrl,  String? earnedAt,  int? progressCurrent,  int? progressTarget)  $default,) {final _that = this;
+switch (_that) {
+case _BadgeItem():
+return $default(_that.id,_that.category,_that.imageUrl,_that.earnedAt,_that.progressCurrent,_that.progressTarget);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String category,  String imageUrl,  String? earnedAt,  int? progressCurrent,  int? progressTarget)?  $default,) {final _that = this;
+switch (_that) {
+case _BadgeItem() when $default != null:
+return $default(_that.id,_that.category,_that.imageUrl,_that.earnedAt,_that.progressCurrent,_that.progressTarget);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _BadgeItem implements BadgeItem {
+  const _BadgeItem({required this.id, required this.category, required this.imageUrl, this.earnedAt, this.progressCurrent, this.progressTarget});
+  factory _BadgeItem.fromJson(Map<String, dynamic> json) => _$BadgeItemFromJson(json);
+
+@override final  String id;
+/// `level`, `streak`, `sessions` o `special`.
+@override final  String category;
+@override final  String imageUrl;
+/// ISO 8601; `null` si todavía está bloqueada.
+@override final  String? earnedAt;
+/// Avance hacia la insignia (niveles, rachas, sesiones); `null` en las
+/// especiales.
+@override final  int? progressCurrent;
+@override final  int? progressTarget;
+
+/// Create a copy of BadgeItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$BadgeItemCopyWith<_BadgeItem> get copyWith => __$BadgeItemCopyWithImpl<_BadgeItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$BadgeItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _BadgeItem&&(identical(other.id, id) || other.id == id)&&(identical(other.category, category) || other.category == category)&&(identical(other.imageUrl, imageUrl) || other.imageUrl == imageUrl)&&(identical(other.earnedAt, earnedAt) || other.earnedAt == earnedAt)&&(identical(other.progressCurrent, progressCurrent) || other.progressCurrent == progressCurrent)&&(identical(other.progressTarget, progressTarget) || other.progressTarget == progressTarget));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,category,imageUrl,earnedAt,progressCurrent,progressTarget);
+}
+
+@override
+String toString() {
+    return 'BadgeItem(id: $id, category: $category, imageUrl: $imageUrl, earnedAt: $earnedAt, progressCurrent: $progressCurrent, progressTarget: $progressTarget)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$BadgeItemCopyWith<$Res> implements $BadgeItemCopyWith<$Res> {
+  factory _$BadgeItemCopyWith(_BadgeItem value, $Res Function(_BadgeItem) _then) = __$BadgeItemCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String category, String imageUrl, String? earnedAt, int? progressCurrent, int? progressTarget
+});
+
+
+
+
+}
+/// @nodoc
+class __$BadgeItemCopyWithImpl<$Res>
+    implements _$BadgeItemCopyWith<$Res> {
+  __$BadgeItemCopyWithImpl(this._self, this._then);
+
+  final _BadgeItem _self;
+  final $Res Function(_BadgeItem) _then;
+
+/// Create a copy of BadgeItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? category = null,Object? imageUrl = null,Object? earnedAt = freezed,Object? progressCurrent = freezed,Object? progressTarget = freezed,}) {
+  return _then(_BadgeItem(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,category: null == category ? _self.category : category // ignore: cast_nullable_to_non_nullable
+as String,imageUrl: null == imageUrl ? _self.imageUrl : imageUrl // ignore: cast_nullable_to_non_nullable
+as String,earnedAt: freezed == earnedAt ? _self.earnedAt : earnedAt // ignore: cast_nullable_to_non_nullable
+as String?,progressCurrent: freezed == progressCurrent ? _self.progressCurrent : progressCurrent // ignore: cast_nullable_to_non_nullable
+as int?,progressTarget: freezed == progressTarget ? _self.progressTarget : progressTarget // ignore: cast_nullable_to_non_nullable
+as int?,
   ));
 }
 

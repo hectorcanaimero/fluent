@@ -109,6 +109,9 @@ abstract class FluentApi {
 
   // 4.5 Social y progreso
   Future<ProgressResult> getProgress();
+
+  /// Catálogo de insignias con las ganadas por el usuario (ronda 4).
+  Future<List<BadgeItem>> getBadges();
   Future<LeaderboardResult> getLeaderboard({String? week});
   Future<List<ChallengeItem>> getChallenges();
   Future<WeeklySummaryResult?> getWeeklySummary({String? week});

@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../features/badges/presentation/badge_image.dart';
 import '../../../features/session/domain/correction_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
@@ -21,10 +23,15 @@ class ProgressScreen extends ConsumerStatefulWidget {
 class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   late Future<ProgressResult> _future;
 
+  /// Aparte del progreso (y en paralelo): si fallan las insignias,
+  /// Progreso se muestra igual; solo falta el acceso a Logros.
+  late final Future<List<BadgeItem>> _badgesFuture;
+
   @override
   void initState() {
     super.initState();
     _loadProgress();
+    _badgesFuture = ref.read(fluentApiProvider).getBadges();
   }
 
   void _loadProgress() {
@@ -76,6 +83,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     progress.level.name,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  _BadgesEntry(future: _badgesFuture),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     l10n.progressCorrectionsTrendTitle,
@@ -218,6 +227,78 @@ class _Stat extends StatelessWidget {
           Text(label, style: theme.bodySmall),
         ],
       ),
+    );
+  }
+}
+
+/// Acceso a Logros: cuántas insignias hay ganadas y las últimas 3.
+class _BadgesEntry extends StatelessWidget {
+  const _BadgesEntry({required this.future});
+
+  final Future<List<BadgeItem>> future;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return FutureBuilder<List<BadgeItem>>(
+      future: future,
+      builder: (context, snapshot) {
+        final badges = snapshot.data;
+        if (badges == null) return const SizedBox.shrink();
+        final earned = [
+          for (final b in badges)
+            if (b.isEarned) b,
+        ]..sort((a, b) => b.earnedAt!.compareTo(a.earnedAt!));
+        return Material(
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          child: InkWell(
+            key: const Key('progress_badges_entry'),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: () => context.push('/badges'),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.badgesSeeAll,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          l10n.badgesEarnedCount(earned.length, badges.length),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final b in earned.take(3))
+                    Padding(
+                      padding: const EdgeInsets.only(left: AppSpacing.xs),
+                      child: BadgeImage(
+                        url: b.imageUrl,
+                        size: 36,
+                        earned: true,
+                      ),
+                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

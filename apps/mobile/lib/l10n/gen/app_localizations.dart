@@ -2011,6 +2011,264 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Corregidas'**
   String get summaryCorrectedLabel;
+
+  /// No description provided for @badgeLevelNewcomerName.
+  ///
+  /// In es, this message translates to:
+  /// **'Newcomer'**
+  String get badgeLevelNewcomerName;
+
+  /// No description provided for @badgeLevelNewcomerCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Recién llegado: empezá a practicar'**
+  String get badgeLevelNewcomerCondition;
+
+  /// No description provided for @badgeLevelChatterboxName.
+  ///
+  /// In es, this message translates to:
+  /// **'Chatterbox'**
+  String get badgeLevelChatterboxName;
+
+  /// No description provided for @badgeLevelChatterboxCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Charlatán: sumá 500 XP'**
+  String get badgeLevelChatterboxCondition;
+
+  /// No description provided for @badgeLevelStorytellerName.
+  ///
+  /// In es, this message translates to:
+  /// **'Storyteller'**
+  String get badgeLevelStorytellerName;
+
+  /// No description provided for @badgeLevelStorytellerCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Cuentacuentos: sumá 1.500 XP'**
+  String get badgeLevelStorytellerCondition;
+
+  /// No description provided for @badgeLevelDebaterName.
+  ///
+  /// In es, this message translates to:
+  /// **'Debater'**
+  String get badgeLevelDebaterName;
+
+  /// No description provided for @badgeLevelDebaterCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Polemista: sumá 3.500 XP'**
+  String get badgeLevelDebaterCondition;
+
+  /// No description provided for @badgeLevelNativeIshName.
+  ///
+  /// In es, this message translates to:
+  /// **'Native-ish'**
+  String get badgeLevelNativeIshName;
+
+  /// No description provided for @badgeLevelNativeIshCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Casi nativo: sumá 7.000 XP'**
+  String get badgeLevelNativeIshCondition;
+
+  /// No description provided for @badgeStreak3Name.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha de 3 días'**
+  String get badgeStreak3Name;
+
+  /// No description provided for @badgeStreak3Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicá 3 días seguidos'**
+  String get badgeStreak3Condition;
+
+  /// No description provided for @badgeStreak7Name.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha de 7 días'**
+  String get badgeStreak7Name;
+
+  /// No description provided for @badgeStreak7Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicá 7 días seguidos'**
+  String get badgeStreak7Condition;
+
+  /// No description provided for @badgeStreak30Name.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha de 30 días'**
+  String get badgeStreak30Name;
+
+  /// No description provided for @badgeStreak30Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicá 30 días seguidos'**
+  String get badgeStreak30Condition;
+
+  /// No description provided for @badgeStreak100Name.
+  ///
+  /// In es, this message translates to:
+  /// **'Racha de 100 días'**
+  String get badgeStreak100Name;
+
+  /// No description provided for @badgeStreak100Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicá 100 días seguidos'**
+  String get badgeStreak100Condition;
+
+  /// No description provided for @badgeFirstSessionName.
+  ///
+  /// In es, this message translates to:
+  /// **'Primera sesión'**
+  String get badgeFirstSessionName;
+
+  /// No description provided for @badgeFirstSessionCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá tu primera sesión'**
+  String get badgeFirstSessionCondition;
+
+  /// No description provided for @badgeSessions10Name.
+  ///
+  /// In es, this message translates to:
+  /// **'10 sesiones'**
+  String get badgeSessions10Name;
+
+  /// No description provided for @badgeSessions10Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá 10 sesiones'**
+  String get badgeSessions10Condition;
+
+  /// No description provided for @badgeSessions50Name.
+  ///
+  /// In es, this message translates to:
+  /// **'50 sesiones'**
+  String get badgeSessions50Name;
+
+  /// No description provided for @badgeSessions50Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá 50 sesiones'**
+  String get badgeSessions50Condition;
+
+  /// No description provided for @badgeSessions100Name.
+  ///
+  /// In es, this message translates to:
+  /// **'100 sesiones'**
+  String get badgeSessions100Name;
+
+  /// No description provided for @badgeSessions100Condition.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá 100 sesiones'**
+  String get badgeSessions100Condition;
+
+  /// No description provided for @badgeBossWonName.
+  ///
+  /// In es, this message translates to:
+  /// **'Desafío superado'**
+  String get badgeBossWonName;
+
+  /// No description provided for @badgeBossWonCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Completá una sesión desafío'**
+  String get badgeBossWonCondition;
+
+  /// No description provided for @badgeNoCorrectionsName.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin errores'**
+  String get badgeNoCorrectionsName;
+
+  /// No description provided for @badgeNoCorrectionsCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminá una sesión sin correcciones'**
+  String get badgeNoCorrectionsCondition;
+
+  /// No description provided for @badgeDoubleDayName.
+  ///
+  /// In es, this message translates to:
+  /// **'Día doble'**
+  String get badgeDoubleDayName;
+
+  /// No description provided for @badgeDoubleDayCondition.
+  ///
+  /// In es, this message translates to:
+  /// **'Hacé las 2 sesiones del mismo día'**
+  String get badgeDoubleDayCondition;
+
+  /// No description provided for @badgesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Logros'**
+  String get badgesTitle;
+
+  /// No description provided for @badgesSeeAll.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver logros'**
+  String get badgesSeeAll;
+
+  /// No description provided for @badgesNewUnlocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva insignia'**
+  String get badgesNewUnlocked;
+
+  /// No description provided for @badgesLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueada'**
+  String get badgesLocked;
+
+  /// No description provided for @badgesEarnedOn.
+  ///
+  /// In es, this message translates to:
+  /// **'Ganada el {date}'**
+  String badgesEarnedOn(String date);
+
+  /// No description provided for @badgesProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{current} de {target}'**
+  String badgesProgress(int current, int target);
+
+  /// No description provided for @badgesEarnedCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{earned} de {total}'**
+  String badgesEarnedCount(int earned, int total);
+
+  /// No description provided for @badgesCategoryLevel.
+  ///
+  /// In es, this message translates to:
+  /// **'Niveles'**
+  String get badgesCategoryLevel;
+
+  /// No description provided for @badgesCategoryStreak.
+  ///
+  /// In es, this message translates to:
+  /// **'Rachas'**
+  String get badgesCategoryStreak;
+
+  /// No description provided for @badgesCategorySessions.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesiones'**
+  String get badgesCategorySessions;
+
+  /// No description provided for @badgesCategorySpecial.
+  ///
+  /// In es, this message translates to:
+  /// **'Especiales'**
+  String get badgesCategorySpecial;
 }
 
 class _AppLocalizationsDelegate

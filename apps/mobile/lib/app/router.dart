@@ -9,6 +9,7 @@ import '../l10n/gen/app_localizations.dart';
 import '../core/api/models.dart';
 import '../core/providers.dart';
 import '../features/auth/domain/auth_state.dart';
+import '../features/badges/presentation/badges_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
@@ -159,6 +160,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      GoRoute(
+        path: '/badges',
+        builder: (context, state) => const BadgesScreen(),
       ),
       GoRoute(
         path: '/memory',

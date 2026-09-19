@@ -2,6 +2,7 @@ import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/fluent_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
+import 'package:fluent_mobile/features/badges/domain/badge_labels.dart';
 import 'package:fluent_mobile/core/storage/token_store.dart';
 import 'package:fluent_mobile/features/auth/domain/auth_state.dart';
 import 'package:fluent_mobile/features/session/presentation/session_summary_screen.dart';
@@ -766,6 +767,77 @@ void main() {
     await tester.pump();
     expect(find.text('+85'), findsOneWidget);
     expect(find.text('13'), findsOneWidget);
+    await tester.pumpAndSettle();
+  });
+
+  testWidgets('las insignias nuevas se celebran al final del resumen', (
+    tester,
+  ) async {
+    final haptics = await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 85,
+        streak: 3,
+        correctionsCount: 0,
+        durationSec: 600,
+        newBadges: ['no_corrections', 'streak_3'],
+      ),
+    );
+    await tester.pumpAndSettle();
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    final badges = find.byKey(const Key('summary_new_badges'));
+    expect(badges, findsOneWidget);
+    expect(
+      find.descendant(of: badges, matching: find.text(l10n.badgesNewUnlocked)),
+      findsOneWidget,
+    );
+    for (final id in ['no_corrections', 'streak_3']) {
+      expect(
+        find.descendant(of: badges, matching: find.text(badgeName(l10n, id))),
+        findsOneWidget,
+      );
+    }
+    // Una sola vibración aunque haya insignias.
+    expect(haptics, hasLength(1));
+  });
+
+  testWidgets('sin insignias nuevas no hay sección de insignias', (
+    tester,
+  ) async {
+    await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 85,
+        streak: 3,
+        correctionsCount: 0,
+        durationSec: 600,
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('summary_new_badges')), findsNothing);
+  });
+
+  testWidgets('con "reducir movimiento" las insignias nuevas se ven desde el '
+      'primer cuadro', (tester) async {
+    await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 85,
+        streak: 3,
+        correctionsCount: 0,
+        durationSec: 600,
+        newBadges: ['no_corrections'],
+      ),
+      disableAnimations: true,
+    );
+    await tester.pump();
+    final scale = tester.widget<ScaleTransition>(
+      find.descendant(
+        of: find.byKey(const Key('summary_new_badges')),
+        matching: find.byType(ScaleTransition),
+      ),
+    );
+    expect(scale.scale.value, 1);
     await tester.pumpAndSettle();
   });
 }

@@ -1116,4 +1116,140 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get summaryCorrectedLabel => 'Corrigidas';
+
+  @override
+  String get badgeLevelNewcomerName => 'Newcomer';
+
+  @override
+  String get badgeLevelNewcomerCondition => 'Recém-chegado: comece a praticar';
+
+  @override
+  String get badgeLevelChatterboxName => 'Chatterbox';
+
+  @override
+  String get badgeLevelChatterboxCondition => 'Tagarela: alcance 500 XP';
+
+  @override
+  String get badgeLevelStorytellerName => 'Storyteller';
+
+  @override
+  String get badgeLevelStorytellerCondition =>
+      'Contador de histórias: alcance 1.500 XP';
+
+  @override
+  String get badgeLevelDebaterName => 'Debater';
+
+  @override
+  String get badgeLevelDebaterCondition => 'Debatedor: alcance 3.500 XP';
+
+  @override
+  String get badgeLevelNativeIshName => 'Native-ish';
+
+  @override
+  String get badgeLevelNativeIshCondition => 'Quase nativo: alcance 7.000 XP';
+
+  @override
+  String get badgeStreak3Name => 'Sequência de 3 dias';
+
+  @override
+  String get badgeStreak3Condition => 'Pratique 3 dias seguidos';
+
+  @override
+  String get badgeStreak7Name => 'Sequência de 7 dias';
+
+  @override
+  String get badgeStreak7Condition => 'Pratique 7 dias seguidos';
+
+  @override
+  String get badgeStreak30Name => 'Sequência de 30 dias';
+
+  @override
+  String get badgeStreak30Condition => 'Pratique 30 dias seguidos';
+
+  @override
+  String get badgeStreak100Name => 'Sequência de 100 dias';
+
+  @override
+  String get badgeStreak100Condition => 'Pratique 100 dias seguidos';
+
+  @override
+  String get badgeFirstSessionName => 'Primeira sessão';
+
+  @override
+  String get badgeFirstSessionCondition => 'Complete sua primeira sessão';
+
+  @override
+  String get badgeSessions10Name => '10 sessões';
+
+  @override
+  String get badgeSessions10Condition => 'Complete 10 sessões';
+
+  @override
+  String get badgeSessions50Name => '50 sessões';
+
+  @override
+  String get badgeSessions50Condition => 'Complete 50 sessões';
+
+  @override
+  String get badgeSessions100Name => '100 sessões';
+
+  @override
+  String get badgeSessions100Condition => 'Complete 100 sessões';
+
+  @override
+  String get badgeBossWonName => 'Desafio superado';
+
+  @override
+  String get badgeBossWonCondition => 'Complete uma sessão desafio';
+
+  @override
+  String get badgeNoCorrectionsName => 'Sem erros';
+
+  @override
+  String get badgeNoCorrectionsCondition => 'Termine uma sessão sem correções';
+
+  @override
+  String get badgeDoubleDayName => 'Dia duplo';
+
+  @override
+  String get badgeDoubleDayCondition => 'Faça as 2 sessões do mesmo dia';
+
+  @override
+  String get badgesTitle => 'Conquistas';
+
+  @override
+  String get badgesSeeAll => 'Ver conquistas';
+
+  @override
+  String get badgesNewUnlocked => 'Nova conquista';
+
+  @override
+  String get badgesLocked => 'Bloqueada';
+
+  @override
+  String badgesEarnedOn(String date) {
+    return 'Conquistada em $date';
+  }
+
+  @override
+  String badgesProgress(int current, int target) {
+    return '$current de $target';
+  }
+
+  @override
+  String badgesEarnedCount(int earned, int total) {
+    return '$earned de $total';
+  }
+
+  @override
+  String get badgesCategoryLevel => 'Níveis';
+
+  @override
+  String get badgesCategoryStreak => 'Sequências';
+
+  @override
+  String get badgesCategorySessions => 'Sessões';
+
+  @override
+  String get badgesCategorySpecial => 'Especiais';
 }

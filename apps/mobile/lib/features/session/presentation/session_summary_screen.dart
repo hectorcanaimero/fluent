@@ -14,6 +14,8 @@ import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../badges/domain/badge_labels.dart';
+import '../../badges/presentation/badge_image.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../settings/data/reminder_prefs.dart';
 import '../domain/correction_labels.dart';
@@ -48,6 +50,11 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
 
 class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   late Future<SessionDetailResult> _detailFuture = _loadDetail();
+
+  /// Solo se pide si la sesión ganó insignias (para sus imágenes).
+  late final Future<List<BadgeItem>> _badgesFuture = ref
+      .read(fluentApiProvider)
+      .getBadges();
 
   Future<SessionDetailResult> _loadDetail() =>
       ref.read(fluentApiProvider).getSession(widget.sessionId);
@@ -353,6 +360,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 summary: summary,
                 duration: _durationFor(summary),
                 tooShort: tooShort,
+                badgesFuture: summary.newBadges.isEmpty ? null : _badgesFuture,
               ),
               if (tooShort) ...[
                 const SizedBox(height: AppSpacing.lg),
@@ -706,12 +714,16 @@ class _Celebration extends StatefulWidget {
     required this.summary,
     required this.duration,
     required this.tooShort,
+    this.badgesFuture,
   });
 
   final String title;
   final SessionSummary summary;
   final String duration;
   final bool tooShort;
+
+  /// Catálogo de insignias, para las imágenes de `summary.newBadges`.
+  final Future<List<BadgeItem>>? badgesFuture;
 
   @override
   State<_Celebration> createState() => _CelebrationState();
@@ -741,6 +753,7 @@ class _CelebrationState extends State<_Celebration>
   ];
   late final _xp = _interval(0.4, _xpLands);
   late final _streakUp = _interval(0.78, 0.92, Curves.easeOutBack);
+  late final _badgesIn = _interval(0.86, 1, Curves.easeOutBack);
 
   @override
   void initState() {
@@ -891,6 +904,14 @@ class _CelebrationState extends State<_Celebration>
             ],
           ),
         ),
+        if (summary.newBadges.isNotEmpty) ...[
+          const SizedBox(height: AppSpacing.xl),
+          _NewBadges(
+            ids: summary.newBadges,
+            future: widget.badgesFuture,
+            animation: _badgesIn,
+          ),
+        ],
       ],
     );
   }
@@ -1078,6 +1099,73 @@ class _LevelUpCard extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Insignias ganadas al cerrar esta sesión: entran con un rebote al final
+/// de la celebración. El nombre se muestra ya; la imagen, cuando llega el
+/// catálogo (mientras tanto, un círculo neutro del mismo tamaño).
+class _NewBadges extends StatelessWidget {
+  const _NewBadges({
+    required this.ids,
+    required this.future,
+    required this.animation,
+  });
+
+  final List<String> ids;
+  final Future<List<BadgeItem>>? future;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context).textTheme;
+    return FutureBuilder<List<BadgeItem>>(
+      future: future,
+      builder: (context, snapshot) {
+        final urls = {for (final b in snapshot.data ?? []) b.id: b.imageUrl};
+        return Column(
+          key: const Key('summary_new_badges'),
+          children: [
+            Text(
+              l10n.badgesNewUnlocked,
+              style: theme.labelLarge?.copyWith(color: AppColors.goldText),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ScaleTransition(
+              scale: animation,
+              child: Wrap(
+                alignment: WrapAlignment.center,
+                spacing: AppSpacing.lg,
+                runSpacing: AppSpacing.md,
+                children: [
+                  for (final id in ids)
+                    Semantics(
+                      label:
+                          '${l10n.badgesNewUnlocked}: ${badgeName(l10n, id)}',
+                      excludeSemantics: true,
+                      child: SizedBox(
+                        width: 96,
+                        child: Column(
+                          children: [
+                            BadgeImage(url: urls[id], size: 72, earned: true),
+                            const SizedBox(height: AppSpacing.sm),
+                            Text(
+                              badgeName(l10n, id),
+                              textAlign: TextAlign.center,
+                              style: theme.labelLarge,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 }

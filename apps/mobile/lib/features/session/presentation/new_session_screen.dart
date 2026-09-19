@@ -252,14 +252,25 @@ class _TopicsTab extends StatelessWidget {
           key: const Key('session_new_free_topic_field'),
           controller: freeTopicController,
           decoration: InputDecoration(labelText: l10n.sessionNewFreeTopicLabel),
-          onSubmitted: starting ? null : onTopic,
+          textInputAction: TextInputAction.go,
+          onSubmitted: (text) {
+            final topic = text.trim();
+            if (!starting && topic.isNotEmpty) onTopic(topic);
+          },
         ),
         const SizedBox(height: AppSpacing.md),
-        ElevatedButton(
-          onPressed: starting || freeTopicController.text.trim().isEmpty
-              ? null
-              : () => onTopic(freeTopicController.text.trim()),
-          child: Text(l10n.sessionNewFreeTopicSubmit),
+        // Escucha al controller: sin esto el botón nunca se habilitaba al
+        // escribir, porque nada redibujaba este widget.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: freeTopicController,
+          builder: (context, value, _) {
+            final topic = value.text.trim();
+            return ElevatedButton(
+              key: const Key('session_new_free_topic_submit'),
+              onPressed: starting || topic.isEmpty ? null : () => onTopic(topic),
+              child: Text(l10n.sessionNewFreeTopicSubmit),
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.xl),
         OutlinedButton(
@@ -341,9 +352,15 @@ class _NewsTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      item.source,
-                      style: Theme.of(context).textTheme.labelSmall,
+                    // Fuentes con nombre largo desbordaban el renglón: la
+                    // fuente se corta y la hora queda siempre visible.
+                    Flexible(
+                      child: Text(
+                        item.source,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     ),
                     if (item.time != null) ...[
                       const SizedBox(width: AppSpacing.sm),

@@ -12,6 +12,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../../settings/data/reminder_prefs.dart';
 import '../domain/correction_labels.dart';
@@ -45,9 +46,10 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
 }
 
 class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
-  late final Future<SessionDetailResult> _detailFuture = ref
-      .read(fluentApiProvider)
-      .getSession(widget.sessionId);
+  late Future<SessionDetailResult> _detailFuture = _loadDetail();
+
+  Future<SessionDetailResult> _loadDetail() =>
+      ref.read(fluentApiProvider).getSession(widget.sessionId);
 
   /// MAL-28: "primera sesión válida" no viene de la API (no hay un contador
   /// de sesiones totales) — se guarda localmente la primera vez que
@@ -67,6 +69,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     final alreadyDone = prefs.getBool(kFirstValidSessionPrefsKey) ?? false;
     if (alreadyDone) return false;
     await prefs.setBool(kFirstValidSessionPrefsKey, true);
+    ref.invalidate(firstValidSessionDoneProvider);
     return true;
   }
 
@@ -296,16 +299,28 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     return FutureBuilder<SessionDetailResult>(
       future: _detailFuture,
       builder: (context, snapshot) {
-        if (!snapshot.hasData) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
+        final detail = snapshot.data;
+        if (detail != null &&
+            snapshot.connectionState == ConnectionState.done) {
+          return _buildScaffold(
+            context,
+            summary: _summaryFromDetail(detail),
+            correctionsFuture: Future.value(detail.corrections),
           );
         }
-        final detail = snapshot.data!;
-        return _buildScaffold(
-          context,
-          summary: _summaryFromDetail(detail),
-          correctionsFuture: Future.value(detail.corrections),
+        // Sin el resumen en `extra` (p. ej. tras reiniciar la app) la carga
+        // puede fallar: antes el spinner giraba para siempre, sin salida.
+        return Scaffold(
+          appBar: AppBar(
+            leading: CloseButton(onPressed: () => context.go('/')),
+          ),
+          body: AsyncBody<SessionDetailResult>(
+            snapshot: snapshot,
+            onRetry: () => setState(() {
+              _detailFuture = _loadDetail();
+            }),
+            builder: (_) => const SizedBox.shrink(),
+          ),
         );
       },
     );
@@ -331,7 +346,11 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
             children: [
               const SizedBox(height: AppSpacing.xl),
               Text(
-                tooShort ? l10n.summaryTooShortTitle : l10n.summaryTitle,
+                tooShort
+                    ? l10n.summaryTooShortTitle
+                    : summary.correctionsCount == 0
+                    ? l10n.summaryTitleNoCorrections
+                    : l10n.summaryTitle,
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.headlineMedium,
               ),

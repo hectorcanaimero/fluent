@@ -81,6 +81,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
           .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+    } catch (_) {
+      // Sin red o timeout: antes fallaba en silencio.
+      if (mounted) _showGenericError();
     } finally {
       if (mounted) setState(() => _startingChallenge = false);
     }
@@ -110,9 +113,18 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+    } catch (_) {
+      if (mounted) _showGenericError();
     } finally {
       if (mounted) setState(() => _invitingFriend = false);
     }
+  }
+
+  void _showGenericError() {
+    final l10n = AppLocalizations.of(context);
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
   }
 
   @override

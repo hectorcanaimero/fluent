@@ -149,7 +149,7 @@ abstract class AppLocalizations {
   /// No description provided for @commonLoadErrorBody.
   ///
   /// In es, this message translates to:
-  /// **'Revisá tu conexión e intentá de nuevo.'**
+  /// **'Revisá tu conexión y probá de nuevo.'**
   String get commonLoadErrorBody;
 
   /// No description provided for @commonRetry.
@@ -185,7 +185,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorValidation.
   ///
   /// In es, this message translates to:
-  /// **'Revisá los datos e intentá de nuevo.'**
+  /// **'Revisá los datos y probá de nuevo.'**
   String get errorValidation;
 
   /// No description provided for @errorInvitationInvalid.
@@ -215,7 +215,7 @@ abstract class AppLocalizations {
   /// No description provided for @errorProviderNotConnected.
   ///
   /// In es, this message translates to:
-  /// **'Conectá un proveedor para poder practicar.'**
+  /// **'Conectá tu cuenta de IA para poder practicar.'**
   String get errorProviderNotConnected;
 
   /// No description provided for @errorProviderKeyInvalid.
@@ -317,7 +317,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeSlide2Body.
   ///
   /// In es, this message translates to:
-  /// **'Armá tu grupo, sumá puntos en cada sesión y subí en el ranking.'**
+  /// **'Sumate con el código de un amigo o invitá a los tuyos. Cada sesión suma en el ranking.'**
   String get welcomeSlide2Body;
 
   /// No description provided for @welcomeSlide3Title.
@@ -353,7 +353,7 @@ abstract class AppLocalizations {
   /// No description provided for @welcomeStreakDays.
   ///
   /// In es, this message translates to:
-  /// **'{count} días'**
+  /// **'{count, plural, one{1 día} other{{count} días}}'**
   String welcomeStreakDays(int count);
 
   /// No description provided for @welcomePageLabel.
@@ -467,7 +467,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingLevelAdvancedSubtitle.
   ///
   /// In es, this message translates to:
-  /// **'Soy fluido y quiero pulir matices'**
+  /// **'Me defiendo bien y quiero sonar más natural'**
   String get onboardingLevelAdvancedSubtitle;
 
   /// No description provided for @onboardingInterestsHeadline.
@@ -485,7 +485,7 @@ abstract class AppLocalizations {
   /// No description provided for @onboardingInterestsSelectedCount.
   ///
   /// In es, this message translates to:
-  /// **'{count} seleccionados'**
+  /// **'{count, plural, one{1 seleccionado} other{{count} seleccionados}}'**
   String onboardingInterestsSelectedCount(int count);
 
   /// No description provided for @onboardingInterestsSeeMore.
@@ -641,7 +641,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersTitle.
   ///
   /// In es, this message translates to:
-  /// **'Proveedores y modelos'**
+  /// **'Tu cuenta de IA'**
   String get providersTitle;
 
   /// No description provided for @providersGoPractice.
@@ -719,7 +719,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersLoadError.
   ///
   /// In es, this message translates to:
-  /// **'No pudimos cargar los proveedores.'**
+  /// **'No pudimos cargar tus cuentas de IA.'**
   String get providersLoadError;
 
   /// No description provided for @providersGeminiPasteKeyButton.
@@ -791,7 +791,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersModelBriefTitle.
   ///
   /// In es, this message translates to:
-  /// **'Modelo para el coach'**
+  /// **'Modelo para las notas del tutor'**
   String get providersModelBriefTitle;
 
   /// No description provided for @providersModelTierFree.
@@ -809,7 +809,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersModelTierPremium.
   ///
   /// In es, this message translates to:
-  /// **'Premium'**
+  /// **'Mejor calidad'**
   String get providersModelTierPremium;
 
   /// No description provided for @providersModelEstimateFree.
@@ -827,7 +827,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeNeedProviderHint.
   ///
   /// In es, this message translates to:
-  /// **'Conectá un proveedor para poder practicar'**
+  /// **'Conectá tu cuenta de IA para poder practicar'**
   String get homeNeedProviderHint;
 
   /// No description provided for @homeGreetingMorning.
@@ -851,7 +851,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeStreakDays.
   ///
   /// In es, this message translates to:
-  /// **'{count} días de racha'**
+  /// **'{count, plural, one{1 día de racha} other{{count} días de racha}}'**
   String homeStreakDays(int count);
 
   /// No description provided for @streakGraceAvailable.
@@ -881,7 +881,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeBossButton.
   ///
   /// In es, this message translates to:
-  /// **'Boss battle'**
+  /// **'Sesión desafío'**
   String get homeBossButton;
 
   /// No description provided for @homeBossSkip.
@@ -917,13 +917,13 @@ abstract class AppLocalizations {
   /// No description provided for @homePendingFactsCard.
   ///
   /// In es, this message translates to:
-  /// **'Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?'**
+  /// **'{count, plural, one{Tengo 1 cosa nueva para recordar de vos, ¿la revisás?} other{Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?}}'**
   String homePendingFactsCard(int count);
 
   /// No description provided for @homeNoProviderBanner.
   ///
   /// In es, this message translates to:
-  /// **'Conectá un proveedor para practicar'**
+  /// **'Conectá tu cuenta de IA para seguir practicando'**
   String get homeNoProviderBanner;
 
   /// No description provided for @homeNoProviderAction.
@@ -935,7 +935,7 @@ abstract class AppLocalizations {
   /// No description provided for @homePendingActionWeeklySummaryCredential.
   ///
   /// In es, this message translates to:
-  /// **'El resumen semanal del grupo no se pudo generar: conectá un proveedor para que siga funcionando.'**
+  /// **'El resumen de esta semana necesita tu cuenta de IA. Conectala para que siga saliendo.'**
   String get homePendingActionWeeklySummaryCredential;
 
   /// No description provided for @homePendingActionAction.
@@ -995,7 +995,7 @@ abstract class AppLocalizations {
   /// No description provided for @sessionNewSurpriseMeHint.
   ///
   /// In es, this message translates to:
-  /// **'Dejá que tu coach elija según lo que practicaste'**
+  /// **'Dejá que tu tutor elija según lo que practicaste'**
   String get sessionNewSurpriseMeHint;
 
   /// No description provided for @sessionNewFreeTopicLabel.
@@ -1181,7 +1181,7 @@ abstract class AppLocalizations {
   /// No description provided for @conversationDegradedChip.
   ///
   /// In es, this message translates to:
-  /// **'Usé un modelo alternativo'**
+  /// **'Respuesta de respaldo'**
   String get conversationDegradedChip;
 
   /// No description provided for @conversationUnavailableTitle.
@@ -1295,7 +1295,7 @@ abstract class AppLocalizations {
   /// No description provided for @summaryTitle.
   ///
   /// In es, this message translates to:
-  /// **'¡Excelente sesión!'**
+  /// **'Sesión hecha'**
   String get summaryTitle;
 
   /// No description provided for @summaryXpEarnedLabel.
@@ -1331,7 +1331,7 @@ abstract class AppLocalizations {
   /// No description provided for @summaryNextIsBossBanner.
   ///
   /// In es, this message translates to:
-  /// **'La próxima sesión es un Boss battle'**
+  /// **'Tu próxima sesión es un desafío'**
   String get summaryNextIsBossBanner;
 
   /// No description provided for @summaryDoubleDayBadge.
@@ -1367,7 +1367,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryConfirmedEmpty.
   ///
   /// In es, this message translates to:
-  /// **'Todavía no hay hechos confirmados.'**
+  /// **'Todavía no hay datos confirmados.'**
   String get memoryConfirmedEmpty;
 
   /// No description provided for @memoryConfirmFact.
@@ -1385,7 +1385,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryEditFactTitle.
   ///
   /// In es, this message translates to:
-  /// **'Editar hecho'**
+  /// **'Editar dato'**
   String get memoryEditFactTitle;
 
   /// No description provided for @memoryEditFactCancel.
@@ -1403,7 +1403,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryBriefSectionTitle.
   ///
   /// In es, this message translates to:
-  /// **'Notas del coach'**
+  /// **'Notas del tutor'**
   String get memoryBriefSectionTitle;
 
   /// No description provided for @memoryBriefExplanation.
@@ -1433,7 +1433,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryForgetAllConfirmBody1.
   ///
   /// In es, this message translates to:
-  /// **'Se van a borrar todos los hechos confirmados y las notas del coach.'**
+  /// **'Se van a borrar todos los datos confirmados y las notas del tutor.'**
   String get memoryForgetAllConfirmBody1;
 
   /// No description provided for @memoryForgetAllConfirmTitle2.
@@ -1475,7 +1475,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupStreak.
   ///
   /// In es, this message translates to:
-  /// **'{count} días en racha grupal'**
+  /// **'{count, plural, one{1 día en racha grupal} other{{count} días en racha grupal}}'**
   String groupStreak(int count);
 
   /// No description provided for @groupChallengesTitle.
@@ -1601,7 +1601,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsEveningReminder.
   ///
   /// In es, this message translates to:
-  /// **'Sesión de la tarde'**
+  /// **'Sesión de la noche'**
   String get settingsEveningReminder;
 
   /// No description provided for @settingsStreakAlert.
@@ -1637,7 +1637,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsDeleteAccountConfirmBody.
   ///
   /// In es, this message translates to:
-  /// **'Se borran tus sesiones, hechos y preferencias. No se puede deshacer.'**
+  /// **'Se borran tus sesiones, datos y preferencias. No se puede deshacer.'**
   String get settingsDeleteAccountConfirmBody;
 
   /// No description provided for @settingsDeleteAccountCancel.
@@ -1727,7 +1727,7 @@ abstract class AppLocalizations {
   /// No description provided for @memoryFactDeleted.
   ///
   /// In es, this message translates to:
-  /// **'Hecho borrado.'**
+  /// **'Dato borrado.'**
   String get memoryFactDeleted;
 
   /// No description provided for @commonXpAmount.
@@ -1889,7 +1889,7 @@ abstract class AppLocalizations {
   /// No description provided for @homeChecklistProvider.
   ///
   /// In es, this message translates to:
-  /// **'Conectar IA'**
+  /// **'Conectar tu cuenta de IA'**
   String get homeChecklistProvider;
 
   /// No description provided for @homeChecklistFirstSession.
@@ -1901,19 +1901,19 @@ abstract class AppLocalizations {
   /// No description provided for @homeCourtesyPracticeButton.
   ///
   /// In es, this message translates to:
-  /// **'Probá tu primera sesión sin conectar nada'**
+  /// **'Probar una sesión gratis'**
   String get homeCourtesyPracticeButton;
 
   /// No description provided for @summaryCourtesyBanner.
   ///
   /// In es, this message translates to:
-  /// **'Esa fue tu sesión de cortesía.'**
+  /// **'Esa fue tu sesión de cortesía. Conectar tu cuenta de IA te lleva 2 minutos y es gratis.'**
   String get summaryCourtesyBanner;
 
   /// No description provided for @summaryCourtesyConnectButton.
   ///
   /// In es, this message translates to:
-  /// **'Para seguir, conectá tu cuenta gratis (2 minutos)'**
+  /// **'Conectar mi cuenta'**
   String get summaryCourtesyConnectButton;
 
   /// No description provided for @firstSessionReminderDialogTitle.
@@ -1943,7 +1943,7 @@ abstract class AppLocalizations {
   /// No description provided for @streakDangerBody.
   ///
   /// In es, this message translates to:
-  /// **'Tu racha de {days} días vence a medianoche. 3 minutos alcanzan.'**
+  /// **'{days, plural, one{Tu racha de 1 día vence a medianoche. 3 minutos alcanzan.} other{Tu racha de {days} días vence a medianoche. 3 minutos alcanzan.}}'**
   String streakDangerBody(int days);
 
   /// No description provided for @streakDangerGraceBody.
@@ -1993,6 +1993,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos iniciar sesión. Probá de nuevo.'**
   String get authSignInError;
+
+  /// No description provided for @summaryTitleNoCorrections.
+  ///
+  /// In es, this message translates to:
+  /// **'Sesión sin correcciones'**
+  String get summaryTitleNoCorrections;
+
+  /// No description provided for @memoryBriefSaved.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas guardadas.'**
+  String get memoryBriefSaved;
 }
 
 class _AppLocalizationsDelegate

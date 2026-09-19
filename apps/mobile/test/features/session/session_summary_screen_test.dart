@@ -14,7 +14,55 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+/// Falla la primera carga del detalle (p. ej. sin red al reabrir la app).
+class _DetailFailsOnceApi extends FakeApi {
+  _DetailFailsOnceApi() : super(artificialDelay: Duration.zero);
+
+  var _calls = 0;
+
+  @override
+  Future<SessionDetailResult> getSession(String sessionId) {
+    _calls += 1;
+    if (_calls == 1) return Future.error(Exception('offline'));
+    return super.getSession(sessionId);
+  }
+}
+
 void main() {
+  testWidgets('sin extra, si falla la carga ofrece reintentar en vez de girar para siempre', (
+    tester,
+  ) async {
+    final api = _DetailFailsOnceApi();
+    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
+    await api.endSession(sessionId: created.session.id, reason: 'user');
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: SessionSummaryScreen(sessionId: created.session.id),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+
+    await tester.tap(find.text(l10n.commonRetry));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+    expect(find.text('+85'), findsOneWidget);
+  });
+
   testWidgets('muestra XP, streak, duración y el aviso de boss battle', (
     tester,
   ) async {

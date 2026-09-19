@@ -26,6 +26,13 @@ class AsyncBody<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Al reintentar, FutureBuilder conserva el error anterior mientras carga
+    // y sin esto se seguía mostrando. Una recarga con datos previos, en
+    // cambio, los mantiene a la vista en vez de volver al skeleton.
+    if (snapshot.connectionState == ConnectionState.waiting &&
+        (snapshot.hasError || !snapshot.hasData)) {
+      return _loading(context);
+    }
     if (snapshot.hasError) {
       final l10n = AppLocalizations.of(context);
       return Center(
@@ -52,12 +59,14 @@ class AsyncBody<T> extends StatelessWidget {
         ),
       );
     }
-    if (!snapshot.hasData) {
-      final skeletonBuilder = skeleton;
-      return skeletonBuilder != null
-          ? skeletonBuilder(context)
-          : const Center(child: CircularProgressIndicator());
-    }
+    if (!snapshot.hasData) return _loading(context);
     return builder(snapshot.data as T);
+  }
+
+  Widget _loading(BuildContext context) {
+    final skeletonBuilder = skeleton;
+    return skeletonBuilder != null
+        ? skeletonBuilder(context)
+        : const Center(child: CircularProgressIndicator());
   }
 }

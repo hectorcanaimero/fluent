@@ -34,7 +34,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonLoadErrorTitle => 'No pudimos cargar esto';
 
   @override
-  String get commonLoadErrorBody => 'Revisá tu conexión e intentá de nuevo.';
+  String get commonLoadErrorBody => 'Revisá tu conexión y probá de nuevo.';
 
   @override
   String get commonRetry => 'Reintentar';
@@ -52,7 +52,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get errorNotOnboarded => 'Todavía te falta completar tu perfil.';
 
   @override
-  String get errorValidation => 'Revisá los datos e intentá de nuevo.';
+  String get errorValidation => 'Revisá los datos y probá de nuevo.';
 
   @override
   String get errorInvitationInvalid => 'Ese código de invitación no es válido.';
@@ -68,7 +68,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get errorProviderNotConnected =>
-      'Conectá un proveedor para poder practicar.';
+      'Conectá tu cuenta de IA para poder practicar.';
 
   @override
   String get errorProviderKeyInvalid => 'Esa clave no es válida.';
@@ -127,7 +127,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get welcomeSlide2Body =>
-      'Armá tu grupo, sumá puntos en cada sesión y subí en el ranking.';
+      'Sumate con el código de un amigo o invitá a los tuyos. Cada sesión suma en el ranking.';
 
   @override
   String get welcomeSlide3Title => '10 minutos, dos veces al día';
@@ -147,7 +147,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String welcomeStreakDays(int count) {
-    return '$count días';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días',
+      one: '1 día',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -215,7 +221,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get onboardingLevelAdvancedSubtitle =>
-      'Soy fluido y quiero pulir matices';
+      'Me defiendo bien y quiero sonar más natural';
 
   @override
   String get onboardingInterestsHeadline => '¿De qué te gusta hablar?';
@@ -226,7 +232,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String onboardingInterestsSelectedCount(int count) {
-    return '$count seleccionados';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count seleccionados',
+      one: '1 seleccionado',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -305,7 +317,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interestFamilyRelationships => 'Vida familiar y relaciones';
 
   @override
-  String get providersTitle => 'Proveedores y modelos';
+  String get providersTitle => 'Tu cuenta de IA';
 
   @override
   String get providersGoPractice => 'Listo, ir a practicar';
@@ -348,7 +360,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos conectar con OpenRouter. Probá de nuevo.';
 
   @override
-  String get providersLoadError => 'No pudimos cargar los proveedores.';
+  String get providersLoadError => 'No pudimos cargar tus cuentas de IA.';
 
   @override
   String get providersGeminiPasteKeyButton => 'Pegar API key';
@@ -384,7 +396,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get providersModelChatTitle => 'Modelo para conversar';
 
   @override
-  String get providersModelBriefTitle => 'Modelo para el coach';
+  String get providersModelBriefTitle => 'Modelo para las notas del tutor';
 
   @override
   String get providersModelTierFree => 'Gratis';
@@ -393,7 +405,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get providersModelTierBudget => 'Económico';
 
   @override
-  String get providersModelTierPremium => 'Premium';
+  String get providersModelTierPremium => 'Mejor calidad';
 
   @override
   String get providersModelEstimateFree => 'Gratis';
@@ -405,7 +417,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get homeNeedProviderHint =>
-      'Conectá un proveedor para poder practicar';
+      'Conectá tu cuenta de IA para poder practicar';
 
   @override
   String homeGreetingMorning(String name) {
@@ -424,7 +436,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String homeStreakDays(int count) {
-    return '$count días de racha';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días de racha',
+      one: '1 día de racha',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -442,7 +460,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homePracticeButton => 'Practicar 10 min';
 
   @override
-  String get homeBossButton => 'Boss battle';
+  String get homeBossButton => 'Sesión desafío';
 
   @override
   String get homeBossSkip => 'Hoy no';
@@ -465,18 +483,25 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String homePendingFactsCard(int count) {
-    return 'Tengo $count cosas nuevas para recordar de vos, ¿las revisás?';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tengo $count cosas nuevas para recordar de vos, ¿las revisás?',
+      one: 'Tengo 1 cosa nueva para recordar de vos, ¿la revisás?',
+    );
+    return '$_temp0';
   }
 
   @override
-  String get homeNoProviderBanner => 'Conectá un proveedor para practicar';
+  String get homeNoProviderBanner =>
+      'Conectá tu cuenta de IA para seguir practicando';
 
   @override
   String get homeNoProviderAction => 'Conectar';
 
   @override
   String get homePendingActionWeeklySummaryCredential =>
-      'El resumen semanal del grupo no se pudo generar: conectá un proveedor para que siga funcionando.';
+      'El resumen de esta semana necesita tu cuenta de IA. Conectala para que siga saliendo.';
 
   @override
   String get homePendingActionAction => 'Revisar';
@@ -507,7 +532,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get sessionNewSurpriseMeHint =>
-      'Dejá que tu coach elija según lo que practicaste';
+      'Dejá que tu tutor elija según lo que practicaste';
 
   @override
   String get sessionNewFreeTopicLabel => 'O escribí tu propio tema';
@@ -615,7 +640,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get conversationCorrectionCorrectedLabel => 'Mejor así';
 
   @override
-  String get conversationDegradedChip => 'Usé un modelo alternativo';
+  String get conversationDegradedChip => 'Respuesta de respaldo';
 
   @override
   String get conversationUnavailableTitle => 'El tutor no está disponible';
@@ -681,7 +706,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get conversationReplayAudio => 'Repetir audio';
 
   @override
-  String get summaryTitle => '¡Excelente sesión!';
+  String get summaryTitle => 'Sesión hecha';
 
   @override
   String get summaryXpEarnedLabel => 'XP ganado';
@@ -699,7 +724,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get summaryCorrectionsEmpty => 'Sin correcciones esta vez, ¡muy bien!';
 
   @override
-  String get summaryNextIsBossBanner => 'La próxima sesión es un Boss battle';
+  String get summaryNextIsBossBanner => 'Tu próxima sesión es un desafío';
 
   @override
   String get summaryDoubleDayBadge =>
@@ -718,7 +743,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get memoryConfirmedSectionTitle => 'Lo que recuerdo';
 
   @override
-  String get memoryConfirmedEmpty => 'Todavía no hay hechos confirmados.';
+  String get memoryConfirmedEmpty => 'Todavía no hay datos confirmados.';
 
   @override
   String get memoryConfirmFact => 'Confirmar';
@@ -727,7 +752,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get memoryDismissFact => 'Descartar';
 
   @override
-  String get memoryEditFactTitle => 'Editar hecho';
+  String get memoryEditFactTitle => 'Editar dato';
 
   @override
   String get memoryEditFactCancel => 'Cancelar';
@@ -736,7 +761,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get memoryEditFactSave => 'Guardar';
 
   @override
-  String get memoryBriefSectionTitle => 'Notas del coach';
+  String get memoryBriefSectionTitle => 'Notas del tutor';
 
   @override
   String get memoryBriefExplanation =>
@@ -754,7 +779,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get memoryForgetAllConfirmBody1 =>
-      'Se van a borrar todos los hechos confirmados y las notas del coach.';
+      'Se van a borrar todos los datos confirmados y las notas del tutor.';
 
   @override
   String get memoryForgetAllConfirmTitle2 => 'Esto no se puede deshacer';
@@ -777,7 +802,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String groupStreak(int count) {
-    return '$count días en racha grupal';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count días en racha grupal',
+      one: '1 día en racha grupal',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -846,7 +877,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get settingsMorningReminder => 'Sesión de la mañana';
 
   @override
-  String get settingsEveningReminder => 'Sesión de la tarde';
+  String get settingsEveningReminder => 'Sesión de la noche';
 
   @override
   String get settingsStreakAlert => 'Alerta de racha en riesgo';
@@ -865,7 +896,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get settingsDeleteAccountConfirmBody =>
-      'Se borran tus sesiones, hechos y preferencias. No se puede deshacer.';
+      'Se borran tus sesiones, datos y preferencias. No se puede deshacer.';
 
   @override
   String get settingsDeleteAccountCancel => 'Cancelar';
@@ -913,7 +944,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonUndo => 'Deshacer';
 
   @override
-  String get memoryFactDeleted => 'Hecho borrado.';
+  String get memoryFactDeleted => 'Dato borrado.';
 
   @override
   String commonXpAmount(int amount) {
@@ -1005,21 +1036,20 @@ class AppLocalizationsEs extends AppLocalizations {
   String get homeChecklistProfile => 'Perfil listo';
 
   @override
-  String get homeChecklistProvider => 'Conectar IA';
+  String get homeChecklistProvider => 'Conectar tu cuenta de IA';
 
   @override
   String get homeChecklistFirstSession => 'Primera sesión de 3 min';
 
   @override
-  String get homeCourtesyPracticeButton =>
-      'Probá tu primera sesión sin conectar nada';
+  String get homeCourtesyPracticeButton => 'Probar una sesión gratis';
 
   @override
-  String get summaryCourtesyBanner => 'Esa fue tu sesión de cortesía.';
+  String get summaryCourtesyBanner =>
+      'Esa fue tu sesión de cortesía. Conectar tu cuenta de IA te lleva 2 minutos y es gratis.';
 
   @override
-  String get summaryCourtesyConnectButton =>
-      'Para seguir, conectá tu cuenta gratis (2 minutos)';
+  String get summaryCourtesyConnectButton => 'Conectar mi cuenta';
 
   @override
   String get firstSessionReminderDialogTitle =>
@@ -1037,7 +1067,13 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String streakDangerBody(int days) {
-    return 'Tu racha de $days días vence a medianoche. 3 minutos alcanzan.';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other: 'Tu racha de $days días vence a medianoche. 3 minutos alcanzan.',
+      one: 'Tu racha de 1 día vence a medianoche. 3 minutos alcanzan.',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -1068,4 +1104,10 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get authSignInError => 'No pudimos iniciar sesión. Probá de nuevo.';
+
+  @override
+  String get summaryTitleNoCorrections => 'Sesión sin correcciones';
+
+  @override
+  String get memoryBriefSaved => 'Notas guardadas.';
 }

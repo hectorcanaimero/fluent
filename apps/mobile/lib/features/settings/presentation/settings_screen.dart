@@ -224,7 +224,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    me.profile.level,
+                    _levelLabel(AppLocalizations.of(context), me.profile.level),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -377,3 +377,12 @@ class _LocaleOption extends StatelessWidget {
     );
   }
 }
+
+/// Nombre del nivel del perfil tal como se eligió en el onboarding; antes se
+/// mostraba el código de la API ("B1").
+String _levelLabel(AppLocalizations l10n, String level) => switch (level) {
+  'A2' => l10n.onboardingLevelBeginnerTitle,
+  'B1' => l10n.onboardingLevelIntermediateTitle,
+  'B2' => l10n.onboardingLevelAdvancedTitle,
+  _ => level,
+};

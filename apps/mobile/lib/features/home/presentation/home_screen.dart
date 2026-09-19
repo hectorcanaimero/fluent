@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/errors/api_exception.dart';
@@ -244,17 +243,19 @@ class _HeaderRow extends StatelessWidget {
 /// desaparece en cuanto los 3 están listos, no se queda ocupando lugar para
 /// siempre. "Primera sesión de 3 min" reusa el mismo flag de
 /// `SharedPreferences` que MAL-28 usa para "primera sesión válida".
-class _OnboardingChecklist extends StatelessWidget {
+class _OnboardingChecklist extends ConsumerWidget {
   const _OnboardingChecklist({required this.data});
 
   final HomeData data;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _hasFirstValidSession(),
-      builder: (context, snapshot) {
-        final firstSessionDone = snapshot.data ?? false;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Mientras se lee la preferencia no se muestra nada: mostrarlo y
+    // esconderlo un instante después era justamente el parpadeo.
+    return ref.watch(firstValidSessionDoneProvider).when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (firstSessionDone) {
         final providerConnected = data.hasActiveProvider;
         if (providerConnected && firstSessionDone) {
           return const SizedBox.shrink();
@@ -292,11 +293,6 @@ class _OnboardingChecklist extends StatelessWidget {
         );
       },
     );
-  }
-
-  static Future<bool> _hasFirstValidSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(kFirstValidSessionPrefsKey) ?? false;
   }
 }
 

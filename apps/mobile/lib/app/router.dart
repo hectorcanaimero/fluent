@@ -9,8 +9,6 @@ import '../l10n/gen/app_localizations.dart';
 import '../core/api/models.dart';
 import '../core/providers.dart';
 import '../features/auth/domain/auth_state.dart';
-import '../features/auth/presentation/login_screen.dart';
-import '../features/auth/presentation/register_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
@@ -22,6 +20,7 @@ import '../features/session/presentation/conversation_screen.dart';
 import '../features/session/presentation/new_session_screen.dart';
 import '../features/session/presentation/session_summary_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
+import '../features/welcome/presentation/welcome_screen.dart';
 import 'splash_screen.dart';
 
 /// Puente entre `AuthController` (Riverpod) y `GoRouter.refreshListenable`
@@ -32,11 +31,16 @@ class RouterNotifier extends ChangeNotifier {
     _ref.listen<AuthState>(authControllerProvider, (previous, next) {
       notifyListeners();
     });
+    _ref.listen<bool>(splashDoneProvider, (previous, next) {
+      notifyListeners();
+    });
   }
 
   final Ref _ref;
 
   AuthState get authState => _ref.read(authControllerProvider);
+
+  bool get splashDone => _ref.read(splashDoneProvider);
 }
 
 final routerNotifierProvider = Provider<RouterNotifier>((ref) {
@@ -46,7 +50,13 @@ final routerNotifierProvider = Provider<RouterNotifier>((ref) {
 });
 
 @visibleForTesting
-String? computeRedirect(AuthState auth, String location) {
+String? computeRedirect(
+  AuthState auth,
+  String location, {
+  bool splashDone = true,
+}) {
+  if (location == '/splash' && !splashDone) return null;
+
   // `unknown` (resolviendo) y `error` (hay tokens pero no se pudo comprobar
   // la sesión, MAL-03) van los dos al splash: es la pantalla que muestra o
   // bien el spinner o bien "No pudimos conectar" con **Reintentar**. Mandar
@@ -55,7 +65,7 @@ String? computeRedirect(AuthState auth, String location) {
     return location == '/splash' ? null : '/splash';
   }
 
-  final isAuthRoute = location == '/login' || location == '/register';
+  final isAuthRoute = location == '/login';
 
   if (auth.status == AuthStatus.unauthenticated) {
     return isAuthRoute ? null : '/login';
@@ -86,16 +96,30 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/splash',
     refreshListenable: notifier,
     redirect: (context, state) =>
-        computeRedirect(notifier.authState, state.matchedLocation),
+        computeRedirect(
+      notifier.authState,
+      state.matchedLocation,
+      splashDone: notifier.splashDone,
+    ),
     routes: [
       GoRoute(
         path: '/splash',
         builder: (context, state) => const SplashScreen(),
       ),
-      GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
+      // Fundido corto: la bienvenida arranca redibujando el logo del último
+      // cuadro del splash en el mismo lugar, así que lo compartido queda
+      // quieto y solo el lema y los puntos del splash se desvanecen.
       GoRoute(
-        path: '/register',
-        builder: (context, state) => const RegisterScreen(),
+        path: '/login',
+        pageBuilder: (context, state) => CustomTransitionPage(
+          key: state.pageKey,
+          child: const WelcomeScreen(),
+          transitionDuration: WelcomeScreen.handoffDuration,
+          transitionsBuilder: (context, animation, _, child) => FadeTransition(
+            opacity: CurvedAnimation(parent: animation, curve: Curves.easeOut),
+            child: child,
+          ),
+        ),
       ),
       GoRoute(
         path: '/onboarding',

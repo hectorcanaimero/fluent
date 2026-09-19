@@ -236,10 +236,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Chip(label: Text(interestLabel(l10n, id))),
                     ],
                   ),
-                  // MAL-14: quien se registró sin grupo (código inválido, o
-                  // "continuar sin grupo") no tenía forma de sumarse
-                  // después — la única entrada de código era el registro.
-                  if (me.group == null) ...[
+                  // MAL-14: única entrada del código de invitación. También
+                  // se muestra en el grupo por defecto: el código lleva al
+                  // grupo de un amigo.
+                  if (me.group == null || me.group!.isDefault) ...[
                     const SizedBox(height: AppSpacing.xl),
                     Text(
                       l10n.settingsInvitationTitle,

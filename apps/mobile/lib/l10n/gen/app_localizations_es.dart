@@ -10,7 +10,7 @@ class AppLocalizationsEs extends AppLocalizations {
   AppLocalizationsEs([String locale = 'es']) : super(locale);
 
   @override
-  String get appTitle => 'Fluent';
+  String get appTitle => 'Open Fluent';
 
   @override
   String get splashLoading => 'Cargando…';
@@ -116,69 +116,44 @@ class AppLocalizationsEs extends AppLocalizations {
   String get formFieldRequired => 'Este campo es obligatorio.';
 
   @override
-  String get loginWelcomeHeadline =>
-      'Hablá inglés con confianza, de a 10 minutos';
+  String get welcomeSlide1Title => 'Un tutor que se acuerda de vos';
 
   @override
-  String get loginWelcomeSubtitle =>
-      'Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.';
+  String get welcomeSlide1Body =>
+      'Hablá de tu trabajo, tu viaje o tu entrevista. Te corrige al momento, sin cortarte.';
 
   @override
-  String get loginBenefit1 =>
-      'Un tutor que se acuerda de vos: de tu trabajo, tu viaje, tu entrevista';
+  String get welcomeSlide2Title => 'Practicá con tus amigos';
 
   @override
-  String get loginBenefit2 =>
-      'Practicá con tus amigos, no con extraños: ranking y desafíos del grupo';
+  String get welcomeSlide2Body =>
+      'Armá tu grupo, sumá puntos en cada sesión y subí en el ranking.';
 
   @override
-  String get loginBenefit3 =>
-      '10 minutos, dos veces al día, con tu propia cuenta de IA gratis';
+  String get welcomeSlide3Title => '10 minutos, dos veces al día';
 
   @override
-  String get loginGetStartedButton => 'Crear cuenta';
+  String get welcomeSlide3Body =>
+      'Una sesión a la mañana y otra a la noche, con tu propia cuenta de IA gratis.';
 
   @override
-  String get loginAlreadyHaveAccount => '¿Ya tenés una cuenta? Iniciá sesión';
+  String get welcomeRankingYou => 'Vos';
 
   @override
-  String get loginEmailLabel => 'Email';
+  String get welcomeSessionMorning => 'Mañana';
 
   @override
-  String get loginPasswordLabel => 'Contraseña';
+  String get welcomeSessionEvening => 'Noche';
 
   @override
-  String get loginSubmitButton => 'Entrar';
+  String welcomeStreakDays(int count) {
+    return '$count días';
+  }
 
   @override
-  String get loginBackButton => 'Volver';
-
-  @override
-  String get loginErrorInvalidCredentials => 'Email o contraseña incorrectos.';
-
-  @override
-  String get loginErrorGeneric => 'No pudimos iniciar sesión. Probá de nuevo.';
-
-  @override
-  String get registerTitle => 'Crear cuenta';
-
-  @override
-  String get registerNameLabel => 'Nombre';
-
-  @override
-  String get registerEmailLabel => 'Email';
-
-  @override
-  String get registerPasswordLabel => 'Contraseña';
-
-  @override
-  String get registerInvitationCodeLabel => 'Código de invitación';
-
-  @override
-  String get registerSubmitButton => 'Crear cuenta';
-
-  @override
-  String get registerGoToLogin => '¿Ya tenés cuenta? Iniciá sesión';
+  String welcomePageLabel(int current, int total) {
+    return 'Página $current de $total';
+  }
 
   @override
   String get registerErrorGeneric =>
@@ -195,39 +170,6 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get registerErrorInvitationExpired =>
       'Ese código de invitación venció.';
-
-  @override
-  String get registerInvitationPendingTitle => 'Tu cuenta ya está creada';
-
-  @override
-  String get registerInvitationPendingBody =>
-      'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.';
-
-  @override
-  String get registerInvitationRetryButton => 'Reintentar código';
-
-  @override
-  String get registerInvitationContinueButton =>
-      'Continuar sin grupo por ahora';
-
-  @override
-  String get loginEmailInvalid => 'Ingresá un email válido.';
-
-  @override
-  String get loginShowPassword => 'Mostrar contraseña';
-
-  @override
-  String get loginHidePassword => 'Ocultar contraseña';
-
-  @override
-  String get registerErrorInvalidData =>
-      'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.';
-
-  @override
-  String get registerPasswordTooShort => 'Usá al menos 10 caracteres.';
-
-  @override
-  String get registerPasswordHelper => 'Mínimo 10 caracteres';
 
   @override
   String get notFoundTitle => 'Esa pantalla no existe';
@@ -462,10 +404,6 @@ class AppLocalizationsEs extends AppLocalizations {
   }
 
   @override
-  String get providersModelProviderDisabledHint =>
-      'Conectá este proveedor para usarlo';
-
-  @override
   String get homeNeedProviderHint =>
       'Conectá un proveedor para poder practicar';
 
@@ -589,7 +527,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get micPermissionBody =>
-      'Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.';
+      'Open Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.';
 
   @override
   String get micPermissionContinue => 'Continuar';
@@ -714,7 +652,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get conversationMicPermissionDeniedBody =>
-      'Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.';
+      'Open Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.';
 
   @override
   String get conversationMicPermissionDeniedCancel => 'Cancelar';
@@ -1044,7 +982,7 @@ class AppLocalizationsEs extends AppLocalizations {
   String get commonComingSoon => 'Pronto';
 
   @override
-  String get settingsReminderNotificationTitle => 'Fluent';
+  String get settingsReminderNotificationTitle => 'Open Fluent';
 
   @override
   String get settingsReminderNotificationBody =>
@@ -1111,7 +1049,7 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String groupInviteMessage(String code) {
-    return 'Te invito a mi grupo de inglés en Fluent. Código: $code. 10 minutos por día, con tu cuenta gratis de IA.';
+    return 'Te invito a mi grupo de inglés en Open Fluent. Código: $code. 10 minutos por día, con tu cuenta gratis de IA.';
   }
 
   @override
@@ -1121,4 +1059,13 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get errorGroupRequired =>
       'Unite a un grupo con tu código de invitación para practicar.';
+
+  @override
+  String get authContinueWithGoogle => 'Continuar con Google';
+
+  @override
+  String get authContinueWithApple => 'Continuar con Apple';
+
+  @override
+  String get authSignInError => 'No pudimos iniciar sesión. Probá de nuevo.';
 }

@@ -2,7 +2,7 @@ import 'package:fluent_mobile/app/app.dart';
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/core/storage/token_store.dart';
-import 'package:fluent_mobile/features/auth/presentation/login_screen.dart';
+import 'package:fluent_mobile/features/welcome/presentation/welcome_screen.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -22,6 +22,6 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.byType(LoginScreen), findsOneWidget);
+    expect(find.byType(WelcomeScreen), findsOneWidget);
   });
 }

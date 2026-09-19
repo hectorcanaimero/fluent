@@ -623,7 +623,9 @@ $ProfileCopyWith<$Res> get profile {
 /// @nodoc
 mixin _$GroupInfo {
 
- String get id; String get name; int get groupStreak;
+ String get id; String get name; int get groupStreak;/// Grupo al que entra todo usuario nuevo; un código de invitación lo
+/// saca de ahí y lo lleva al grupo de un amigo.
+ bool get isDefault;
 /// Create a copy of GroupInfo
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -637,20 +639,20 @@ $GroupInfoCopyWith<GroupInfo> get copyWith => _$GroupInfoCopyWithImpl<GroupInfo>
 @override
 bool operator ==(Object other) {
   final _this = this as GroupInfo;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupInfo&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.groupStreak, _this.groupStreak) || other.groupStreak == _this.groupStreak));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is GroupInfo&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.groupStreak, _this.groupStreak) || other.groupStreak == _this.groupStreak)&&(identical(other.isDefault, _this.isDefault) || other.isDefault == _this.isDefault));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as GroupInfo;
-  return Object.hash(runtimeType,_this.id,_this.name,_this.groupStreak);
+  return Object.hash(runtimeType,_this.id,_this.name,_this.groupStreak,_this.isDefault);
 }
 
 @override
 String toString() {
   final _this = this as GroupInfo;
-  return 'GroupInfo(id: ${_this.id}, name: ${_this.name}, groupStreak: ${_this.groupStreak})';
+  return 'GroupInfo(id: ${_this.id}, name: ${_this.name}, groupStreak: ${_this.groupStreak}, isDefault: ${_this.isDefault})';
 }
 
 
@@ -661,7 +663,7 @@ abstract mixin class $GroupInfoCopyWith<$Res>  {
   factory $GroupInfoCopyWith(GroupInfo value, $Res Function(GroupInfo) _then) = _$GroupInfoCopyWithImpl;
 @useResult
 $Res call({
- String id, String name, int groupStreak
+ String id, String name, int groupStreak, bool isDefault
 });
 
 
@@ -678,12 +680,13 @@ class _$GroupInfoCopyWithImpl<$Res>
 
 /// Create a copy of GroupInfo
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? groupStreak = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,Object? groupStreak = null,Object? isDefault = null,}) {
   return _then(GroupInfo(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,groupStreak: null == groupStreak ? _self.groupStreak : groupStreak // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isDefault: null == isDefault ? _self.isDefault : isDefault // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -768,10 +771,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  int groupStreak)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name,  int groupStreak,  bool isDefault)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _GroupInfo() when $default != null:
-return $default(_that.id,_that.name,_that.groupStreak);case _:
+return $default(_that.id,_that.name,_that.groupStreak,_that.isDefault);case _:
   return orElse();
 
 }
@@ -789,10 +792,10 @@ return $default(_that.id,_that.name,_that.groupStreak);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  int groupStreak)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name,  int groupStreak,  bool isDefault)  $default,) {final _that = this;
 switch (_that) {
 case _GroupInfo():
-return $default(_that.id,_that.name,_that.groupStreak);case _:
+return $default(_that.id,_that.name,_that.groupStreak,_that.isDefault);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -809,10 +812,10 @@ return $default(_that.id,_that.name,_that.groupStreak);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  int groupStreak)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name,  int groupStreak,  bool isDefault)?  $default,) {final _that = this;
 switch (_that) {
 case _GroupInfo() when $default != null:
-return $default(_that.id,_that.name,_that.groupStreak);case _:
+return $default(_that.id,_that.name,_that.groupStreak,_that.isDefault);case _:
   return null;
 
 }
@@ -824,12 +827,15 @@ return $default(_that.id,_that.name,_that.groupStreak);case _:
 @JsonSerializable()
 
 class _GroupInfo implements GroupInfo {
-  const _GroupInfo({required this.id, required this.name, this.groupStreak = 0});
+  const _GroupInfo({required this.id, required this.name, this.groupStreak = 0, this.isDefault = false});
   factory _GroupInfo.fromJson(Map<String, dynamic> json) => _$GroupInfoFromJson(json);
 
 @override final  String id;
 @override final  String name;
 @override@JsonKey() final  int groupStreak;
+/// Grupo al que entra todo usuario nuevo; un código de invitación lo
+/// saca de ahí y lo lleva al grupo de un amigo.
+@override@JsonKey() final  bool isDefault;
 
 /// Create a copy of GroupInfo
 /// with the given fields replaced by the non-null parameter values.
@@ -844,18 +850,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.groupStreak, groupStreak) || other.groupStreak == groupStreak));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _GroupInfo&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name)&&(identical(other.groupStreak, groupStreak) || other.groupStreak == groupStreak)&&(identical(other.isDefault, isDefault) || other.isDefault == isDefault));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,name,groupStreak);
+    return Object.hash(runtimeType,id,name,groupStreak,isDefault);
 }
 
 @override
 String toString() {
-    return 'GroupInfo(id: $id, name: $name, groupStreak: $groupStreak)';
+    return 'GroupInfo(id: $id, name: $name, groupStreak: $groupStreak, isDefault: $isDefault)';
 }
 
 
@@ -866,7 +872,7 @@ abstract mixin class _$GroupInfoCopyWith<$Res> implements $GroupInfoCopyWith<$Re
   factory _$GroupInfoCopyWith(_GroupInfo value, $Res Function(_GroupInfo) _then) = __$GroupInfoCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String name, int groupStreak
+ String id, String name, int groupStreak, bool isDefault
 });
 
 
@@ -883,12 +889,13 @@ class __$GroupInfoCopyWithImpl<$Res>
 
 /// Create a copy of GroupInfo
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? groupStreak = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,Object? groupStreak = null,Object? isDefault = null,}) {
   return _then(_GroupInfo(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
 as String,groupStreak: null == groupStreak ? _self.groupStreak : groupStreak // ignore: cast_nullable_to_non_nullable
-as int,
+as int,isDefault: null == isDefault ? _self.isDefault : isDefault // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 

@@ -4,6 +4,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 
 import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
+import '../features/auth/data/social_sign_in.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/providers/data/oauth_launcher.dart';
 import '../features/settings/data/reminder_service.dart';
@@ -31,10 +32,18 @@ final tokenStoreProvider = Provider<TokenStore>((ref) {
   return CachingTokenStore(SecureTokenStore());
 });
 
-/// Cliente REST de auth contra InsForge (SPEC-06 §6). Login y registro lo
-/// usan directamente; también sirve de [TokenRefresher] para `ApiClient`.
+/// Cliente REST de auth contra InsForge (SPEC-06 §6). El login social lo
+/// usa directamente; también sirve de [TokenRefresher] para `ApiClient`.
 final insforgeAuthClientProvider = Provider<InsforgeAuthClient>((ref) {
   return InsforgeAuthClient();
+});
+
+final socialSignInProvider = Provider<SocialSignIn>((ref) {
+  if (Env.useFakeApi) return FakeSocialSignIn();
+  return InsforgeSocialSignIn(
+    authClient: ref.watch(insforgeAuthClientProvider),
+    launcher: ref.watch(oauthLauncherProvider),
+  );
 });
 
 final tokenRefresherProvider = Provider<TokenRefresher>((ref) {
@@ -69,6 +78,10 @@ final localeOverrideProvider = StateProvider<Locale?>((ref) => null);
 /// (SPEC-06 §5) en esta sesión de la app. Se pide una sola vez, la
 /// primera vez que se entra a `/session/new`.
 final micPrimerShownProvider = StateProvider<bool>((ref) => false);
+
+/// Pasa a `true` cuando la animación del splash terminó su primera pasada.
+/// El router no sale de `/splash` antes, para que no se corte a la mitad.
+final splashDoneProvider = StateProvider<bool>((ref) => false);
 
 /// Abre el navegador para el PKCE de OpenRouter (SPEC-06 §7). Con
 /// `USE_FAKE_API=true` se simula el login y el retorno del deep link.

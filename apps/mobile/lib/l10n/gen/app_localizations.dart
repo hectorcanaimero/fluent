@@ -101,7 +101,7 @@ abstract class AppLocalizations {
   /// No description provided for @appTitle.
   ///
   /// In es, this message translates to:
-  /// **'Fluent'**
+  /// **'Open Fluent'**
   String get appTitle;
 
   /// No description provided for @splashLoading.
@@ -296,125 +296,71 @@ abstract class AppLocalizations {
   /// **'Este campo es obligatorio.'**
   String get formFieldRequired;
 
-  /// No description provided for @loginWelcomeHeadline.
+  /// No description provided for @welcomeSlide1Title.
   ///
   /// In es, this message translates to:
-  /// **'Hablá inglés con confianza, de a 10 minutos'**
-  String get loginWelcomeHeadline;
+  /// **'Un tutor que se acuerda de vos'**
+  String get welcomeSlide1Title;
 
-  /// No description provided for @loginWelcomeSubtitle.
+  /// No description provided for @welcomeSlide1Body.
   ///
   /// In es, this message translates to:
-  /// **'Fluent es tu coach de conversación personal. Dos sesiones cortas por día, sobre temas que realmente te interesan.'**
-  String get loginWelcomeSubtitle;
+  /// **'Hablá de tu trabajo, tu viaje o tu entrevista. Te corrige al momento, sin cortarte.'**
+  String get welcomeSlide1Body;
 
-  /// No description provided for @loginBenefit1.
+  /// No description provided for @welcomeSlide2Title.
   ///
   /// In es, this message translates to:
-  /// **'Un tutor que se acuerda de vos: de tu trabajo, tu viaje, tu entrevista'**
-  String get loginBenefit1;
+  /// **'Practicá con tus amigos'**
+  String get welcomeSlide2Title;
 
-  /// No description provided for @loginBenefit2.
+  /// No description provided for @welcomeSlide2Body.
   ///
   /// In es, this message translates to:
-  /// **'Practicá con tus amigos, no con extraños: ranking y desafíos del grupo'**
-  String get loginBenefit2;
+  /// **'Armá tu grupo, sumá puntos en cada sesión y subí en el ranking.'**
+  String get welcomeSlide2Body;
 
-  /// No description provided for @loginBenefit3.
+  /// No description provided for @welcomeSlide3Title.
   ///
   /// In es, this message translates to:
-  /// **'10 minutos, dos veces al día, con tu propia cuenta de IA gratis'**
-  String get loginBenefit3;
+  /// **'10 minutos, dos veces al día'**
+  String get welcomeSlide3Title;
 
-  /// No description provided for @loginGetStartedButton.
+  /// No description provided for @welcomeSlide3Body.
   ///
   /// In es, this message translates to:
-  /// **'Crear cuenta'**
-  String get loginGetStartedButton;
+  /// **'Una sesión a la mañana y otra a la noche, con tu propia cuenta de IA gratis.'**
+  String get welcomeSlide3Body;
 
-  /// No description provided for @loginAlreadyHaveAccount.
+  /// No description provided for @welcomeRankingYou.
   ///
   /// In es, this message translates to:
-  /// **'¿Ya tenés una cuenta? Iniciá sesión'**
-  String get loginAlreadyHaveAccount;
+  /// **'Vos'**
+  String get welcomeRankingYou;
 
-  /// No description provided for @loginEmailLabel.
+  /// No description provided for @welcomeSessionMorning.
   ///
   /// In es, this message translates to:
-  /// **'Email'**
-  String get loginEmailLabel;
+  /// **'Mañana'**
+  String get welcomeSessionMorning;
 
-  /// No description provided for @loginPasswordLabel.
+  /// No description provided for @welcomeSessionEvening.
   ///
   /// In es, this message translates to:
-  /// **'Contraseña'**
-  String get loginPasswordLabel;
+  /// **'Noche'**
+  String get welcomeSessionEvening;
 
-  /// No description provided for @loginSubmitButton.
+  /// No description provided for @welcomeStreakDays.
   ///
   /// In es, this message translates to:
-  /// **'Entrar'**
-  String get loginSubmitButton;
+  /// **'{count} días'**
+  String welcomeStreakDays(int count);
 
-  /// No description provided for @loginBackButton.
+  /// No description provided for @welcomePageLabel.
   ///
   /// In es, this message translates to:
-  /// **'Volver'**
-  String get loginBackButton;
-
-  /// No description provided for @loginErrorInvalidCredentials.
-  ///
-  /// In es, this message translates to:
-  /// **'Email o contraseña incorrectos.'**
-  String get loginErrorInvalidCredentials;
-
-  /// No description provided for @loginErrorGeneric.
-  ///
-  /// In es, this message translates to:
-  /// **'No pudimos iniciar sesión. Probá de nuevo.'**
-  String get loginErrorGeneric;
-
-  /// No description provided for @registerTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Crear cuenta'**
-  String get registerTitle;
-
-  /// No description provided for @registerNameLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Nombre'**
-  String get registerNameLabel;
-
-  /// No description provided for @registerEmailLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Email'**
-  String get registerEmailLabel;
-
-  /// No description provided for @registerPasswordLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Contraseña'**
-  String get registerPasswordLabel;
-
-  /// No description provided for @registerInvitationCodeLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'Código de invitación'**
-  String get registerInvitationCodeLabel;
-
-  /// No description provided for @registerSubmitButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Crear cuenta'**
-  String get registerSubmitButton;
-
-  /// No description provided for @registerGoToLogin.
-  ///
-  /// In es, this message translates to:
-  /// **'¿Ya tenés cuenta? Iniciá sesión'**
-  String get registerGoToLogin;
+  /// **'Página {current} de {total}'**
+  String welcomePageLabel(int current, int total);
 
   /// No description provided for @registerErrorGeneric.
   ///
@@ -439,66 +385,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ese código de invitación venció.'**
   String get registerErrorInvitationExpired;
-
-  /// No description provided for @registerInvitationPendingTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Tu cuenta ya está creada'**
-  String get registerInvitationPendingTitle;
-
-  /// No description provided for @registerInvitationPendingBody.
-  ///
-  /// In es, this message translates to:
-  /// **'El código de invitación no funcionó todavía. Probá de nuevo o continuá sin grupo por ahora; podés cargarlo más tarde desde Ajustes.'**
-  String get registerInvitationPendingBody;
-
-  /// No description provided for @registerInvitationRetryButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Reintentar código'**
-  String get registerInvitationRetryButton;
-
-  /// No description provided for @registerInvitationContinueButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Continuar sin grupo por ahora'**
-  String get registerInvitationContinueButton;
-
-  /// No description provided for @loginEmailInvalid.
-  ///
-  /// In es, this message translates to:
-  /// **'Ingresá un email válido.'**
-  String get loginEmailInvalid;
-
-  /// No description provided for @loginShowPassword.
-  ///
-  /// In es, this message translates to:
-  /// **'Mostrar contraseña'**
-  String get loginShowPassword;
-
-  /// No description provided for @loginHidePassword.
-  ///
-  /// In es, this message translates to:
-  /// **'Ocultar contraseña'**
-  String get loginHidePassword;
-
-  /// No description provided for @registerErrorInvalidData.
-  ///
-  /// In es, this message translates to:
-  /// **'Revisá el email y la contraseña: puede que ese email ya esté registrado o que la contraseña sea demasiado corta.'**
-  String get registerErrorInvalidData;
-
-  /// No description provided for @registerPasswordTooShort.
-  ///
-  /// In es, this message translates to:
-  /// **'Usá al menos 10 caracteres.'**
-  String get registerPasswordTooShort;
-
-  /// No description provided for @registerPasswordHelper.
-  ///
-  /// In es, this message translates to:
-  /// **'Mínimo 10 caracteres'**
-  String get registerPasswordHelper;
 
   /// No description provided for @notFoundTitle.
   ///
@@ -938,12 +824,6 @@ abstract class AppLocalizations {
   /// **'≈ {amount} USD por sesión'**
   String providersModelEstimatePaid(String amount);
 
-  /// No description provided for @providersModelProviderDisabledHint.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectá este proveedor para usarlo'**
-  String get providersModelProviderDisabledHint;
-
   /// No description provided for @homeNeedProviderHint.
   ///
   /// In es, this message translates to:
@@ -1151,7 +1031,7 @@ abstract class AppLocalizations {
   /// No description provided for @micPermissionBody.
   ///
   /// In es, this message translates to:
-  /// **'Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.'**
+  /// **'Open Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.'**
   String get micPermissionBody;
 
   /// No description provided for @micPermissionContinue.
@@ -1367,7 +1247,7 @@ abstract class AppLocalizations {
   /// No description provided for @conversationMicPermissionDeniedBody.
   ///
   /// In es, this message translates to:
-  /// **'Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.'**
+  /// **'Open Fluent necesita permiso de micrófono para escucharte. Activalo en los ajustes del sistema.'**
   String get conversationMicPermissionDeniedBody;
 
   /// No description provided for @conversationMicPermissionDeniedCancel.
@@ -1973,7 +1853,7 @@ abstract class AppLocalizations {
   /// No description provided for @settingsReminderNotificationTitle.
   ///
   /// In es, this message translates to:
-  /// **'Fluent'**
+  /// **'Open Fluent'**
   String get settingsReminderNotificationTitle;
 
   /// No description provided for @settingsReminderNotificationBody.
@@ -2081,7 +1961,7 @@ abstract class AppLocalizations {
   /// No description provided for @groupInviteMessage.
   ///
   /// In es, this message translates to:
-  /// **'Te invito a mi grupo de inglés en Fluent. Código: {code}. 10 minutos por día, con tu cuenta gratis de IA.'**
+  /// **'Te invito a mi grupo de inglés en Open Fluent. Código: {code}. 10 minutos por día, con tu cuenta gratis de IA.'**
   String groupInviteMessage(String code);
 
   /// No description provided for @errorInvitationLimitReached.
@@ -2095,6 +1975,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Unite a un grupo con tu código de invitación para practicar.'**
   String get errorGroupRequired;
+
+  /// No description provided for @authContinueWithGoogle.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar con Google'**
+  String get authContinueWithGoogle;
+
+  /// No description provided for @authContinueWithApple.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar con Apple'**
+  String get authContinueWithApple;
+
+  /// No description provided for @authSignInError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos iniciar sesión. Probá de nuevo.'**
+  String get authSignInError;
 }
 
 class _AppLocalizationsDelegate

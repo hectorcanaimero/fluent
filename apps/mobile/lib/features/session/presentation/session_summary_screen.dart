@@ -631,14 +631,24 @@ class _StreakShareCard extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Text(
-            'Fluent',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w700,
-              fontSize: 14,
-              letterSpacing: 1.2,
-            ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ClipRRect(
+                borderRadius: BorderRadius.circular(6),
+                child: Image.asset('assets/icon/icon.png', width: 24),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              const Text(
+                'Open Fluent',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontWeight: FontWeight.w700,
+                  fontSize: 14,
+                  letterSpacing: 1.2,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.lg),
           const Icon(

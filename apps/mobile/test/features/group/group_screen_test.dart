@@ -99,7 +99,7 @@ void main() {
       final text = share.shared.single;
       expect(
         text,
-        startsWith('Te invito a mi grupo de inglés en Fluent. Código: FLUENT-'),
+        startsWith('Te invito a mi grupo de inglés en Open Fluent. Código: FLUENT-'),
       );
       expect(text, endsWith('con tu cuenta gratis de IA.'));
     },

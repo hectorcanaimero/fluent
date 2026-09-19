@@ -10,12 +10,18 @@ void main() {
       expect(computeRedirect(auth, '/'), '/splash');
     });
 
+    test('no sale de /splash hasta que termina la animación', () {
+      const auth = AuthState(status: AuthStatus.unauthenticated);
+      expect(computeRedirect(auth, '/splash', splashDone: false), isNull);
+      expect(computeRedirect(auth, '/splash', splashDone: true), '/login');
+    });
+
     test('sin token, cualquier ruta redirige a /login', () {
       const auth = AuthState(status: AuthStatus.unauthenticated);
       expect(computeRedirect(auth, '/'), '/login');
       expect(computeRedirect(auth, '/group'), '/login');
       expect(computeRedirect(auth, '/login'), isNull);
-      expect(computeRedirect(auth, '/register'), isNull);
+      expect(computeRedirect(auth, '/register'), '/login');
     });
 
     test('autenticado sin onboarded va a /onboarding', () {

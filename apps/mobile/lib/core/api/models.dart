@@ -51,6 +51,10 @@ abstract class GroupInfo with _$GroupInfo {
     required String id,
     required String name,
     @Default(0) int groupStreak,
+
+    /// Grupo al que entra todo usuario nuevo; un código de invitación lo
+    /// saca de ahí y lo lleva al grupo de un amigo.
+    @Default(false) bool isDefault,
   }) = _GroupInfo;
 
   factory GroupInfo.fromJson(Map<String, dynamic> json) =>

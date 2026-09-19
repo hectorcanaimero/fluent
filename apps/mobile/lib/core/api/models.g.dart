@@ -48,6 +48,7 @@ _GroupInfo _$GroupInfoFromJson(Map<String, dynamic> json) => _GroupInfo(
   id: json['id'] as String,
   name: json['name'] as String,
   groupStreak: (json['groupStreak'] as num?)?.toInt() ?? 0,
+  isDefault: json['isDefault'] as bool? ?? false,
 );
 
 Map<String, dynamic> _$GroupInfoToJson(_GroupInfo instance) =>
@@ -55,6 +56,7 @@ Map<String, dynamic> _$GroupInfoToJson(_GroupInfo instance) =>
       'id': instance.id,
       'name': instance.name,
       'groupStreak': instance.groupStreak,
+      'isDefault': instance.isDefault,
     };
 
 _ProviderInfo _$ProviderInfoFromJson(Map<String, dynamic> json) =>

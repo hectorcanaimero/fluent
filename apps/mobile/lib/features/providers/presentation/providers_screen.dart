@@ -9,6 +9,8 @@ import '../../../core/env.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
+import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../domain/providers_data.dart';
@@ -247,15 +249,13 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
       body: SafeArea(
         child: FutureBuilder<ProvidersData>(
           future: _future,
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              if (snapshot.hasError) {
-                return Center(child: Text(l10n.providersLoadError));
-              }
-              return const Center(child: CircularProgressIndicator());
-            }
-            final data = snapshot.data!;
-            return Column(
+          // Antes: spinner pelado y, si fallaba, un texto sin forma de
+          // reintentar.
+          builder: (context, snapshot) => AsyncBody<ProvidersData>(
+            snapshot: snapshot,
+            onRetry: _reload,
+            skeleton: (_) => const _ProvidersSkeleton(),
+            builder: (data) => Column(
               children: [
                 Expanded(
                   child: ListView(
@@ -264,7 +264,7 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
                       if (_error != null) ...[
                         Text(
                           _error!,
-                          style: const TextStyle(color: AppColors.error),
+                          style: const TextStyle(color: AppColors.errorText),
                         ),
                         const SizedBox(height: AppSpacing.md),
                       ],
@@ -334,8 +334,8 @@ class _ProvidersScreenState extends ConsumerState<ProvidersScreen> {
                     ),
                   ),
               ],
-            );
-          },
+            ),
+          ),
         ),
       ),
     );
@@ -388,16 +388,22 @@ class _GeminiKeySheetState extends State<_GeminiKeySheet> {
             l10n.providersGeminiKeyHelpStep1,
             style: Theme.of(context).textTheme.bodyMedium,
           ),
-          InkWell(
-            onTap: () => launchUrl(
-              Uri.parse(_kGeminiHelpUrl),
-              mode: LaunchMode.externalApplication,
-            ),
-            child: Text(
-              l10n.providersGeminiKeyLink,
-              style: const TextStyle(
-                color: AppColors.primary,
-                decoration: TextDecoration.underline,
+          // TextButton: área táctil de 48 dp y color con contraste AA (el
+          // InkWell con texto `primary` medía ~20 dp y daba 3,2:1).
+          Align(
+            alignment: Alignment.centerLeft,
+            child: TextButton(
+              onPressed: () => launchUrl(
+                Uri.parse(_kGeminiHelpUrl),
+                mode: LaunchMode.externalApplication,
+              ),
+              style: TextButton.styleFrom(
+                foregroundColor: AppColors.primaryDark,
+                padding: EdgeInsets.zero,
+              ),
+              child: Text(
+                l10n.providersGeminiKeyLink,
+                style: const TextStyle(decoration: TextDecoration.underline),
               ),
             ),
           ),
@@ -504,7 +510,7 @@ class _ProviderCard extends StatelessWidget {
                     style: const TextStyle(
                       fontSize: 11,
                       fontWeight: FontWeight.w700,
-                      color: AppColors.gold,
+                      color: AppColors.goldText,
                     ),
                   ),
                 ),
@@ -537,13 +543,12 @@ class _ProviderCard extends StatelessWidget {
                 : ElevatedButton(
                     onPressed: connecting ? null : onConnect,
                     child: connecting
+                        // Sin color fijo: el blanco no se veía sobre el
+                        // fondo claro del botón deshabilitado.
                         ? const SizedBox(
                             height: 20,
                             width: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : Text(connectLabel ?? l10n.providersConnectButton),
                   ),
@@ -584,10 +589,12 @@ class _ModelSummaryTile extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final model = _findModel();
+    // Ink en vez de Container: con un fondo opaco el ripple del InkWell
+    // quedaba tapado y el toque no daba ninguna respuesta.
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(AppRadius.md),
-      child: Container(
+      child: Ink(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.surface,
@@ -618,6 +625,11 @@ class _ModelPickerSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Solo los proveedores conectados: listar los demás deshabilitados
+    // confundía (con Gemini conectado aparecía todo OpenRouter apagado).
+    final connected = data.catalog.providers.keys
+        .where(data.isConnected)
+        .toList();
     return DraggableScrollableSheet(
       expand: false,
       initialChildSize: 0.7,
@@ -634,12 +646,16 @@ class _ModelPickerSheet extends StatelessWidget {
                   key: const Key('model_picker_list'),
                   controller: scrollController,
                   children: [
-                    for (final providerId in data.catalog.providers.keys)
+                    if (connected.isEmpty)
+                      Text(
+                        AppLocalizations.of(context).homeNeedProviderHint,
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    for (final providerId in connected)
                       _ProviderModelGroup(
                         providerId: providerId,
                         groups: data.catalog.providers[providerId]!,
                         estimatePerSession: data.catalog.estimatePerSession,
-                        connected: data.isConnected(providerId),
                         onSelected: (modelId) =>
                             Navigator.of(context).pop((providerId, modelId)),
                       ),
@@ -659,14 +675,12 @@ class _ProviderModelGroup extends StatelessWidget {
     required this.providerId,
     required this.groups,
     required this.estimatePerSession,
-    required this.connected,
     required this.onSelected,
   });
 
   final String providerId;
   final ModelTierGroups groups;
   final Map<String, double> estimatePerSession;
-  final bool connected;
   final ValueChanged<String> onSelected;
 
   @override
@@ -685,20 +699,11 @@ class _ProviderModelGroup extends StatelessWidget {
             style: Theme.of(context).textTheme.labelSmall,
           ),
         ),
-        if (!connected)
-          Padding(
-            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
-            child: Text(
-              l10n.providersModelProviderDisabledHint,
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-          ),
         if (groups.free.isNotEmpty)
           _TierSection(
             label: l10n.providersModelTierFree,
             models: groups.free,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
         if (groups.budget.isNotEmpty)
@@ -706,7 +711,6 @@ class _ProviderModelGroup extends StatelessWidget {
             label: l10n.providersModelTierBudget,
             models: groups.budget,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
         if (groups.premium.isNotEmpty)
@@ -714,7 +718,6 @@ class _ProviderModelGroup extends StatelessWidget {
             label: l10n.providersModelTierPremium,
             models: groups.premium,
             estimatePerSession: estimatePerSession,
-            enabled: connected,
             onSelected: onSelected,
           ),
       ],
@@ -727,14 +730,12 @@ class _TierSection extends StatelessWidget {
     required this.label,
     required this.models,
     required this.estimatePerSession,
-    required this.enabled,
     required this.onSelected,
   });
 
   final String label;
   final List<ModelOption> models;
   final Map<String, double> estimatePerSession;
-  final bool enabled;
   final ValueChanged<String> onSelected;
 
   @override
@@ -752,7 +753,6 @@ class _TierSection extends StatelessWidget {
           ListTile(
             key: Key('model_option_${model.id}'),
             contentPadding: EdgeInsets.zero,
-            enabled: enabled,
             title: Text(model.name),
             subtitle: Text(
               (estimatePerSession[model.id] ?? 0) > 0
@@ -761,8 +761,30 @@ class _TierSection extends StatelessWidget {
                     )
                   : l10n.providersModelEstimateFree,
             ),
-            onTap: enabled ? () => onSelected(model.id) : null,
+            onTap: () => onSelected(model.id),
           ),
+      ],
+    );
+  }
+}
+
+/// Forma de la pantalla mientras carga: dos tarjetas de cuenta y los
+/// selectores de modelo.
+class _ProvidersSkeleton extends StatelessWidget {
+  const _ProvidersSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(height: 120, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.md),
+        SkeletonBox(height: 120, borderRadius: AppRadius.lg),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
       ],
     );
   }

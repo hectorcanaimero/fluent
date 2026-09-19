@@ -437,6 +437,13 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
+  Future<List<BadgeItem>> getBadges() => _client.guard(() async {
+    final res = await _client.dio.get('/me/badges');
+    final list = (res.data as Map<String, dynamic>)['badges'] as List<dynamic>;
+    return [for (final b in list) BadgeItem.fromJson(b as Map<String, dynamic>)];
+  });
+
+  @override
   Future<LeaderboardResult> getLeaderboard({String? week}) =>
       _client.guard(() async {
         final res = await _client.dio.get(

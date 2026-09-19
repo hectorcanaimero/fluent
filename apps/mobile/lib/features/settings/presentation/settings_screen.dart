@@ -10,6 +10,8 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -179,7 +181,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             child: Text(l10n.settingsDeleteAccountCancel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.destructive,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.settingsDeleteAccountConfirm),
           ),
@@ -215,16 +219,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
             return AsyncBody<MeResponse>(
               snapshot: snapshot,
               onRetry: () => setState(_loadProfile),
+              skeleton: (_) => const _SettingsSkeleton(),
               builder: (me) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
-                  Text(
-                    me.profile.displayName,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  Row(
+                    children: [
+                      UserAvatar(
+                        name: me.profile.displayName,
+                        imageUrl: me.profile.avatarUrl,
+                        size: 56,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          me.profile.displayName,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(
-                    me.profile.level,
+                    _levelLabel(AppLocalizations.of(context), me.profile.level),
                     style: Theme.of(context).textTheme.bodySmall,
                   ),
                   const SizedBox(height: AppSpacing.lg),
@@ -236,10 +253,10 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                         Chip(label: Text(interestLabel(l10n, id))),
                     ],
                   ),
-                  // MAL-14: quien se registró sin grupo (código inválido, o
-                  // "continuar sin grupo") no tenía forma de sumarse
-                  // después — la única entrada de código era el registro.
-                  if (me.group == null) ...[
+                  // MAL-14: única entrada del código de invitación. También
+                  // se muestra en el grupo por defecto: el código lleva al
+                  // grupo de un amigo.
+                  if (me.group == null || me.group!.isDefault) ...[
                     const SizedBox(height: AppSpacing.xl),
                     Text(
                       l10n.settingsInvitationTitle,
@@ -334,7 +351,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   OutlinedButton(
                     key: const Key('settings_delete_account_button'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
+                      foregroundColor: AppColors.errorText,
                     ),
                     onPressed: _deleteAccount,
                     child: Text(l10n.settingsDeleteAccount),
@@ -374,6 +391,40 @@ class _LocaleOption extends StatelessWidget {
         color: isSelected ? AppColors.primary : AppColors.textMuted,
       ),
       onTap: () => onSelected(value),
+    );
+  }
+}
+
+/// Nombre del nivel del perfil tal como se eligió en el onboarding; antes se
+/// mostraba el código de la API ("B1").
+String _levelLabel(AppLocalizations l10n, String level) => switch (level) {
+  'A2' => l10n.onboardingLevelBeginnerTitle,
+  'B1' => l10n.onboardingLevelIntermediateTitle,
+  'B2' => l10n.onboardingLevelAdvancedTitle,
+  _ => level,
+};
+
+/// Forma de Ajustes mientras carga el perfil (antes, spinner pelado).
+class _SettingsSkeleton extends StatelessWidget {
+  const _SettingsSkeleton();
+
+  @override
+  Widget build(BuildContext context) {
+    return ListView(
+      physics: const NeverScrollableScrollPhysics(),
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: const [
+        SkeletonBox(width: 180, height: 28),
+        SizedBox(height: AppSpacing.sm),
+        SkeletonBox(width: 90, height: 14),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SkeletonListTile(),
+        SizedBox(height: AppSpacing.xl),
+        SkeletonListTile(),
+        SkeletonListTile(),
+      ],
     );
   }
 }

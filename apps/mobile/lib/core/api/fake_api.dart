@@ -655,6 +655,12 @@ class FakeApi implements FluentApi {
     final newStreak = _profile.streak + (isDoubleDay ? 1 : 0);
     _profile = _profile.copyWith(xp: _profile.xp + 85, streak: newStreak);
 
+    // Insignias nuevas: las especiales que esta sesión cumple por primera vez.
+    final newBadges = <String>[
+      if (_sessionCorrections[sessionId]!.isEmpty) 'no_corrections',
+      if (isDoubleDay) 'double_day',
+    ].where(_earnedBadges.add).toList();
+
     return SessionEndResult(
       summary: SessionSummary(
         xpEarned: 85,
@@ -663,6 +669,7 @@ class FakeApi implements FluentApi {
         correctionsCount: _sessionCorrections[sessionId]!.length,
         durationSec: 9 * 60 + 40,
         nextIsBoss: newStreak % 7 == 0,
+        newBadges: newBadges,
       ),
     );
   }
@@ -773,6 +780,58 @@ class FakeApi implements FluentApi {
   }
 
   // ---- 4.5 Social y progreso --------------------------------------------
+
+  /// Mismas URLs que usa la API real (bucket público `badges` de InsForge).
+  static const _badgesBase =
+      'https://c4jzbm8x.us-east.insforge.app/api/storage/buckets/badges/objects';
+
+  final Set<String> _earnedBadges = {'level_newcomer', 'first_session', 'streak_3'};
+
+  @override
+  Future<List<BadgeItem>> getBadges() async {
+    await _delay();
+    // (id, categoría, meta): la meta alimenta el progreso de las bloqueadas.
+    const catalog = [
+      ('level_newcomer', 'level', 0),
+      ('level_chatterbox', 'level', 500),
+      ('level_storyteller', 'level', 1500),
+      ('level_debater', 'level', 3500),
+      ('level_native_ish', 'level', 7000),
+      ('streak_3', 'streak', 3),
+      ('streak_7', 'streak', 7),
+      ('streak_30', 'streak', 30),
+      ('streak_100', 'streak', 100),
+      ('first_session', 'sessions', 1),
+      ('sessions_10', 'sessions', 10),
+      ('sessions_50', 'sessions', 50),
+      ('sessions_100', 'sessions', 100),
+      ('boss_won', 'special', null),
+      ('no_corrections', 'special', null),
+      ('double_day', 'special', null),
+    ];
+    int? current(String category) => switch (category) {
+      'level' => _profile.xp,
+      'streak' => 21,
+      'sessions' => 8,
+      _ => null,
+    };
+    // Igual que la API real: una meta cumplida es una insignia ganada, nunca
+    // una bloqueada al 100 %.
+    bool earned(String id, String category, int? target) =>
+        _earnedBadges.contains(id) ||
+        (target != null && (current(category) ?? 0) >= target);
+    return [
+      for (final (id, category, target) in catalog)
+        BadgeItem(
+          id: id,
+          category: category,
+          imageUrl: '$_badgesBase/$id.png',
+          earnedAt: earned(id, category, target) ? '2026-09-12T10:00:00Z' : null,
+          progressCurrent: target == null ? null : current(category),
+          progressTarget: target,
+        ),
+    ];
+  }
 
   @override
   Future<ProgressResult> getProgress() async {

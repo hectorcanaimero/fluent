@@ -47,6 +47,7 @@ function profileFixture(overrides: Partial<Profile> = {}): Profile {
     grace_used_week: null,
     courtesy_session_used_at: null,
     sessions_count: 0,
+    avatar_url: null,
     onboarded_at: '2026-09-01T10:00:00.000Z',
     created_at: '2026-09-01T10:00:00.000Z',
     updated_at: '2026-09-01T10:00:00.000Z',

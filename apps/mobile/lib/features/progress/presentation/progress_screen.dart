@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../features/badges/presentation/badge_image.dart';
 import '../../../features/session/domain/correction_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 
@@ -21,10 +23,15 @@ class ProgressScreen extends ConsumerStatefulWidget {
 class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   late Future<ProgressResult> _future;
 
+  /// Aparte del progreso (y en paralelo): si fallan las insignias,
+  /// Progreso se muestra igual; solo falta el acceso a Logros.
+  late final Future<List<BadgeItem>> _badgesFuture;
+
   @override
   void initState() {
     super.initState();
     _loadProgress();
+    _badgesFuture = ref.read(fluentApiProvider).getBadges();
   }
 
   void _loadProgress() {
@@ -51,8 +58,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     style: Theme.of(context).textTheme.headlineMedium,
                   ),
                   const SizedBox(height: AppSpacing.lg),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  _StatGrid(
                     children: [
                       _Stat(
                         label: l10n.progressXpLabel,
@@ -77,6 +83,8 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
                     progress.level.name,
                     style: Theme.of(context).textTheme.titleMedium,
                   ),
+                  const SizedBox(height: AppSpacing.md),
+                  _BadgesEntry(future: _badgesFuture),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     l10n.progressCorrectionsTrendTitle,
@@ -121,7 +129,7 @@ class _ProgressScreenState extends ConsumerState<ProgressScreen> {
   }
 }
 
-/// MEJ-02: forma aproximada (título + fila de 3 stats + tendencia).
+/// MEJ-02: forma aproximada (título + grilla de 4 stats + tendencia).
 class _ProgressSkeleton extends StatelessWidget {
   const _ProgressSkeleton();
 
@@ -132,12 +140,12 @@ class _ProgressSkeleton extends StatelessWidget {
       children: const [
         SkeletonBox(width: 140, height: 28),
         SizedBox(height: AppSpacing.lg),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        _StatGrid(
           children: [
-            SkeletonBox(width: 64, height: 48),
-            SkeletonBox(width: 64, height: 48),
-            SkeletonBox(width: 64, height: 48),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
+            SkeletonBox(height: 76, borderRadius: AppRadius.lg),
           ],
         ),
         SizedBox(height: AppSpacing.xl),
@@ -151,6 +159,40 @@ class _ProgressSkeleton extends StatelessWidget {
   }
 }
 
+/// Grilla de 2×2: en una sola fila las 4 etiquetas no entran a 390 dp en
+/// es/pt ni con el texto del sistema agrandado. Cada fila toma el alto de
+/// su celda más alta.
+class _StatGrid extends StatelessWidget {
+  const _StatGrid({required this.children});
+
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        for (var i = 0; i < children.length; i += 2) ...[
+          if (i > 0) const SizedBox(height: AppSpacing.md),
+          IntrinsicHeight(
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Expanded(child: children[i]),
+                const SizedBox(width: AppSpacing.md),
+                Expanded(
+                  child: i + 1 < children.length
+                      ? children[i + 1]
+                      : const SizedBox.shrink(),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ],
+    );
+  }
+}
+
 class _Stat extends StatelessWidget {
   const _Stat({required this.label, required this.value});
 
@@ -159,15 +201,104 @@ class _Stat extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: Theme.of(context).textTheme.headlineMedium
-              ?.copyWith(color: AppColors.primary),
-        ),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
+    final theme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Números grandes (XP) se achican en vez de desbordar la celda.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: AlignmentDirectional.centerStart,
+            child: Text(
+              value,
+              style: theme.headlineMedium?.copyWith(
+                color: AppColors.primaryDark,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(label, style: theme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+/// Acceso a Logros: cuántas insignias hay ganadas y las últimas 3.
+class _BadgesEntry extends StatelessWidget {
+  const _BadgesEntry({required this.future});
+
+  final Future<List<BadgeItem>> future;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return FutureBuilder<List<BadgeItem>>(
+      future: future,
+      builder: (context, snapshot) {
+        final badges = snapshot.data;
+        if (badges == null) return const SizedBox.shrink();
+        final earned = [
+          for (final b in badges)
+            if (b.isEarned) b,
+        ]..sort((a, b) => b.earnedAt!.compareTo(a.earnedAt!));
+        return Material(
+          color: AppColors.surface,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            side: const BorderSide(color: AppColors.border),
+          ),
+          child: InkWell(
+            key: const Key('progress_badges_entry'),
+            borderRadius: BorderRadius.circular(AppRadius.lg),
+            onTap: () => context.push('/badges'),
+            child: Padding(
+              padding: const EdgeInsets.all(AppSpacing.lg),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          l10n.badgesSeeAll,
+                          style: Theme.of(context).textTheme.titleSmall,
+                        ),
+                        const SizedBox(height: AppSpacing.xs),
+                        Text(
+                          l10n.badgesEarnedCount(earned.length, badges.length),
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
+                    ),
+                  ),
+                  for (final b in earned.take(3))
+                    Padding(
+                      padding: const EdgeInsets.only(left: AppSpacing.xs),
+                      child: BadgeImage(
+                        url: b.imageUrl,
+                        size: 36,
+                        earned: true,
+                      ),
+                    ),
+                  const SizedBox(width: AppSpacing.sm),
+                  const Icon(
+                    Icons.chevron_right,
+                    color: AppColors.textSecondary,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
     );
   }
 }

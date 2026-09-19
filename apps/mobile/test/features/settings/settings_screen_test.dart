@@ -62,6 +62,9 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('María'), findsOneWidget);
+    // El nivel se muestra por su nombre, no con el código de la API.
+    expect(find.text('Intermedio'), findsOneWidget);
+    expect(find.text('B1'), findsNothing);
 
     await tester.dragUntilVisible(
       find.byKey(const Key('settings_logout_button')),

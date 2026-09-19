@@ -144,50 +144,70 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
           ],
         ),
       ),
-      body: FutureBuilder<SessionSuggestions>(
-        future: _future,
-        builder: (context, snapshot) {
-          return AsyncBody<SessionSuggestions>(
-            snapshot: snapshot,
-            onRetry: () => setState(_loadSuggestions),
-            skeleton: (context) => const _NewSessionSkeleton(),
-            builder: (suggestions) => TabBarView(
-              controller: _tabController,
-              children: [
-                _TopicsTab(
-                  topics: suggestions.topics,
-                  freeTopicController: _freeTopicController,
-                  starting: _starting,
-                  onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
-                  // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
-                  // que "Surprise me" elige uno al azar de las sugerencias en
-                  // vez de mandar la petición sin tema (eso siempre daría
-                  // `400 VALIDATION`).
-                  onSurpriseMe: suggestions.topics.isEmpty
-                      ? null
-                      : () => _start(
-                          kind: 'free_topic',
-                          topic:
-                              suggestions.topics[Random().nextInt(
-                                suggestions.topics.length,
-                              )],
-                        ),
-                ),
-                _RoleplayTab(
-                  roleplays: suggestions.roleplays,
-                  starting: _starting,
-                  onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
-                ),
-                _NewsTab(
-                  news: suggestions.news,
-                  starting: _starting,
-                  onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
-                ),
-              ],
-            ),
-          );
-        },
+      body: Column(
+        children: [
+          // Cualquier tema, roleplay o noticia arranca la sesión: una sola
+          // barra arriba avisa que está en marcha (antes solo se
+          // deshabilitaba todo, sin ninguna señal).
+          SizedBox(
+            height: 3,
+            child: _starting
+                ? const LinearProgressIndicator(
+                    key: Key('session_new_starting_indicator'),
+                    minHeight: 3,
+                  )
+                : null,
+          ),
+          Expanded(child: _buildBody(context)),
+        ],
       ),
+    );
+  }
+
+  Widget _buildBody(BuildContext context) {
+    return FutureBuilder<SessionSuggestions>(
+      future: _future,
+      builder: (context, snapshot) {
+        return AsyncBody<SessionSuggestions>(
+          snapshot: snapshot,
+          onRetry: () => setState(_loadSuggestions),
+          skeleton: (context) => const _NewSessionSkeleton(),
+          builder: (suggestions) => TabBarView(
+            controller: _tabController,
+            children: [
+              _TopicsTab(
+                topics: suggestions.topics,
+                freeTopicController: _freeTopicController,
+                starting: _starting,
+                onTopic: (topic) => _start(kind: 'free_topic', topic: topic),
+                // SPEC-04 §3.2: `free_topic` exige un `topic` no vacío, así
+                // que "Surprise me" elige uno al azar de las sugerencias en
+                // vez de mandar la petición sin tema (eso siempre daría
+                // `400 VALIDATION`).
+                onSurpriseMe: suggestions.topics.isEmpty
+                    ? null
+                    : () => _start(
+                        kind: 'free_topic',
+                        topic:
+                            suggestions.topics[Random().nextInt(
+                              suggestions.topics.length,
+                            )],
+                      ),
+              ),
+              _RoleplayTab(
+                roleplays: suggestions.roleplays,
+                starting: _starting,
+                onSelected: (r) => _start(kind: 'roleplay', roleplayId: r.id),
+              ),
+              _NewsTab(
+                news: suggestions.news,
+                starting: _starting,
+                onSelected: (n) => _start(kind: 'news', newsItemId: n.id),
+              ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -252,14 +272,27 @@ class _TopicsTab extends StatelessWidget {
           key: const Key('session_new_free_topic_field'),
           controller: freeTopicController,
           decoration: InputDecoration(labelText: l10n.sessionNewFreeTopicLabel),
-          onSubmitted: starting ? null : onTopic,
+          textInputAction: TextInputAction.go,
+          onSubmitted: (text) {
+            final topic = text.trim();
+            if (!starting && topic.isNotEmpty) onTopic(topic);
+          },
         ),
         const SizedBox(height: AppSpacing.md),
-        ElevatedButton(
-          onPressed: starting || freeTopicController.text.trim().isEmpty
-              ? null
-              : () => onTopic(freeTopicController.text.trim()),
-          child: Text(l10n.sessionNewFreeTopicSubmit),
+        // Escucha al controller: sin esto el botón nunca se habilitaba al
+        // escribir, porque nada redibujaba este widget.
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: freeTopicController,
+          builder: (context, value, _) {
+            final topic = value.text.trim();
+            return ElevatedButton(
+              key: const Key('session_new_free_topic_submit'),
+              onPressed: starting || topic.isEmpty
+                  ? null
+                  : () => onTopic(topic),
+              child: Text(l10n.sessionNewFreeTopicSubmit),
+            );
+          },
         ),
         const SizedBox(height: AppSpacing.xl),
         OutlinedButton(
@@ -341,9 +374,15 @@ class _NewsTab extends StatelessWidget {
               children: [
                 Row(
                   children: [
-                    Text(
-                      item.source,
-                      style: Theme.of(context).textTheme.labelSmall,
+                    // Fuentes con nombre largo desbordaban el renglón: la
+                    // fuente se corta y la hora queda siempre visible.
+                    Flexible(
+                      child: Text(
+                        item.source,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context).textTheme.labelSmall,
+                      ),
                     ),
                     if (item.time != null) ...[
                       const SizedBox(width: AppSpacing.sm),
@@ -393,18 +432,20 @@ class _Card extends StatelessWidget {
       child: InkWell(
         onTap: onTap,
         borderRadius: BorderRadius.circular(AppRadius.lg),
-        child: Container(
+        // Ink y no Container: el fondo opaco tapaba el ripple.
+        child: Ink(
           padding: const EdgeInsets.all(AppSpacing.lg),
           decoration: BoxDecoration(
             color: AppColors.surface,
             borderRadius: BorderRadius.circular(AppRadius.lg),
             border: Border.all(color: AppColors.border),
           ),
-          alignment: Alignment.center,
-          child: Text(
-            title,
-            textAlign: TextAlign.center,
-            style: Theme.of(context).textTheme.titleSmall,
+          child: Center(
+            child: Text(
+              title,
+              textAlign: TextAlign.center,
+              style: Theme.of(context).textTheme.titleSmall,
+            ),
           ),
         ),
       ),

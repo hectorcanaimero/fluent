@@ -18,6 +18,9 @@ abstract class Profile with _$Profile {
     required int streak,
     String? lastSessionDay,
 
+    /// Foto del login social (https); `null` muestra la inicial.
+    String? avatarUrl,
+
     /// MEJ-20: `GET /me` todavía no lo manda (`ProfileDto` de la API no
     /// tiene `userId`); se lee igual para poder comparar contra
     /// `GroupMember.userId` en vez de por `displayName` en cuanto la API lo
@@ -51,6 +54,10 @@ abstract class GroupInfo with _$GroupInfo {
     required String id,
     required String name,
     @Default(0) int groupStreak,
+
+    /// Grupo al que entra todo usuario nuevo; un código de invitación lo
+    /// saca de ahí y lo lleva al grupo de un amigo.
+    @Default(false) bool isDefault,
   }) = _GroupInfo;
 
   factory GroupInfo.fromJson(Map<String, dynamic> json) =>
@@ -336,6 +343,9 @@ abstract class SessionSummary with _$SessionSummary {
     required int correctionsCount,
     required int durationSec,
     @Default(false) bool nextIsBoss,
+
+    /// Ids de las insignias ganadas al cerrar esta sesión (ronda 4).
+    @Default(<String>[]) List<String> newBadges,
   }) = _SessionSummary;
 
   factory SessionSummary.fromJson(Map<String, dynamic> json) =>
@@ -538,4 +548,33 @@ abstract class WeeklySummaryResult with _$WeeklySummaryResult {
 
   factory WeeklySummaryResult.fromJson(Map<String, dynamic> json) =>
       _$WeeklySummaryResultFromJson(json);
+}
+
+/// Insignia de logros (`GET /me/badges`). El nombre y la condición viven en
+/// l10n (ver `badge_labels.dart`); la imagen, en el bucket `badges` de
+/// InsForge, así se puede cambiar sin publicar la app.
+@freezed
+abstract class BadgeItem with _$BadgeItem {
+  const factory BadgeItem({
+    required String id,
+
+    /// `level`, `streak`, `sessions` o `special`.
+    required String category,
+    required String imageUrl,
+
+    /// ISO 8601; `null` si todavía está bloqueada.
+    String? earnedAt,
+
+    /// Avance hacia la insignia (niveles, rachas, sesiones); `null` en las
+    /// especiales.
+    int? progressCurrent,
+    int? progressTarget,
+  }) = _BadgeItem;
+
+  factory BadgeItem.fromJson(Map<String, dynamic> json) =>
+      _$BadgeItemFromJson(json);
+}
+
+extension BadgeState on BadgeItem {
+  bool get isEarned => earnedAt != null;
 }

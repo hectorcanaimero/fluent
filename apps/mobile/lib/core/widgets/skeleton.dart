@@ -26,11 +26,23 @@ class _SkeletonBoxState extends State<SkeletonBox>
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(milliseconds: 900),
-  )..repeat(reverse: true);
+  );
   late final Animation<double> _opacity = Tween<double>(
     begin: 0.4,
     end: 1.0,
   ).animate(CurvedAnimation(parent: _controller, curve: Curves.easeInOut));
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Con "reducir animaciones" el placeholder queda quieto en vez de latir
+    // sin fin.
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  }
 
   @override
   void dispose() {

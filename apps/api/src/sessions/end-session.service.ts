@@ -63,6 +63,7 @@ export class EndSessionService {
         correctionsCount,
         durationSec: wasActive ? durationSec : (session.duration_sec ?? 0),
         nextIsBoss: closeResult.next_is_boss,
+        newBadges: closeResult.newBadges,
       },
     };
   }

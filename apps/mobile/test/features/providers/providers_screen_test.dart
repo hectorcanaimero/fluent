@@ -65,6 +65,20 @@ class _NoActiveProviderApi extends FakeApi {
 /// ProvidersScreen siempre vive bajo un GoRouter en la app real
 /// (`app/router.dart`): `context.canPop()`/`context.go()` (MAL-11) lo
 /// exigen, así que los tests también la envuelven en uno.
+/// Falla la primera carga del catálogo de modelos (sin red al abrir).
+class _ModelsFailOnceApi extends FakeApi {
+  _ModelsFailOnceApi() : super(artificialDelay: Duration.zero);
+
+  var _calls = 0;
+
+  @override
+  Future<ModelsCatalog> getModels() {
+    _calls += 1;
+    if (_calls == 1) return Future.error(Exception('offline'));
+    return super.getModels();
+  }
+}
+
 Future<void> _pumpProvidersScreen(
   WidgetTester tester, {
   FluentApi? api,
@@ -109,6 +123,21 @@ Future<void> _pumpProvidersScreen(
 }
 
 void main() {
+  testWidgets('si falla la carga ofrece Reintentar y recupera', (
+    tester,
+  ) async {
+    await _pumpProvidersScreen(tester, api: _ModelsFailOnceApi());
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+
+    await tester.tap(find.text(l10n.commonRetry));
+    await tester.pumpAndSettle();
+
+    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+    expect(find.byKey(const Key('provider_card_openrouter')), findsOneWidget);
+  });
+
   testWidgets('flujo completo de Gemini: pegar key conecta el proveedor', (
     tester,
   ) async {
@@ -132,39 +161,26 @@ void main() {
     expect(find.text(l10n.providersStatusNotConnected), findsNothing);
   });
 
-  testWidgets('modelos de un proveedor no conectado aparecen deshabilitados', (
+  testWidgets('el selector solo lista modelos de proveedores conectados', (
     tester,
   ) async {
     await _pumpProvidersScreen(tester);
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
 
     await tester.tap(find.byKey(const Key('model_picker_chat')));
     await tester.pumpAndSettle();
 
-    // El proveedor Gemini está más abajo en la hoja de selección.
-    await tester.dragUntilVisible(
+    // Gemini no está conectado en los datos de ejemplo: sus modelos no salen.
+    expect(
       find.byKey(const Key('model_option_gemini-1.5-flash')),
-      find.byKey(const Key('model_picker_list')),
-      const Offset(0, -200),
+      findsNothing,
     );
-    await tester.pumpAndSettle();
-
-    // Gemini todavía no está conectado: su modelo gratis debe verse pero
-    // deshabilitado.
-    final geminiModelTile = tester.widget<ListTile>(
-      find.byKey(const Key('model_option_gemini-1.5-flash')),
-    );
-    expect(geminiModelTile.enabled, isFalse);
-    expect(geminiModelTile.onTap, isNull);
-    expect(find.text(l10n.providersModelProviderDisabledHint), findsOneWidget);
-
-    // OpenRouter sí está conectado en los datos de ejemplo.
-    final openRouterModelTile = tester.widget<ListTile>(
+    // OpenRouter sí está conectado.
+    expect(
       find.byKey(
         const Key('model_option_meta-llama/llama-3.1-8b-instruct:free'),
       ),
+      findsOneWidget,
     );
-    expect(openRouterModelTile.enabled, isTrue);
   });
 
   testWidgets(

@@ -62,7 +62,7 @@ void main() {
 
     await _pumpSplash(tester, container);
 
-    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byKey(const Key('splash_animation')), findsOneWidget);
   });
 
   testWidgets('sin red ofrece reintentar en vez de mandar al login (MAL-03)', (tester) async {

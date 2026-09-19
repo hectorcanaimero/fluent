@@ -10,7 +10,7 @@ class AppLocalizationsPt extends AppLocalizations {
   AppLocalizationsPt([String locale = 'pt']) : super(locale);
 
   @override
-  String get appTitle => 'Fluent';
+  String get appTitle => 'Open Fluent';
 
   @override
   String get splashLoading => 'Carregando…';
@@ -68,7 +68,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get errorProviderNotConnected =>
-      'Conecte um provedor para poder praticar.';
+      'Conecte sua conta de IA para poder praticar.';
 
   @override
   String get errorProviderKeyInvalid => 'Essa chave não é válida.';
@@ -117,69 +117,50 @@ class AppLocalizationsPt extends AppLocalizations {
   String get formFieldRequired => 'Este campo é obrigatório.';
 
   @override
-  String get loginWelcomeHeadline =>
-      'Fale inglês com confiança, 10 minutos por vez';
+  String get welcomeSlide1Title => 'Um tutor que lembra de você';
 
   @override
-  String get loginWelcomeSubtitle =>
-      'Fluent é seu coach pessoal de conversação. Duas sessões curtas por dia, sobre temas que você realmente gosta.';
+  String get welcomeSlide1Body =>
+      'Fale do seu trabalho, da sua viagem ou da sua entrevista. Ele corrige na hora, sem te interromper.';
 
   @override
-  String get loginBenefit1 =>
-      'Um tutor que lembra de você: do seu trabalho, da sua viagem, da sua entrevista';
+  String get welcomeSlide2Title => 'Pratique com seus amigos';
 
   @override
-  String get loginBenefit2 =>
-      'Pratique com seus amigos, não com estranhos: ranking e desafios do grupo';
+  String get welcomeSlide2Body =>
+      'Entre com o código de um amigo ou convide os seus. Cada sessão conta no ranking.';
 
   @override
-  String get loginBenefit3 =>
-      '10 minutos, duas vezes por dia, com sua própria conta de IA grátis';
+  String get welcomeSlide3Title => '10 minutos, duas vezes por dia';
 
   @override
-  String get loginGetStartedButton => 'Criar conta';
+  String get welcomeSlide3Body =>
+      'Uma sessão de manhã e outra à noite, com sua própria conta de IA grátis.';
 
   @override
-  String get loginAlreadyHaveAccount => 'Já tem uma conta? Entrar';
+  String get welcomeRankingYou => 'Você';
 
   @override
-  String get loginEmailLabel => 'Email';
+  String get welcomeSessionMorning => 'Manhã';
 
   @override
-  String get loginPasswordLabel => 'Senha';
+  String get welcomeSessionEvening => 'Noite';
 
   @override
-  String get loginSubmitButton => 'Entrar';
+  String welcomeStreakDays(int count) {
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dias',
+      one: '1 dia',
+    );
+    return '$_temp0';
+  }
 
   @override
-  String get loginBackButton => 'Voltar';
-
-  @override
-  String get loginErrorInvalidCredentials => 'Email ou senha incorretos.';
-
-  @override
-  String get loginErrorGeneric => 'Não conseguimos entrar. Tente de novo.';
-
-  @override
-  String get registerTitle => 'Criar conta';
-
-  @override
-  String get registerNameLabel => 'Nome';
-
-  @override
-  String get registerEmailLabel => 'Email';
-
-  @override
-  String get registerPasswordLabel => 'Senha';
-
-  @override
-  String get registerInvitationCodeLabel => 'Código de convite';
-
-  @override
-  String get registerSubmitButton => 'Criar conta';
-
-  @override
-  String get registerGoToLogin => 'Já tem conta? Entrar';
+  String welcomePageLabel(int current, int total) {
+    return 'Página $current de $total';
+  }
 
   @override
   String get registerErrorGeneric =>
@@ -196,39 +177,6 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get registerErrorInvitationExpired =>
       'Esse código de convite expirou.';
-
-  @override
-  String get registerInvitationPendingTitle => 'Sua conta já foi criada';
-
-  @override
-  String get registerInvitationPendingBody =>
-      'O código de convite ainda não funcionou. Tente de novo ou continue sem grupo por enquanto; você pode inserir o código mais tarde em Ajustes.';
-
-  @override
-  String get registerInvitationRetryButton => 'Tentar código novamente';
-
-  @override
-  String get registerInvitationContinueButton =>
-      'Continuar sem grupo por enquanto';
-
-  @override
-  String get loginEmailInvalid => 'Digite um e-mail válido.';
-
-  @override
-  String get loginShowPassword => 'Mostrar senha';
-
-  @override
-  String get loginHidePassword => 'Ocultar senha';
-
-  @override
-  String get registerErrorInvalidData =>
-      'Confira o e-mail e a senha: pode ser que esse e-mail já esteja cadastrado ou que a senha seja curta demais.';
-
-  @override
-  String get registerPasswordTooShort => 'Use pelo menos 10 caracteres.';
-
-  @override
-  String get registerPasswordHelper => 'Mínimo de 10 caracteres';
 
   @override
   String get notFoundTitle => 'Essa tela não existe';
@@ -274,7 +222,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get onboardingLevelAdvancedSubtitle =>
-      'Sou fluente e quero refinar nuances';
+      'Me viro bem e quero soar mais natural';
 
   @override
   String get onboardingInterestsHeadline => 'Sobre o que você gosta de falar?';
@@ -285,7 +233,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String onboardingInterestsSelectedCount(int count) {
-    return '$count selecionados';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count selecionados',
+      one: '1 selecionado',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -364,7 +318,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interestFamilyRelationships => 'Vida familiar e relacionamentos';
 
   @override
-  String get providersTitle => 'Provedores e modelos';
+  String get providersTitle => 'Sua conta de IA';
 
   @override
   String get providersGoPractice => 'Pronto, ir praticar';
@@ -407,7 +361,8 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não conseguimos conectar com o OpenRouter. Tente de novo.';
 
   @override
-  String get providersLoadError => 'Não conseguimos carregar os provedores.';
+  String get providersLoadError =>
+      'Não conseguimos carregar suas contas de IA.';
 
   @override
   String get providersGeminiPasteKeyButton => 'Colar API key';
@@ -443,7 +398,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providersModelChatTitle => 'Modelo para conversar';
 
   @override
-  String get providersModelBriefTitle => 'Modelo para o coach';
+  String get providersModelBriefTitle => 'Modelo para as notas do tutor';
 
   @override
   String get providersModelTierFree => 'Grátis';
@@ -452,7 +407,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get providersModelTierBudget => 'Econômico';
 
   @override
-  String get providersModelTierPremium => 'Premium';
+  String get providersModelTierPremium => 'Melhor qualidade';
 
   @override
   String get providersModelEstimateFree => 'Grátis';
@@ -463,11 +418,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String get providersModelProviderDisabledHint =>
-      'Conecte esse provedor para usá-lo';
-
-  @override
-  String get homeNeedProviderHint => 'Conecte um provedor para poder praticar';
+  String get homeNeedProviderHint =>
+      'Conecte sua conta de IA para poder praticar';
 
   @override
   String homeGreetingMorning(String name) {
@@ -486,7 +438,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String homeStreakDays(int count) {
-    return '$count dias de sequência';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dias de sequência',
+      one: '1 dia de sequência',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -505,7 +463,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homePracticeButton => 'Praticar 10 min';
 
   @override
-  String get homeBossButton => 'Boss battle';
+  String get homeBossButton => 'Sessão desafio';
 
   @override
   String get homeBossSkip => 'Hoje não';
@@ -528,18 +486,25 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String homePendingFactsCard(int count) {
-    return 'Tenho $count coisas novas para lembrar sobre você, quer revisar?';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: 'Tenho $count coisas novas para lembrar sobre você, quer revisar?',
+      one: 'Tenho 1 coisa nova para lembrar sobre você, quer revisar?',
+    );
+    return '$_temp0';
   }
 
   @override
-  String get homeNoProviderBanner => 'Conecte um provedor para praticar';
+  String get homeNoProviderBanner =>
+      'Conecte sua conta de IA para continuar praticando';
 
   @override
   String get homeNoProviderAction => 'Conectar';
 
   @override
   String get homePendingActionWeeklySummaryCredential =>
-      'O resumo semanal do grupo não pôde ser gerado: conecte um provedor para que continue funcionando.';
+      'O resumo desta semana precisa da sua conta de IA. Conecte para ele continuar saindo.';
 
   @override
   String get homePendingActionAction => 'Revisar';
@@ -570,7 +535,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get sessionNewSurpriseMeHint =>
-      'Deixe seu coach escolher com base no que você já praticou';
+      'Deixe seu tutor escolher com base no que você já praticou';
 
   @override
   String get sessionNewFreeTopicLabel => 'Ou escreva seu próprio tema';
@@ -590,7 +555,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get micPermissionBody =>
-      'O Fluent usa o microfone do celular para te ouvir durante a conversa. A transcrição é processada no seu aparelho e você revisa antes de enviar.';
+      'O Open Fluent usa o microfone do celular para te ouvir durante a conversa. A transcrição é processada no seu aparelho e você revisa antes de enviar.';
 
   @override
   String get micPermissionContinue => 'Continuar';
@@ -678,7 +643,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get conversationCorrectionCorrectedLabel => 'Melhor assim';
 
   @override
-  String get conversationDegradedChip => 'Usei um modelo alternativo';
+  String get conversationDegradedChip => 'Resposta de reserva';
 
   @override
   String get conversationUnavailableTitle => 'O tutor não está disponível';
@@ -715,7 +680,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get conversationMicPermissionDeniedBody =>
-      'O Fluent precisa de permissão de microfone para te ouvir. Ative nas configurações do sistema.';
+      'O Open Fluent precisa de permissão de microfone para te ouvir. Ative nas configurações do sistema.';
 
   @override
   String get conversationMicPermissionDeniedCancel => 'Cancelar';
@@ -737,15 +702,10 @@ class AppLocalizationsPt extends AppLocalizations {
       'Houve um problema com o microfone. Tente de novo.';
 
   @override
-  String conversationSpeedButtonLabel(String rate) {
-    return '${rate}x';
-  }
-
-  @override
   String get conversationReplayAudio => 'Repetir áudio';
 
   @override
-  String get summaryTitle => 'Ótima sessão!';
+  String get summaryTitle => 'Sessão feita';
 
   @override
   String get summaryXpEarnedLabel => 'XP ganho';
@@ -763,7 +723,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get summaryCorrectionsEmpty => 'Sem correções dessa vez, muito bem!';
 
   @override
-  String get summaryNextIsBossBanner => 'A próxima sessão é um Boss battle';
+  String get summaryNextIsBossBanner => 'Sua próxima sessão é um desafio';
 
   @override
   String get summaryDoubleDayBadge =>
@@ -800,7 +760,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get memoryEditFactSave => 'Salvar';
 
   @override
-  String get memoryBriefSectionTitle => 'Notas do coach';
+  String get memoryBriefSectionTitle => 'Notas do tutor';
 
   @override
   String get memoryBriefExplanation =>
@@ -818,7 +778,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get memoryForgetAllConfirmBody1 =>
-      'Todos os fatos confirmados e as notas do coach serão apagados.';
+      'Todos os fatos confirmados e as notas do tutor serão apagados.';
 
   @override
   String get memoryForgetAllConfirmTitle2 => 'Isso não pode ser desfeito';
@@ -841,7 +801,13 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String groupStreak(int count) {
-    return '$count dias de sequência em grupo';
+    String _temp0 = intl.Intl.pluralLogic(
+      count,
+      locale: localeName,
+      other: '$count dias de sequência em grupo',
+      one: '1 dia de sequência em grupo',
+    );
+    return '$_temp0';
   }
 
   @override
@@ -909,7 +875,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get settingsMorningReminder => 'Sessão da manhã';
 
   @override
-  String get settingsEveningReminder => 'Sessão da tarde';
+  String get settingsEveningReminder => 'Sessão da noite';
 
   @override
   String get settingsStreakAlert => 'Alerta de sequência em risco';
@@ -1046,7 +1012,7 @@ class AppLocalizationsPt extends AppLocalizations {
   String get commonComingSoon => 'Em breve';
 
   @override
-  String get settingsReminderNotificationTitle => 'Fluent';
+  String get settingsReminderNotificationTitle => 'Open Fluent';
 
   @override
   String get settingsReminderNotificationBody =>
@@ -1069,21 +1035,20 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeChecklistProfile => 'Perfil pronto';
 
   @override
-  String get homeChecklistProvider => 'Conectar IA';
+  String get homeChecklistProvider => 'Conectar sua conta de IA';
 
   @override
   String get homeChecklistFirstSession => 'Primeira sessão de 3 min';
 
   @override
-  String get homeCourtesyPracticeButton =>
-      'Experimente sua primeira sessão sem conectar nada';
+  String get homeCourtesyPracticeButton => 'Experimentar uma sessão grátis';
 
   @override
-  String get summaryCourtesyBanner => 'Essa foi sua sessão de cortesia.';
+  String get summaryCourtesyBanner =>
+      'Essa foi sua sessão de cortesia. Conectar sua conta de IA leva 2 minutos e é grátis.';
 
   @override
-  String get summaryCourtesyConnectButton =>
-      'Para continuar, conecte sua conta grátis (2 minutos)';
+  String get summaryCourtesyConnectButton => 'Conectar minha conta';
 
   @override
   String get firstSessionReminderDialogTitle =>
@@ -1101,19 +1066,26 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String streakDangerBody(int days) {
-    return 'Sua sequência de $days dias vence à meia-noite. 3 minutos bastam.';
+    String _temp0 = intl.Intl.pluralLogic(
+      days,
+      locale: localeName,
+      other:
+          'Sua sequência de $days dias vence à meia-noite. 3 minutos bastam.',
+      one: 'Sua sequência de 1 dia vence à meia-noite. 3 minutos bastam.',
+    );
+    return '$_temp0';
   }
 
   @override
   String get streakDangerGraceBody =>
-      'Hoje o dia de graça te salva; amanhã não.';
+      'Hoje o dia de folga te salva; amanhã não.';
 
   @override
   String get groupInviteFriendButton => 'Convidar um amigo';
 
   @override
   String groupInviteMessage(String code) {
-    return 'Te convido pro meu grupo de inglês no Fluent. Código: $code. 10 minutos por dia, com sua conta grátis de IA.';
+    return 'Te convido pro meu grupo de inglês no Open Fluent. Código: $code. 10 minutos por dia, com sua conta grátis de IA.';
   }
 
   @override
@@ -1123,4 +1095,161 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get errorGroupRequired =>
       'Entre em um grupo com seu código de convite pra praticar.';
+
+  @override
+  String get authContinueWithGoogle => 'Continuar com Google';
+
+  @override
+  String get authContinueWithApple => 'Continuar com Apple';
+
+  @override
+  String get authSignInError => 'Não conseguimos entrar. Tente de novo.';
+
+  @override
+  String get summaryTitleNoCorrections => 'Sessão sem correções';
+
+  @override
+  String get memoryBriefSaved => 'Notas salvas.';
+
+  @override
+  String get conversationSlowerToggle => 'Mais devagar';
+
+  @override
+  String get summaryCorrectedLabel => 'Corrigidas';
+
+  @override
+  String get badgeLevelNewcomerName => 'Newcomer';
+
+  @override
+  String get badgeLevelNewcomerCondition => 'Recém-chegado: comece a praticar';
+
+  @override
+  String get badgeLevelChatterboxName => 'Chatterbox';
+
+  @override
+  String get badgeLevelChatterboxCondition => 'Tagarela: alcance 500 XP';
+
+  @override
+  String get badgeLevelStorytellerName => 'Storyteller';
+
+  @override
+  String get badgeLevelStorytellerCondition =>
+      'Contador de histórias: alcance 1.500 XP';
+
+  @override
+  String get badgeLevelDebaterName => 'Debater';
+
+  @override
+  String get badgeLevelDebaterCondition => 'Debatedor: alcance 3.500 XP';
+
+  @override
+  String get badgeLevelNativeIshName => 'Native-ish';
+
+  @override
+  String get badgeLevelNativeIshCondition => 'Quase nativo: alcance 7.000 XP';
+
+  @override
+  String get badgeStreak3Name => 'Sequência de 3 dias';
+
+  @override
+  String get badgeStreak3Condition => 'Pratique 3 dias seguidos';
+
+  @override
+  String get badgeStreak7Name => 'Sequência de 7 dias';
+
+  @override
+  String get badgeStreak7Condition => 'Pratique 7 dias seguidos';
+
+  @override
+  String get badgeStreak30Name => 'Sequência de 30 dias';
+
+  @override
+  String get badgeStreak30Condition => 'Pratique 30 dias seguidos';
+
+  @override
+  String get badgeStreak100Name => 'Sequência de 100 dias';
+
+  @override
+  String get badgeStreak100Condition => 'Pratique 100 dias seguidos';
+
+  @override
+  String get badgeFirstSessionName => 'Primeira sessão';
+
+  @override
+  String get badgeFirstSessionCondition => 'Complete sua primeira sessão';
+
+  @override
+  String get badgeSessions10Name => '10 sessões';
+
+  @override
+  String get badgeSessions10Condition => 'Complete 10 sessões';
+
+  @override
+  String get badgeSessions50Name => '50 sessões';
+
+  @override
+  String get badgeSessions50Condition => 'Complete 50 sessões';
+
+  @override
+  String get badgeSessions100Name => '100 sessões';
+
+  @override
+  String get badgeSessions100Condition => 'Complete 100 sessões';
+
+  @override
+  String get badgeBossWonName => 'Desafio superado';
+
+  @override
+  String get badgeBossWonCondition => 'Complete uma sessão desafio';
+
+  @override
+  String get badgeNoCorrectionsName => 'Sem erros';
+
+  @override
+  String get badgeNoCorrectionsCondition => 'Termine uma sessão sem correções';
+
+  @override
+  String get badgeDoubleDayName => 'Dia duplo';
+
+  @override
+  String get badgeDoubleDayCondition => 'Faça as 2 sessões do mesmo dia';
+
+  @override
+  String get badgesTitle => 'Conquistas';
+
+  @override
+  String get badgesSeeAll => 'Ver conquistas';
+
+  @override
+  String get badgesNewUnlocked => 'Nova conquista';
+
+  @override
+  String get badgesLocked => 'Bloqueada';
+
+  @override
+  String badgesEarnedOn(String date) {
+    return 'Conquistada em $date';
+  }
+
+  @override
+  String badgesProgress(int current, int target) {
+    return '$current de $target';
+  }
+
+  @override
+  String badgesEarnedCount(int earned, int total) {
+    return '$earned de $total';
+  }
+
+  @override
+  String get badgesCategoryLevel => 'Níveis';
+
+  @override
+  String get badgesCategoryStreak => 'Sequências';
+
+  @override
+  String get badgesCategorySessions => 'Sessões';
+
+  @override
+  String get badgesCategorySpecial => 'Especiais';
 }

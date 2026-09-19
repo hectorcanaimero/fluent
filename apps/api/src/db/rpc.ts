@@ -187,4 +187,6 @@ export const RPC = {
   awardProfileCompleted: 'award_profile_completed',
   /** MEJ-25: turno del tutor, correcciones y contadores en una transacción. */
   recordTurn: 'record_turn',
+  /** Ronda 4: otorga las insignias que el usuario ya cumple; devuelve las nuevas. */
+  awardBadges: 'award_badges',
 } as const;

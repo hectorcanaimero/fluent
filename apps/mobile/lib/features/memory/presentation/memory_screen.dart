@@ -57,12 +57,22 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
   /// MEJ-08: antes un fallo acá no mostraba nada — el hecho pendiente
   /// desaparecía de la UI (por el `_reload` optimista implícito del rebuild)
   /// sin que la confirmación hubiera llegado a guardarse.
-  void _showApiError(ApiException e) {
+  void _showApiError(ApiException e) => _showMessage(
+    (l10n) => l10nForApiError(e.code, l10n),
+  );
+
+  /// Errores fuera de `ApiException` (sin red, timeout) también avisan: antes
+  /// guardar las notas u "olvidar todo" fallaba en silencio.
+  void _showError(Object e) => e is ApiException
+      ? _showApiError(e)
+      : _showMessage((l10n) => l10n.errorGeneric);
+
+  void _showMessage(String Function(AppLocalizations l10n) text) {
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
     ScaffoldMessenger.of(
       context,
-    ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+    ).showSnackBar(SnackBar(content: Text(text(l10n))));
   }
 
   Future<void> _confirmFact(MemoryFact fact, String text) async {
@@ -145,7 +155,11 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
     setState(() => _savingBrief = true);
     try {
       await ref.read(fluentApiProvider).putBrief(_briefController.text.trim());
+      if (!mounted) return;
       setState(() => _briefDirty = false);
+      _showMessage((l10n) => l10n.memoryBriefSaved);
+    } catch (e) {
+      _showError(e);
     } finally {
       if (mounted) setState(() => _savingBrief = false);
     }
@@ -165,8 +179,12 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
     );
     if (secondConfirm != true) return;
 
-    await ref.read(fluentApiProvider).forgetAllMemory();
-    _reload();
+    try {
+      await ref.read(fluentApiProvider).forgetAllMemory();
+      _reload();
+    } catch (e) {
+      _showError(e);
+    }
   }
 
   Future<bool?> _confirmDialog({required String title, required String body}) {
@@ -182,7 +200,9 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
             child: Text(l10n.memoryForgetAllCancel),
           ),
           ElevatedButton(
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.error),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.destructive,
+            ),
             onPressed: () => Navigator.of(ctx).pop(true),
             child: Text(l10n.memoryForgetAllConfirm),
           ),
@@ -247,7 +267,7 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
                         padding: const EdgeInsets.symmetric(
                           horizontal: AppSpacing.lg,
                         ),
-                        color: AppColors.error,
+                        color: AppColors.destructive,
                         child: const Icon(
                           Icons.delete_outline,
                           color: Colors.white,
@@ -289,7 +309,7 @@ class _MemoryScreenState extends ConsumerState<MemoryScreen> {
                   OutlinedButton(
                     key: const Key('memory_forget_all_button'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: AppColors.error,
+                      foregroundColor: AppColors.errorText,
                     ),
                     onPressed: _forgetAll,
                     child: Text(l10n.memoryForgetAllButton),
@@ -369,19 +389,22 @@ class _PendingFactTileState extends State<_PendingFactTile> {
             child: TextField(
               key: Key('pending_fact_field_${widget.fact.id}'),
               controller: _controller,
-              decoration: const InputDecoration(border: InputBorder.none),
+              // collapsed: con `border: none` el tema igual le ponía relleno
+              // blanco y borde, y cada dato parecía un campo de formulario.
+              decoration: const InputDecoration.collapsed(hintText: null),
               maxLines: null,
             ),
           ),
           IconButton(
             key: Key('pending_fact_confirm_${widget.fact.id}'),
-            icon: const Icon(Icons.check_circle, color: AppColors.success),
+            // primaryDark: `success` sobre primarySoft daba 2,76:1.
+            icon: const Icon(Icons.check_circle, color: AppColors.primaryDark),
             tooltip: l10n.memoryConfirmFact,
             onPressed: () => widget.onConfirm(_controller.text.trim()),
           ),
           IconButton(
             key: Key('pending_fact_dismiss_${widget.fact.id}'),
-            icon: const Icon(Icons.cancel, color: AppColors.textMuted),
+            icon: const Icon(Icons.cancel, color: AppColors.textSecondary),
             tooltip: l10n.memoryDismissFact,
             onPressed: widget.onDismiss,
           ),

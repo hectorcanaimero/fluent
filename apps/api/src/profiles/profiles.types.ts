@@ -15,6 +15,8 @@ export interface ProfileDto {
   xp: number;
   streak: number;
   lastSessionDay: string | null;
+  /** Foto del login social; `null` si no hay (se muestra la inicial). */
+  avatarUrl: string | null;
 }
 
 /** `group` de `GET /me`, `POST /invitations/redeem` y `GET /group` (envuelto según el endpoint). */
@@ -22,6 +24,8 @@ export interface GroupDto {
   id: string;
   name: string;
   groupStreak: number;
+  /** Grupo por defecto: un código de invitación puede sacar al usuario de él. */
+  isDefault: boolean;
 }
 
 /** Elemento de `providers[]` en `GET /me`. */

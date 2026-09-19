@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<title>Open Fluent</title>
+<p>Listo, podés cerrar esta ventana.</p>
+<script>
+  // Retorno del login social en web: le pasa la URL (con ?insforge_code) a
+  // flutter_web_auth_2 en la ventana que abrió el popup.
+  const message = { 'flutter-web-auth-2': window.location.href };
+  if (window.opener) {
+    window.opener.postMessage(message, window.location.origin);
+    window.close();
+  } else if (window.parent && window.parent !== window) {
+    window.parent.postMessage(message, window.location.origin);
+  } else {
+    localStorage.setItem('flutter-web-auth-2', window.location.href);
+    window.close();
+  }
+</script>

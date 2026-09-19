@@ -6,9 +6,10 @@ import '../../../core/http/token_refresher.dart';
 import '../../../core/storage/token_store.dart';
 
 /// Cliente REST mínimo contra InsForge para auth (SPEC-06 §6). No hay SDK
-/// de Dart para InsForge, así que se llama directo a los cuatro endpoints
-/// de auth. También implementa [TokenRefresher] para que `ApiClient` pueda
-/// refrescar el token de la API de Fluent.
+/// de Dart para InsForge, así que se llama directo a sus endpoints de auth.
+/// El login es solo social (Google, luego Apple) por OAuth con PKCE.
+/// También implementa [TokenRefresher] para que `ApiClient` pueda refrescar
+/// el token de la API de Fluent.
 class InsforgeAuthClient implements TokenRefresher {
   InsforgeAuthClient({Dio? dio, String? baseUrl, String? anonKey})
     : anonKey = anonKey ?? Env.insforgeAnonKey,
@@ -33,34 +34,41 @@ class InsforgeAuthClient implements TokenRefresher {
   Options get _anonAuthOptions =>
       Options(headers: {'Authorization': 'Bearer $anonKey'});
 
-  Future<AuthTokens> register({
-    required String email,
-    required String password,
-    required String name,
+  /// Paso 1 del login social: InsForge devuelve la URL del proveedor
+  /// ([provider] es `google` o `apple`). [redirectUri] es adonde vuelve el
+  /// navegador con `?insforge_code=` (o `?error=`).
+  Future<String> oauthAuthUrl({
+    required String provider,
+    required String redirectUri,
+    required String codeChallenge,
   }) async {
     try {
-      await dio.post(
-        '/api/auth/users',
-        queryParameters: _clientTypeQuery,
+      final res = await dio.get(
+        '/api/auth/oauth/$provider',
         options: _anonAuthOptions,
-        data: {'email': email, 'password': password, 'name': name},
+        queryParameters: {
+          'redirect_uri': redirectUri,
+          'code_challenge': codeChallenge,
+        },
       );
+      return (res.data as Map<String, dynamic>)['authUrl'] as String;
     } on DioException catch (e) {
-      throw _mapError(e, registering: true);
+      throw _mapError(e);
     }
-    return login(email: email, password: password);
   }
 
-  Future<AuthTokens> login({
-    required String email,
-    required String password,
+  /// Paso 2: canjea el `insforge_code` del redirect por la sesión. Con
+  /// `client_type=mobile` el refresh token viene en el cuerpo.
+  Future<AuthTokens> exchangeOAuthCode({
+    required String code,
+    required String codeVerifier,
   }) async {
     try {
       final res = await dio.post(
-        '/api/auth/sessions',
+        '/api/auth/oauth/exchange',
         queryParameters: _clientTypeQuery,
         options: _anonAuthOptions,
-        data: {'method': 'password', 'email': email, 'password': password},
+        data: {'code': code, 'code_verifier': codeVerifier},
       );
       return _tokensFromResponse(res.data as Map<String, dynamic>);
     } on DioException catch (e) {
@@ -109,21 +117,12 @@ class InsforgeAuthClient implements TokenRefresher {
     );
   }
 
-  ApiException _mapError(DioException e, {bool registering = false}) {
+  ApiException _mapError(DioException e) {
     final statusCode = e.response?.statusCode;
-    // En el alta, un 400/409/422 es un dato inválido (email ya registrado,
-    // contraseña corta), no credenciales incorrectas (MEJ-06).
-    if (registering && (statusCode == 400 || statusCode == 409 || statusCode == 422)) {
-      return ApiException(
-        code: ApiErrorCode.validation,
-        message: 'invalid registration data',
-        statusCode: statusCode,
-      );
-    }
     if (statusCode == 401 || statusCode == 400) {
       return ApiException(
         code: ApiErrorCode.unauthenticated,
-        message: 'invalid email or password',
+        message: 'oauth sign-in rejected',
         statusCode: statusCode,
       );
     }

@@ -66,4 +66,41 @@ void main() {
     await tester.tap(find.text(l10n.commonRetry));
     expect(retried, isTrue);
   });
+
+  testWidgets('al reintentar tras un error muestra carga, no el error viejo', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        AsyncBody<int>(
+          snapshot: const AsyncSnapshot<int>.withError(
+            ConnectionState.waiting,
+            'boom',
+          ),
+          builder: (data) => Text('$data'),
+          onRetry: () {},
+        ),
+      ),
+    );
+    expect(find.byType(CircularProgressIndicator), findsOneWidget);
+    expect(find.byType(ElevatedButton), findsNothing);
+  });
+
+  testWidgets('recargar con datos previos los mantiene a la vista', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      _wrap(
+        AsyncBody<int>(
+          snapshot: const AsyncSnapshot<int>.withData(
+            ConnectionState.waiting,
+            7,
+          ),
+          builder: (data) => Text('valor: $data'),
+          onRetry: () {},
+        ),
+      ),
+    );
+    expect(find.text('valor: 7'), findsOneWidget);
+  });
 }

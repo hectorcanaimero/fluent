@@ -20,6 +20,8 @@ function closeResultFixture(overrides: Partial<CloseSessionResult> = {}): CloseS
 
 interface FakeEndSessionRepoOptions {
   readonly closeResult?: CloseSessionResult;
+  /** Lo que devuelve `award_badges`; una función que lanza simula un fallo. */
+  readonly awardBadges?: () => Promise<string[]>;
 }
 
 function fakeEndSessionRepository(options: FakeEndSessionRepoOptions = {}) {
@@ -36,6 +38,7 @@ function fakeEndSessionRepository(options: FakeEndSessionRepoOptions = {}) {
     markBriefDone: async (userId: string, sessionId: string) => {
       calls.markBriefDone.push({ userId, sessionId });
     },
+    awardBadges: async () => (options.awardBadges ? options.awardBadges() : []),
   };
 
   return { repo: repo as unknown as EndSessionRepository, calls };
@@ -160,6 +163,54 @@ describe('SessionCloserService', () => {
       decideBrief: true,
     });
 
-    expect(result).toEqual({ xp_earned: 12, streak: 7, is_double_day: true, next_is_boss: true });
+    expect(result).toEqual({
+      xp_earned: 12,
+      streak: 7,
+      is_double_day: true,
+      next_is_boss: true,
+      newBadges: [],
+    });
+  });
+
+  it('devuelve las insignias recién ganadas', async () => {
+    const { repo } = fakeEndSessionRepository({
+      awardBadges: async () => ['first_session', 'no_corrections'],
+    });
+    const { dispatcher } = fakeJobDispatcher();
+    const service = new SessionCloserService(repo, dispatcher);
+
+    const result = await service.close({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      durationSec: 240,
+      turnsCount: 1,
+      decideBrief: false,
+    });
+
+    expect(result.newBadges).toEqual(['first_session', 'no_corrections']);
+  });
+
+  it('un fallo al otorgar insignias no tumba el cierre', async () => {
+    const warnSpy = vi.spyOn(Logger.prototype, 'warn').mockImplementation(() => undefined);
+    const { repo } = fakeEndSessionRepository({
+      awardBadges: async () => {
+        throw new Error('rpc caída');
+      },
+    });
+    const { dispatcher } = fakeJobDispatcher();
+    const service = new SessionCloserService(repo, dispatcher);
+
+    const result = await service.close({
+      userId: USER_ID,
+      sessionId: SESSION_ID,
+      durationSec: 240,
+      turnsCount: 1,
+      decideBrief: false,
+    });
+
+    expect(result.xp_earned).toBe(74);
+    expect(result.newBadges).toEqual([]);
+    expect(warnSpy.mock.calls[0]?.[0]).toContain('insignias');
+    warnSpy.mockRestore();
   });
 });

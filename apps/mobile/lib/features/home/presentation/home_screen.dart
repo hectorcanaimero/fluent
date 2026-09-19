@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
+import '../../../core/widgets/button_spinner.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../features/session/domain/session_prefs.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -216,21 +217,19 @@ class _HeaderRow extends StatelessWidget {
         Semantics(
           button: true,
           label: l10n.settingsTitle,
-          child: InkWell(
-            key: const Key('home_avatar_button'),
-            onTap: () => context.push('/settings'),
-            borderRadius: BorderRadius.circular(999),
-            child: CircleAvatar(
-              radius: 22,
-              backgroundColor: AppColors.primarySoft,
-              child: Text(
-                data.displayName.isNotEmpty
-                    ? data.displayName[0].toUpperCase()
-                    : '?',
-                style: const TextStyle(
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.primaryDark,
-                ),
+          // 48 dp de área táctil y el fondo en el Material: sobre un
+          // CircleAvatar opaco el ripple quedaba tapado.
+          child: Material(
+            color: AppColors.primarySoft,
+            shape: const CircleBorder(),
+            clipBehavior: Clip.antiAlias,
+            child: InkWell(
+              key: const Key('home_avatar_button'),
+              onTap: () => context.push('/settings'),
+              // Foto del login social, o la inicial si no hay.
+              child: UserAvatar(
+                name: data.displayName,
+                imageUrl: data.avatarUrl,
               ),
             ),
           ),
@@ -244,17 +243,19 @@ class _HeaderRow extends StatelessWidget {
 /// desaparece en cuanto los 3 están listos, no se queda ocupando lugar para
 /// siempre. "Primera sesión de 3 min" reusa el mismo flag de
 /// `SharedPreferences` que MAL-28 usa para "primera sesión válida".
-class _OnboardingChecklist extends StatelessWidget {
+class _OnboardingChecklist extends ConsumerWidget {
   const _OnboardingChecklist({required this.data});
 
   final HomeData data;
 
   @override
-  Widget build(BuildContext context) {
-    return FutureBuilder<bool>(
-      future: _hasFirstValidSession(),
-      builder: (context, snapshot) {
-        final firstSessionDone = snapshot.data ?? false;
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Mientras se lee la preferencia no se muestra nada: mostrarlo y
+    // esconderlo un instante después era justamente el parpadeo.
+    return ref.watch(firstValidSessionDoneProvider).when(
+      loading: () => const SizedBox.shrink(),
+      error: (_, _) => const SizedBox.shrink(),
+      data: (firstSessionDone) {
         final providerConnected = data.hasActiveProvider;
         if (providerConnected && firstSessionDone) {
           return const SizedBox.shrink();
@@ -292,11 +293,6 @@ class _OnboardingChecklist extends StatelessWidget {
         );
       },
     );
-  }
-
-  static Future<bool> _hasFirstValidSession() async {
-    final prefs = await SharedPreferences.getInstance();
-    return prefs.getBool(kFirstValidSessionPrefsKey) ?? false;
   }
 }
 
@@ -359,7 +355,7 @@ class _StreakCard extends StatelessWidget {
         children: [
           const Icon(
             Icons.local_fire_department,
-            color: AppColors.accent,
+            color: AppColors.accentText,
             size: 32,
           ),
           const SizedBox(width: AppSpacing.md),
@@ -446,7 +442,7 @@ class _NoProviderBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.gold),
+          const Icon(Icons.warning_amber_rounded, color: AppColors.goldText),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -477,7 +473,7 @@ class _PendingActionBanner extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.info_outline, color: AppColors.gold),
+          const Icon(Icons.info_outline, color: AppColors.goldText),
           const SizedBox(width: AppSpacing.md),
           Expanded(
             child: Text(
@@ -514,14 +510,22 @@ class _PrimaryCta extends StatelessWidget {
     final blocked = !data.canPractice || starting;
     if (data.suggestions.bossPending) {
       return Column(
+        // stretch: el ElevatedButton ya no ocupa todo el ancho por tema.
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           ElevatedButton(
             key: const Key('home_boss_button'),
             onPressed: blocked ? null : onBoss,
-            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accent),
-            child: Text(l10n.homeBossButton),
+            // accentText de fondo: el blanco sobre `accent` daba 2,66:1.
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentText,
+            ),
+            child: starting ? const ButtonSpinner() : Text(l10n.homeBossButton),
           ),
-          TextButton(onPressed: onPractice, child: Text(l10n.homeBossSkip)),
+          TextButton(
+            onPressed: starting ? null : onPractice,
+            child: Text(l10n.homeBossSkip),
+          ),
         ],
       );
     }
@@ -534,7 +538,8 @@ class _PrimaryCta extends StatelessWidget {
     return ElevatedButton(
       key: const Key('home_practice_button'),
       onPressed: blocked ? null : onPractice,
-      child: Text(label),
+      // Al tocar solo se deshabilitaba: ahora muestra que está arrancando.
+      child: starting ? const ButtonSpinner() : Text(label),
     );
   }
 }
@@ -551,7 +556,8 @@ class _PendingFactsCard extends StatelessWidget {
       key: const Key('home_pending_facts_card'),
       onTap: () => context.push('/memory'),
       borderRadius: BorderRadius.circular(AppRadius.lg),
-      child: Container(
+      // Ink y no Container: el fondo opaco tapaba el ripple.
+      child: Ink(
         padding: const EdgeInsets.all(AppSpacing.lg),
         decoration: BoxDecoration(
           color: AppColors.primarySoft,

@@ -121,6 +121,8 @@ export interface Profile {
   /** MAL-24: cuándo gastó su sesión de cortesía; `null` si aún le queda. */
   courtesy_session_used_at: string | null; // ISO 8601 timestamp
   sessions_count: number;
+  /** Foto del login social (https), copiada de InsForge al crear el perfil. */
+  avatar_url: string | null;
   onboarded_at: string | null; // ISO 8601 timestamp (PostgREST serializa timestamptz como string)
   created_at: string; // ISO 8601 timestamp
   updated_at: string; // ISO 8601 timestamp
@@ -136,6 +138,7 @@ export interface Group {
   owner_id: string | null;
   group_streak: number;
   group_streak_day: string | null; // ISO 8601 date (añadido en migración 5)
+  is_default: boolean; // grupo al que entra todo perfil nuevo (20260919160000)
   created_at: string; // ISO 8601 timestamp
 }
 
@@ -378,4 +381,6 @@ export const TABLES = {
   coachingBriefHistory: 'coaching_brief_history',
   newsItems: 'news_items',
   weeklySummaries: 'weekly_summaries',
+  badges: 'badges',
+  userBadges: 'user_badges',
 } as const;

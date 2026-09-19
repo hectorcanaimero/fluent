@@ -60,6 +60,7 @@ class HomeData {
       me.pendingActions.contains(_weeklySummaryCredentialAction);
 
   String get displayName => me.profile.displayName;
+  String? get avatarUrl => me.profile.avatarUrl;
 
   int? get yourGroupPosition {
     // MAL-29: la posición se calcula sobre el mismo leaderboard semanal que

@@ -39,6 +39,21 @@ export class EndSessionRepository {
   }
 
   /**
+   * RPC `award_badges`: inserta las insignias que el usuario ya cumple y
+   * devuelve los ids de las recién ganadas (idempotente).
+   */
+  async awardBadges(userId: string, sessionId: string): Promise<string[]> {
+    const result = await this.admin.database.rpc(RPC.awardBadges, {
+      p_user_id: userId,
+      p_session_id: sessionId,
+    });
+    if (result.error) {
+      throw new Error(`award_badges: ${result.error.message}`);
+    }
+    return (result.data as unknown as string[] | null) ?? [];
+  }
+
+  /**
    * Número de `corrections` de la sesión, para `SessionSummary.correctionsCount`
    * (SPEC-04 §5). Se cuenta trayendo `id` hasta `limit` filas y midiendo el
    * array: mismo patrón que `src/sessions-query/sessions-query.repository.ts`,

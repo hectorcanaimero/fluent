@@ -187,7 +187,12 @@ class FakeSpeechService implements SpeechService {
     _onSoundLevelChange = onSoundLevelChange;
     _listening = true;
     _lastPartial = '';
+    listenCount++;
   }
+
+  /// Veces que se llamó a [listen]: un turno puede reabrir el micrófono
+  /// varias veces si el motor corta solo.
+  int listenCount = 0;
 
   @override
   Future<void> stop() async {

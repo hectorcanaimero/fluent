@@ -264,8 +264,10 @@ void main() {
     await tester.pump();
     expect(speech.isListening, isTrue);
 
-    // El usuario dice algo; el STT simulado entrega el resultado final.
+    // El usuario dice algo y toca el mic para terminar su turno.
     speech.emit('I go there yesterday', isFinal: true);
+    await tester.pump();
+    await tester.tap(find.byKey(const Key('conversation_mic_button')));
     await tester.pump();
 
     // listening -> reviewing, con la transcripción editable.
@@ -771,7 +773,7 @@ void main() {
   });
 
   testWidgets(
-    'MAL-05: si el motor termina solo sin resultado final, pasa a revisar con el parcial',
+    'si el motor corta solo, sigue escuchando y junta todo en un turno',
     (tester) async {
       final speech = FakeSpeechService();
       await pumpConversation(
@@ -785,14 +787,27 @@ void main() {
       speech.emit('partial text', isFinal: false);
       await tester.pump();
 
+      // El motor corta dos veces por su cuenta (silencio y resultado final).
       speech.emitDoneWithoutResult();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(speech.isListening, isTrue);
+      expect(speech.listenCount, 2);
+      speech.emit('and then more', isFinal: true);
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(speech.isListening, isTrue);
+      speech.emit('the end');
       await tester.pump();
+      // Sigue en modo escucha, mostrando todo lo dicho hasta ahora.
+      expect(find.byKey(const Key('conversation_draft_field')), findsNothing);
+      expect(find.text('partial text and then more the end'), findsOneWidget);
 
+      // El usuario decide terminar: revisa el texto completo.
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
       final draftField = tester.widget<TextField>(
         find.byKey(const Key('conversation_draft_field')),
       );
-      expect(draftField.controller!.text, 'partial text');
-      expect(find.byKey(const Key('conversation_send_button')), findsOneWidget);
+      expect(draftField.controller!.text, 'partial text and then more the end');
       expect(speech.isListening, isFalse);
     },
   );
@@ -809,8 +824,12 @@ void main() {
 
       await tester.tap(find.byKey(const Key('conversation_mic_button')));
       await tester.pump();
-      speech.emitError('error_no_match');
-      await tester.pump();
+      // Silencio: se reintenta hasta 3 veces seguidas sin texto.
+      for (var i = 0; i < 3; i++) {
+        speech.emitError('error_no_match');
+        await tester.pump(const Duration(milliseconds: 300));
+      }
+      expect(speech.listenCount, 3);
 
       final l10n = await AppLocalizations.delegate.load(const Locale('es'));
       expect(find.text(l10n.conversationSttErrorNoMatch), findsOneWidget);
@@ -1500,5 +1519,108 @@ void main() {
     await tester.tap(find.byIcon(Icons.volume_up_outlined).first);
     await tester.pumpAndSettle();
     expect(tts.lastRate, 0.8);
+  });
+
+  Future<FakeSpeechService> startListeningTurn(WidgetTester tester) async {
+    final speech = FakeSpeechService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: speech,
+    );
+    await tester.tap(find.byKey(const Key('conversation_mic_button')));
+    await tester.pump();
+    return speech;
+  }
+
+  String draftText(WidgetTester tester) => tester
+      .widget<TextField>(find.byKey(const Key('conversation_draft_field')))
+      .controller!
+      .text;
+
+  testWidgets('la ventana del turno se cuenta desde el inicio, no por '
+      'fragmento', (tester) async {
+    final speech = await startListeningTurn(tester);
+    speech.emit('first part', isFinal: true);
+    await tester.pump(const Duration(seconds: 60));
+    expect(speech.isListening, isTrue);
+    speech.emit('second part');
+    // Al cumplirse la ventana del turno se cierra con todo lo dicho.
+    await tester.pump(kListenWindow);
+    expect(draftText(tester), 'first part second part');
+    expect(speech.isListening, isFalse);
+  });
+
+  testWidgets('3 reinicios sin texto cierran el turno con lo ya dicho', (
+    tester,
+  ) async {
+    final speech = await startListeningTurn(tester);
+    speech.emit('something useful', isFinal: true);
+    await tester.pump(const Duration(milliseconds: 300));
+    for (var i = 0; i < 3; i++) {
+      speech.emitDoneWithoutResult();
+      await tester.pump(const Duration(milliseconds: 300));
+    }
+    expect(draftText(tester), 'something useful');
+    expect(speech.isListening, isFalse);
+  });
+
+  testWidgets('un error real (permiso) no reabre el micrófono', (tester) async {
+    final speech = await startListeningTurn(tester);
+    speech.emitError('error_permission');
+    await tester.pump(const Duration(seconds: 1));
+
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    expect(find.text(l10n.conversationSttErrorGeneric), findsOneWidget);
+    expect(speech.listenCount, 1);
+    expect(speech.isListening, isFalse);
+  });
+
+  testWidgets('un error real con texto ya dicho pasa a revisarlo', (
+    tester,
+  ) async {
+    final speech = await startListeningTurn(tester);
+    speech.emit('keep this', isFinal: true);
+    await tester.pump(const Duration(milliseconds: 300));
+    speech.emitError('error_network');
+    await tester.pump(const Duration(seconds: 1));
+    expect(draftText(tester), 'keep this');
+    expect(speech.listenCount, 2);
+  });
+
+  testWidgets('entre fragmentos la pantalla sigue en modo escucha', (
+    tester,
+  ) async {
+    final speech = await startListeningTurn(tester);
+    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+    speech.emit('hello', isFinal: true);
+    await tester.pump();
+    // Mientras reabre el mic (antes de la pausa de reinicio).
+    expect(
+      find.bySemanticsLabel(l10n.conversationMicButtonListeningSemantics),
+      findsOneWidget,
+    );
+    expect(find.byKey(const Key('conversation_mic_halo')), findsOneWidget);
+    await tester.pump(const Duration(milliseconds: 300));
+    expect(speech.isListening, isTrue);
+  });
+
+  testWidgets('al pasar a segundo plano termina el turno sin reabrir el mic', (
+    tester,
+  ) async {
+    final speech = await startListeningTurn(tester);
+    speech.emit('before leaving', isFinal: true);
+    await tester.pump();
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.paused);
+    await tester.pump(const Duration(seconds: 1));
+    expect(speech.listenCount, 1);
+    expect(speech.isListening, isFalse);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.hidden);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.inactive);
+    tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
+    await tester.pump();
+    expect(draftText(tester), 'before leaving');
   });
 }

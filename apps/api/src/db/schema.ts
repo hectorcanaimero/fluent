@@ -381,4 +381,6 @@ export const TABLES = {
   coachingBriefHistory: 'coaching_brief_history',
   newsItems: 'news_items',
   weeklySummaries: 'weekly_summaries',
+  badges: 'badges',
+  userBadges: 'user_badges',
 } as const;

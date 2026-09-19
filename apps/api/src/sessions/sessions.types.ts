@@ -89,6 +89,8 @@ export interface SessionSummaryDto {
   readonly correctionsCount: number;
   readonly durationSec: number;
   readonly nextIsBoss: boolean;
+  /** Ids de las insignias ganadas al cerrar esta sesión (ronda 4). */
+  readonly newBadges: readonly string[];
 }
 
 /** Respuesta completa de `POST /sessions/:id/end` (`SessionEndResult` en la app). */

@@ -10,6 +10,7 @@ import { RedisModule } from './redis/redis.module.js';
 import { InsforgeModule } from './insforge/insforge.module.js';
 import { I18nModule } from './i18n/i18n.module.js';
 import { ProfilesModule } from './profiles/profiles.module.js';
+import { BadgesModule } from './badges/badges.module.js';
 import { GroupsModule } from './groups/groups.module.js';
 import { CredentialsModule } from './credentials/credentials.module.js';
 import { ModelsModule } from './models/models.module.js';
@@ -64,6 +65,7 @@ import { AdminModule } from './admin/admin.module.js';
     RateLimitModule,
     HealthModule,
     ProfilesModule,
+    BadgesModule,
     GroupsModule,
     CredentialsModule,
     // `ModelsModule` (catálogo y preferencias, SPEC-02 §4.2, PR-02/T5) va

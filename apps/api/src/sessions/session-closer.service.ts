@@ -38,6 +38,11 @@ export interface SessionCloseParams {
   readonly decideBrief: boolean;
 }
 
+/** Resultado de `close_session` más las insignias recién ganadas. */
+export interface SessionCloseResult extends CloseSessionResult {
+  readonly newBadges: readonly string[];
+}
+
 /**
  * Cierre de una sesión: RPC `close_session` (SPEC-04 §5.2) + decisión del
  * encolado de `coaching-brief` (SPEC-04 §5.3, SPEC-05 §2).
@@ -60,7 +65,7 @@ export class SessionCloserService {
     @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
   ) {}
 
-  async close(params: SessionCloseParams): Promise<CloseSessionResult> {
+  async close(params: SessionCloseParams): Promise<SessionCloseResult> {
     const closeResult = await this.repository.closeSession(
       {
         p_session_id: params.sessionId,
@@ -88,6 +93,18 @@ export class SessionCloserService {
       }
     }
 
-    return closeResult;
+    // Las insignias no pueden tumbar el cierre: si falla, la sesión queda
+    // cerrada igual y la próxima llamada a `award_badges` otorga lo que falte.
+    let newBadges: string[] = [];
+    try {
+      newBadges = await this.repository.awardBadges(params.userId, params.sessionId);
+    } catch (error) {
+      this.logger.warn(
+        `No se pudieron otorgar insignias en la sesión ${params.sessionId}: ` +
+          `${(error as Error).message}`,
+      );
+    }
+
+    return { ...closeResult, newBadges };
   }
 }

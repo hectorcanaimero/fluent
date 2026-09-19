@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:dio/dio.dart' show CancelToken;
 import 'package:flutter/foundation.dart';
@@ -14,6 +15,7 @@ import '../../../core/errors/api_exception.dart';
 import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/spark_mark.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/speech_service.dart';
 import '../data/tts_service.dart';
@@ -42,10 +44,13 @@ class ConversationScreen extends ConsumerStatefulWidget {
 
 class _ConversationScreenState extends ConsumerState<ConversationScreen>
     with WidgetsBindingObserver {
-  /// MEJ-04: igual al `listenFor` de `speech_service.dart` — el motor corta
-  /// solo a los 45 s, así que la cuenta regresiva visible debe arrancar del
-  /// mismo número para no desincronizarse con lo que realmente pasa.
-  static const _listenWindowSeconds = 45;
+  /// MEJ-04: igual al `listenFor` de `speech_service.dart`, así la cuenta
+  /// regresiva visible no se desincroniza con lo que realmente pasa.
+  static final _listenWindowSeconds = kListenWindow.inSeconds;
+
+  /// La cuenta regresiva solo aparece al final del turno: con 2 minutos,
+  /// verla siempre metía presión sin motivo.
+  static const _countdownVisibleSeconds = 20;
 
   ConvState _state = ConvState.idle;
   final List<ChatMessage> _messages = [];
@@ -367,9 +372,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   void _startListenCountdown() {
     _listenCountdownTimer?.cancel();
     _listenSecondsLeft.value = _listenWindowSeconds;
-    _listenCountdownTimer = Timer.periodic(const Duration(seconds: 1), (
-      timer,
-    ) {
+    _listenCountdownTimer = Timer.periodic(const Duration(seconds: 1), (timer) {
       final next = _listenSecondsLeft.value - 1;
       if (next <= 0) {
         timer.cancel();
@@ -707,6 +710,10 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     });
   }
 
+  static const _timeWarningSeconds = 120;
+
+  bool get _showTyping => _state == ConvState.sending && _liveIndex == null;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -772,9 +779,17 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
               child: Center(
                 child: ValueListenableBuilder<int>(
                   valueListenable: _remainingSecondsNotifier,
+                  // Cifras de ancho fijo (el ancho no salta cada segundo) y
+                  // color de aviso en los últimos 2 minutos.
                   builder: (context, seconds, _) => Text(
                     _formatTime(seconds),
                     key: const Key('conversation_timer'),
+                    style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                      fontFeatures: const [FontFeature.tabularFigures()],
+                      color: seconds <= _timeWarningSeconds
+                          ? AppColors.accentText
+                          : AppColors.textPrimary,
+                    ),
                   ),
                 ),
               ),
@@ -794,14 +809,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
                 key: const Key('conversation_message_list'),
                 controller: _scrollController,
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
-                itemCount: _messages.length,
+                // El tutor "escribiendo" ocupa el lugar de la respuesta
+                // hasta que llega el primer token.
+                itemCount: _messages.length + (_showTyping ? 1 : 0),
                 itemBuilder: (context, index) {
+                  if (index == _messages.length) return const _TypingBubble();
                   final message = _messages[index];
                   return message.isAssistant
                       ? _AssistantBubble(
                           message: message,
-                          rate: _ttsRate,
-                          onSetRate: _setRate,
                           onReplay: () => _replay(message.text),
                           liveText: index == _liveIndex ? _liveText : null,
                         )
@@ -823,6 +839,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
               onRetry: _retry,
               onTextMode: _enterTextMode,
               onStopSpeaking: _stopSpeaking,
+              slower: _ttsRate < 1,
+              onToggleSlower: () => _setRate(_ttsRate < 1 ? 1.0 : 0.8),
             ),
           ],
         ),
@@ -831,18 +849,69 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   }
 }
 
+/// Duración de una animación decorativa: cero con "reducir movimiento".
+Duration _motion(BuildContext context, Duration duration) =>
+    MediaQuery.disableAnimationsOf(context) ? Duration.zero : duration;
+
+/// Estilo de texto de las burbujas (diseño: 15/w500, interlineado 1.45).
+TextStyle? _bubbleText(BuildContext context, {Color? color}) =>
+    Theme.of(context).textTheme.bodyLarge?.copyWith(height: 1.45, color: color);
+
+/// Fila del tutor: avatar con la chispa + burbuja de 18/18/18/4 (diseño
+/// "AI Bubble"), con ancho máximo para que no ocupe toda la pantalla.
+class _TutorRow extends StatelessWidget {
+  const _TutorRow({required this.child, this.avatar});
+
+  final Widget child;
+  final Widget? avatar;
+
+  static const avatarSize = 32.0;
+  static const gap = 10.0;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: [
+        avatar ?? const SparkAvatar(size: avatarSize),
+        const SizedBox(width: gap),
+        Flexible(
+          child: ConstrainedBox(
+            constraints: BoxConstraints(
+              maxWidth: MediaQuery.sizeOf(context).width * 0.72,
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.lg,
+                vertical: AppSpacing.md,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.surface,
+                border: Border.all(color: AppColors.border),
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(18),
+                  topRight: Radius.circular(18),
+                  bottomRight: Radius.circular(18),
+                  bottomLeft: Radius.circular(4),
+                ),
+              ),
+              child: child,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
 class _AssistantBubble extends StatelessWidget {
   const _AssistantBubble({
     required this.message,
-    required this.rate,
-    required this.onSetRate,
     required this.onReplay,
     this.liveText,
   });
 
   final ChatMessage message;
-  final double rate;
-  final ValueChanged<double> onSetRate;
   final VoidCallback onReplay;
 
   /// MEJ-17: mientras esta burbuja es la que está recibiendo tokens del
@@ -854,69 +923,220 @@ class _AssistantBubble extends StatelessWidget {
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final live = liveText;
+    final textStyle = _bubbleText(context);
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Container(
-            padding: const EdgeInsets.all(AppSpacing.md),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.md),
-              border: Border.all(color: AppColors.border),
-            ),
+          _TutorRow(
             child: live == null
-                ? Text(message.text)
+                ? Text(message.text, style: textStyle)
                 : ValueListenableBuilder<String>(
                     valueListenable: live,
-                    builder: (context, value, _) => Text(value),
+                    // MAL-22: tras un `reset` el texto queda vacío hasta el
+                    // próximo token: se vuelve a mostrar "escribiendo".
+                    builder: (context, value, _) => AnimatedSwitcher(
+                      duration: _motion(
+                        context,
+                        const Duration(milliseconds: 200),
+                      ),
+                      child: value.isEmpty
+                          ? const _TypingDots()
+                          : Text(value, style: textStyle),
+                    ),
                   ),
           ),
-          // Wrap: con el chip de respuesta degradada no entra en una línea
-          // en pantallas angostas. Mientras llega el streaming no se
-          // muestran: `message.text` todavía es el primer token.
+          // Mientras llega el streaming no se muestran: `message.text`
+          // todavía es el primer token. La velocidad vive en el compositor.
           if (live == null)
-            Wrap(
-              crossAxisAlignment: WrapCrossAlignment.center,
-              children: [
-                IconButton(
-                  key: Key('conversation_replay_${message.text.hashCode}'),
-                  icon: const Icon(Icons.volume_up_outlined, size: 18),
-                  tooltip: l10n.conversationReplayAudio,
-                  onPressed: onReplay,
-                ),
-                for (final r in const [0.8, 1.0, 1.2])
-                  TextButton(
-                    onPressed: () => onSetRate(r),
-                    style: TextButton.styleFrom(
-                      // AA en ambos estados (MEJ-01).
-                      foregroundColor: rate == r
-                          ? AppColors.primaryDark
-                          : AppColors.textSecondary,
-                    ),
-                    child: Text(l10n.conversationSpeedButtonLabel(r.toString())),
+            Padding(
+              padding: const EdgeInsets.only(
+                left: _TutorRow.avatarSize + _TutorRow.gap - AppSpacing.sm,
+              ),
+              child: Wrap(
+                crossAxisAlignment: WrapCrossAlignment.center,
+                children: [
+                  IconButton(
+                    key: Key('conversation_replay_${message.text.hashCode}'),
+                    icon: const Icon(Icons.volume_up_outlined, size: 18),
+                    color: AppColors.textSecondary,
+                    tooltip: l10n.conversationReplayAudio,
+                    onPressed: onReplay,
                   ),
-                if (message.degraded)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: AppSpacing.sm,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: AppColors.locked,
-                      borderRadius: BorderRadius.circular(AppRadius.pill),
-                    ),
-                    child: Text(
-                      l10n.conversationDegradedChip,
-                      style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                        color: AppColors.textSecondary,
+                  if (message.degraded)
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: AppSpacing.sm,
+                        vertical: 2,
+                      ),
+                      decoration: BoxDecoration(
+                        color: AppColors.locked,
+                        borderRadius: BorderRadius.circular(AppRadius.pill),
+                      ),
+                      child: Text(
+                        l10n.conversationDegradedChip,
+                        style: Theme.of(context).textTheme.labelSmall
+                            ?.copyWith(color: AppColors.textSecondary),
                       ),
                     ),
-                  ),
-              ],
+                ],
+              ),
             ),
         ],
+      ),
+    );
+  }
+}
+
+/// El tutor "escribiendo": aparece donde va a llegar la respuesta, entre
+/// que se envía el turno y el primer token.
+class _TypingBubble extends StatelessWidget {
+  const _TypingBubble();
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      key: const Key('conversation_typing_bubble'),
+      liveRegion: true,
+      label: AppLocalizations.of(context).conversationThinkingHint,
+      excludeSemantics: true,
+      child: const Padding(
+        padding: EdgeInsets.symmetric(vertical: AppSpacing.xs),
+        child: _TutorRow(avatar: _PulsingSparkAvatar(), child: _TypingDots()),
+      ),
+    );
+  }
+}
+
+/// Tres puntos que suben y se iluminan en cascada. Con "reducir movimiento"
+/// quedan quietos.
+class _TypingDots extends StatefulWidget {
+  const _TypingDots();
+
+  @override
+  State<_TypingDots> createState() => _TypingDotsState();
+}
+
+class _TypingDotsState extends State<_TypingDots>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1200),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller
+        ..stop()
+        ..value = 0;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final still = MediaQuery.disableAnimationsOf(context);
+    return SizedBox(
+      height: 22,
+      child: AnimatedBuilder(
+        animation: _controller,
+        builder: (context, _) => Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            for (var i = 0; i < 3; i++) ...[
+              if (i > 0) const SizedBox(width: 6),
+              Builder(
+                builder: (context) {
+                  // Cada punto hace un pulso en su tercio del ciclo.
+                  final t = still
+                      ? 1.0
+                      : math.sin(
+                          (((_controller.value - i * 0.2) % 1.0) * math.pi)
+                              .clamp(0.0, math.pi),
+                        );
+                  return Transform.translate(
+                    offset: Offset(0, -3 * t),
+                    child: Container(
+                      width: 8,
+                      height: 8,
+                      decoration: BoxDecoration(
+                        color: AppColors.primary.withValues(
+                          alpha: 0.35 + 0.65 * t,
+                        ),
+                        shape: BoxShape.circle,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// Avatar del tutor con la chispa latiendo mientras piensa.
+class _PulsingSparkAvatar extends StatefulWidget {
+  const _PulsingSparkAvatar();
+
+  @override
+  State<_PulsingSparkAvatar> createState() => _PulsingSparkAvatarState();
+}
+
+class _PulsingSparkAvatarState extends State<_PulsingSparkAvatar>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 900),
+  );
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller
+        ..stop()
+        ..value = 1;
+    } else if (!_controller.isAnimating) {
+      _controller.repeat(reverse: true);
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(
+        width: _TutorRow.avatarSize,
+        height: _TutorRow.avatarSize,
+        decoration: const BoxDecoration(
+          color: AppColors.primaryDark,
+          shape: BoxShape.circle,
+        ),
+        alignment: Alignment.center,
+        child: ScaleTransition(
+          scale: Tween(begin: 0.8, end: 1.15).animate(
+            CurvedAnimation(parent: _controller, curve: Curves.easeInOut),
+          ),
+          child: const SparkMark(size: _TutorRow.avatarSize / 2),
+        ),
       ),
     );
   }
@@ -937,75 +1157,162 @@ class _UserBubbleState extends State<_UserBubble> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final hasCorrections = widget.message.corrections.isNotEmpty;
+    final corrections = widget.message.corrections;
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Align(
         alignment: Alignment.centerRight,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Container(
-              padding: const EdgeInsets.all(AppSpacing.md),
-              decoration: BoxDecoration(
-                color: AppColors.primarySoft,
-                borderRadius: BorderRadius.circular(AppRadius.md),
+        child: ConstrainedBox(
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.sizeOf(context).width * 0.75,
+          ),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              // Diseño "User Bubble": relleno con texto blanco. `primaryDark`
+              // porque blanco sobre `primary` no llega a AA (MEJ-01).
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.lg,
+                  vertical: AppSpacing.md,
+                ),
+                decoration: const BoxDecoration(
+                  color: AppColors.primaryDark,
+                  borderRadius: BorderRadius.only(
+                    topLeft: Radius.circular(18),
+                    topRight: Radius.circular(18),
+                    bottomLeft: Radius.circular(18),
+                    bottomRight: Radius.circular(4),
+                  ),
+                ),
+                child: Text(
+                  widget.message.text,
+                  style: _bubbleText(context, color: Colors.white),
+                ),
               ),
-              child: Text(widget.message.text),
-            ),
-            if (hasCorrections)
-              InkWell(
-                key: const Key('conversation_correction_chip'),
-                onTap: () => setState(() => _expanded = !_expanded),
-                child: Padding(
-                  padding: const EdgeInsets.only(top: AppSpacing.xs),
-                  child: Text(
-                    l10n.conversationCorrectionChip(
-                      widget.message.corrections.length,
-                    ),
-                    // `accent` como texto da 2.5:1 (MEJ-01).
-                    style: const TextStyle(
-                      color: AppColors.accentText,
-                      fontWeight: FontWeight.w600,
+              if (corrections.isNotEmpty)
+                // Las correcciones llegan después de la respuesta: el chip
+                // entra con un rebote para llamar la atención.
+                TweenAnimationBuilder<double>(
+                  tween: Tween(begin: 0, end: 1),
+                  duration: _motion(context, const Duration(milliseconds: 450)),
+                  curve: Curves.easeOutBack,
+                  builder: (context, t, child) => Transform.scale(
+                    scale: 0.8 + 0.2 * t,
+                    alignment: Alignment.centerRight,
+                    child: Opacity(opacity: t.clamp(0.0, 1.0), child: child),
+                  ),
+                  child: Semantics(
+                    expanded: _expanded,
+                    child: TextButton.icon(
+                      key: const Key('conversation_correction_chip'),
+                      onPressed: () => setState(() => _expanded = !_expanded),
+                      style: TextButton.styleFrom(
+                        foregroundColor: AppColors.goldText,
+                      ),
+                      icon: const Icon(Icons.lightbulb_outline, size: 18),
+                      label: Text(
+                        l10n.conversationCorrectionChip(corrections.length),
+                      ),
                     ),
                   ),
                 ),
+              AnimatedSize(
+                duration: _motion(context, const Duration(milliseconds: 220)),
+                curve: Curves.easeOutCubic,
+                alignment: Alignment.topRight,
+                child: corrections.isNotEmpty && _expanded
+                    ? _CorrectionCard(corrections: corrections)
+                    : const SizedBox(width: double.infinity),
               ),
-            if (hasCorrections && _expanded)
-              Container(
-                key: const Key('conversation_correction_detail'),
-                margin: const EdgeInsets.only(top: AppSpacing.xs),
-                padding: const EdgeInsets.all(AppSpacing.md),
-                constraints: const BoxConstraints(maxWidth: 280),
-                decoration: BoxDecoration(
-                  color: AppColors.accentSoft,
-                  borderRadius: BorderRadius.circular(AppRadius.md),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    for (final c in widget.message.corrections) ...[
-                      Text(
-                        '${l10n.conversationCorrectionOriginalLabel}: ${c.original}',
-                        style: const TextStyle(
-                          decoration: TextDecoration.lineThrough,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
-                      Text(
-                        '${l10n.conversationCorrectionCorrectedLabel}: ${c.corrected}',
-                        style: const TextStyle(fontWeight: FontWeight.w700),
-                      ),
-                      Text(
-                        c.note,
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ],
-                ),
-              ),
-          ],
+            ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+/// Diseño "Correction": fondo `goldSoft`, bombilla y texto `goldText`. Solo
+/// se tacha lo que estaba mal, no la etiqueta.
+class _CorrectionCard extends StatelessWidget {
+  const _CorrectionCard({required this.corrections});
+
+  final List<Correction> corrections;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final base = Theme.of(context).textTheme.bodyMedium
+        ?.copyWith(color: AppColors.goldText, height: 1.4);
+    return Container(
+      key: const Key('conversation_correction_detail'),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.sm,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          for (final (i, c) in corrections.indexed) ...[
+            if (i > 0) const SizedBox(height: AppSpacing.sm),
+            Semantics(
+              label:
+                  '${l10n.conversationCorrectionOriginalLabel}: ${c.original}. '
+                  '${l10n.conversationCorrectionCorrectedLabel}: ${c.corrected}. '
+                  '${c.note}',
+              excludeSemantics: true,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.lightbulb_outline,
+                      size: 16,
+                      color: AppColors.goldText,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text.rich(
+                          TextSpan(
+                            style: base,
+                            children: [
+                              TextSpan(
+                                text: c.original,
+                                style: const TextStyle(
+                                  decoration: TextDecoration.lineThrough,
+                                ),
+                              ),
+                              const TextSpan(text: '  →  '),
+                              TextSpan(
+                                text: c.corrected,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w800,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (c.note.isNotEmpty)
+                          Text(c.note, style: base?.copyWith(fontSize: 12)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
       ),
     );
   }
@@ -1024,6 +1331,8 @@ class _BottomControls extends StatelessWidget {
     required this.onRetry,
     required this.onTextMode,
     required this.onStopSpeaking,
+    required this.slower,
+    required this.onToggleSlower,
   });
 
   final ConvState state;
@@ -1038,9 +1347,22 @@ class _BottomControls extends StatelessWidget {
   final VoidCallback onTextMode;
   final VoidCallback onStopSpeaking;
 
+  /// El tutor habla a 0.8x. Un solo control en el compositor, en vez de
+  /// tres velocidades debajo de cada burbuja.
+  final bool slower;
+  final VoidCallback onToggleSlower;
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final slowerToggle = FilterChip(
+      key: const Key('conversation_slower_toggle'),
+      avatar: const Icon(Icons.slow_motion_video, size: 18),
+      label: Text(l10n.conversationSlowerToggle),
+      selected: slower,
+      showCheckmark: false,
+      onSelected: (_) => onToggleSlower(),
+    );
     return SafeArea(
       child: Padding(
         padding: const EdgeInsets.all(AppSpacing.screenPad),
@@ -1068,9 +1390,8 @@ class _BottomControls extends StatelessWidget {
                   liveRegion: true,
                   child: Text(
                     errorMessage!,
-                    style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                      color: AppColors.errorText,
-                    ),
+                    style: Theme.of(context).textTheme.bodyMedium
+                        ?.copyWith(color: AppColors.errorText),
                   ),
                 ),
               ],
@@ -1100,9 +1421,17 @@ class _BottomControls extends StatelessWidget {
             children: [
               ValueListenableBuilder<int>(
                 valueListenable: listenSecondsLeft,
-                builder: (context, seconds, _) => Text(
-                  l10n.conversationListeningSecondsLeft(seconds),
-                  style: Theme.of(context).textTheme.bodySmall,
+                builder: (context, seconds, _) => Visibility(
+                  visible:
+                      seconds <=
+                      _ConversationScreenState._countdownVisibleSeconds,
+                  maintainSize: true,
+                  maintainAnimation: true,
+                  maintainState: true,
+                  child: Text(
+                    l10n.conversationListeningSecondsLeft(seconds),
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ),
               ),
               Text(partialText, textAlign: TextAlign.center),
@@ -1144,6 +1473,8 @@ class _BottomControls extends StatelessWidget {
                   onPressed: onStopSpeaking,
                   child: Text(l10n.conversationStopButton),
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                slowerToggle,
               ],
             ),
           ),
@@ -1168,6 +1499,8 @@ class _BottomControls extends StatelessWidget {
                   ),
                 ],
               ),
+              const SizedBox(height: AppSpacing.sm),
+              slowerToggle,
             ],
           ),
         },
@@ -1176,14 +1509,18 @@ class _BottomControls extends StatelessWidget {
   }
 }
 
-class _MicButton extends StatelessWidget {
-  const _MicButton({required this.active, required this.onTap, this.soundLevel});
+class _MicButton extends StatefulWidget {
+  const _MicButton({
+    required this.active,
+    required this.onTap,
+    this.soundLevel,
+  });
 
   final bool active;
   final VoidCallback? onTap;
 
   /// MEJ-04: nivel de volumen del micrófono mientras escucha, para dibujar
-  /// un anillo que reacciona a la voz. `null` fuera de `listening` (nada
+  /// un halo que reacciona a la voz. `null` fuera de `listening` (nada
   /// que animar).
   final ValueListenable<double>? soundLevel;
 
@@ -1192,28 +1529,83 @@ class _MicButton extends StatelessWidget {
   static const _haloBox = _buttonSize * (1 + _haloGrowth);
 
   @override
+  State<_MicButton> createState() => _MicButtonState();
+}
+
+class _MicButtonState extends State<_MicButton>
+    with SingleTickerProviderStateMixin {
+  /// "Respiración" del halo en silencio: confirma que sigue escuchando
+  /// aunque el usuario no esté hablando.
+  late final AnimationController _breath = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1600),
+  );
+  bool _pressed = false;
+
+  bool get _listening => widget.soundLevel != null;
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _syncBreath();
+  }
+
+  @override
+  void didUpdateWidget(_MicButton oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _syncBreath();
+  }
+
+  void _syncBreath() {
+    if (_listening && !MediaQuery.disableAnimationsOf(context)) {
+      if (!_breath.isAnimating) _breath.repeat(reverse: true);
+    } else {
+      _breath.stop();
+    }
+  }
+
+  void _setPressed(bool pressed) {
+    if (_pressed != pressed) setState(() => _pressed = pressed);
+  }
+
+  @override
+  void dispose() {
+    _breath.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final enabled = onTap != null;
+    final enabled = widget.onTap != null;
+    final reduceMotion = MediaQuery.disableAnimationsOf(context);
     // Escuchando: `accentText` (blanco encima 5:1; `accent` da 2.7:1).
     // Deshabilitado (enviando/hablando): gris, distinto del reposo.
-    final button = Material(
-      shape: const CircleBorder(),
-      color: !enabled
-          ? AppColors.locked
-          : active
-          ? AppColors.accentText
-          : AppColors.primaryDark,
-      child: InkWell(
-        key: const Key('conversation_mic_button'),
-        customBorder: const CircleBorder(),
-        onTap: onTap,
-        child: SizedBox.square(
-          dimension: _buttonSize,
-          child: Icon(
-            Icons.mic,
-            color: enabled ? Colors.white : AppColors.textMuted,
-            size: 32,
+    final button = AnimatedScale(
+      scale: _pressed && enabled ? 0.95 : 1,
+      duration: _motion(context, const Duration(milliseconds: 100)),
+      curve: Curves.easeOut,
+      child: Material(
+        shape: const CircleBorder(),
+        color: !enabled
+            ? AppColors.locked
+            : widget.active
+            ? AppColors.accentText
+            : AppColors.primaryDark,
+        child: InkWell(
+          key: const Key('conversation_mic_button'),
+          customBorder: const CircleBorder(),
+          onTap: widget.onTap,
+          onTapDown: (_) => _setPressed(true),
+          onTapUp: (_) => _setPressed(false),
+          onTapCancel: () => _setPressed(false),
+          child: SizedBox.square(
+            dimension: _MicButton._buttonSize,
+            child: Icon(
+              Icons.mic,
+              color: enabled ? Colors.white : AppColors.textMuted,
+              size: 32,
+            ),
           ),
         ),
       ),
@@ -1222,10 +1614,10 @@ class _MicButton extends StatelessWidget {
     // Caja fija: el halo se dibuja con `Transform.scale` (solo pintura),
     // así el panel inferior no cambia de alto con la voz ni al empezar a
     // escuchar.
-    final level = soundLevel;
+    final level = widget.soundLevel;
     final visual = SizedBox.square(
       key: const Key('conversation_mic_box'),
-      dimension: _haloBox,
+      dimension: _MicButton._haloBox,
       child: Stack(
         alignment: Alignment.center,
         children: [
@@ -1234,22 +1626,37 @@ class _MicButton extends StatelessWidget {
               valueListenable: level,
               builder: (context, value, _) {
                 // `speech_to_text` no normaliza `onSoundLevelChange` (suele
-                // moverse entre -2 y 10 aprox.): se recorta a 0-10. Con
-                // animaciones desactivadas el halo queda fijo.
-                final normalized = MediaQuery.disableAnimationsOf(context)
+                // moverse entre -2 y 10 aprox.): se recorta a 0-10 y se
+                // suaviza para que el halo no tiemble.
+                final target = reduceMotion
                     ? 0.5
                     : (value / 10).clamp(0.0, 1.0);
-                return Transform.scale(
-                  scale: 1 + normalized * _haloGrowth,
-                  child: Container(
-                    width: _buttonSize,
-                    height: _buttonSize,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.accent.withValues(
-                        alpha: 0.15 + normalized * 0.25,
-                      ),
-                    ),
+                return TweenAnimationBuilder<double>(
+                  tween: Tween(end: target),
+                  duration: _motion(context, const Duration(milliseconds: 120)),
+                  builder: (context, voice, _) => AnimatedBuilder(
+                    animation: _breath,
+                    builder: (context, _) {
+                      final breath = 0.04 + 0.1 * _breath.value;
+                      final grow = math.max(
+                        voice * _MicButton._haloGrowth,
+                        breath,
+                      );
+                      return Transform.scale(
+                        key: const Key('conversation_mic_halo'),
+                        scale: 1 + grow,
+                        child: Container(
+                          width: _MicButton._buttonSize,
+                          height: _MicButton._buttonSize,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: AppColors.accent.withValues(
+                              alpha: 0.15 + voice * 0.25,
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
                 );
               },
@@ -1262,7 +1669,7 @@ class _MicButton extends StatelessWidget {
     return Semantics(
       button: true,
       enabled: enabled,
-      label: active
+      label: widget.active
           ? l10n.conversationMicButtonListeningSemantics
           : l10n.conversationMicButtonSemantics,
       child: visual,

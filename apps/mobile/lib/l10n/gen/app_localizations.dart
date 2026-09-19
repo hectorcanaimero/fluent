@@ -1280,12 +1280,6 @@ abstract class AppLocalizations {
   /// **'Hubo un problema con el micrófono. Probá de nuevo.'**
   String get conversationSttErrorGeneric;
 
-  /// No description provided for @conversationSpeedButtonLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'{rate}x'**
-  String conversationSpeedButtonLabel(String rate);
-
   /// No description provided for @conversationReplayAudio.
   ///
   /// In es, this message translates to:
@@ -2005,6 +1999,18 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Notas guardadas.'**
   String get memoryBriefSaved;
+
+  /// No description provided for @conversationSlowerToggle.
+  ///
+  /// In es, this message translates to:
+  /// **'Más lento'**
+  String get conversationSlowerToggle;
+
+  /// No description provided for @summaryCorrectedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Corregidas'**
+  String get summaryCorrectedLabel;
 }
 
 class _AppLocalizationsDelegate

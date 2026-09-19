@@ -8,6 +8,7 @@ import 'package:fluent_mobile/features/session/presentation/session_summary_scre
 import 'package:fluent_mobile/features/settings/data/reminder_service.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -40,39 +41,43 @@ class _SlowDetailApi extends FakeApi {
 }
 
 void main() {
-  testWidgets('sin extra, si falla la carga ofrece reintentar en vez de girar para siempre', (
-    tester,
-  ) async {
-    final api = _DetailFailsOnceApi();
-    final created = await api.createSession(kind: 'free_topic', topic: 'Travel');
-    await api.endSession(sessionId: created.session.id, reason: 'user');
+  testWidgets(
+    'sin extra, si falla la carga ofrece reintentar en vez de girar para siempre',
+    (tester) async {
+      final api = _DetailFailsOnceApi();
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      await api.endSession(sessionId: created.session.id, reason: 'user');
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [fluentApiProvider.overrideWith((ref) => api)],
-        child: MaterialApp(
-          localizationsDelegates: const [
-            AppLocalizations.delegate,
-            GlobalMaterialLocalizations.delegate,
-            GlobalWidgetsLocalizations.delegate,
-            GlobalCupertinoLocalizations.delegate,
-          ],
-          supportedLocales: AppLocalizations.supportedLocales,
-          home: SessionSummaryScreen(sessionId: created.session.id),
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [fluentApiProvider.overrideWith((ref) => api)],
+          child: MaterialApp(
+            localizationsDelegates: const [
+              AppLocalizations.delegate,
+              GlobalMaterialLocalizations.delegate,
+              GlobalWidgetsLocalizations.delegate,
+              GlobalCupertinoLocalizations.delegate,
+            ],
+            supportedLocales: AppLocalizations.supportedLocales,
+            home: SessionSummaryScreen(sessionId: created.session.id),
+          ),
         ),
-      ),
-    );
-    await tester.pumpAndSettle();
+      );
+      await tester.pumpAndSettle();
 
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-    expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.commonLoadErrorTitle), findsOneWidget);
 
-    await tester.tap(find.text(l10n.commonRetry));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text(l10n.commonRetry));
+      await tester.pumpAndSettle();
 
-    expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
-    expect(find.text('+85'), findsOneWidget);
-  });
+      expect(find.text(l10n.commonLoadErrorTitle), findsNothing);
+      expect(find.text('+85'), findsOneWidget);
+    },
+  );
 
   testWidgets('muestra XP, streak, duración y el aviso de boss battle', (
     tester,
@@ -236,7 +241,10 @@ void main() {
             path: '/providers',
             builder: (context, state) => const Text('PROVIDERS_SCREEN'),
           ),
-          GoRoute(path: '/', builder: (context, state) => const Text('HOME_SCREEN')),
+          GoRoute(
+            path: '/',
+            builder: (context, state) => const Text('HOME_SCREEN'),
+          ),
         ],
       );
 
@@ -343,10 +351,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           api: api,
           reminder: reminder,
         ),
@@ -376,10 +381,7 @@ void main() {
       final now = TimeOfDay.now();
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           api: api,
           reminder: reminder,
         ),
@@ -419,10 +421,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           api: api,
           reminder: reminder,
         ),
@@ -459,10 +458,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           api: api,
           reminder: reminder,
         ),
@@ -518,10 +514,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           reminder: reminder,
           api: api,
         ),
@@ -559,10 +552,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           reminder: reminder,
           api: api,
         ),
@@ -594,10 +584,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           reminder: reminder,
           api: api,
         ),
@@ -627,10 +614,7 @@ void main() {
       );
       await tester.pumpWidget(
         wrap(
-          SessionSummaryScreen(
-            sessionId: created.session.id,
-            summary: summary,
-          ),
+          SessionSummaryScreen(sessionId: created.session.id, summary: summary),
           reminder: reminder,
           api: api,
         ),
@@ -669,6 +653,119 @@ void main() {
 
     expect(find.byKey(const Key('summary_skeleton')), findsOneWidget);
     expect(find.byType(CircularProgressIndicator), findsNothing);
+    await tester.pumpAndSettle();
+  });
+
+  Future<List<String>> pumpSummaryCountingHaptics(
+    WidgetTester tester,
+    SessionSummary summary, {
+    bool disableAnimations = false,
+  }) async {
+    final haptics = <String>[];
+    tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+      SystemChannels.platform,
+      (call) async {
+        if (call.method == 'HapticFeedback.vibrate') {
+          haptics.add('${call.arguments}');
+        }
+        return null;
+      },
+    );
+    addTearDown(
+      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(
+        SystemChannels.platform,
+        null,
+      ),
+    );
+    final api = FakeApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+        child: MaterialApp(
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          builder: (context, child) => MediaQuery(
+            data: MediaQuery.of(context)
+                .copyWith(disableAnimations: disableAnimations),
+            child: child!,
+          ),
+          home: SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+          ),
+        ),
+      ),
+    );
+    return haptics;
+  }
+
+  testWidgets('la vibración llega con el XP, no al abrir la pantalla', (
+    tester,
+  ) async {
+    final haptics = await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 85,
+        streak: 13,
+        correctionsCount: 2,
+        durationSec: 600,
+      ),
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    expect(haptics, isEmpty);
+    // El XP todavía está contando.
+    expect(find.text('+85'), findsNothing);
+
+    await tester.pumpAndSettle();
+    expect(haptics, hasLength(1));
+    expect(find.text('+85'), findsOneWidget);
+    expect(find.text('13'), findsOneWidget);
+    expect(find.text('2'), findsOneWidget);
+  });
+
+  testWidgets('una sesión demasiado corta no se celebra ni vibra', (
+    tester,
+  ) async {
+    final haptics = await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 0,
+        streak: 0,
+        correctionsCount: 0,
+        durationSec: 40,
+      ),
+    );
+    await tester.pump();
+    // Todo en su estado final desde el primer cuadro.
+    expect(find.text('+0'), findsOneWidget);
+    await tester.pumpAndSettle();
+    expect(haptics, isEmpty);
+  });
+
+  testWidgets('con "reducir movimiento" el resumen aparece ya en su estado '
+      'final', (tester) async {
+    await pumpSummaryCountingHaptics(
+      tester,
+      const SessionSummary(
+        xpEarned: 85,
+        streak: 13,
+        correctionsCount: 2,
+        durationSec: 600,
+      ),
+      disableAnimations: true,
+    );
+    await tester.pump();
+    expect(find.text('+85'), findsOneWidget);
+    expect(find.text('13'), findsOneWidget);
     await tester.pumpAndSettle();
   });
 }

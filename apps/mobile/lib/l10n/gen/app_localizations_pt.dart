@@ -702,11 +702,6 @@ class AppLocalizationsPt extends AppLocalizations {
       'Houve um problema com o microfone. Tente de novo.';
 
   @override
-  String conversationSpeedButtonLabel(String rate) {
-    return '${rate}x';
-  }
-
-  @override
   String get conversationReplayAudio => 'Repetir áudio';
 
   @override
@@ -1115,4 +1110,10 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get memoryBriefSaved => 'Notas salvas.';
+
+  @override
+  String get conversationSlowerToggle => 'Mais devagar';
+
+  @override
+  String get summaryCorrectedLabel => 'Corrigidas';
 }

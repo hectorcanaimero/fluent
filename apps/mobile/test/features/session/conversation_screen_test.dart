@@ -389,7 +389,6 @@ void main() {
     },
   );
 
-
   testWidgets(
     'tres LLM_UNAVAILABLE seguidos muestran un diálogo para terminar',
     (tester) async {
@@ -744,33 +743,32 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets(
-    'MAL-08: al salir de la conversación cancela el turno en vuelo',
-    (tester) async {
-      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
-      final speech = FakeSpeechService();
-      await pumpConversation(tester, api: api, speech: speech);
+  testWidgets('MAL-08: al salir de la conversación cancela el turno en vuelo', (
+    tester,
+  ) async {
+    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+    final speech = FakeSpeechService();
+    await pumpConversation(tester, api: api, speech: speech);
 
-      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
-      await tester.pump();
-      await tester.enterText(
-        find.byKey(const Key('conversation_draft_field')),
-        'hello',
-      );
-      await tester.tap(find.byKey(const Key('conversation_send_button')));
-      await tester.pump();
+    await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+    await tester.pump();
+    await tester.enterText(
+      find.byKey(const Key('conversation_draft_field')),
+      'hello',
+    );
+    await tester.tap(find.byKey(const Key('conversation_send_button')));
+    await tester.pump();
 
-      expect(api.capturedToken, isNotNull);
-      expect(api.capturedToken!.isCancelled, isFalse);
+    expect(api.capturedToken, isNotNull);
+    expect(api.capturedToken!.isCancelled, isFalse);
 
-      // Saca la pantalla del árbol sin que el stream haya mandado `done`.
-      await tester.pumpWidget(const SizedBox.shrink());
+    // Saca la pantalla del árbol sin que el stream haya mandado `done`.
+    await tester.pumpWidget(const SizedBox.shrink());
 
-      expect(api.capturedToken!.isCancelled, isTrue);
+    expect(api.capturedToken!.isCancelled, isTrue);
 
-      await api.closeStream();
-    },
-  );
+    await api.closeStream();
+  });
 
   testWidgets(
     'MAL-05: si el motor termina solo sin resultado final, pasa a revisar con el parcial',
@@ -980,28 +978,39 @@ void main() {
     },
   );
 
-  testWidgets('MEJ-04: la cuenta regresiva de escucha arranca en 45s y baja', (
-    tester,
-  ) async {
-    final speech = FakeSpeechService();
-    await pumpConversation(
-      tester,
-      api: FakeApi(artificialDelay: Duration.zero),
-      speech: speech,
-    );
+  testWidgets(
+    'MEJ-04: la cuenta regresiva arranca en el máximo del turno y solo se ve al final',
+    (tester) async {
+      final speech = FakeSpeechService();
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: speech,
+      );
 
-    await tester.tap(find.byKey(const Key('conversation_mic_button')));
-    await tester.pump();
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
 
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-    expect(find.text(l10n.conversationListeningSecondsLeft(45)), findsOneWidget);
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      bool shown(int seconds) => tester
+          .widget<Visibility>(
+            find.ancestor(
+              of: find.text(l10n.conversationListeningSecondsLeft(seconds)),
+              matching: find.byType(Visibility),
+            ),
+          )
+          .visible;
 
-    await tester.pump(const Duration(seconds: 1));
-    expect(find.text(l10n.conversationListeningSecondsLeft(44)), findsOneWidget);
+      final window = kListenWindow.inSeconds;
+      expect(shown(window), isFalse);
 
-    speech.emit('hello', isFinal: true);
-    await tester.pump();
-  });
+      await tester.pump(Duration(seconds: window - 20));
+      expect(shown(20), isTrue);
+
+      speech.emit('hello', isFinal: true);
+      await tester.pump();
+    },
+  );
 
   testWidgets(
     'MEJ-04: el nivel de sonido del micrófono no reconstruye toda la pantalla',
@@ -1063,9 +1072,7 @@ void main() {
     },
   );
 
-  testWidgets('MEJ-04: al enviar el turno muestra "Pensando…"', (
-    tester,
-  ) async {
+  testWidgets('MEJ-04: al enviar el turno muestra "Pensando…"', (tester) async {
     final api = _InstantReplyApi(
       artificialDelay: Duration.zero,
       turnDelay: const Duration(milliseconds: 50),
@@ -1093,9 +1100,7 @@ void main() {
     (tester) async {
       final api = _InstantReplyApi(artificialDelay: Duration.zero);
       final speech = FakeSpeechService();
-      final tts = FakeTtsService(
-        speakDelay: const Duration(milliseconds: 300),
-      );
+      final tts = FakeTtsService(speakDelay: const Duration(milliseconds: 300));
       await pumpConversation(tester, api: api, speech: speech, tts: tts);
 
       await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
@@ -1187,8 +1192,10 @@ void main() {
     (tester) async {
       final api = _ControlledStreamApi(artificialDelay: Duration.zero);
       await pumpConversation(tester, api: api, speech: FakeSpeechService());
-      final replaysBefore =
-          find.byIcon(Icons.volume_up_outlined).evaluate().length;
+      final replaysBefore = find
+          .byIcon(Icons.volume_up_outlined)
+          .evaluate()
+          .length;
 
       await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
       await tester.pump();
@@ -1336,15 +1343,30 @@ void main() {
     expect(find.byKey(const Key('conversation_skeleton')), findsNothing);
   });
 
-  testWidgets('mientras el tutor piensa, el micrófono se anuncia deshabilitado', (
-    tester,
-  ) async {
-    final api = _ControlledStreamApi(artificialDelay: Duration.zero);
-    await pumpConversation(tester, api: api, speech: FakeSpeechService());
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-    final mic = find.bySemanticsLabel(l10n.conversationMicButtonSemantics);
-    expect(tester.getSemantics(mic), isSemantics(isEnabled: true));
+  testWidgets(
+    'mientras el tutor piensa, el micrófono se anuncia deshabilitado',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      await pumpConversation(tester, api: api, speech: FakeSpeechService());
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      final mic = find.bySemanticsLabel(l10n.conversationMicButtonSemantics);
+      expect(tester.getSemantics(mic), isSemantics(isEnabled: true));
 
+      await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
+      await tester.pump();
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+
+      expect(tester.getSemantics(mic), isSemantics(isEnabled: false));
+      unawaited(api.closeStream());
+    },
+  );
+
+  Future<void> sendHello(WidgetTester tester) async {
     await tester.tap(find.byKey(const Key('conversation_text_mode_button')));
     await tester.pump();
     await tester.enterText(
@@ -1353,8 +1375,130 @@ void main() {
     );
     await tester.tap(find.byKey(const Key('conversation_send_button')));
     await tester.pump();
+  }
 
-    expect(tester.getSemantics(mic), isSemantics(isEnabled: false));
-    unawaited(api.closeStream());
+  testWidgets(
+    'el tutor "escribiendo" aparece antes del primer token y lo reemplaza '
+    'la respuesta',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      await pumpConversation(tester, api: api, speech: FakeSpeechService());
+      await sendHello(tester);
+
+      final typing = find.byKey(const Key('conversation_typing_bubble'));
+      expect(typing, findsOneWidget);
+
+      api.emit(const TurnStreamToken('First words'));
+      await tester.pump();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(typing, findsNothing);
+      expect(find.text('First words'), findsOneWidget);
+      unawaited(api.closeStream());
+    },
+  );
+
+  testWidgets(
+    'con "reducir movimiento" el tutor escribiendo y el micrófono quedan '
+    'quietos',
+    (tester) async {
+      final api = _ControlledStreamApi(artificialDelay: Duration.zero);
+      final speech = FakeSpeechService();
+      final created = await api.createSession(
+        kind: 'free_topic',
+        topic: 'Travel',
+      );
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            fluentApiProvider.overrideWith((ref) => api),
+            speechServiceProvider.overrideWith((ref) => speech),
+            ttsServiceProvider.overrideWith((ref) => FakeTtsService()),
+          ],
+          child: MaterialApp(
+            localizationsDelegates: _delegates,
+            supportedLocales: AppLocalizations.supportedLocales,
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(disableAnimations: true),
+              child: child!,
+            ),
+            home: ConversationScreen(sessionId: created.session.id),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+
+      // Escuchando: el halo no respira ni sigue la voz.
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pump();
+      speech.emitSoundLevel(10);
+      await tester.pump();
+      expect(tester.hasRunningAnimations, isFalse);
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      // Al detener la escucha queda en revisión: se envía desde ahí.
+      // Pensando: la burbuja se ve, pero sin animación.
+      await tester.enterText(
+        find.byKey(const Key('conversation_draft_field')),
+        'hello',
+      );
+      await tester.tap(find.byKey(const Key('conversation_send_button')));
+      await tester.pump();
+      expect(
+        find.byKey(const Key('conversation_typing_bubble')),
+        findsOneWidget,
+      );
+      expect(tester.hasRunningAnimations, isFalse);
+      unawaited(api.closeStream());
+    },
+  );
+
+  testWidgets('el halo del micrófono respira en silencio sin cambiar la caja', (
+    tester,
+  ) async {
+    final speech = FakeSpeechService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: speech,
+    );
+    final box = find.byKey(const Key('conversation_mic_box'));
+    final idle = tester.getSize(box);
+    await tester.tap(find.byKey(const Key('conversation_mic_button')));
+    await tester.pump();
+
+    double haloScale() => tester
+        .widget<Transform>(find.byKey(const Key('conversation_mic_halo')))
+        .transform
+        .getMaxScaleOnAxis();
+
+    await tester.pump(const Duration(milliseconds: 100));
+    final early = haloScale();
+    await tester.pump(const Duration(milliseconds: 800));
+    expect(haloScale(), isNot(early));
+    expect(tester.getSize(box), idle);
+  });
+
+  testWidgets('"Más lento" en el compositor baja la velocidad del tutor', (
+    tester,
+  ) async {
+    final tts = FakeTtsService();
+    await pumpConversation(
+      tester,
+      api: FakeApi(artificialDelay: Duration.zero),
+      speech: FakeSpeechService(),
+      tts: tts,
+    );
+    final toggle = find.byKey(const Key('conversation_slower_toggle'));
+    expect(tester.widget<FilterChip>(toggle).selected, isFalse);
+
+    await tester.tap(toggle);
+    await tester.pump();
+    expect(tester.widget<FilterChip>(toggle).selected, isTrue);
+
+    await tester.tap(find.byIcon(Icons.volume_up_outlined).first);
+    await tester.pumpAndSettle();
+    expect(tts.lastRate, 0.8);
   });
 }

@@ -197,7 +197,6 @@
   "conversationSttErrorNoMatch": "Não entendemos o que você disse. Tente de novo.",
   "conversationSttErrorTimeout": "O tempo de escuta acabou. Tente de novo.",
   "conversationSttErrorGeneric": "Houve um problema com o microfone. Tente de novo.",
-  "conversationSpeedButtonLabel": "{rate}x",
   "conversationReplayAudio": "Repetir áudio",
   "summaryTitle": "Sessão feita",
   "summaryXpEarnedLabel": "XP ganho",
@@ -317,5 +316,7 @@
   "authContinueWithApple": "Continuar com Apple",
   "authSignInError": "Não conseguimos entrar. Tente de novo.",
   "summaryTitleNoCorrections": "Sessão sem correções",
-  "memoryBriefSaved": "Notas salvas."
+  "memoryBriefSaved": "Notas salvas.",
+  "conversationSlowerToggle": "Mais devagar",
+  "summaryCorrectedLabel": "Corrigidas"
 }

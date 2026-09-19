@@ -1,6 +1,15 @@
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
+/// Máximo que dura un turno de voz. Antes eran 45 s y se cortaba en
+/// respuestas largas; la cuenta regresiva de la conversación usa este mismo
+/// valor para no desincronizarse.
+const kListenWindow = Duration(seconds: 120);
+
+/// Silencio tolerado antes de dar el turno por terminado. Con 3 s se cortaba
+/// cuando el estudiante hacía una pausa para pensar.
+const kPauseTolerance = Duration(seconds: 8);
+
 /// Abstrae `speech_to_text` (SPEC-06 §5) para poder simular el flujo de
 /// voz en tests y con `USE_FAKE_API=true`, sin permisos de micrófono ni
 /// hardware real.
@@ -26,7 +35,7 @@ abstract class SpeechService {
   /// transcripción parcial y una vez más con `isFinal: true` al terminar.
   ///
   /// MAL-05: el motor puede terminar solo sin emitir nunca `isFinal: true`
-  /// (los 45 s de `listenFor`, una llamada entrante, `error_no_match`) —
+  /// (el máximo de `listenFor`, una llamada entrante, `error_no_match`) —
   /// [onDoneWithoutResult] cubre el primer caso (status `done`/
   /// `notListening` sin resultado final) y [onError] los errores del motor
   /// (`error.errorMsg`, por ejemplo `error_no_match` o
@@ -108,8 +117,8 @@ class SpeechToTextService implements SpeechService {
           listenMode: stt.ListenMode.dictation,
           partialResults: true,
           localeId: localeId,
-          pauseFor: const Duration(seconds: 3),
-          listenFor: const Duration(seconds: 45),
+          pauseFor: kPauseTolerance,
+          listenFor: kListenWindow,
         ),
       );
     } catch (_) {
@@ -207,7 +216,7 @@ class FakeSpeechService implements SpeechService {
   }
 
   /// Helper de test (MAL-05): el motor termina solo sin resultado final
-  /// (los 45 s, una llamada entrante).
+  /// (el máximo de `listenFor`, una llamada entrante).
   void emitDoneWithoutResult() {
     _listening = false;
     _onDoneWithoutResult?.call();

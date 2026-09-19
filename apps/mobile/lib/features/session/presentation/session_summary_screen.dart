@@ -59,9 +59,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   Future<bool>? _isFirstValidSessionFuture;
 
   Future<bool> _isFirstValidSession(int xpEarned) {
-    return _isFirstValidSessionFuture ??= _computeIsFirstValidSession(
-      xpEarned,
-    );
+    return _isFirstValidSessionFuture ??= _computeIsFirstValidSession(xpEarned);
   }
 
   Future<bool> _computeIsFirstValidSession(int xpEarned) async {
@@ -103,12 +101,14 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
     final l10n = AppLocalizations.of(context);
     final (morning, evening) = await loadReminderTimes();
     if (!mounted) return;
-    await ref.read(reminderServiceProvider).skipToday(
-      morning: morning,
-      evening: evening,
-      title: l10n.settingsReminderNotificationTitle,
-      body: l10n.settingsReminderNotificationBody,
-    );
+    await ref
+        .read(reminderServiceProvider)
+        .skipToday(
+          morning: morning,
+          evening: evening,
+          title: l10n.settingsReminderNotificationTitle,
+          body: l10n.settingsReminderNotificationBody,
+        );
   }
 
   /// MEJ-38: tras la primera sesión válida, ofrecer el recordatorio diario
@@ -123,9 +123,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
         _computeMaybeShowFirstSessionReminderDialog(xpEarned);
   }
 
-  Future<void> _computeMaybeShowFirstSessionReminderDialog(
-    int xpEarned,
-  ) async {
+  Future<void> _computeMaybeShowFirstSessionReminderDialog(int xpEarned) async {
     final isFirst = await _isFirstValidSession(xpEarned);
     if (!isFirst) return;
     if (await hasAskedFirstSessionReminder()) return;
@@ -265,9 +263,8 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   @override
   void initState() {
     super.initState();
-    // MEJ-07: celebración física al llegar al resumen — antes solo el XP
-    // se animaba, sin ninguna señal más allá de la pantalla.
-    HapticFeedback.mediumImpact();
+    // La vibración de la celebración (MEJ-07) la dispara `_Celebration`
+    // cuando llega el XP, y no la hay si la sesión fue demasiado corta.
     // A esta pantalla solo se llega con la sesión ya cerrada, así que deja de
     // ser la "activa". Sin esto, `computeRedirect` seguía empujando a
     // `/session/:id` y no se podía volver al inicio (MAL-04). Se hace en un
@@ -346,22 +343,24 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: AppSpacing.xl),
-              Text(
-                tooShort
+              const SizedBox(height: AppSpacing.lg),
+              _Celebration(
+                title: tooShort
                     ? l10n.summaryTooShortTitle
                     : summary.correctionsCount == 0
                     ? l10n.summaryTitleNoCorrections
                     : l10n.summaryTitle,
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.headlineMedium,
+                summary: summary,
+                duration: _durationFor(summary),
+                tooShort: tooShort,
               ),
               if (tooShort) ...[
-                const SizedBox(height: AppSpacing.md),
+                const SizedBox(height: AppSpacing.lg),
                 Text(
                   l10n.summaryTooShortBody,
                   textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.bodyMedium,
+                  style: Theme.of(context).textTheme.bodyLarge
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 ElevatedButton(
@@ -370,49 +369,6 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   child: Text(l10n.summaryTooShortRetryButton),
                 ),
               ],
-              const SizedBox(height: AppSpacing.xl),
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  _StatColumn(
-                    label: l10n.summaryXpEarnedLabel,
-                    valueBuilder: (context) => TweenAnimationBuilder<int>(
-                      tween: IntTween(begin: 0, end: summary.xpEarned),
-                      duration: const Duration(milliseconds: 800),
-                      builder: (context, value, _) =>
-                          Text(l10n.summaryXpDelta(value)),
-                    ),
-                  ),
-                  _StatColumn(
-                    label: l10n.summaryStreakLabel,
-                    // MEJ-07: la llama "prende" con un rebote en vez de
-                    // aparecer estática — la única animación de esta
-                    // pantalla era la del XP.
-                    valueBuilder: (context) => TweenAnimationBuilder<double>(
-                      tween: Tween(begin: 0, end: 1),
-                      duration: const Duration(milliseconds: 600),
-                      curve: Curves.elasticOut,
-                      builder: (context, t, child) =>
-                          Transform.scale(scale: t, child: child),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.local_fire_department,
-                            // Icono con significado: ≥3:1 (MEJ-01).
-                            color: AppColors.accentText,
-                          ),
-                          Text('${summary.streak}'),
-                        ],
-                      ),
-                    ),
-                  ),
-                  _StatColumn(
-                    label: l10n.summaryDurationLabel,
-                    valueBuilder: (context) => Text(_durationFor(summary)),
-                  ),
-                ],
-              ),
               if (summary.isDoubleDay) ...[
                 const SizedBox(height: AppSpacing.lg),
                 _Banner(
@@ -474,9 +430,8 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   }
                   return Padding(
                     padding: const EdgeInsets.only(top: AppSpacing.md),
-                    child: _Banner(
+                    child: _LevelUpCard(
                       text: l10n.summaryLevelUpBanner(progress.level.name),
-                      color: AppColors.goldSoft,
                     ),
                   );
                 },
@@ -589,37 +544,22 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                 },
               ),
               const SizedBox(height: AppSpacing.xl),
-              ElevatedButton(
-                key: const Key('summary_back_button'),
-                onPressed: () => context.go('/'),
-                child: Text(l10n.summaryBackButton),
-              ),
+              if (tooShort)
+                OutlinedButton(
+                  key: const Key('summary_back_button'),
+                  onPressed: () => context.go('/'),
+                  child: Text(l10n.summaryBackButton),
+                )
+              else
+                ElevatedButton(
+                  key: const Key('summary_back_button'),
+                  onPressed: () => context.go('/'),
+                  child: Text(l10n.summaryBackButton),
+                ),
             ],
           ),
         ),
       ),
-    );
-  }
-}
-
-class _StatColumn extends StatelessWidget {
-  const _StatColumn({required this.label, required this.valueBuilder});
-
-  final String label;
-  final WidgetBuilder valueBuilder;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      children: [
-        DefaultTextStyle(
-          style: Theme.of(context).textTheme.headlineMedium!
-              .copyWith(color: AppColors.primaryDark),
-          child: valueBuilder(context),
-        ),
-        const SizedBox(height: AppSpacing.xs),
-        Text(label, style: Theme.of(context).textTheme.bodySmall),
-      ],
     );
   }
 }
@@ -734,17 +674,410 @@ class _SummarySkeleton extends StatelessWidget {
         SizedBox(height: AppSpacing.xl),
         Row(
           children: [
-            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+            Expanded(
+              child: SkeletonBox(height: 96, borderRadius: AppRadius.lg),
+            ),
             SizedBox(width: AppSpacing.md),
-            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+            Expanded(
+              child: SkeletonBox(height: 96, borderRadius: AppRadius.lg),
+            ),
             SizedBox(width: AppSpacing.md),
-            Expanded(child: SkeletonBox(height: 96, borderRadius: AppRadius.lg)),
+            Expanded(
+              child: SkeletonBox(height: 96, borderRadius: AppRadius.lg),
+            ),
           ],
         ),
         SizedBox(height: AppSpacing.xl),
         SkeletonListTile(),
         SkeletonListTile(),
       ],
+    );
+  }
+}
+
+/// Cabecera del resumen con su coreografía: el check aparece, las tarjetas
+/// entran en cascada, el XP cuenta cuando llega su tarjeta (con la
+/// vibración justo ahí) y la racha sube +1. Una sesión demasiado corta no
+/// se celebra: todo aparece quieto y sin vibrar. Con "reducir movimiento"
+/// se salta al estado final.
+class _Celebration extends StatefulWidget {
+  const _Celebration({
+    required this.title,
+    required this.summary,
+    required this.duration,
+    required this.tooShort,
+  });
+
+  final String title;
+  final SessionSummary summary;
+  final String duration;
+  final bool tooShort;
+
+  @override
+  State<_Celebration> createState() => _CelebrationState();
+}
+
+class _CelebrationState extends State<_Celebration>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(milliseconds: 1800),
+  );
+
+  static const _xpLands = 0.75;
+  bool _hapticDone = false;
+  bool _started = false;
+
+  Animation<double> _interval(double begin, double end, [Curve? curve]) =>
+      CurvedAnimation(
+        parent: _controller,
+        curve: Interval(begin, end, curve: curve ?? Curves.easeOutCubic),
+      );
+
+  late final _ring = _interval(0, 0.3, Curves.elasticOut);
+  late final _titleIn = _interval(0.1, 0.35);
+  late final _cards = [
+    for (var i = 0; i < 3; i++) _interval(0.3 + i * 0.08, 0.55 + i * 0.08),
+  ];
+  late final _xp = _interval(0.4, _xpLands);
+  late final _streakUp = _interval(0.78, 0.92, Curves.easeOutBack);
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.addListener(() {
+      if (!_hapticDone && _controller.value >= _xpLands) {
+        _hapticDone = true;
+        // MEJ-07: celebración física, en el momento en que llega el XP.
+        HapticFeedback.mediumImpact();
+      }
+    });
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (_started) return;
+    _started = true;
+    if (widget.tooShort) {
+      _hapticDone = true;
+      _controller.value = 1;
+    } else if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.value = 1;
+    } else {
+      _controller.forward();
+    }
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context).textTheme;
+    final summary = widget.summary;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Center(
+          child: ScaleTransition(
+            scale: _ring,
+            child: widget.tooShort
+                ? const _HeaderBadge(
+                    icon: Icons.hourglass_bottom,
+                    background: AppColors.locked,
+                    foreground: AppColors.textSecondary,
+                  )
+                : const _HeaderBadge(
+                    icon: Icons.check_rounded,
+                    background: AppColors.primaryDark,
+                    foreground: Colors.white,
+                  ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        FadeTransition(
+          opacity: _titleIn,
+          child: Column(
+            children: [
+              Text(
+                widget.title,
+                textAlign: TextAlign.center,
+                style: theme.headlineLarge?.copyWith(fontSize: 26),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const Icon(
+                    Icons.timer_outlined,
+                    size: 16,
+                    color: AppColors.textSecondary,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Text(
+                    widget.duration,
+                    semanticsLabel:
+                        '${l10n.summaryDurationLabel} ${widget.duration}',
+                    style: theme.bodyLarge?.copyWith(
+                      color: AppColors.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xl),
+        IntrinsicHeight(
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Expanded(
+                child: _CardIn(
+                  animation: _cards[0],
+                  child: _StatCard(
+                    icon: Icons.bolt,
+                    tint: AppColors.goldSoft,
+                    iconColor: AppColors.goldText,
+                    label: l10n.summaryXpEarnedLabel,
+                    value: AnimatedBuilder(
+                      animation: _xp,
+                      builder: (context, _) => Text(
+                        l10n.summaryXpDelta(
+                          (summary.xpEarned * _xp.value).round(),
+                        ),
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _CardIn(
+                  animation: _cards[1],
+                  child: _StatCard(
+                    icon: Icons.edit_outlined,
+                    tint: AppColors.primarySoft,
+                    iconColor: AppColors.primaryDark,
+                    label: l10n.summaryCorrectedLabel,
+                    value: Text('${summary.correctionsCount}'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _CardIn(
+                  animation: _cards[2],
+                  child: _StatCard(
+                    icon: Icons.local_fire_department,
+                    tint: AppColors.accentSoft,
+                    iconColor: AppColors.accentText,
+                    label: l10n.summaryStreakLabel,
+                    value: _StreakTicker(
+                      streak: summary.streak,
+                      // Solo sube si esta sesión la hizo crecer.
+                      animation: widget.tooShort || summary.streak == 0
+                          ? const AlwaysStoppedAnimation(1.0)
+                          : _streakUp,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HeaderBadge extends StatelessWidget {
+  const _HeaderBadge({
+    required this.icon,
+    required this.background,
+    required this.foreground,
+  });
+
+  final IconData icon;
+  final Color background;
+  final Color foreground;
+
+  @override
+  Widget build(BuildContext context) {
+    return ExcludeSemantics(
+      child: Container(
+        key: const Key('summary_header_badge'),
+        width: 88,
+        height: 88,
+        decoration: BoxDecoration(
+          color: background,
+          shape: BoxShape.circle,
+          border: Border.all(
+            color: background.withValues(alpha: 0.25),
+            width: 8,
+          ),
+        ),
+        child: Icon(icon, size: 44, color: foreground),
+      ),
+    );
+  }
+}
+
+/// Entrada de cada tarjeta: fade + subida de 16 px.
+class _CardIn extends StatelessWidget {
+  const _CardIn({required this.animation, required this.child});
+
+  final Animation<double> animation;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return FadeTransition(
+      opacity: animation,
+      child: SlideTransition(
+        position: Tween(
+          begin: const Offset(0, 0.15),
+          end: Offset.zero,
+        ).animate(animation),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _StatCard extends StatelessWidget {
+  const _StatCard({
+    required this.icon,
+    required this.tint,
+    required this.iconColor,
+    required this.label,
+    required this.value,
+  });
+
+  final IconData icon;
+  final Color tint;
+  final Color iconColor;
+  final String label;
+  final Widget value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: AppSpacing.md,
+        vertical: AppSpacing.lg,
+      ),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        children: [
+          Container(
+            width: 36,
+            height: 36,
+            decoration: BoxDecoration(color: tint, shape: BoxShape.circle),
+            child: Icon(icon, size: 20, color: iconColor),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          // El número se achica antes que desbordar la tarjeta.
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            child: DefaultTextStyle(style: theme.headlineMedium!, child: value),
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          Text(label, textAlign: TextAlign.center, style: theme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
+
+/// La racha pasa de `streak - 1` a `streak` deslizándose hacia arriba.
+class _StreakTicker extends StatelessWidget {
+  const _StreakTicker({required this.streak, required this.animation});
+
+  final int streak;
+  final Animation<double> animation;
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = animation.value;
+        if (t >= 1 || streak == 0) return Text('$streak');
+        return ClipRect(
+          child: Stack(
+            children: [
+              Opacity(opacity: 0, child: Text('$streak')),
+              Transform.translate(
+                offset: Offset(0, -24 * t),
+                child: Opacity(
+                  opacity: (1 - t).clamp(0.0, 1.0),
+                  child: Text('${streak - 1}'),
+                ),
+              ),
+              Transform.translate(
+                offset: Offset(0, 24 * (1 - t)),
+                child: Opacity(
+                  opacity: t.clamp(0.0, 1.0),
+                  child: Text('$streak'),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Subir de nivel es el momento más raro: tarjeta dorada propia, no un
+/// aviso más.
+class _LevelUpCard extends StatelessWidget {
+  const _LevelUpCard({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('summary_level_up_card'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        // Texto `textPrimary` sobre `gold`: 9:1.
+        color: AppColors.gold,
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 44,
+            height: 44,
+            decoration: const BoxDecoration(
+              color: AppColors.surface,
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.military_tech,
+              color: AppColors.goldText,
+              size: 26,
+            ),
+          ),
+          const SizedBox(width: AppSpacing.md),
+          Expanded(
+            child: Text(text, style: Theme.of(context).textTheme.titleMedium),
+          ),
+        ],
+      ),
     );
   }
 }

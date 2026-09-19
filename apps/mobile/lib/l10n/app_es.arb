@@ -254,12 +254,6 @@
   "conversationSttErrorNoMatch": "No entendimos lo que dijiste. Probá de nuevo.",
   "conversationSttErrorTimeout": "Se acabó el tiempo de escucha. Probá de nuevo.",
   "conversationSttErrorGeneric": "Hubo un problema con el micrófono. Probá de nuevo.",
-  "conversationSpeedButtonLabel": "{rate}x",
-  "@conversationSpeedButtonLabel": {
-    "placeholders": {
-      "rate": {"type": "String"}
-    }
-  },
   "conversationReplayAudio": "Repetir audio",
   "summaryTitle": "Sesión hecha",
   "summaryXpEarnedLabel": "XP ganado",
@@ -432,5 +426,7 @@
   "authContinueWithApple": "Continuar con Apple",
   "authSignInError": "No pudimos iniciar sesión. Probá de nuevo.",
   "summaryTitleNoCorrections": "Sesión sin correcciones",
-  "memoryBriefSaved": "Notas guardadas."
+  "memoryBriefSaved": "Notas guardadas.",
+  "conversationSlowerToggle": "Más lento",
+  "summaryCorrectedLabel": "Corregidas"
 }

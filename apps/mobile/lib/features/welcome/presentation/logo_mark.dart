@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/widgets/spark_mark.dart';
 
 /// Isotipo de la propuesta B "Spark" (`assets/icon/logo.svg`), dibujado con
 /// paths para que escale nítido sin depender de un paquete de SVG. El
@@ -61,17 +62,7 @@ class _LogoMarkPainter extends CustomPainter {
       Paint()..color = AppColors.primary,
     );
     canvas.drawPath(
-      Path()
-        ..moveTo(49.024, 36.544)
-        ..relativeCubicTo(0.448, 2.176, 1.28, 4.416, 2.496, 5.568)
-        ..relativeCubicTo(1.344, 1.28, 5.12, 2.432, 5.12, 2.432)
-        ..relativeCubicTo(0, 0, -4.096, 0.768, -5.696, 2.752)
-        ..relativeCubicTo(-1.408, 1.856, -1.92, 4.864, -1.92, 4.864)
-        ..relativeCubicTo(0, 0, -0.768, -3.776, -2.624, -5.312)
-        ..relativeCubicTo(-1.664, -1.344, -4.928, -2.048, -4.928, -2.304)
-        ..relativeCubicTo(3.84, -1.024, 5.376, -2.048, 6.208, -3.776)
-        ..relativeCubicTo(0.768, -1.472, 1.088, -2.112, 1.344, -4.224)
-        ..close(),
+      buildSparkPath().shift(const Offset(41.472, 36.544)),
       Paint()..color = AppColors.gold,
     );
   }

@@ -683,7 +683,7 @@ abstract class AppLocalizations {
   /// No description provided for @providersStatusError.
   ///
   /// In es, this message translates to:
-  /// **'Con error'**
+  /// **'No funciona: volvé a conectarla'**
   String get providersStatusError;
 
   /// No description provided for @providersConnectButton.
@@ -1031,7 +1031,7 @@ abstract class AppLocalizations {
   /// No description provided for @micPermissionBody.
   ///
   /// In es, this message translates to:
-  /// **'Open Fluent usa el micrófono del teléfono para escucharte durante la conversación. La transcripción se procesa en tu dispositivo y vos la revisás antes de enviarla.'**
+  /// **'Open Fluent usa el micrófono para escucharte durante la conversación. Tu voz se convierte en texto, nunca guardamos el audio, y vos revisás el texto antes de enviarlo.'**
   String get micPermissionBody;
 
   /// No description provided for @micPermissionContinue.

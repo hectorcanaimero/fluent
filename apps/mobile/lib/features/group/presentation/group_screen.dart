@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_error_snack_bar.dart';
 import '../../../core/errors/api_exception.dart';
-import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/button_spinner.dart';
@@ -82,9 +82,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
         context.push('/session/${e.activeSessionId}');
         return;
       }
-      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+          .showSnackBar(apiErrorSnackBar(context, e.code));
     } catch (_) {
       // Sin red o timeout: antes fallaba en silencio.
       if (mounted) _showGenericError();
@@ -113,10 +112,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           .shareText(l10n.groupInviteMessage(invitation.code));
     } on ApiException catch (e) {
       if (!mounted) return;
-      final l10n = AppLocalizations.of(context);
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+      ).showSnackBar(apiErrorSnackBar(context, e.code));
     } catch (_) {
       if (mounted) _showGenericError();
     } finally {

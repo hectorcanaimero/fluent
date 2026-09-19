@@ -3,8 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/errors/api_error_snack_bar.dart';
 import '../../../core/errors/api_exception.dart';
-import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/button_spinner.dart';
@@ -70,7 +70,7 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         return;
       }
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+          .showSnackBar(apiErrorSnackBar(context, e.code));
     } catch (_) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -280,8 +280,13 @@ class _OnboardingChecklist extends ConsumerWidget {
                 const SizedBox(height: AppSpacing.sm),
                 _ChecklistItem(label: l10n.homeChecklistProfile, done: true),
                 _ChecklistItem(
+                  key: const Key('home_checklist_provider'),
                   label: l10n.homeChecklistProvider,
                   done: providerConnected,
+                  // Antes era solo texto: no había cómo llegar a conectar.
+                  onTap: providerConnected
+                      ? null
+                      : () => context.push('/providers'),
                 ),
                 _ChecklistItem(
                   label: l10n.homeChecklistFirstSession,
@@ -297,14 +302,22 @@ class _OnboardingChecklist extends ConsumerWidget {
 }
 
 class _ChecklistItem extends StatelessWidget {
-  const _ChecklistItem({required this.label, required this.done});
+  const _ChecklistItem({
+    super.key,
+    required this.label,
+    required this.done,
+    this.onTap,
+  });
 
   final String label;
   final bool done;
 
+  /// Pendiente y accionable: la fila lleva a donde se completa.
+  final VoidCallback? onTap;
+
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final row = Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
@@ -314,14 +327,32 @@ class _ChecklistItem extends StatelessWidget {
             color: done ? AppColors.primary : AppColors.textMuted,
           ),
           const SizedBox(width: AppSpacing.sm),
-          Text(
-            label,
-            style: TextStyle(
-              color: done ? AppColors.textPrimary : AppColors.textMuted,
-              decoration: done ? TextDecoration.lineThrough : null,
+          Expanded(
+            child: Text(
+              label,
+              style: TextStyle(
+                color: done
+                    ? AppColors.textPrimary
+                    : onTap != null
+                    ? AppColors.primaryDark
+                    : AppColors.textSecondary,
+                fontWeight: onTap != null ? FontWeight.w600 : null,
+                decoration: done ? TextDecoration.lineThrough : null,
+              ),
             ),
           ),
+          if (onTap != null)
+            const Icon(Icons.chevron_right, color: AppColors.primaryDark),
         ],
+      ),
+    );
+    if (onTap == null) return row;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.md),
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 48),
+        child: row,
       ),
     );
   }

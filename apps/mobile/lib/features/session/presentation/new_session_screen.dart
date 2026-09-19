@@ -6,8 +6,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../app/theme.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_error_snack_bar.dart';
 import '../../../core/errors/api_exception.dart';
-import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
@@ -118,7 +118,7 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
         return;
       }
       ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10nForApiError(e.code, l10n))));
+          .showSnackBar(apiErrorSnackBar(context, e.code));
     } catch (_) {
       if (mounted) {
         ScaffoldMessenger.of(context)

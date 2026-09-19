@@ -22,6 +22,8 @@ export interface GroupDto {
   id: string;
   name: string;
   groupStreak: number;
+  /** Grupo por defecto: un código de invitación puede sacar al usuario de él. */
+  isDefault: boolean;
 }
 
 /** Elemento de `providers[]` en `GET /me`. */

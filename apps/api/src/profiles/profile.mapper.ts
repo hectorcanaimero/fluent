@@ -22,6 +22,7 @@ export function toGroupDto(row: Group): GroupDto {
     id: row.id,
     name: row.name,
     groupStreak: row.group_streak,
+    isDefault: row.is_default,
   };
 }
 

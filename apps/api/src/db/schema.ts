@@ -136,6 +136,7 @@ export interface Group {
   owner_id: string | null;
   group_streak: number;
   group_streak_day: string | null; // ISO 8601 date (añadido en migración 5)
+  is_default: boolean; // grupo al que entra todo perfil nuevo (20260919160000)
   created_at: string; // ISO 8601 timestamp
 }
 

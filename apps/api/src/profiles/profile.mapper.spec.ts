@@ -62,6 +62,7 @@ describe('toGroupDto', () => {
       owner_id: 'owner-1',
       group_streak: 3,
       group_streak_day: '2026-09-07',
+      is_default: false,
       created_at: '2026-08-01T00:00:00.000Z',
     };
 
@@ -69,6 +70,7 @@ describe('toGroupDto', () => {
       id: 'group-1',
       name: 'Los Pibes',
       groupStreak: 3,
+      isDefault: false,
     });
   });
 });

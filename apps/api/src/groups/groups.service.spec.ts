@@ -39,6 +39,7 @@ function makeGroup(overrides: Partial<Group> = {}): Group {
     owner_id: 'group-owner',
     group_streak: 2,
     group_streak_day: null,
+    is_default: false,
     created_at: '2026-08-01T00:00:00.000Z',
     ...overrides,
   };
@@ -149,7 +150,7 @@ describe('GroupsService.getGroup', () => {
 
     const result = await service.getGroup('user-1');
 
-    expect(result.group).toEqual({ id: 'group-1', name: 'Los Pibes', groupStreak: 2 });
+    expect(result.group).toEqual({ id: 'group-1', name: 'Los Pibes', groupStreak: 2, isDefault: false });
     expect(result.members).toEqual([
       { userId: 'user-1', displayName: 'Ana', level: 'B1', xp: 10, streak: 1, lastSessionDay: null },
     ]);

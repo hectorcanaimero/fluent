@@ -51,6 +51,8 @@ export class GroupsService {
         id: result.group_id,
         name: result.name,
         groupStreak: result.group_streak,
+        // Un código siempre lleva a un grupo de amigos, no al grupo por defecto.
+        isDefault: false,
       },
     };
   }

@@ -22,6 +22,7 @@ DECLARE
   v_result   jsonb;
   v_n        int;
   v_error    text;
+  v_default  uuid;
 BEGIN
   -- ---- usuarios de prueba -------------------------------------------------
   SELECT id INTO v_a FROM auth.users WHERE email = 'sqltest-a@fluent.test';
@@ -32,6 +33,12 @@ BEGIN
   END IF;
 
   -- ---- estado limpio ------------------------------------------------------
+  -- Sin grupo por defecto durante el test (si no, el trigger de
+  -- 20260919160000 les asignaría grupo a los perfiles). Se restaura en la
+  -- limpieza; si el test falla, el bloque entero se revierte.
+  SELECT id INTO v_default FROM public.groups WHERE is_default;
+  UPDATE public.groups SET is_default = false WHERE is_default;
+
   DELETE FROM public.profiles WHERE user_id IN (v_a, v_b, v_c);
   DELETE FROM public.invitations WHERE code IN (v_code_a, v_code_b, v_code_exp);
   DELETE FROM public.groups WHERE name = 'test-redeem-invitation';
@@ -143,6 +150,7 @@ BEGIN
   DELETE FROM public.profiles WHERE user_id IN (v_a, v_b, v_c);
   DELETE FROM public.invitations WHERE code IN (v_code_a, v_code_b, v_code_exp);
   DELETE FROM public.groups WHERE name = 'test-redeem-invitation';
+  UPDATE public.groups SET is_default = true WHERE id = v_default;
 
   RAISE NOTICE 'redeem_invitation: todas las comprobaciones en verde';
 END;

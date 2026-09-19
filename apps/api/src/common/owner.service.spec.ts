@@ -11,6 +11,7 @@ function makeGroup(overrides: Partial<Group> = {}): Group {
     owner_id: 'group-owner',
     group_streak: 0,
     group_streak_day: null,
+    is_default: false,
     created_at: '2026-08-01T00:00:00.000Z',
     ...overrides,
   };

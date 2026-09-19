@@ -1,4 +1,4 @@
-package dev.fluent.fluent_mobile
+package com.guria.openfluent
 
 import io.flutter.embedding.android.FlutterActivity
 

@@ -17,6 +17,7 @@ import 'api/models.dart';
 import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
+import 'push/push_service.dart';
 import 'share/share_service.dart';
 import 'http/caching_token_store.dart';
 import 'storage/token_store.dart';
@@ -158,5 +159,7 @@ final authControllerProvider =
         // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
         // la app quedaba "zombi" hasta reiniciarla (MAL-02).
         sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
+        // Este teléfono deja de recibir push de la cuenta que se va.
+        beforeLogout: () => ref.read(pushServiceProvider).unregister(),
       );
     });

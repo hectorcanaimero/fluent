@@ -53,6 +53,10 @@ dependencies:
   cupertino_icons: ^1.0.8
   lottie: ^3.6.1
   crypto: ^3.0.7
+  firebase_core: ^4.15.0
+  firebase_crashlytics: ^5.4.0
+  firebase_analytics: ^12.6.0
+  firebase_messaging: ^16.7.0
 
 dev_dependencies:
   flutter_test:

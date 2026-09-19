@@ -15,7 +15,7 @@
 		<key>CFBundleInfoDictionaryVersion</key>
 		<string>6.0</string>
 		<key>CFBundleName</key>
-		<string>Fluent</string>
+		<string>Open Fluent</string>
 		<key>CFBundlePackageType</key>
 		<string>APPL</string>
 		<key>CFBundleShortVersionString</key>
@@ -32,7 +32,7 @@
 		<array>
 			<dict>
 				<key>CFBundleURLName</key>
-				<string>dev.fluent.fluent_mobile.oauth</string>
+				<string>com.guria.openfluent.oauth</string>
 				<key>CFBundleURLSchemes</key>
 				<array>
 					<string>fluent</string>
@@ -41,10 +41,26 @@
 		</array>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
+		<!-- Textos por idioma en {en,es,pt}.lproj/InfoPlist.strings; estos
+		     son el respaldo (idioma base: inglés). -->
 		<key>NSMicrophoneUsageDescription</key>
-		<string>Fluent usa el micrófono para que hables con el tutor. La transcripción se procesa en tu dispositivo.</string>
+		<string>Open Fluent uses the microphone so you can speak with your tutor. Your voice becomes text; we never store the audio.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
-		<string>Fluent usa el micrófono para que hables con el tutor. La transcripción se procesa en tu dispositivo.</string>
+		<string>Open Fluent turns what you say into text so your tutor can answer and correct you. We never store the audio.</string>
+		<key>CFBundleLocalizations</key>
+		<array>
+			<string>en</string>
+			<string>es</string>
+			<string>pt</string>
+		</array>
+		<!-- Solo HTTPS estándar: sin cifrado propio que declarar a exportación. -->
+		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+		<!-- Firebase Messaging: recibir push en segundo plano. -->
+		<key>UIBackgroundModes</key>
+		<array>
+			<string>remote-notification</string>
+		</array>
 		<key>UIApplicationSceneManifest</key>
 		<dict>
 			<key>UIApplicationSupportsMultipleScenes</key>

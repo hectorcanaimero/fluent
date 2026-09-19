@@ -59,3 +59,5 @@ defines.json
 android/key.properties
 android/**/*.jks
 android/**/*.keystore
+*.p12
+*.mobileprovision

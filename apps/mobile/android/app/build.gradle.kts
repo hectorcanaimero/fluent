@@ -2,24 +2,38 @@ import java.util.Properties
 
 plugins {
     id("com.android.application")
+    id("com.google.gms.google-services")
+    id("com.google.firebase.crashlytics")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Firma de release, en este orden:
+// 1. `android/key.properties` (builds locales; nunca se commitea).
+// 2. Variables de Codemagic (`android_signing` con una referencia al
+//    keystore): CM_KEYSTORE_PATH, CM_KEYSTORE_PASSWORD, CM_KEY_ALIAS,
+//    CM_KEY_PASSWORD.
+// 3. Si no hay ninguna, la clave de debug (Play la rechaza).
 val keystorePropertiesFile = rootProject.file("key.properties")
 val keystoreProperties = Properties()
-val hasReleaseKeystore = keystorePropertiesFile.exists()
-if (hasReleaseKeystore) {
+if (keystorePropertiesFile.exists()) {
     keystoreProperties.load(keystorePropertiesFile.inputStream())
-} else {
+} else if (System.getenv("CM_KEYSTORE_PATH") != null) {
+    keystoreProperties["storeFile"] = System.getenv("CM_KEYSTORE_PATH")
+    keystoreProperties["storePassword"] = System.getenv("CM_KEYSTORE_PASSWORD")
+    keystoreProperties["keyAlias"] = System.getenv("CM_KEY_ALIAS")
+    keystoreProperties["keyPassword"] = System.getenv("CM_KEY_PASSWORD")
+}
+val hasReleaseKeystore = keystoreProperties.getProperty("storeFile") != null
+if (!hasReleaseKeystore) {
     logger.warn(
-        "android/key.properties no existe: el build release se firma con la clave " +
-            "de debug. Ver README.md de mobile para generar el keystore.",
+        "Sin android/key.properties ni CM_KEYSTORE_PATH: el build release se " +
+            "firma con la clave de debug. Ver docs/runbooks/stores.md.",
     )
 }
 
 android {
-    namespace = "dev.fluent.fluent_mobile"
+    namespace = "com.guria.openfluent"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -30,8 +44,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "dev.fluent.fluent_mobile"
+        // Tiene que coincidir con el package de google-services.json y con la
+        // ficha de Play: no cambiarlo después de publicar.
+        applicationId = "com.guria.openfluent"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

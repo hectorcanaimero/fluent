@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "169521440265",
+    "project_id": "open-fluent",
+    "storage_bucket": "open-fluent.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:169521440265:android:afea93b59d8a2997187ad8",
+        "android_client_info": {
+          "package_name": "com.guria.openfluent"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBUgzvL4hpmDt29thlh74Splgq4tlfte30"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

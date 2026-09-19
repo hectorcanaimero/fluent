@@ -17,9 +17,11 @@ class AuthController extends StateNotifier<AuthState> {
     required FluentApi api,
     InsforgeAuthClient? authClient,
     Stream<void>? sessionExpired,
+    Future<void> Function()? beforeLogout,
   }) : _tokenStore = tokenStore,
        _api = api,
        _authClient = authClient,
+       _beforeLogout = beforeLogout,
        super(const AuthState()) {
     _sessionExpiredSub = sessionExpired?.listen((_) => _onSessionExpired());
   }
@@ -31,6 +33,10 @@ class AuthController extends StateNotifier<AuthState> {
   /// access token) al cerrar sesión. Opcional: los tests que no ejercitan el logout remoto no lo
   /// necesitan, y sin él `logout()` sigue limpiando el estado local.
   final InsforgeAuthClient? _authClient;
+
+  /// Se corre al cerrar sesión con los tokens todavía guardados (por
+  /// ejemplo, dar de baja el token de push). Nunca bloquea el logout.
+  final Future<void> Function()? _beforeLogout;
   StreamSubscription<void>? _sessionExpiredSub;
 
   @override
@@ -123,6 +129,12 @@ class AuthController extends StateNotifier<AuthState> {
     // pantalla muerta antes de que pasara nada en local. `logout` ya traga
     // los fallos de red por dentro.
     final tokens = await _tokenStore.read();
+    final beforeLogout = _beforeLogout;
+    if (beforeLogout != null) {
+      try {
+        await beforeLogout().timeout(const Duration(seconds: 3));
+      } catch (_) {}
+    }
     final pending = (tokens != null && _authClient != null)
         ? _authClient.logout(tokens.accessToken)
         : null;

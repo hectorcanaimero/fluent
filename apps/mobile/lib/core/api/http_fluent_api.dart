@@ -88,6 +88,22 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
+  Future<void> registerPushToken({
+    required String token,
+    required String platform,
+  }) => _client.guard(() async {
+    await _client.dio.post(
+      '/me/push-token',
+      data: {'token': token, 'platform': platform},
+    );
+  });
+
+  @override
+  Future<void> unregisterPushToken(String token) => _client.guard(() async {
+    await _client.dio.delete('/me/push-token', data: {'token': token});
+  });
+
+  @override
   Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) =>
       _client.guard(() async {
         final res = await _client.dio.post(

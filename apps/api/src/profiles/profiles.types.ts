@@ -15,6 +15,8 @@ export interface ProfileDto {
   xp: number;
   streak: number;
   lastSessionDay: string | null;
+  /** Foto del login social; `null` si no hay (se muestra la inicial). */
+  avatarUrl: string | null;
 }
 
 /** `group` de `GET /me`, `POST /invitations/redeem` y `GET /group` (envuelto según el endpoint). */

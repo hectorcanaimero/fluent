@@ -121,6 +121,8 @@ export interface Profile {
   /** MAL-24: cuándo gastó su sesión de cortesía; `null` si aún le queda. */
   courtesy_session_used_at: string | null; // ISO 8601 timestamp
   sessions_count: number;
+  /** Foto del login social (https), copiada de InsForge al crear el perfil. */
+  avatar_url: string | null;
   onboarded_at: string | null; // ISO 8601 timestamp (PostgREST serializa timestamptz como string)
   created_at: string; // ISO 8601 timestamp
   updated_at: string; // ISO 8601 timestamp

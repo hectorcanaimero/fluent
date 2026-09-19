@@ -18,6 +18,7 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     grace_used_week: null,
     courtesy_session_used_at: null,
     sessions_count: 5,
+    avatar_url: null,
     onboarded_at: '2026-09-01T00:00:00.000Z',
     created_at: '2026-08-01T00:00:00.000Z',
     updated_at: '2026-09-07T00:00:00.000Z',
@@ -38,7 +39,15 @@ describe('toProfileDto', () => {
       xp: 120,
       streak: 4,
       lastSessionDay: '2026-09-07',
+      avatarUrl: null,
     });
+  });
+
+  it('passes through the social login avatar', () => {
+    const dto = toProfileDto(
+      makeProfile({ avatar_url: 'https://lh3.googleusercontent.com/a/photo' }),
+    );
+    expect(dto.avatarUrl).toBe('https://lh3.googleusercontent.com/a/photo');
   });
 
   it('does not leak columns absent from the app contract (group_id, onboarded_at, ...)', () => {

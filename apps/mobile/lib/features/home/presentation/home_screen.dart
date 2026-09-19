@@ -8,6 +8,7 @@ import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/button_spinner.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../core/widgets/skeleton.dart';
 import '../../../features/session/domain/session_prefs.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -225,21 +226,10 @@ class _HeaderRow extends StatelessWidget {
             child: InkWell(
               key: const Key('home_avatar_button'),
               onTap: () => context.push('/settings'),
-              child: SizedBox.square(
-                dimension: 48,
-                child: Center(
-                  child: ExcludeSemantics(
-                    child: Text(
-                      data.displayName.isNotEmpty
-                          ? data.displayName[0].toUpperCase()
-                          : '?',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w700,
-                        color: AppColors.primaryDark,
-                      ),
-                    ),
-                  ),
-                ),
+              // Foto del login social, o la inicial si no hay.
+              child: UserAvatar(
+                name: data.displayName,
+                imageUrl: data.avatarUrl,
               ),
             ),
           ),

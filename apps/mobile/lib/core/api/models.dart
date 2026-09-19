@@ -18,6 +18,9 @@ abstract class Profile with _$Profile {
     required int streak,
     String? lastSessionDay,
 
+    /// Foto del login social (https); `null` muestra la inicial.
+    String? avatarUrl,
+
     /// MEJ-20: `GET /me` todavía no lo manda (`ProfileDto` de la API no
     /// tiene `userId`); se lee igual para poder comparar contra
     /// `GroupMember.userId` en vez de por `displayName` en cuanto la API lo

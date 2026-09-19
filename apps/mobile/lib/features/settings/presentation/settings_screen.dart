@@ -11,6 +11,7 @@ import '../../../core/errors/l10n_for_api_error.dart';
 import '../../../core/providers.dart';
 import '../../../core/widgets/async_body.dart';
 import '../../../core/widgets/skeleton.dart';
+import '../../../core/widgets/user_avatar.dart';
 import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
@@ -222,9 +223,21 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               builder: (me) => ListView(
                 padding: const EdgeInsets.all(AppSpacing.screenPad),
                 children: [
-                  Text(
-                    me.profile.displayName,
-                    style: Theme.of(context).textTheme.headlineMedium,
+                  Row(
+                    children: [
+                      UserAvatar(
+                        name: me.profile.displayName,
+                        imageUrl: me.profile.avatarUrl,
+                        size: 56,
+                      ),
+                      const SizedBox(width: AppSpacing.md),
+                      Expanded(
+                        child: Text(
+                          me.profile.displayName,
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   Text(

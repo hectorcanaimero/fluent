@@ -13,6 +13,7 @@ export function toProfileDto(row: Profile): ProfileDto {
     xp: row.xp,
     streak: row.streak,
     lastSessionDay: row.last_session_day,
+    avatarUrl: row.avatar_url,
   };
 }
 

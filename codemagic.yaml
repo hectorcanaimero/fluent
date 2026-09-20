@@ -160,10 +160,20 @@ workflows:
             --certificate-key @env:CERTIFICATE_PRIVATE_KEY
           keychain add-certificates
           xcode-project use-profiles
-          # Qué entitlements trae de verdad el perfil: si no aparece
-          # `aps-environment`, la capacidad Push no está guardada en el
-          # identificador y hay que activarla en Apple Developer.
-          for profile in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+          # Sin perfil instalado el archive falla igual, pero culpando a la
+          # primera capacidad de los entitlements («requires a provisioning
+          # profile with the Push Notifications feature»), que manda a
+          # investigar el lado equivocado. Se corta acá con el motivo real.
+          PROFILES="$HOME/Library/MobileDevice/Provisioning Profiles"
+          if ! ls "$PROFILES"/*.mobileprovision >/dev/null 2>&1; then
+            echo "No se instalo ningun perfil de aprovisionamiento."
+            echo "Suele ser el certificado: sin CERTIFICATE_PRIVATE_KEY,"
+            echo "fetch-signing-files no guarda ni certificado ni perfiles."
+            exit 1
+          fi
+          # Qué entitlements trae el perfil: si no aparece `aps-environment`,
+          # la capacidad Push no está guardada en el identificador.
+          for profile in "$PROFILES"/*.mobileprovision; do
             echo "== $profile"
             security cms -D -i "$profile" \
               | plutil -extract Entitlements xml1 -o - - || true

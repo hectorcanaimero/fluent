@@ -10,12 +10,13 @@ import '../data/social_sign_in.dart';
 /// la sesión en `AuthController` y el router hace el resto (onboarding para
 /// usuarios nuevos, Home para los que ya estaban).
 ///
-/// Apple todavía no está configurado en InsForge: el botón aparece cuando
-/// se agregue `SocialProvider.apple` a [providers].
+/// Apple va en las dos plataformas: la guía 4.8 de la App Store lo exige
+/// cuando la app ofrece otro login social, y en Android el flujo web de
+/// InsForge funciona igual.
 class SocialLoginButtons extends ConsumerStatefulWidget {
   const SocialLoginButtons({
     super.key,
-    this.providers = const [SocialProvider.google],
+    this.providers = const [SocialProvider.google, SocialProvider.apple],
   });
 
   final List<SocialProvider> providers;

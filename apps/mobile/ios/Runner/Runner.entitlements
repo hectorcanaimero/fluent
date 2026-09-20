@@ -2,9 +2,11 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- Push (Firebase Messaging). Al exportar para App Store, Xcode lo
-	     cambia a `production` según el perfil de distribución. -->
+	<!-- Push (Firebase Messaging). `production` es lo que trae el perfil de
+	     App Store, y es el mismo archivo para Debug/Profile/Release: con
+	     `development` el archive falla porque el entitlement no coincide con
+	     el perfil de distribución. Firebase resuelve el entorno solo. -->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 </dict>
 </plist>

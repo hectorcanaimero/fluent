@@ -126,7 +126,7 @@ El VPS no tiene Mac, así que los builds de release se hacen en Codemagic con
 
 | Workflow | Máquina | Hace | Publica en |
 |---|---|---|---|
-| `android-release` | Linux | tests, `flutter build appbundle --release` firmado | Google Play, pista **internal** |
+| `android-release` | Mac mini M2 | tests, `flutter build appbundle --release` firmado | Google Play, pista **internal** |
 | `ios-release` | Mac mini M2 | tests, `flutter build ipa --release` firmado | App Store Connect → **TestFlight** |
 
 Los dos se disparan con un tag `v*` o a mano desde Codemagic. Este archivo no se puede correr

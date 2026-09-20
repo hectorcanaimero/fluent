@@ -64,10 +64,6 @@ workflows:
     cache: *cache
     environment:
       <<: *android_versions
-      android_signing:
-        # Referencia al keystore de subida cargado en Codemagic
-        # (Team settings → Code signing identities → Android keystores).
-        - open_fluent_upload
       groups:
         - fluent_prod
       vars:
@@ -75,6 +71,16 @@ workflows:
         GOOGLE_PLAY_TRACK: internal
     scripts:
       - *firebase_config
+      # El keystore viene del grupo de variables (ANDROID_KEYSTORE_B64), no de
+      # "Code signing identities": así la firma no depende de dónde esté
+      # cargado el keystore en la cuenta. `build.gradle.kts` lee las CM_*.
+      - name: Keystore de firma
+        script: |
+          for var in ANDROID_KEYSTORE_B64 CM_KEYSTORE_PASSWORD CM_KEY_ALIAS CM_KEY_PASSWORD; do
+            if [ -z "${!var}" ]; then echo "Falta $var en el grupo fluent_prod"; exit 1; fi
+          done
+          echo "$ANDROID_KEYSTORE_B64" | base64 --decode > "$CM_BUILD_DIR/upload-keystore.jks"
+          echo "CM_KEYSTORE_PATH=$CM_BUILD_DIR/upload-keystore.jks" >> $CM_ENV
       - *pub_get
       - *tests
       - *release_defines

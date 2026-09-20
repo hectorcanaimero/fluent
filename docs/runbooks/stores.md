@@ -157,20 +157,30 @@ Codemagic → Team settings → **Global variables and secrets** → crear el gr
 
 ### 3. Android
 
-1. **Keystore:** Team settings → Code signing identities → **Android keystores** → subir
-   `open-fluent-upload.jks` con su contraseña, alias `upload` y **nombre de referencia
-   `open_fluent_upload`** (el que usa el YAML). Gradle toma las variables `CM_KEYSTORE_*` que
-   inyecta Codemagic cuando no hay `key.properties`.
-2. **Cuenta de servicio de Google Play:** en Google Cloud (proyecto vinculado a Play Console)
-   crear una cuenta de servicio y una clave JSON; en Play Console → Usuarios y permisos,
-   invitarla con permiso para publicar en pistas de prueba. Pegar el JSON en
-   `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`.
-3. **La primera versión se sube a mano** en Play Console (la API de Play no puede crear la app
-   ni su primer release): generá un AAB firmado (localmente o descargando el artefacto de una
-   corrida de Codemagic) y subilo a la pista interna. A partir de ahí, Codemagic publica solo.
+El keystore va como **variable del grupo `fluent_prod`**, no en "Code signing
+identities": así no depende de dónde esté cargado en la cuenta.
 
-El versionCode es el último subido a Play + 1 (si la consulta falla, el contador de builds de
-Codemagic).
+En el servidor, generá el base64 del keystore (no lo pegues en ningún chat):
+
+```bash
+base64 -w0 ~/open-fluent-upload.jks > ~/keystore.b64
+```
+
+Variables a agregar (todas *secure*, grupo `fluent_prod`):
+
+| Variable | Valor |
+|---|---|
+| `ANDROID_KEYSTORE_B64` | el contenido de `~/keystore.b64` |
+| `CM_KEYSTORE_PASSWORD` | la contraseña del keystore |
+| `CM_KEY_ALIAS` | `upload` |
+| `CM_KEY_PASSWORD` | la contraseña de la clave (suele ser la misma) |
+
+El workflow las decodifica a un archivo temporal y exporta `CM_KEYSTORE_PATH`;
+`android/app/build.gradle.kts` firma con eso cuando no hay `key.properties`.
+
+Además, la cuenta de servicio de Google Play (`GCLOUD_SERVICE_ACCOUNT_CREDENTIALS`)
+necesita permiso para publicar en pistas de prueba, y **la primera versión se
+sube a mano** en Play Console: la API no puede crear el primer release.
 
 ### 4. iOS
 

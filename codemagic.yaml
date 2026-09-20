@@ -118,11 +118,10 @@ workflows:
       app_store_connect: Open Fluent ASC
     environment:
       <<: *ios_versions
-      ios_signing:
-        distribution_type: app_store
-        bundle_identifier: com.guria.openfluent
       groups:
         - fluent_prod
+      vars:
+        BUNDLE_ID: com.guria.openfluent
     scripts:
       - *firebase_config
       # El proyecto usa Swift Package Manager (no hay Podfile): nada de
@@ -132,8 +131,17 @@ workflows:
       - *pub_get
       - *tests
       - *release_defines
-      - name: Perfiles de firma
-        script: xcode-project use-profiles
+      # La firma automática de Codemagic solo *busca* los archivos; si el
+      # perfil todavía no existe, falla con "No matching profiles found".
+      # `--create` lo genera (y el certificado de distribución) con la clave
+      # de la integración.
+      - name: Certificado y perfil de firma
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
+            --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
       - name: Build del IPA
         script: |
           # Número de build: uno más que el último en TestFlight; si falla la

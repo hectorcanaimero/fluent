@@ -61,6 +61,9 @@ void main() {
 
     expect(_opacityOf(tester, find.text('Un tutor que se acuerda de vos')), 1);
     expect(find.byType(SocialLoginButtons), findsOneWidget);
+    // Los dos proveedores: sin Apple, la guía 4.8 rechaza la app.
+    expect(find.byKey(const Key('social_login_google')), findsOneWidget);
+    expect(find.byKey(const Key('social_login_apple')), findsOneWidget);
     expect(find.textContaining('I went', findRichText: true), findsOneWidget);
     // Sin email/contraseña: solo login social.
     expect(find.byType(TextFormField), findsNothing);

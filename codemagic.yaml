@@ -152,11 +152,18 @@ workflows:
               "$APP_STORE_APPLE_ID" 2>/dev/null || echo "")
           fi
           if [ -n "$LATEST" ]; then NEXT=$((LATEST + 1)); else NEXT=$BUILD_NUMBER; fi
-          flutter build ipa --release \
+          # `flutter build ipa` hace su propia comprobación de certificados y
+          # falla ("No valid code signing certificates were found") aunque el
+          # perfil ya esté instalado. Se compila sin firmar y el IPA lo
+          # empaqueta la herramienta de Codemagic con los perfiles que dejó
+          # `xcode-project use-profiles`.
+          flutter build ios --release --no-codesign \
             --build-name="$BUILD_NAME" \
             --build-number="$NEXT" \
-            --export-options-plist=/Users/builder/export_options.plist \
             $DART_DEFINES
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
     artifacts:
       - build/ios/ipa/*.ipa
       - /tmp/xcodebuild_logs/*.log

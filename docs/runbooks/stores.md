@@ -184,6 +184,23 @@ sube a mano** en Play Console: la API no puede crear el primer release.
 
 ### 4. iOS
 
+1. **Apple Developer → Identifiers**: registrá `com.guria.openfluent` con la
+   capacidad **Push Notifications**.
+2. **App Store Connect → Users and Access → Integrations → App Store Connect
+   API → Team Keys**: creá una clave con rol **Admin** (con App Manager, Apple
+   no deja crear certificados ni perfiles) y guardá Issuer ID, Key ID y el
+   `.p8`.
+3. **Codemagic → Teams → Integrations → Developer Portal**: cargala con el
+   nombre exacto `Open Fluent ASC`.
+4. Creá la app en **App Store Connect** con ese bundle id y poné su Apple ID
+   numérico en la variable `APP_STORE_APPLE_ID`.
+
+El workflow **crea** el certificado y el perfil si no existen
+(`app-store-connect fetch-signing-files --create`). La firma automática de
+Codemagic solo los busca, y por eso fallaba con «No matching profiles found
+for bundle identifier».
+
+
 1. **App Store Connect API key:** App Store Connect → Usuarios y acceso → Integraciones →
    **App Store Connect API** → crear una clave con rol *App Manager*. Anotar el **Issuer ID**, el
    **Key ID** y bajar el `.p8`.

@@ -150,7 +150,6 @@ Codemagic → Team settings → **Global variables and secrets** → crear el gr
 | `INSFORGE_ANON_KEY` | anon key de InsForge |
 | `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` | el JSON completo de la cuenta de servicio de Google Play (paso 3) |
 | `APP_STORE_APPLE_ID` | el Apple ID numérico de la app en App Store Connect (App Information) |
-| `NOTIFY_EMAIL` | el mail que recibe el aviso de cada build |
 | `GOOGLE_SERVICES_JSON` | opcional (hoy no hace falta: el archivo está en el repo). Alternativa: `base64 -w0 google-services.json` |
 | `GOOGLE_SERVICE_INFO_PLIST` | ídem para `GoogleService-Info.plist` |
 
@@ -188,7 +187,16 @@ Codemagic).
 El número de build es el último de TestFlight + 1 (si no hay `APP_STORE_APPLE_ID` o la consulta
 falla, el contador de Codemagic).
 
-### 5. Publicar una versión
+### 5. Avisos por correo
+
+Codemagic avisa del resultado a la dirección de tu cuenta. En `codemagic.yaml`
+no se configuran destinatarios: la sección `publishing.email` se valida antes
+de cargar el grupo de variables, así que una variable como `$NOTIFY_EMAIL`
+llega vacía y el build falla con
+«recipients -> 0: none is not an allowed value». Si querés avisar a más
+direcciones, escribilas literales.
+
+### 6. Publicar una versión
 
 ```bash
 # 1. Subir la versión visible en apps/mobile/pubspec.yaml, por ejemplo:

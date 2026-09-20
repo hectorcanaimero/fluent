@@ -164,20 +164,27 @@ workflows:
           # primera capacidad de los entitlements («requires a provisioning
           # profile with the Push Notifications feature»), que manda a
           # investigar el lado equivocado. Se corta acá con el motivo real.
-          PROFILES="$HOME/Library/MobileDevice/Provisioning Profiles"
-          if ! ls "$PROFILES"/*.mobileprovision >/dev/null 2>&1; then
+          # Los perfiles caen en el directorio de Xcode; el de MobileDevice
+          # es el sitio clásico y se mira por si acaso. De paso se imprimen
+          # los entitlements: si no aparece `aps-environment`, la capacidad
+          # Push no está guardada en el identificador.
+          found=""
+          for dir in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
+                     "$HOME/Library/MobileDevice/Provisioning Profiles"; do
+            for profile in "$dir"/*.mobileprovision; do
+              [ -f "$profile" ] || continue
+              found=1
+              echo "== $profile"
+              security cms -D -i "$profile" \
+                | plutil -extract Entitlements xml1 -o - - || true
+            done
+          done
+          if [ -z "$found" ]; then
             echo "No se instalo ningun perfil de aprovisionamiento."
             echo "Suele ser el certificado: sin CERTIFICATE_PRIVATE_KEY,"
             echo "fetch-signing-files no guarda ni certificado ni perfiles."
             exit 1
           fi
-          # Qué entitlements trae el perfil: si no aparece `aps-environment`,
-          # la capacidad Push no está guardada en el identificador.
-          for profile in "$PROFILES"/*.mobileprovision; do
-            echo "== $profile"
-            security cms -D -i "$profile" \
-              | plutil -extract Entitlements xml1 -o - - || true
-          done
       - name: Build del IPA
         script: |
           # Número de build: uno más que el último en TestFlight; si falla la

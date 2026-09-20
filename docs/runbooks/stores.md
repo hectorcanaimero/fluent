@@ -195,6 +195,11 @@ sube a mano** en Play Console: la API no puede crear el primer release.
 4. Creá la app en **App Store Connect** con ese bundle id y poné su Apple ID
    numérico en la variable `APP_STORE_APPLE_ID`.
 
+El IPA se arma en dos pasos: `flutter build ios --release --no-codesign` y
+después `xcode-project build-ipa`. `flutter build ipa` hace su propia
+comprobación de certificados y falla con «No valid code signing certificates
+were found» aunque el perfil ya esté instalado.
+
 El workflow **crea** el certificado y el perfil si no existen
 (`app-store-connect fetch-signing-files --create`). La firma automática de
 Codemagic solo los busca, y por eso fallaba con «No matching profiles found

@@ -149,8 +149,15 @@ workflows:
                       | jq -r '.[].id' || true); do
             app-store-connect delete-profile "$id" --ignore-not-found || true
           done
+          # Sin `--certificate-key` el comando avisa «Cannot save Signing
+          # Certificates without certificate private key» y no deja ni
+          # certificado ni perfil: el archive falla después quejándose de la
+          # primera capacidad que encuentra en los entitlements. La clave es
+          # una RSA propia guardada en el grupo de variables; con `--create`
+          # se emite el certificado de distribución contra ella.
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE --create
+            --type IOS_APP_STORE --create \
+            --certificate-key @env:CERTIFICATE_PRIVATE_KEY
           keychain add-certificates
           xcode-project use-profiles
           # Qué entitlements trae de verdad el perfil: si no aparece

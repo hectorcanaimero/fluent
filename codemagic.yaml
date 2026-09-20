@@ -142,6 +142,14 @@ workflows:
             --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
+          # Qué entitlements trae de verdad el perfil: si no aparece
+          # `aps-environment`, la capacidad Push no está guardada en el
+          # identificador y hay que activarla en Apple Developer.
+          for profile in "$HOME/Library/MobileDevice/Provisioning Profiles/"*.mobileprovision; do
+            echo "== $profile"
+            security cms -D -i "$profile" \
+              | plutil -extract Entitlements xml1 -o - - || true
+          done
       - name: Build del IPA
         script: |
           # Número de build: uno más que el último en TestFlight; si falla la

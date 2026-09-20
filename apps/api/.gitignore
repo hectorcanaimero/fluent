@@ -15,3 +15,4 @@
 .windsurf
 *.tsbuildinfo
 dist-scripts/
+.env.bak*

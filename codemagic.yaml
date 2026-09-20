@@ -138,6 +138,17 @@ workflows:
       - name: Certificado y perfil de firma
         script: |
           keychain initialize
+          # Los perfiles viejos se reutilizan tal cual: uno creado antes de
+          # activar Push Notifications hace fallar el archive con
+          # «requires a provisioning profile with the Push Notifications
+          # feature». Se borran para que se regeneren con las capacidades
+          # actuales del identificador.
+          for id in $(app-store-connect list-profiles \
+                        --bundle-id-identifier "$BUNDLE_ID" \
+                        --profile-type IOS_APP_STORE --json 2>/dev/null \
+                      | jq -r '.[].id' || true); do
+            app-store-connect delete-profile "$id" --ignore-not-found || true
+          done
           app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE --create
           keychain add-certificates

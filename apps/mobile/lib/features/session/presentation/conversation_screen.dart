@@ -548,7 +548,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       context: context,
       builder: (ctx) => AlertDialog(
         title: Text(l10n.conversationMicUnavailableTitle),
-        content: Text(l10n.conversationMicUnavailableBody),
+        // En iOS el reconocedor no está disponible cuando Dictado está
+        // apagado: ese es el arreglo, no "instalar el inglés".
+        content: Text(
+          defaultTargetPlatform == TargetPlatform.iOS
+              ? l10n.conversationMicUnavailableBodyIos
+              : l10n.conversationMicUnavailableBody,
+        ),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(ctx).pop(),

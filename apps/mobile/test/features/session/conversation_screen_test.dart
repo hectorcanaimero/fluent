@@ -10,6 +10,7 @@ import 'package:fluent_mobile/features/session/data/speech_service.dart';
 import 'package:fluent_mobile/features/session/data/tts_service.dart';
 import 'package:fluent_mobile/features/session/presentation/conversation_screen.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -890,6 +891,27 @@ void main() {
         find.text(l10n.conversationMicPermissionDeniedTitle),
         findsNothing,
       );
+    },
+  );
+
+  testWidgets(
+    'en iOS, sin STT, el diálogo manda a activar Dictado',
+    (tester) async {
+      debugDefaultTargetPlatformOverride = TargetPlatform.iOS;
+      addTearDown(() => debugDefaultTargetPlatformOverride = null);
+      await pumpConversation(
+        tester,
+        api: FakeApi(artificialDelay: Duration.zero),
+        speech: FakeSpeechService(available: false, permissionGranted: true),
+      );
+
+      await tester.tap(find.byKey(const Key('conversation_mic_button')));
+      await tester.pumpAndSettle();
+
+      final l10n = await AppLocalizations.delegate.load(const Locale('es'));
+      expect(find.text(l10n.conversationMicUnavailableBodyIos), findsOneWidget);
+      expect(find.text(l10n.conversationMicUnavailableBody), findsNothing);
+      debugDefaultTargetPlatformOverride = null;
     },
   );
 

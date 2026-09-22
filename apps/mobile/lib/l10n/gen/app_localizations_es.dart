@@ -670,6 +670,10 @@ class AppLocalizationsEs extends AppLocalizations {
       'Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.';
 
   @override
+  String get conversationMicUnavailableBodyIos =>
+      'El iPhone reconoce la voz con Dictado. Activalo en Ajustes → General → Teclado → Activar dictado y volvé a intentar. Mientras tanto, podés escribir.';
+
+  @override
   String get conversationMicUnavailableAccept => 'Entendido';
 
   @override

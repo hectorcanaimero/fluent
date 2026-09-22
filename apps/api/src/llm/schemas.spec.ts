@@ -95,12 +95,45 @@ describe('BriefOutput', () => {
     expect(result.success && result.data.recurring_errors).toEqual([]);
   });
 
-  it('fails when happens_on has an invalid date format', () => {
-    const result = BriefOutput.safeParse({
-      brief: 'Keep practicing past simple.',
-      facts: [{ text: 'Learner likes hiking.', happens_on: '03/11/2026' }],
+  it('descarta el dato con la fecha mal escrita y conserva el resto', () => {
+    const parsed = BriefOutput.safeParse({
+      brief: 'Keep practicing past tense.',
+      facts: [
+        { text: 'Works as a designer', happens_on: null },
+        { text: 'Trip', happens_on: '12/05/2026' },
+      ],
     });
-    expect(result.success).toBe(false);
+
+    expect(parsed.success).toBe(true);
+    expect(parsed.success && parsed.data.facts).toEqual([
+      { text: 'Works as a designer', happens_on: null },
+    ]);
+  });
+
+  it('un dato sin happens_on vale: la fecha queda en null', () => {
+    const parsed = BriefOutput.safeParse({
+      brief: 'Keep practicing past tense.',
+      facts: [{ text: 'Supports Flamengo' }],
+    });
+
+    expect(parsed.success && parsed.data.facts).toEqual([
+      { text: 'Supports Flamengo', happens_on: null },
+    ]);
+  });
+
+  it('un level_hint fuera del enum no tumba el brief', () => {
+    const parsed = BriefOutput.safeParse({
+      brief: 'Keep practicing past tense.',
+      level_hint: 'B2+',
+    });
+
+    expect(parsed.success && parsed.data.level_hint).toBe(null);
+  });
+
+  it('el brief largo se recorta a 900 caracteres', () => {
+    const parsed = BriefOutput.safeParse({ brief: 'a'.repeat(1200) });
+
+    expect(parsed.success && parsed.data.brief.length).toBe(900);
   });
 
   it('accepts a null happens_on', () => {

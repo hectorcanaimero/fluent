@@ -296,21 +296,37 @@ export class LlmClient {
 
     const extracted = extractFirstJsonObject(content);
     if (extracted === null) {
-      this.logger.warn('llm.invalid_json', { provider, model, purpose, reason: 'no_json', latencyMs });
+      // Sin el objeto no hay nada que validar; se registra la forma del
+      // cuerpo (largo, si venía vacío, si traía vallas de markdown) en vez
+      // del contenido, que habla del aprendiz.
+      this.logger.warn('llm.invalid_json', {
+        provider,
+        model,
+        purpose,
+        reason: 'no_json',
+        contentLength: content.length,
+        hasFence: content.includes('```'),
+        latencyMs,
+      });
       throw new LlmCallError('invalid_json', provider, model, latencyMs, response.status, 'sin objeto JSON');
     }
 
     const parsed = schema.safeParse(extracted);
     if (!parsed.success) {
-      this.logger.warn('llm.invalid_json', { provider, model, purpose, reason: 'schema', latencyMs });
-      throw new LlmCallError(
-        'invalid_json',
+      // Qué campo falló, en el log y no solo en la excepción: es lo único que
+      // distingue "el modelo se salió del esquema" de "devolvió otra cosa".
+      const detail = clip(
+        parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; '),
+      );
+      this.logger.warn('llm.invalid_json', {
         provider,
         model,
+        purpose,
+        reason: 'schema',
+        detail,
         latencyMs,
-        response.status,
-        clip(parsed.error.issues.map((i) => `${i.path.join('.')}: ${i.message}`).join('; ')),
-      );
+      });
+      throw new LlmCallError('invalid_json', provider, model, latencyMs, response.status, detail);
     }
 
     this.logger.debug('llm.ok', { provider, model, purpose, latencyMs, ...usage });

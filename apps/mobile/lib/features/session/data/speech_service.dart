@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:speech_to_text/speech_recognition_error.dart';
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 
@@ -26,10 +27,12 @@ abstract class SpeechService {
   /// reconocimiento de voz".
   Future<bool> get hasPermission;
 
-  /// `true` si el locale (por ejemplo `en_US`) está instalado en el
-  /// dispositivo. Si es `false`, la UI debe ofrecer instalarlo u ofrecer
-  /// modo texto (SPEC-06 §5).
-  Future<bool> hasLocale(String localeId);
+  /// Identificador que usa **este** dispositivo para [languageCode], o
+  /// `null` si no tiene ese idioma (la UI ofrece entonces el modo texto,
+  /// SPEC-06 §5). Hay que preguntarlo porque cada plataforma los escribe a
+  /// su manera: Android `en_US`, iOS `en-US`. Comparar contra una constante
+  /// daba "no hay reconocimiento de voz" en todos los iPhone.
+  Future<String?> resolveLocaleId(String languageCode);
 
   /// Empieza a escuchar. [onResult] se llama con cada actualización de la
   /// transcripción parcial y una vez más con `isFinal: true` al terminar.
@@ -61,6 +64,25 @@ abstract class SpeechService {
   bool get isListening;
 }
 
+/// Elige de [ids] el identificador de [languageCode] que usa el dispositivo.
+///
+/// Cada plataforma los escribe distinto (Android `en_US`, iOS `en-US`), así
+/// que se compara por partes y sin distinguir mayúsculas. Se prefiere la
+/// variante de EE. UU. —la que espera el tutor— y, si no está, cualquier
+/// otra del mismo idioma: con inglés británico se practica igual.
+@visibleForTesting
+String? pickLocaleId(Iterable<String> ids, String languageCode) {
+  final wanted = languageCode.toLowerCase();
+  String? fallback;
+  for (final id in ids) {
+    final parts = id.toLowerCase().split(RegExp('[-_]'));
+    if (parts.first != wanted) continue;
+    if (parts.length > 1 && parts[1] == 'us') return id;
+    fallback ??= id;
+  }
+  return fallback;
+}
+
 class SpeechToTextService implements SpeechService {
   final stt.SpeechToText _speech = stt.SpeechToText();
   void Function(String text, bool isFinal)? _onResult;
@@ -89,10 +111,8 @@ class SpeechToTextService implements SpeechService {
   }
 
   @override
-  Future<bool> hasLocale(String localeId) async {
-    final locales = await _speech.locales();
-    return locales.any((l) => l.localeId == localeId);
-  }
+  Future<String?> resolveLocaleId(String languageCode) async =>
+      pickLocaleId((await _speech.locales()).map((l) => l.localeId), languageCode);
 
   @override
   Future<void> listen({
@@ -170,8 +190,8 @@ class FakeSpeechService implements SpeechService {
   Future<bool> get hasPermission async => permissionGranted;
 
   @override
-  Future<bool> hasLocale(String localeId) async =>
-      localeId == 'en_US' ? hasEnUsLocale : false;
+  Future<String?> resolveLocaleId(String languageCode) async =>
+      languageCode == 'en' && hasEnUsLocale ? 'en_US' : null;
 
   @override
   Future<void> listen({

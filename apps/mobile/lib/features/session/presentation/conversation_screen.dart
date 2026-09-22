@@ -87,7 +87,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   int? _liveIndex;
 
   bool _micAvailable = true;
-  bool _micHasEnUsLocale = true;
+
+  /// Identificador de inglés de este dispositivo (`en_US` en Android,
+  /// `en-US` en iOS) o `null` si no lo tiene: se pregunta en vez de
+  /// suponerlo, y se le pasa tal cual al motor al escuchar.
+  String? _micLocaleId = 'en_US';
 
   /// MAL-05: si `initialize()` falló, distingue "el usuario denegó el
   /// permiso" (se ofrece abrir Ajustes) de "el dispositivo no tiene
@@ -187,7 +191,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       await tts.setLanguage('en-US');
       _micAvailable = await speech.initialize();
       if (_micAvailable) {
-        _micHasEnUsLocale = await speech.hasLocale('en_US');
+        _micLocaleId = await speech.resolveLocaleId('en');
       } else {
         _micPermissionDenied = !(await speech.hasPermission);
       }
@@ -351,7 +355,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       }
       return;
     }
-    if (!_micHasEnUsLocale) {
+    if (_micLocaleId == null) {
       await _showMicUnavailableDialog();
       return;
     }
@@ -375,6 +379,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     var chunkText = '';
     _soundLevel.value = 0;
     await _speech.listen(
+      localeId: _micLocaleId!,
       onResult: (text, isFinal) {
         if (!mounted || id != _chunkId || _chunkClosed) return;
         chunkText = text;

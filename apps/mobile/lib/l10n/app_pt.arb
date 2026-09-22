@@ -189,6 +189,7 @@
   "conversationBootErrorBack": "Voltar",
   "conversationMicUnavailableTitle": "Sem reconhecimento de voz",
   "conversationMicUnavailableBody": "Seu aparelho não tem reconhecimento de voz em inglês instalado. Você pode escrever no modo texto.",
+  "conversationMicUnavailableBodyIos": "O iPhone reconhece a voz com o Ditado. Ative em Ajustes → Geral → Teclado → Ativar Ditado e tente de novo. Enquanto isso, você pode escrever.",
   "conversationMicUnavailableAccept": "Entendido",
   "conversationMicPermissionDeniedTitle": "Ative o microfone",
   "conversationMicPermissionDeniedBody": "O Open Fluent precisa de permissão de microfone para te ouvir. Ative nas configurações do sistema.",

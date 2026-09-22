@@ -129,24 +129,6 @@ export class GroupsRepository {
     return this.insertOneInvitation(groupId, createdBy);
   }
 
-  /**
-   * Cuántas invitaciones vivas creó `createdBy`: sin canjear (`used_by` nulo)
-   * y sin caducar (MEJ-41). Una caducada ya no sirve a nadie, así que no
-   * cuenta para el límite. Lee como mucho `limit` filas porque quien llama
-   * solo necesita saber si se pasó del tope, no el total exacto.
-   */
-  async countLiveInvitations(createdBy: string, limit: number, now: Date = new Date()): Promise<number> {
-    const result = await this.admin.database
-      .from(TABLES.invitations)
-      .select('code')
-      .eq('created_by', createdBy)
-      .is('used_by', null)
-      .gt('expires_at', now.toISOString())
-      .limit(limit);
-
-    return (unwrapInsforge<{ code: string }[]>(result) ?? []).length;
-  }
-
   private async insertOneInvitation(
     groupId: string,
     createdBy: string,

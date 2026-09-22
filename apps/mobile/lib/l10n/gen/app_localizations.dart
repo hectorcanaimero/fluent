@@ -1232,6 +1232,12 @@ abstract class AppLocalizations {
   /// **'Tu dispositivo no tiene reconocimiento de voz en inglés instalado. Podés escribir en modo texto.'**
   String get conversationMicUnavailableBody;
 
+  /// No description provided for @conversationMicUnavailableBodyIos.
+  ///
+  /// In es, this message translates to:
+  /// **'El iPhone reconoce la voz con Dictado. Activalo en Ajustes → General → Teclado → Activar dictado y volvé a intentar. Mientras tanto, podés escribir.'**
+  String get conversationMicUnavailableBodyIos;
+
   /// No description provided for @conversationMicUnavailableAccept.
   ///
   /// In es, this message translates to:

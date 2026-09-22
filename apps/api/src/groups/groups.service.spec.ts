@@ -3,7 +3,7 @@ import { I18nService } from '../i18n/i18n.service.js';
 import { OwnerService } from '../common/owner.service.js';
 import type { Group, Profile } from '../db/schema.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
-import { GroupsService, MAX_LIVE_INVITATIONS_PER_MEMBER } from './groups.service.js';
+import { GroupsService } from './groups.service.js';
 import type { GroupsRepository } from './groups.repository.js';
 
 const OWNER_USER_ID = '9595625c-aea8-4120-accc-ed149d0a84c6';
@@ -62,7 +62,6 @@ function createService(
     createInvitation: vi
       .fn()
       .mockResolvedValue({ code: 'ABCDEFGH', expiresAt: '2026-09-25T10:00:00.000Z' }),
-    countLiveInvitations: vi.fn().mockResolvedValue(0),
   };
 
   // Mock de OwnerService que implementa la lógica de isOwner.
@@ -184,46 +183,6 @@ describe('GroupsService.createInvitation — invitar desde la app (MEJ-41)', () 
     expect(groupsRepository.createInvitation).toHaveBeenCalledWith(group.id, 'user-1');
   });
 
-  it('cuenta las invitaciones vivas del propio miembro, no las del grupo', async () => {
-    const group = makeGroup();
-    const profile = makeProfile({ user_id: 'user-1', group_id: group.id });
-    const { service, groupsRepository } = createService(profile, group);
-
-    await service.createInvitation('user-1');
-
-    expect(groupsRepository.countLiveInvitations).toHaveBeenCalledWith(
-      'user-1',
-      MAX_LIVE_INVITATIONS_PER_MEMBER,
-    );
-  });
-
-  it(`con ${MAX_LIVE_INVITATIONS_PER_MEMBER} vivas → 422 INVITATION_LIMIT_REACHED y no crea ninguna`, async () => {
-    const group = makeGroup();
-    const profile = makeProfile({ user_id: 'user-1', group_id: group.id });
-    const { service, groupsRepository } = createService(profile, group);
-    groupsRepository.countLiveInvitations.mockResolvedValue(MAX_LIVE_INVITATIONS_PER_MEMBER);
-
-    const error = await service.createInvitation('user-1').catch((e: unknown) => e);
-
-    expect(error).toBeInstanceOf(ApiException);
-    expect((error as ApiException).getApiBody()).toMatchObject({
-      error: 'INVITATION_LIMIT_REACHED',
-      statusCode: 422,
-    });
-    expect(groupsRepository.createInvitation).not.toHaveBeenCalled();
-  });
-
-  it('una por debajo del tope todavía pasa', async () => {
-    const group = makeGroup();
-    const profile = makeProfile({ user_id: 'user-1', group_id: group.id });
-    const { service, groupsRepository } = createService(profile, group);
-    groupsRepository.countLiveInvitations.mockResolvedValue(MAX_LIVE_INVITATIONS_PER_MEMBER - 1);
-
-    await expect(service.createInvitation('user-1')).resolves.toMatchObject({
-      code: 'ABCDEFGH',
-    });
-  });
-
   it('sin grupo → 422 GROUP_REQUIRED (no el 409 NOT_ONBOARDED de los demás)', async () => {
     const profile = makeProfile({ user_id: 'user-1', group_id: null });
     const { service, groupsRepository } = createService(profile, null);
@@ -235,7 +194,7 @@ describe('GroupsService.createInvitation — invitar desde la app (MEJ-41)', () 
       error: 'GROUP_REQUIRED',
       statusCode: 422,
     });
-    expect(groupsRepository.countLiveInvitations).not.toHaveBeenCalled();
+    expect(groupsRepository.createInvitation).not.toHaveBeenCalled();
   });
 
   it('con `group_id` colgando de un grupo borrado → también GROUP_REQUIRED', async () => {
@@ -245,19 +204,6 @@ describe('GroupsService.createInvitation — invitar desde la app (MEJ-41)', () 
     await expect(service.createInvitation('user-1')).rejects.toMatchObject({
       code: 'GROUP_REQUIRED',
     });
-  });
-
-  it('el mensaje sale en el idioma del perfil', async () => {
-    const group = makeGroup();
-    const profile = makeProfile({ user_id: 'user-1', group_id: group.id, locale: 'pt-BR' });
-    const { service, groupsRepository } = createService(profile, group);
-    groupsRepository.countLiveInvitations.mockResolvedValue(MAX_LIVE_INVITATIONS_PER_MEMBER);
-
-    const error = (await service
-      .createInvitation('user-1')
-      .catch((e: unknown) => e)) as ApiException;
-
-    expect(error.getApiBody().message).toContain('convites');
   });
 
   it('`POST /admin/invitations` sigue exigiendo owner y sin grupo sigue dando NOT_ONBOARDED', async () => {

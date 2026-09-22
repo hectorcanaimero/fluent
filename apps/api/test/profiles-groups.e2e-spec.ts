@@ -380,53 +380,6 @@ maybeDescribe('Perfil, grupo e invitaciones (e2e, InsForge feat-api)', () => {
     expect(redeemed.body.group.id).toBe(group.id);
   }, 90_000);
 
-  it('POST /v1/groups/invitations: 422 INVITATION_LIMIT_REACHED con cinco vivas (MEJ-41)', async () => {
-    const owner = await newUser('Owner Limit');
-    const group = await newGroup('Grupo límite', owner.id);
-    const code = await newInvitation(group.id, owner.id);
-    const member = await newUser('Member Limit');
-
-    await request(app.getHttpServer())
-      .post('/v1/invitations/redeem')
-      .set(authHeader(member.accessToken))
-      .send({ code })
-      .expect((res) => expect([200, 201]).toContain(res.status));
-
-    for (let i = 0; i < 5; i += 1) {
-      const created = await request(app.getHttpServer())
-        .post('/v1/groups/invitations')
-        .set(authHeader(member.accessToken))
-        .send({});
-      expect([200, 201]).toContain(created.status);
-      seededInvitationCodes.push(created.body.code);
-    }
-
-    const response = await request(app.getHttpServer())
-      .post('/v1/groups/invitations')
-      .set(authHeader(member.accessToken))
-      .send({})
-      .expect(422);
-
-    expect(response.body).toMatchObject({
-      error: 'INVITATION_LIMIT_REACHED',
-      statusCode: 422,
-    });
-
-    // Una caducada no cuenta: al vencer una de las cinco, vuelve a poder.
-    await admin.database
-      .from('invitations')
-      .update({ expires_at: new Date(Date.now() - 60_000).toISOString() })
-      .eq('code', seededInvitationCodes.at(-1)!);
-
-    const again = await request(app.getHttpServer())
-      .post('/v1/groups/invitations')
-      .set(authHeader(member.accessToken))
-      .send({});
-
-    expect([200, 201]).toContain(again.status);
-    seededInvitationCodes.push(again.body.code);
-  }, 120_000);
-
   it('POST /v1/groups/invitations: 422 GROUP_REQUIRED sin grupo (MEJ-41)', async () => {
     const user = await newUser('Sin Grupo Inv');
 

@@ -54,31 +54,3 @@ function fakeAdmin(rows: unknown[]) {
 
   return { admin, calls };
 }
-
-describe('GroupsRepository.countLiveInvitations (MEJ-41)', () => {
-  const NOW = new Date('2026-09-12T10:00:00.000Z');
-
-  it('cuenta solo las del propio miembro, sin canjear y sin caducar', async () => {
-    const { admin, calls } = fakeAdmin([{ code: 'AAAAAAAA' }, { code: 'BBBBBBBB' }]);
-
-    const count = await new GroupsRepository(admin).countLiveInvitations('user-1', 5, NOW);
-
-    expect(count).toBe(2);
-    expect(calls).toEqual([
-      ['from', 'invitations'],
-      ['select', 'code'],
-      ['eq', 'created_by', 'user-1'],
-      ['is', 'used_by', null],
-      ['gt', 'expires_at', NOW.toISOString()],
-      ['limit', 5],
-    ]);
-  });
-
-  it('sin invitaciones vivas devuelve 0', async () => {
-    const { admin } = fakeAdmin([]);
-
-    await expect(
-      new GroupsRepository(admin).countLiveInvitations('user-1', 5, NOW),
-    ).resolves.toBe(0);
-  });
-});

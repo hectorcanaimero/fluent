@@ -91,7 +91,7 @@ El texto termina **siempre** en el pie de marca `— Fluent · practicá inglés
 
 `POST /v1/groups/invitations` lo puede llamar **cualquier miembro** del grupo, no solo el owner, y devuelve `201 { code, expiresAt }` con un único código (14 días de vigencia, mismo alfabeto y misma tabla que los del owner). `POST /admin/invitations` sigue siendo del owner y crea varios de una vez.
 
-- Límite: **5 invitaciones vivas por miembro** (`invitations.created_by`), entendiendo por viva la que no se canjeó (`used_by` nulo) y no caducó. Al pasarse, `422 INVITATION_LIMIT_REACHED`. Una caducada deja hueco: ya no sirve a nadie.
+- Sin límite de invitaciones por miembro. Hubo un tope de 5 vivas (`INVITATION_LIMIT_REACHED`), pero se agotaba sin compartir ninguna: los códigos son de un solo uso y caducan solos.
 - Sin grupo, `422 GROUP_REQUIRED` (SPEC-02 §6) y no el `409 NOT_ONBOARDED` del resto de rutas de grupo: el perfil está completo y lo que falta es canjear un código.
 
 ## 9. Visibilidad (RF-6.5)

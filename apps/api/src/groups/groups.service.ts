@@ -11,14 +11,6 @@ import type { Group } from '../db/schema.js';
 export const DEFAULT_INVITATIONS_COUNT = 1;
 
 /**
- * Invitaciones vivas (sin canjear y sin caducar) que puede tener a la vez un
- * miembro (MEJ-41). El tope es por **miembro** (`invitations.created_by`), no
- * por grupo: cada uno responde de los códigos que reparte, y cinco pendientes
- * es más de lo que nadie manda de una sentada.
- */
-export const MAX_LIVE_INVITATIONS_PER_MEMBER = 5;
-
-/**
  * `GroupsModule` (SPEC-02 §4.1): `POST /invitations/redeem`,
  * `POST /admin/invitations`, `POST /groups/invitations`, `GET /group`.
  */
@@ -86,29 +78,18 @@ export class GroupsService {
    * Sin grupo → `422 GROUP_REQUIRED` (y no el `409 NOT_ONBOARDED` de los
    * otros endpoints de grupo): el perfil está completo, lo que falta es
    * canjear una invitación, y la app lleva a pantallas distintas en cada
-   * caso. Con más de `MAX_LIVE_INVITATIONS_PER_MEMBER` vivas →
-   * `422 INVITATION_LIMIT_REACHED`.
+   * caso. Sin tope de invitaciones: cada código es de un solo uso y caduca
+   * solo, y un tope de cinco se agotaba sin haber compartido ninguno.
    */
   async createInvitation(
     userId: string,
     acceptLanguageHeader?: string,
   ): Promise<CreatedInvitation> {
-    const { profile, group, locale } = await this.requireOwnGroup(
+    const { profile, group } = await this.requireOwnGroup(
       userId,
       acceptLanguageHeader,
       'GROUP_REQUIRED',
     );
-
-    const live = await this.groupsRepository.countLiveInvitations(
-      profile.user_id,
-      MAX_LIVE_INVITATIONS_PER_MEMBER,
-    );
-    if (live >= MAX_LIVE_INVITATIONS_PER_MEMBER) {
-      throw ApiException.of(
-        'INVITATION_LIMIT_REACHED',
-        this.i18n.translate('INVITATION_LIMIT_REACHED', locale),
-      );
-    }
 
     return this.groupsRepository.createInvitation(group.id, profile.user_id);
   }

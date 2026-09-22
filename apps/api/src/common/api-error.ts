@@ -56,7 +56,6 @@ export const API_ERROR_STATUS = {
    * `GROUP_REQUIRED`: la petición está bien formada y es la regla de negocio
    * la que la rechaza.
    */
-  INVITATION_LIMIT_REACHED: 422,
   /** Agotada la cadena de fallback de proveedores (RF-2.5). */
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */

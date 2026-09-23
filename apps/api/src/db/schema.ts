@@ -11,6 +11,7 @@
  * - 20260908190806_sesiones-turnos-correcciones.sql
  * - 20260908191227_memoria-hechos-y-brief.sql
  * - 20260908191927_noticias-y-social.sql
+ * - 20260923130000_planes.sql
  */
 
 /* ============================================================================
@@ -22,6 +23,9 @@ export type Level = 'A2' | 'B1' | 'B2';
 
 /** Idioma de UI y notas (SPEC-01 §2.1) */
 export type Locale = 'es' | 'pt-BR';
+
+/** Plan de suscripción del usuario */
+export type Plan = 'free' | 'pro';
 
 /** Proveedor de LLM (SPEC-01 §2.4, §2.5) */
 export type Provider = 'openrouter' | 'gemini';
@@ -121,6 +125,9 @@ export interface Profile {
   /** MAL-24: cuándo gastó su sesión de cortesía; `null` si aún le queda. */
   courtesy_session_used_at: string | null; // ISO 8601 timestamp
   sessions_count: number;
+  plan: Plan;
+  /** Fin del plan pro; `null` = sin vencimiento. */
+  plan_expires_at: string | null; // ISO 8601 timestamp
   /** Foto del login social (https), copiada de InsForge al crear el perfil. */
   avatar_url: string | null;
   onboarded_at: string | null; // ISO 8601 timestamp (PostgREST serializa timestamptz como string)

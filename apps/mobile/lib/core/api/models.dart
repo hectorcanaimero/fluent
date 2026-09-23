@@ -65,18 +65,6 @@ abstract class GroupInfo with _$GroupInfo {
 }
 
 @freezed
-abstract class ProviderInfo with _$ProviderInfo {
-  const factory ProviderInfo({
-    required String provider,
-    required String status,
-    String? connectedAt,
-  }) = _ProviderInfo;
-
-  factory ProviderInfo.fromJson(Map<String, dynamic> json) =>
-      _$ProviderInfoFromJson(json);
-}
-
-@freezed
 abstract class ModelPreference with _$ModelPreference {
   const factory ModelPreference({
     String? chatProvider,
@@ -94,7 +82,6 @@ abstract class MeResponse with _$MeResponse {
   const factory MeResponse({
     required Profile profile,
     GroupInfo? group,
-    @Default(<ProviderInfo>[]) List<ProviderInfo> providers,
     ModelPreference? modelPreference,
     required bool onboarded,
     String? activeSessionId,
@@ -105,17 +92,22 @@ abstract class MeResponse with _$MeResponse {
     /// usó la sesión de cortesía (con la credencial del owner del grupo,
     /// modelos gratis). `false` por defecto mientras la API no lo mande.
     @Default(false) bool courtesySessionAvailable,
+
+    /// Plan de la cuenta: `free` o `pro`.
+    @Default('free') String plan,
+
+    /// Vencimiento del plan Pro; `null` si no vence o es Free.
+    DateTime? planExpiresAt,
   }) = _MeResponse;
 
   factory MeResponse.fromJson(Map<String, dynamic> json) =>
       _$MeResponseFromJson(json);
 }
 
-/// MAL-13: única definición de "hay un proveedor conectado", para que
-/// `HomeData`, `ProvidersData` y `canPracticeProvider` (core/providers.dart)
-/// no la reimplementen cada uno por su cuenta y puedan desincronizarse.
-extension MeResponseProviders on MeResponse {
-  bool get hasActiveProvider => providers.any((p) => p.status == 'active');
+extension MeResponsePlan on MeResponse {
+  bool get isPro =>
+      plan == 'pro' &&
+      (planExpiresAt == null || planExpiresAt!.isAfter(DateTime.now()));
 }
 
 @freezed
@@ -158,38 +150,6 @@ abstract class GroupInvitationResult with _$GroupInvitationResult {
 
   factory GroupInvitationResult.fromJson(Map<String, dynamic> json) =>
       _$GroupInvitationResultFromJson(json);
-}
-
-@freezed
-abstract class PkceStartResult with _$PkceStartResult {
-  const factory PkceStartResult({
-    required String authUrl,
-    required String codeVerifierId,
-  }) = _PkceStartResult;
-
-  factory PkceStartResult.fromJson(Map<String, dynamic> json) =>
-      _$PkceStartResultFromJson(json);
-}
-
-@freezed
-abstract class ProviderCredits with _$ProviderCredits {
-  const factory ProviderCredits({required double total, required double used}) =
-      _ProviderCredits;
-
-  factory ProviderCredits.fromJson(Map<String, dynamic> json) =>
-      _$ProviderCreditsFromJson(json);
-}
-
-@freezed
-abstract class ProviderStatusResult with _$ProviderStatusResult {
-  const factory ProviderStatusResult({
-    required String status,
-    String? lastError,
-    ProviderCredits? credits,
-  }) = _ProviderStatusResult;
-
-  factory ProviderStatusResult.fromJson(Map<String, dynamic> json) =>
-      _$ProviderStatusResultFromJson(json);
 }
 
 @freezed

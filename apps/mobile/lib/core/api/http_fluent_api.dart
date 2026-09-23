@@ -104,49 +104,6 @@ class HttpFluentApi implements FluentApi {
   });
 
   @override
-  Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) =>
-      _client.guard(() async {
-        final res = await _client.dio.post(
-          '/providers/openrouter/pkce/start',
-          data: {'callbackUrl': callbackUrl},
-        );
-        return PkceStartResult.fromJson(res.data as Map<String, dynamic>);
-      });
-
-  @override
-  Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String codeVerifierId,
-  }) => _client.guard(() async {
-    final res = await _client.dio.post(
-      '/providers/openrouter/pkce/complete',
-      data: {'codeVerifierId': codeVerifierId},
-    );
-    return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
-  });
-
-  @override
-  Future<ProviderStatusResult> connectGemini(String apiKey) =>
-      _client.guard(() async {
-        final res = await _client.dio.post(
-          '/providers/gemini',
-          data: {'apiKey': apiKey},
-        );
-        return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
-      });
-
-  @override
-  Future<void> disconnectProvider(String provider) => _client.guard(() async {
-    await _client.dio.delete('/providers/$provider');
-  });
-
-  @override
-  Future<ProviderStatusResult> getProviderStatus(String provider) =>
-      _client.guard(() async {
-        final res = await _client.dio.get('/providers/$provider/status');
-        return ProviderStatusResult.fromJson(res.data as Map<String, dynamic>);
-      });
-
-  @override
   Future<ModelsCatalog> getModels() => _client.guard(() async {
     final res = await _client.dio.get('/models');
     return ModelsCatalog.fromJson(res.data as Map<String, dynamic>);

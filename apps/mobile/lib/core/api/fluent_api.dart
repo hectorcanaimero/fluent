@@ -47,14 +47,7 @@ abstract class FluentApi {
   /// llama al cerrar sesión, antes de borrar los tokens de auth.
   Future<void> unregisterPushToken(String token);
 
-  // 4.2 Proveedores y modelos
-  Future<PkceStartResult> startOpenRouterPkce(String callbackUrl);
-  Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String codeVerifierId,
-  });
-  Future<ProviderStatusResult> connectGemini(String apiKey);
-  Future<void> disconnectProvider(String provider);
-  Future<ProviderStatusResult> getProviderStatus(String provider);
+  // 4.2 Modelos
   Future<ModelsCatalog> getModels();
   Future<ModelPreference> putModelPreference({
     required String chatProvider,

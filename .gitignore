@@ -11,3 +11,7 @@ dist/
 apps/api/.insforge/
 .insforge/
 .claude/worktrees/
+
+# orch: estado en SQLite y backups de tasks.json, nunca al repo
+.orchestrator/state/
+tasks.json.bak-*

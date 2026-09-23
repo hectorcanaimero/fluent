@@ -1,0 +1,487 @@
+{
+  "meta": {
+    "project": "fluent",
+    "generatedAt": "2026-09-23",
+    "note": "Skeleton created by `orch init`. Add tasks by editing this file directly OR by writing specs under specs/ and running `orch atomize --file specs/YOUR-SPEC.md --apply`."
+  },
+  "phases": [
+    {
+      "id": 0,
+      "name": "F0 — Foundation"
+    }
+  ],
+  "tasks": [
+    {
+      "id": "F1.1.T1",
+      "phase": 1,
+      "title": "Proveedor 9router con el Vercel AI SDK",
+      "description": "Añadir `ai` y `@ai-sdk/openai-compatible` (AI SDK 7.x) a `apps/api/package.json`\ncon `pnpm --filter @fluent/api add ai @ai-sdk/openai-compatible`.\n\nCrear `apps/api/src/llm/ninerouter.provider.ts` que exporte el token\n`NINEROUTER_PROVIDER` y una factory `createNineRouterProvider(env)` que devuelva\n`createOpenAICompatible({ name: '9router', baseURL: env.NINEROUTER_URL, apiKey: env.NINEROUTER_API_KEY, includeUsage: true })`.\nNo activar `supportsStructuredOutputs` (decisión D3 de la arquitectura).\nRegistrar el provider en `LlmInfraModule` (`llm-infra.module.ts`) con\n`ConfigService` y exportarlo; API y worker lo comparten.\n\nEn `apps/api/src/config/env.ts` añadir `NINEROUTER_URL` (`z.url()`) y\n`NINEROUTER_API_KEY` (`z.string().min(1)`), obligatorias. `FALLBACK_MODELS`\npasa a opcional. Reflejarlo en `.env.example` y `.env.test` (valores de prueba).\n\nEn `apps/api/src/llm/config.ts`: `Provider = '9router'`, `PROVIDER_IDS = ['9router']`,\n`PROVIDERS` queda con una sola entrada (`baseUrl` ya no se usa para llamar pero\nla mantiene el catálogo), `DEFAULT_FALLBACK_MODELS = [{ provider: '9router', model: 'fluent-free' }]`,\n`isProvider` acepta solo `'9router'`. Añadir `PRO_COMBO = 'fluent-pro'` y\n`FREE_COMBO = 'fluent-free'`.\n\nEste cambio de tipo rompe `db/schema.ts` (`Provider = 'openrouter' | 'gemini'`):\ncambiar ahí también a `'9router'`. Otros ficheros que dejen de compilar por el\ntipo (`providers/`, `credentials/`, `models/`, `jobs/`) se arreglan con el\ncambio mínimo para que `pnpm --filter @fluent/api build` pase; su reescritura\nreal es de F1.2 a F1.4 y F5.\n\nDone when: `pnpm --filter @fluent/api build` y `pnpm --filter @fluent/api test`\npasan; `env.spec.ts` cubre que falta `NINEROUTER_URL` tumba el arranque; la key\nno aparece en ningún log ni `toString` del provider.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Cableado de dependencias y tipos; sin lógica nueva.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/package.json",
+        "pnpm-lock.yaml",
+        "apps/api/src/llm/ninerouter.provider.ts",
+        "apps/api/src/llm/config.ts",
+        "apps/api/src/llm/llm-infra.module.ts",
+        "apps/api/src/config/env.ts",
+        "apps/api/src/config/env.spec.ts",
+        "apps/api/.env.example",
+        "apps/api/.env.test",
+        "apps/api/src/db/schema.ts"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F1.2.T1",
+      "phase": 1,
+      "title": "LlmService sobre generateObject y streamObject",
+      "description": "Reescribir `apps/api/src/llm/llm.service.ts` para que cada intento use el SDK\nen vez de `LlmClient`:\n\n- Sin `onToken`: `generateObject({ model: provider(candidate.model), schema, messages, temperature, maxOutputTokens, abortSignal: AbortSignal.timeout(timeoutMs), maxRetries: 0, experimental_repairText })`.\n- Con `onToken`: `streamObject(...)` con los mismos parámetros; recorrer\n  `partialObjectStream`, y por cada partial con `reply: string` emitir\n  `onToken(reply.slice(previousReply.length))` solo si `reply.startsWith(previousReply)`;\n  si no, dejar de emitir (el `done` del SSE manda el objeto entero). Al final\n  esperar `object` y `usage`.\n- `experimental_repairText: ({ text }) =\u003e JSON.stringify(extractFirstJsonObject(text))`\n  o `null` si no hay objeto, reutilizando `apps/api/src/llm/json.ts`.\n- `mapError(error): LlmErrorStatus` según la tabla de la arquitectura\n  (`NoObjectGeneratedError` → `invalid_json`; `APICallError` 401/403 →\n  `auth_error`, 429 → `rate_limited`, otro → `provider_error`; abort →\n  `timeout`). Un `error` part en `fullStream` cuenta como `provider_error`.\n- `usage`: `inputTokens`/`outputTokens` del SDK a `LlmUsage { tokensIn, tokensOut }`,\n  `null` cuando el SDK no los da.\n\nSe conservan intactos: `LlmServiceRequest` (por ahora sigue recibiendo\n`credentials`, F2.2 lo cambia a `plan`), `LlmServiceResult`, `LlmAttempt`,\n`LlmCallSink`, `LlmEventBus`, `LlmUnavailableError`, `onReset`,\n`TURN_MAX_ATTEMPTS`, `MAX_ATTEMPTS`, la degradación y el registro en `llm_calls`.\n`LlmServiceDeps.client` pasa a `provider: ReturnType\u003ctypeof createOpenAICompatible\u003e`.\nLos tipos `LlmMessage`, `LlmUsage`, `LlmCallStatus`, `LlmErrorStatus`,\n`LlmCallError` se mueven de `llm.client.ts` a `llm/types.ts`.\n\nBorrar `llm.client.ts`, `llm.client.spec.ts`, `stream-reply-parser.ts`,\n`stream-reply-parser.spec.ts`. `bench-turns.spec.ts` se adapta o se borra si\nsolo probaba el cliente.\n\nTests: reescribir `llm.service.spec.ts` con `MockLanguageModelV3` de `ai/test`\n(o el mock que exponga la versión instalada) cubriendo: éxito no streaming,\néxito streaming con deltas de `reply` en orden, `invalid_json` que cae al\nsiguiente candidato y llama `onReset`, 429 → `rate_limited`, timeout, cadena\nagotada → `LlmUnavailableError`, y que cada intento se registra en el sink.\n\nDone when: `pnpm --filter @fluent/api test` y `build` pasan; `grep -r \"llm.client\" apps/api/src` no devuelve nada; el endpoint SSE de turnos (`sessions/turns.controller.ts`) sigue compilando sin cambios.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "Núcleo del producto; streaming, reintentos y mapeo de errores con muchos bordes.",
+      "status": "backlog",
+      "dependencies": [
+        "F1.1.T1"
+      ],
+      "estimateHours": 6.0,
+      "files": [
+        "apps/api/src/llm/llm.service.ts",
+        "apps/api/src/llm/llm.service.spec.ts",
+        "apps/api/src/llm/types.ts",
+        "apps/api/src/llm/llm.client.ts",
+        "apps/api/src/llm/llm.client.spec.ts",
+        "apps/api/src/llm/stream-reply-parser.ts",
+        "apps/api/src/llm/stream-reply-parser.spec.ts",
+        "apps/api/src/llm/bench-turns.spec.ts",
+        "apps/api/src/llm/llm.module.ts",
+        "apps/api/src/llm/json.ts"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F1.3.T1",
+      "phase": 1,
+      "title": "CredentialsService devuelve la credencial del operador",
+      "description": "Fase de transición (decisión D4): sesiones y jobs siguen pidiendo credenciales,\npero la respuesta es siempre la del operador.\n\n- `apps/api/src/credentials/credentials.service.ts`: `listActive(userId)` y\n  `getActiveApiKey(userId, '9router')` devuelven\n  `[{ provider: '9router', apiKey: env.NINEROUTER_API_KEY }]` sin tocar la base.\n  `find` devuelve `null`; `saveApiKey`, `remove`, `markCredentialError` quedan\n  como no-op con un `warn`. `listStatuses` devuelve `[]`.\n- `apps/api/src/jobs/coaching-brief/coaching-brief.service.ts` y\n  `apps/api/src/jobs/weekly-summary/weekly-summary.service.ts`: dejan de leer\n  filas cifradas y de usar `CredentialsCrypto`; construyen `credentials` con\n  la del operador (inyectar `CredentialsService` o `ConfigService`). Sus\n  repositorios dejan de seleccionar `provider_credentials`.\n- `apps/api/src/jobs/weekly-summary/pending-credential.store.ts` y el aviso\n  `weekly_summary_credential_missing` en `profiles/pending-actions.service.ts`\n  desaparecen: el resumen semanal ya no puede fallar por credencial. Borrar el\n  store y su spec; `pendingActions` en `GET /me` queda como lista vacía si no\n  hay otro aviso.\n\nDone when: `pnpm --filter @fluent/api test` pasa; `sessions.service.spec.ts`\ny `turns.service.spec.ts` ya no necesitan preparar credenciales para abrir\nsesión; ningún job importa `credentials.crypto`.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Cambio mecánico en varios ficheros con tests existentes que guían.",
+      "status": "backlog",
+      "dependencies": [
+        "F1.1.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/api/src/credentials/credentials.service.ts",
+        "apps/api/src/credentials/credentials.service.spec.ts",
+        "apps/api/src/credentials/credentials.module.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.service.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.service.spec.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.repository.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.module.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.service.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.service.spec.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.repository.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.module.ts",
+        "apps/api/src/jobs/weekly-summary/pending-credential.store.ts",
+        "apps/api/src/jobs/weekly-summary/pending-credential.store.spec.ts",
+        "apps/api/src/profiles/pending-actions.service.ts",
+        "apps/api/src/profiles/pending-actions.service.spec.ts",
+        "apps/api/src/sessions/sessions.service.spec.ts",
+        "apps/api/src/sessions/turns.service.spec.ts"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F1.4.T1",
+      "phase": 1,
+      "title": "Catálogo de modelos desde 9router",
+      "description": "- Crear `apps/api/src/llm/ninerouter-models.ts` con `NINEROUTER_MODELS: readonly CatalogModel[]`,\n  lista fija del operador con `id`, `name`, `tier`, `pricePerMillionIn`,\n  `pricePerMillionOut`, `contextLength`. Incluir al menos `fluent-free`\n  (tier `free`, precio 0) y `fluent-pro` (tier `premium`) y los modelos de pago\n  del combo Pro con sus precios de referencia, en un comentario la fuente de\n  cada precio. Borrar `gemini-models.ts`.\n- `apps/api/src/llm/catalog.service.ts`: `listModels()` hace\n  `GET {NINEROUTER_URL}/v1/models` con `Authorization: Bearer` (cache Redis\n  `llm:catalog:9router`, 6 h, misma política de caché y `refresh` que hoy) y\n  devuelve la intersección: ids presentes en la respuesta **y** en\n  `NINEROUTER_MODELS`, con los datos de la lista fija. Si la respuesta de\n  9router no trae un id, no se expone. Quitar el parseo de precios de OpenRouter\n  y `tierFromOutputPrice` deja de aplicarse a datos remotos.\n- `apps/api/src/models/models.service.ts`: `getCatalog` ya no busca la key del\n  usuario; `listCatalogModels` usa la key del operador vía el provider o\n  `ConfigService`. `assertRoleIsAvailable` deja de comprobar credencial y solo\n  comprueba pertenencia al catálogo (la comprobación de plan llega en F2.2).\n- `models.types.ts`: `providers` es `Record\u003c'9router', ModelTierGroupsDto\u003e`.\n  `models.mapper.ts` agrupa por el único proveedor.\n\nDone when: `catalog.service.spec.ts` cubre intersección, caché y `refresh`;\n`models.service.spec.ts` pasa; `GET /models` en `test/models.e2e-spec.ts`\ndevuelve `providers['9router']` con `fluent-free` en `free`.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Reescritura acotada con tests existentes.",
+      "status": "backlog",
+      "dependencies": [
+        "F1.1.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/src/llm/ninerouter-models.ts",
+        "apps/api/src/llm/gemini-models.ts",
+        "apps/api/src/llm/catalog.service.ts",
+        "apps/api/src/llm/catalog.service.spec.ts",
+        "apps/api/src/models/models.service.ts",
+        "apps/api/src/models/models.service.spec.ts",
+        "apps/api/src/models/models.types.ts",
+        "apps/api/src/models/models.mapper.ts",
+        "apps/api/src/models/models.mapper.spec.ts",
+        "apps/api/test/models.e2e-spec.ts"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.4.T1",
+      "comments": []
+    },
+    {
+      "id": "F1.5.T1",
+      "phase": 1,
+      "title": "Migración: proveedor 9router y limpieza de preferencias",
+      "description": "Escribir `apps/api/migrations/20260923120000_9router.sql` siguiendo el estilo\nde `apps/api/migrations/20260908190234_proveedores-y-preferencias-de-modelo.sql`\n(comentarios en español, REVOKE/GRANT explícitos si se crea algo):\n\n- `model_preferences`: quitar los CHECK de `chat_provider` y `brief_provider`,\n  `UPDATE` todas las filas a `chat_provider = '9router'`, `brief_provider = '9router'`,\n  `chat_model = 'fluent-free'`, `brief_model = 'fluent-free'`, y volver a crear\n  los CHECK con `IN ('9router')` y DEFAULT `'9router'`.\n- `provider_credentials`: `DELETE FROM public.provider_credentials;` (la tabla\n  se borra en F5).\n- Encabezado con la referencia a `docs/arch/001-9router-y-planes.md`.\n\nRegistrar la migración donde el runbook `docs/runbooks/insforge.md` indique\n(solo el fichero SQL; no aplicarla contra ningún proyecto remoto).\n\nDone when: el SQL corre limpio en una base local con la migración anterior\naplicada (`psql -f`), y un `INSERT` con `chat_provider = 'openrouter'` falla\npor el CHECK.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "SQL corto con un patrón ya en el repo.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 1.0,
+      "files": [
+        "apps/api/migrations/20260923120000_9router.sql"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.5.T1",
+      "comments": []
+    },
+    {
+      "id": "F1.6.T1",
+      "phase": 1,
+      "title": "bench-models.ts sobre el SDK y los combos",
+      "description": "Adaptar `apps/api/scripts/bench-models.ts` (SPEC-03 §9) para que use el\nprovider de F1.1 y `generateObject` con `TurnOutput`, y acepte por argumento la\nlista de modelos o combos a medir (por defecto `fluent-free` y `fluent-pro`).\nMantener las métricas: tasa de JSON válido, p50, p90 y detección de al menos 1\nde los 2 errores plantados en 20 turnos B1. Salida en tabla por modelo y\nexit code 1 si algún modelo queda por debajo de JSON válido ≥ 95 % o p90 ≥ 8 s.\n`pnpm --filter @fluent/api bench:models` sigue siendo el comando.\n\nDone when: el script compila con `tsc -p tsconfig.scripts.json` y, con\n`NINEROUTER_URL` y `NINEROUTER_API_KEY` reales en el entorno, imprime la tabla.\nNo hace falta red en CI: un flag `--dry-run` imprime los prompts sin llamar.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Script existente que cambia de cliente.",
+      "status": "backlog",
+      "dependencies": [
+        "F1.1.T1"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/scripts/bench-models.ts",
+        "apps/api/tsconfig.scripts.json"
+      ],
+      "specRef": "f1-api-9router-sdk.md#F1.6.T1",
+      "comments": []
+    },
+    {
+      "id": "F2.1.T1",
+      "phase": 2,
+      "title": "Columnas de plan y helper isPro",
+      "description": "- Migración `apps/api/migrations/20260923130000_planes.sql`:\n  `ALTER TABLE public.profiles ADD COLUMN plan text NOT NULL DEFAULT 'free' CHECK (plan IN ('free','pro'))`\n  y `ADD COLUMN plan_expires_at timestamptz`. Mantener las políticas RLS\n  actuales de `profiles` (el usuario lee su fila; solo la API escribe): revisar\n  la migración `20260908171114_grupos-invitaciones-perfiles.sql` para que las\n  columnas nuevas no queden escribibles por `authenticated`.\n- `apps/api/src/db/schema.ts`: `export type Plan = 'free' | 'pro'`;\n  `Profile.plan: Plan`, `Profile.plan_expires_at: string | null`.\n- `apps/api/src/profiles/plan.ts`: `isPro(profile: Pick\u003cProfile,'plan'|'plan_expires_at'\u003e, now = new Date()): boolean`\n  y `effectivePlan(profile, now): Plan`. Un `pro` con `plan_expires_at` en el\n  pasado cuenta como `free`.\n\nDone when: `plan.spec.ts` cubre free, pro sin fecha, pro vigente, pro vencido,\nfecha inválida; `build` pasa.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Migración corta y una función pura.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 1.5,
+      "files": [
+        "apps/api/migrations/20260923130000_planes.sql",
+        "apps/api/src/db/schema.ts",
+        "apps/api/src/profiles/plan.ts",
+        "apps/api/src/profiles/plan.spec.ts"
+      ],
+      "specRef": "f2-api-planes.md#F2.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F2.2.T1",
+      "phase": 2,
+      "title": "Resolver por plan, PLAN_REQUIRED y topes diarios",
+      "description": "- `apps/api/src/llm/model-resolver.ts`: `resolve({ plan, preference, fallbackModels? })`.\n  Free → `[{ '9router', FREE_COMBO, source: 'fallback' }]` y\n  `preferenceDropped = preference != null`. Pro → `[preference (source 'preference'), fluent-pro, fluent-free]`\n  sin duplicados. `Candidate` pierde `apiKey`; desaparecen `ActiveCredential`\n  y `CredentialsSource` de este fichero (los llamadores de F1.3 que aún los\n  importen pasan a importarlos de `credentials/`, o se borran si ya no se usan).\n- `apps/api/src/llm/llm.service.ts`: `LlmServiceRequest.credentials` se\n  sustituye por `plan: Plan`. Los llamadores (`sessions.service.ts`,\n  `turns.service.ts`, `coaching-brief.service.ts`, `weekly-summary.service.ts`)\n  pasan `effectivePlan(profile)` en vez de credenciales. No borrar aún la\n  sesión de cortesía (es de F5), solo dejar de pasarle credenciales al LLM.\n- `apps/api/src/common/api-error.ts`: `PLAN_REQUIRED: 403`.\n- `apps/api/src/models/models.service.ts`: en `updatePreferences`, si\n  `effectivePlan(profile) === 'free'` y algún modelo elegido tiene tier ≠ `free`\n  en el catálogo → `ApiException.of('PLAN_REQUIRED', 'Elegir un modelo de pago requiere el plan Pro.')`.\n- `apps/api/src/config/env.ts`: `TURNS_DAILY_CAP` se reemplaza por\n  `TURNS_DAILY_CAP_FREE` (default 30) y `TURNS_DAILY_CAP_PRO` (default 120),\n  enteros ≥ 0, 0 desactiva. `.env.example` acorde.\n- `apps/api/src/sessions/turns.service.ts` `requireDailyTurnsBudget`: elige el\n  tope según `isPro(profile)`. El mensaje para Free menciona que Pro amplía el\n  tope.\n\nDone when: `model-resolver.spec.ts` cubre las cuatro combinaciones (free con\ny sin preferencia, pro con y sin preferencia); `models.service.spec.ts` cubre\n`PLAN_REQUIRED`; `turns.service.spec.ts` cubre tope free vs pro; `test/session-turns.e2e-spec.ts` pasa.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "Toca la ruta caliente del turno y la firma de `LlmService`; errores aquí bloquean todas las sesiones.",
+      "status": "backlog",
+      "dependencies": [
+        "F2.1.T1",
+        "F1.2.T1",
+        "F1.4.T1"
+      ],
+      "estimateHours": 5.0,
+      "files": [
+        "apps/api/src/llm/model-resolver.ts",
+        "apps/api/src/llm/model-resolver.spec.ts",
+        "apps/api/src/llm/llm.service.ts",
+        "apps/api/src/llm/llm.service.spec.ts",
+        "apps/api/src/common/api-error.ts",
+        "apps/api/src/models/models.service.ts",
+        "apps/api/src/models/models.service.spec.ts",
+        "apps/api/src/config/env.ts",
+        "apps/api/src/config/env.spec.ts",
+        "apps/api/.env.example",
+        "apps/api/.env.test",
+        "apps/api/src/sessions/turns.service.ts",
+        "apps/api/src/sessions/turns.service.spec.ts",
+        "apps/api/src/sessions/sessions.service.ts",
+        "apps/api/src/sessions/sessions.service.spec.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.service.ts",
+        "apps/api/src/jobs/coaching-brief/coaching-brief.service.spec.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.service.ts",
+        "apps/api/src/jobs/weekly-summary/weekly-summary.service.spec.ts",
+        "apps/api/test/session-turns.e2e-spec.ts"
+      ],
+      "specRef": "f2-api-planes.md#F2.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F2.3.T1",
+      "phase": 2,
+      "title": "GET /me con plan y PUT /admin/users/:id/plan",
+      "description": "- `apps/api/src/profiles/profiles.types.ts`: `MeDto` gana `plan: Plan` y\n  `planExpiresAt: string | null`; pierde `providers`. `profiles.service.ts`\n  deja de llamar a `CredentialsService.listStatuses`.\n- `apps/api/src/admin`: `PUT /admin/users/:id/plan` con DTO\n  `{ plan: 'free' | 'pro', expiresAt?: string | null }` (class-validator,\n  `expiresAt` ISO 8601 o null). Solo `OWNER_USER_ID`, mismo guard que\n  `GET /admin/metrics`; otro usuario `403 FORBIDDEN`; `id` inexistente\n  `404 NOT_FOUND`. Escribe `profiles.plan` y `plan_expires_at` con la clave\n  admin y responde `{ userId, plan, planExpiresAt }`. Registrar en el log quién\n  cambió el plan de quién.\n- OpenAPI (`apps/api/src/openapi.ts` o decoradores) refleja ambos cambios.\n\nDone when: `profiles.service.spec.ts` y `admin.service.spec.ts` cubren los\ncasos; `test/admin.e2e-spec.ts` cubre 200 owner, 403 no owner, 404; el\ncontrato de `GET /me` en `docs/specs/SPEC-02-auth-y-api.md` §4.1 se actualiza\nen la misma tarea.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "CRUD con guard existente.",
+      "status": "backlog",
+      "dependencies": [
+        "F2.1.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/src/profiles/profiles.types.ts",
+        "apps/api/src/profiles/profiles.service.ts",
+        "apps/api/src/profiles/profiles.service.spec.ts",
+        "apps/api/src/profiles/profiles.module.ts",
+        "apps/api/src/admin/admin.controller.ts",
+        "apps/api/src/admin/admin.service.ts",
+        "apps/api/src/admin/admin.service.spec.ts",
+        "apps/api/src/admin/admin.repository.ts",
+        "apps/api/src/admin/admin.types.ts",
+        "apps/api/src/admin/dto/update-user-plan.dto.ts",
+        "apps/api/test/admin.e2e-spec.ts",
+        "docs/specs/SPEC-02-auth-y-api.md"
+      ],
+      "specRef": "f2-api-planes.md#F2.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F3.1.T1",
+      "phase": 3,
+      "title": "core/api sin proveedores y con plan",
+      "description": "- `apps/mobile/lib/core/api/fluent_api.dart`: quitar `startOpenRouterPkce`,\n  `completeOpenRouterPkce`, `connectGemini`, `disconnectProvider`,\n  `getProviderStatus`. Mantener `getModels` y `putModelPreference`.\n- `apps/mobile/lib/core/api/models.dart`: `MeResponse` pierde `providers` y la\n  extensión `MeResponseProviders`; gana `plan` (`String`, `'free'` por defecto)\n  y `planExpiresAt` (`DateTime?`), más una extensión `MeResponsePlan` con\n  `bool get isPro` (plan `pro` y fecha nula o futura). Borrar `ProviderInfo`,\n  `ProviderCredits`, `ProviderStatusResult`, `PkceStartResult`.\n  `ModelsCatalog.providers` sigue siendo `Map\u003cString, ModelTierGroups\u003e`.\n- `http_fluent_api.dart` y `fake_api.dart` acordes. El fake devuelve un usuario\n  Free por defecto y expone un `setPlan('pro')` para tests y demo.\n- Regenerar `models.g.dart` y `models.freezed.dart`.\n- Tests en `apps/mobile/test/core/api/` adaptados: parseo de `plan` y\n  `planExpiresAt`, `isPro` con fecha vencida.\n\nDone when: `flutter analyze` sin errores en `lib/core`; `flutter test test/core`\npasa. El resto de la app puede no compilar todavía (lo arreglan F3.2 y F3.3).",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Cambio de contrato mecánico con codegen.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/core/api/fluent_api.dart",
+        "apps/mobile/lib/core/api/http_fluent_api.dart",
+        "apps/mobile/lib/core/api/fake_api.dart",
+        "apps/mobile/lib/core/api/models.dart",
+        "apps/mobile/lib/core/api/models.g.dart",
+        "apps/mobile/lib/core/api/models.freezed.dart",
+        "apps/mobile/test/core/api/http_fluent_api_sessions_test.dart",
+        "apps/mobile/test/core/api/http_fluent_api_turn_stream_test.dart",
+        "apps/mobile/test/core/api/models_test.dart"
+      ],
+      "specRef": "f3-app-movil-plan.md#F3.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F3.2.T1",
+      "phase": 3,
+      "title": "Borrar la pantalla y el flujo de proveedores",
+      "description": "- Mover `apps/mobile/lib/features/providers/data/oauth_launcher.dart` a\n  `apps/mobile/lib/features/auth/data/oauth_launcher.dart` (lo usa\n  `social_sign_in.dart`) y actualizar imports.\n- Borrar `apps/mobile/lib/features/providers/` entera y\n  `apps/mobile/test/features/providers/`.\n- `apps/mobile/lib/app/router.dart`: quitar la ruta `/providers`.\n- `apps/mobile/lib/core/providers.dart`: quitar `ProvidersData`,\n  `canPracticeProvider` y cualquier provider de Riverpod que dependa de\n  `hasActiveProvider`; `HomeData` deja de mirar proveedores.\n- `apps/mobile/lib/features/onboarding/presentation/onboarding_flow.dart`:\n  quitar el salto a `/providers` y su comentario (MAL-24).\n- `apps/mobile/lib/features/home/`: cualquier aviso o CTA de «conecta un\n  proveedor» desaparece.\n- Asset `assets/auth/google_g.png` y demás de auth se quedan.\n\nDone when: `flutter analyze` limpio; `flutter test` pasa (los tests de home y\nonboarding dejan de preparar proveedores); `grep -rn \"providers\" apps/mobile/lib --include=*.dart`\nsolo devuelve `core/providers.dart` (Riverpod) y `MeResponse`-nada.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Borrado guiado por el compilador.",
+      "status": "backlog",
+      "dependencies": [
+        "F3.1.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/features/providers/data/oauth_launcher.dart",
+        "apps/mobile/lib/features/providers/domain/providers_data.dart",
+        "apps/mobile/lib/features/providers/presentation/providers_screen.dart",
+        "apps/mobile/lib/features/auth/data/oauth_launcher.dart",
+        "apps/mobile/lib/features/auth/data/social_sign_in.dart",
+        "apps/mobile/lib/app/router.dart",
+        "apps/mobile/lib/core/providers.dart",
+        "apps/mobile/lib/features/onboarding/presentation/onboarding_flow.dart",
+        "apps/mobile/lib/features/home/presentation/home_screen.dart",
+        "apps/mobile/lib/features/home/presentation/home_shell.dart",
+        "apps/mobile/test/features/providers/providers_screen_test.dart",
+        "apps/mobile/test/features/onboarding/onboarding_flow_test.dart",
+        "apps/mobile/test/features/home/home_screen_test.dart",
+        "apps/mobile/test/features/home/home_shell_test.dart"
+      ],
+      "specRef": "f3-app-movil-plan.md#F3.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F3.3.T1",
+      "phase": 3,
+      "title": "Pantalla de plan, selector solo Pro y textos",
+      "description": "- Nueva `apps/mobile/lib/features/settings/presentation/plan_screen.dart` en\n  la ruta `/settings/plan`: muestra el plan actual (`Free` o `Pro` con fecha de\n  vencimiento si la hay), una lista de lo que incluye Pro (modelos de pago a\n  elegir, tope diario de 120 turnos, brief con modelo fuerte) y un botón\n  «Pasar a Pro» que en esta fase abre un diálogo «Disponible pronto». Para Pro\n  el botón no aparece. Seguir el estilo de `settings_screen.dart` y los\n  tokens de `AppColors`.\n- `apps/mobile/lib/features/settings/presentation/settings_screen.dart`: la\n  entrada «Proveedores» (`l10n.providersTitle`) se sustituye por «Plan» que\n  navega a `/settings/plan`. El selector de modelo (donde esté hoy: si vivía\n  en `providers_screen.dart`, recrearlo como `model_picker_screen.dart` en\n  `features/settings/presentation/`) solo se muestra si `me.isPro`; para Free\n  se muestra el texto «Modelos gratuitos con respaldo automático».\n- `apps/mobile/lib/core/errors/l10n_for_api_error.dart`: quitar\n  `PROVIDER_NOT_CONNECTED` y `PROVIDER_KEY_INVALID`; añadir `PLAN_REQUIRED`\n  («Elegir un modelo de pago requiere el plan Pro.» / portugués equivalente).\n- `app_es.arb` y `app_pt.arb`: borrar las claves de proveedores que ya no se\n  usan (comprobar con `grep` en `lib/`), añadir las de plan. Regenerar\n  `lib/l10n/gen/`.\n- Registrar la ruta en `router.dart` (solo la línea nueva; F3.2 quita la vieja\n  y ambas tareas dependen de F3.1, así que ejecutar esta después de F3.2 si\n  hay conflicto en `router.dart`: la dependencia lo garantiza).\n\nDone when: `flutter analyze` limpio; `flutter test` pasa incluyendo un\n`plan_screen_test.dart` que cubre Free con botón, Pro sin botón y Pro vencido\ncomo Free; ningún `l10n.providers*` queda referenciado.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "UI nueva sencilla más l10n; sin lógica de negocio.",
+      "status": "backlog",
+      "dependencies": [
+        "F3.1.T1",
+        "F3.2.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/mobile/lib/features/settings/presentation/plan_screen.dart",
+        "apps/mobile/lib/features/settings/presentation/model_picker_screen.dart",
+        "apps/mobile/lib/features/settings/presentation/settings_screen.dart",
+        "apps/mobile/lib/app/router.dart",
+        "apps/mobile/lib/core/errors/l10n_for_api_error.dart",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/lib/l10n/gen/app_localizations.dart",
+        "apps/mobile/lib/l10n/gen/app_localizations_es.dart",
+        "apps/mobile/lib/l10n/gen/app_localizations_pt.dart",
+        "apps/mobile/test/features/settings/plan_screen_test.dart",
+        "apps/mobile/test/features/settings/settings_screen_test.dart"
+      ],
+      "specRef": "f3-app-movil-plan.md#F3.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F4.1.T1",
+      "phase": 4,
+      "title": "POST /webhooks/revenuecat escribe el plan",
+      "description": "- Nuevo módulo `apps/api/src/billing/` con `billing.module.ts`,\n  `billing.controller.ts`, `billing.service.ts`, `billing.service.spec.ts`.\n- `POST /webhooks/revenuecat`, marcado `@Public()`, exige\n  `Authorization: Bearer ${REVENUECAT_WEBHOOK_SECRET}`; si no coincide,\n  `401 UNAUTHENTICATED` sin detalle. `REVENUECAT_WEBHOOK_SECRET` opcional en\n  `env.ts`: si falta, el endpoint responde `404` (cobro desactivado).\n- Cuerpo según el formato de webhook de RevenueCat (`event.type`,\n  `event.app_user_id`, `event.expiration_at_ms`, `event.entitlement_ids`).\n  `app_user_id` es el `userId` de InsForge (la app lo fija en F4.2).\n  Eventos `INITIAL_PURCHASE`, `RENEWAL`, `UNCANCELLATION`, `PRODUCT_CHANGE`\n  con entitlement `pro` → `plan = 'pro'`, `plan_expires_at = expiration_at_ms`.\n  `EXPIRATION`, `CANCELLATION` con expiración pasada, `BILLING_ISSUE` tras\n  gracia → `plan = 'free'`, `plan_expires_at = null`. Otros eventos → `200`\n  sin cambios. Idempotente: el mismo evento dos veces deja el mismo estado.\n- Reutilizar el repositorio de F2.3 (`admin.repository.ts` o uno propio en\n  `billing/`) para escribir `profiles`. Un `app_user_id` sin perfil → `200`\n  con log `warn`, nunca 5xx (RevenueCat reintenta).\n- Registrar en `app.module.ts`.\n\nDone when: `billing.service.spec.ts` cubre cada tipo de evento, idempotencia,\nsecreto incorrecto y perfil inexistente; `test/billing.e2e-spec.ts` cubre 401\ny un `INITIAL_PURCHASE` que deja al usuario Pro en `GET /me`.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "Ruta pública que escribe dinero en estado; hay que acertar con la verificación y la idempotencia.",
+      "status": "backlog",
+      "dependencies": [
+        "F2.3.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/api/src/billing/billing.module.ts",
+        "apps/api/src/billing/billing.controller.ts",
+        "apps/api/src/billing/billing.service.ts",
+        "apps/api/src/billing/billing.service.spec.ts",
+        "apps/api/src/billing/billing.repository.ts",
+        "apps/api/src/billing/dto/revenuecat-event.dto.ts",
+        "apps/api/src/app.module.ts",
+        "apps/api/src/config/env.ts",
+        "apps/api/.env.example",
+        "apps/api/test/billing.e2e-spec.ts"
+      ],
+      "specRef": "f4-cobro-pro.md#F4.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F4.2.T1",
+      "phase": 4,
+      "title": "Suscripción con purchases_flutter",
+      "description": "- Añadir `purchases_flutter` a `apps/mobile/pubspec.yaml`.\n- `apps/mobile/lib/core/billing/billing_service.dart`: configura RevenueCat\n  con la key pública por plataforma (desde `core/env.dart`), llama a\n  `Purchases.logIn(userId)` tras el login para que `app_user_id` sea el id de\n  InsForge, expone `Future\u003cvoid\u003e buyPro()` (abre la hoja de compra nativa del\n  paquete `pro`) y `Future\u003cvoid\u003e restore()`.\n- `plan_screen.dart`: el botón «Pasar a Pro» llama a `buyPro()`, muestra el\n  precio localizado que devuelve RevenueCat, y tras la compra vuelve a pedir\n  `GET /me` hasta que `plan == 'pro'` (máximo 10 s, luego mensaje «Se activará\n  en unos minutos»). Botón secundario «Restaurar compras».\n- Sin claves de RevenueCat en el entorno (`Env.revenuecatKey` vacío) la\n  pantalla se comporta como en F3 (diálogo «Disponible pronto»), así el fake y\n  los tests no dependen del SDK.\n\nDone when: `flutter analyze` limpio; `plan_screen_test.dart` cubre el modo sin\nclave y el modo con un `BillingService` falso que resuelve `buyPro()`;\n`flutter build apk --debug` compila con la dependencia nueva.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Integración de SDK con patrón documentado por el proveedor.",
+      "status": "backlog",
+      "dependencies": [
+        "F3.3.T1",
+        "F4.1.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/mobile/pubspec.yaml",
+        "apps/mobile/pubspec.lock",
+        "apps/mobile/lib/core/env.dart",
+        "apps/mobile/lib/core/billing/billing_service.dart",
+        "apps/mobile/lib/core/providers.dart",
+        "apps/mobile/lib/features/settings/presentation/plan_screen.dart",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/lib/l10n/gen/app_localizations.dart",
+        "apps/mobile/lib/l10n/gen/app_localizations_es.dart",
+        "apps/mobile/lib/l10n/gen/app_localizations_pt.dart",
+        "apps/mobile/test/features/settings/plan_screen_test.dart"
+      ],
+      "specRef": "f4-cobro-pro.md#F4.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F5.1.T1",
+      "phase": 5,
+      "title": "Borrar providers, credentials, cortesía y variables",
+      "description": "- Borrar `apps/api/src/providers/` y `apps/api/src/credentials/` enteros\n  (incluidos specs) y quitarlos de `app.module.ts` y `worker.module.ts`.\n  `llm-infra.module.ts` deja de exportar `CREDENTIAL_ERROR_EVENT` si nadie lo\n  escucha; `LlmService` deja de emitir `credential.error`.\n- Sesión de cortesía (MAL-24): quitar `resolveCourtesy`, `courtesyCredentials`\n  y todo lo que lea `session.courtesy` en `sessions.service.ts`,\n  `turns.service.ts`, `sessions.repository.ts`, `session-sweeper.*`. Los\n  llamadores de `LlmService` ya pasan `plan` (F2.2), así que aquí solo se\n  quita código.\n- Migración `apps/api/migrations/20260923140000_borrar-byok.sql`:\n  `DROP TABLE public.provider_credentials;` y `ALTER TABLE public.sessions DROP COLUMN courtesy;`\n  (revisar `20260911205643_sesion-de-cortesia.sql` por si dejó una función o\n  un índice que borrar). `db/schema.ts` acorde.\n- `config/env.ts`: quitar `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`,\n  `OPENROUTER_OAUTH_CALLBACK`; `API_PUBLIC_URL` se queda solo si algo más la\n  usa (comprobar con grep; si no, quitar también `suspiciousEnvWarnings` y su\n  spec). `.env.example`, `.env.test` y `test/insforge-e2e.ts` acordes.\n- `common/api-error.ts`: quitar `PROVIDER_NOT_CONNECTED`, `PROVIDER_KEY_INVALID`.\n- `jobs/maintenance`: si había un job de recifrado de credenciales, borrarlo.\n- Tests e2e en `apps/api/test/` que preparaban credenciales se limpian.\n\nDone when: `grep -rniE \"openrouter|gemini|pkce|credential\" apps/api/src` solo\ndevuelve, como mucho, comentarios históricos en `llm/` y nombres de modelos en\n`ninerouter-models.ts`; `pnpm --filter @fluent/api build`, `lint`, `test` y\n`test:e2e` pasan.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Borrado extenso guiado por el compilador y los tests.",
+      "status": "backlog",
+      "dependencies": [
+        "F1.3.T1",
+        "F2.2.T1",
+        "F3.2.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/api/src/providers/dto/connect-gemini.dto.ts",
+        "apps/api/src/providers/dto/pkce-complete.dto.ts",
+        "apps/api/src/providers/dto/pkce-start.dto.ts",
+        "apps/api/src/providers/pkce.spec.ts",
+        "apps/api/src/providers/pkce.store.ts",
+        "apps/api/src/providers/pkce.ts",
+        "apps/api/src/providers/provider-api.client.ts",
+        "apps/api/src/providers/provider-fetch.module.ts",
+        "apps/api/src/providers/providers.controller.ts",
+        "apps/api/src/providers/providers.module.ts",
+        "apps/api/src/providers/providers.service.spec.ts",
+        "apps/api/src/providers/providers.service.ts",
+        "apps/api/src/providers/providers.types.ts",
+        "apps/api/src/credentials/credential-error.listener.spec.ts",
+        "apps/api/src/credentials/credential-error.listener.ts",
+        "apps/api/src/credentials/credentials.crypto.spec.ts",
+        "apps/api/src/credentials/credentials.crypto.ts",
+        "apps/api/src/credentials/credentials.module.ts",
+        "apps/api/src/credentials/credentials.repository.ts",
+        "apps/api/src/credentials/credentials.service.spec.ts",
+        "apps/api/src/credentials/credentials.service.ts",
+        "apps/api/src/app.module.ts",
+        "apps/api/src/worker.module.ts",
+        "apps/api/src/llm/llm-infra.module.ts",
+        "apps/api/src/llm/llm-infra.constants.ts",
+        "apps/api/src/llm/llm.service.ts",
+        "apps/api/src/llm/llm.service.spec.ts",
+        "apps/api/src/sessions/sessions.service.ts",
+        "apps/api/src/sessions/sessions.service.spec.ts",
+        "apps/api/src/sessions/sessions.repository.ts",
+        "apps/api/src/sessions/turns.service.ts",
+        "apps/api/src/sessions/turns.service.spec.ts",
+        "apps/api/src/sessions/session-sweeper.service.ts",
+        "apps/api/src/sessions/session-sweeper.repository.ts",
+        "apps/api/src/jobs/maintenance/maintenance.processor.ts",
+        "apps/api/src/jobs/maintenance/maintenance.processor.spec.ts",
+        "apps/api/src/config/env.ts",
+        "apps/api/src/config/env.spec.ts",
+        "apps/api/.env.example",
+        "apps/api/.env.test",
+        "apps/api/src/common/api-error.ts",
+        "apps/api/src/db/schema.ts",
+        "apps/api/migrations/20260923140000_borrar-byok.sql",
+        "apps/api/test/insforge-e2e.ts",
+        "apps/api/test/sessions.e2e-spec.ts",
+        "apps/api/test/session-end.e2e-spec.ts",
+        "apps/api/test/session-turns.e2e-spec.ts",
+        "apps/api/test/memory.e2e-spec.ts",
+        "apps/api/test/coaching-brief-queue.e2e-spec.ts",
+        "apps/api/scripts/db-smoke.ts",
+        "apps/api/scripts/db-test-users.ts"
+      ],
+      "specRef": "f5-limpieza-y-docs.md#F5.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F5.2.T1",
+      "phase": 5,
+      "title": "ADR 0005 y actualización de PRD, SPECs y runbook",
+      "description": "- `docs/adr/0005-llm-via-9router-y-planes.md` con el formato de los ADR\n  existentes (Fecha, Estado, Contexto, Decisión, Alternativas consideradas,\n  Consecuencias). Decisión y alternativas: tomar D1 a D6 de\n  `docs/arch/001-9router-y-planes.md`. En Consecuencias, decir claro que el\n  operador paga las cuotas y que los datos del aprendiz pasan por los\n  proveedores del combo.\n- `docs/adr/0002-byok-y-proveedores-de-llm.md`: Estado pasa a\n  «Reemplazado por ADR 0005». `docs/adr/README.md` lista el nuevo.\n- `docs/PRD.md` §6.2: reescribir RF-2.x según `docs/prd/001-9router-y-planes.md`\n  (RF-2.1 a RF-2.9 pasan a describir 9router, planes y topes). §3 «Operador»\n  deja de decir «cero costo de LLM». §8.2 quita `provider_credentials`.\n- `docs/specs/SPEC-02-auth-y-api.md`: §4.2 sustituye los endpoints de\n  proveedores por `GET /models`, `PUT /me/models` con `PLAN_REQUIRED` y\n  `PUT /admin/users/:id/plan`; §5 (cifrado) se elimina; §6 quita\n  `PROVIDER_*` y añade `PLAN_REQUIRED`.\n- `docs/specs/SPEC-03-llm-y-prompts.md`: §1 describe el SDK y el provider;\n  §2 la resolución por plan; §7 el catálogo desde 9router. §9 sigue vigente.\n- `docs/specs/SPEC-08-infraestructura.md` §2: variables nuevas y borradas;\n  añadir el contenedor de 9router al despliegue.\n- `docs/runbooks/despliegue.md`: cómo levantar 9router (`docker run …\n  -e REQUIRE_API_KEY=true`), crear los combos `fluent-free` y `fluent-pro`,\n  generar la key y ponerla en Coolify; qué mirar en `/admin/metrics` la\n  primera semana.\n\nDone when: `grep -rn \"BYOK\\|PKCE\\|CREDENTIALS_MASTER_KEY\" docs/PRD.md docs/specs docs/runbooks`\nsolo devuelve menciones históricas marcadas como tal; los enlaces entre\ndocumentos resuelven.",
+      "model": "claude/claude-haiku-4-5-20251001",
+      "reason": "Solo documentación con fuentes ya escritas.",
+      "status": "backlog",
+      "dependencies": [
+        "F5.1.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "docs/adr/0005-llm-via-9router-y-planes.md",
+        "docs/adr/0002-byok-y-proveedores-de-llm.md",
+        "docs/adr/README.md",
+        "docs/PRD.md",
+        "docs/specs/SPEC-02-auth-y-api.md",
+        "docs/specs/SPEC-03-llm-y-prompts.md",
+        "docs/specs/SPEC-08-infraestructura.md",
+        "docs/runbooks/despliegue.md"
+      ],
+      "specRef": "f5-limpieza-y-docs.md#F5.2.T1",
+      "comments": []
+    }
+  ]
+}

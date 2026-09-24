@@ -32,7 +32,9 @@ cp defines.example.json defines.json
   "API_URL": "https://fluent-api.example.com/v1",
   "INSFORGE_URL": "https://xyz.us-east-1.insforge.app",
   "INSFORGE_ANON_KEY": "anon_PEGA_AQUI",
-  "USE_FAKE_API": "false"
+  "USE_FAKE_API": "false",
+  "REVENUECAT_KEY_IOS": "",
+  "REVENUECAT_KEY_ANDROID": ""
 }
 ```
 
@@ -42,6 +44,7 @@ cp defines.example.json defines.json
 | `INSFORGE_URL` | Base del proyecto InsForge usado para auth | `https://insforge.local` |
 | `INSFORGE_ANON_KEY` | Anon key de InsForge (SPEC-06 §6). Sin ella, alta/login/refresh fallan con `AUTH_INVALID_CREDENTIALS "No token provided"` | vacío |
 | `USE_FAKE_API` | `"true"` usa `FakeApi` (datos de ejemplo, sin red); `"false"` usa la API real | `"false"` desde T9 |
+| `REVENUECAT_KEY_IOS` / `REVENUECAT_KEY_ANDROID` | Claves públicas del SDK de RevenueCat (F4.2). Una `test_…` (Test Store) vale para ambas mientras no haya apps en las tiendas | vacío: «Pasar a Pro» muestra «Disponible pronto» |
 
 Correr o compilar con esos valores:
 

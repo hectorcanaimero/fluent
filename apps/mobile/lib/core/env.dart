@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 /// Configuración de entorno leída con `--dart-define`.
 ///
 /// Ejemplo de build real:
@@ -6,7 +8,9 @@
 ///   --dart-define=API_URL=https://fluent-api.example.com/v1 \
 ///   --dart-define=INSFORGE_URL=https://xyz.us-east-1.insforge.app \
 ///   --dart-define=INSFORGE_ANON_KEY=anon_xxxxx \
-///   --dart-define=USE_FAKE_API=false
+///   --dart-define=USE_FAKE_API=false \
+///   --dart-define=REVENUECAT_KEY_IOS=appl_xxxxx \
+///   --dart-define=REVENUECAT_KEY_ANDROID=goog_xxxxx
 /// ```
 class Env {
   const Env._();
@@ -41,6 +45,25 @@ class Env {
     'USE_FAKE_API',
     defaultValue: false,
   );
+
+  /// Claves públicas del SDK de RevenueCat, una por tienda (F4.2). Vacías,
+  /// el cobro queda desactivado y «Pasar a Pro» muestra «Disponible pronto».
+  /// Una clave `test_…` (Test Store) sirve en ambas plataformas mientras no
+  /// haya apps en App Store / Play.
+  static const String _revenuecatKeyIos = String.fromEnvironment(
+    'REVENUECAT_KEY_IOS',
+    defaultValue: '',
+  );
+  static const String _revenuecatKeyAndroid = String.fromEnvironment(
+    'REVENUECAT_KEY_ANDROID',
+    defaultValue: '',
+  );
+
+  /// Clave de RevenueCat de la plataforma actual; `''` si no está
+  /// configurada.
+  static String get revenuecatKey => defaultTargetPlatform == TargetPlatform.iOS
+      ? _revenuecatKeyIos
+      : _revenuecatKeyAndroid;
 
   /// Esquema del deep link de retorno de PKCE (`fluent://oauth/openrouter`).
   static const String oauthCallbackScheme = 'fluent';

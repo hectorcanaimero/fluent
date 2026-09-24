@@ -2,5 +2,7 @@
   "API_URL": "https://fluent-api.example.com/v1",
   "INSFORGE_URL": "https://xyz.us-east-1.insforge.app",
   "INSFORGE_ANON_KEY": "anon_PEGA_AQUI",
-  "USE_FAKE_API": "false"
+  "USE_FAKE_API": "false",
+  "REVENUECAT_KEY_IOS": "",
+  "REVENUECAT_KEY_ANDROID": ""
 }

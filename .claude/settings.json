@@ -1,5 +1,8 @@
 {
   "enabledPlugins": {
     "lua-lsp@claude-plugins-official": true
+  },
+    "permissions": {
+    "allow": ["Bash", "Edit", "Write", "Read", "Glob", "Grep", "mcp__orch"]
   }
 }

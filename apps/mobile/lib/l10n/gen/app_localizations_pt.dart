@@ -1193,4 +1193,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get modelPickerLoadError => 'Não conseguimos carregar os modelos.';
+
+  @override
+  String planUpgradeButtonWithPrice(String price) {
+    return 'Assinar o Pro · $price';
+  }
+
+  @override
+  String get planRestoreButton => 'Restaurar compras';
+
+  @override
+  String get planActivating => 'Será ativado em alguns minutos';
+
+  @override
+  String get planPurchaseError =>
+      'Não conseguimos concluir a compra. Tente de novo.';
 }

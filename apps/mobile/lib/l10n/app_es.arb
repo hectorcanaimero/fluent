@@ -530,9 +530,20 @@
   "modelPickerChatTitle": "Modelo para conversar",
   "modelPickerBriefTitle": "Modelo para las notas del tutor",
   "modelPickerLoadError": "No pudimos cargar los modelos.",
+  "planUpgradeButtonWithPrice": "Pasar a Pro · {price}",
+  "planRestoreButton": "Restaurar compras",
+  "planActivating": "Se activará en unos minutos",
+  "planPurchaseError": "No pudimos completar la compra. Probá de nuevo.",
   "@planProUntil": {
     "placeholders": {
       "date": {
+        "type": "String"
+      }
+    }
+  },
+  "@planUpgradeButtonWithPrice": {
+    "placeholders": {
+      "price": {
         "type": "String"
       }
     }

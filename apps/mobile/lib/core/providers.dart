@@ -11,6 +11,7 @@ import '../features/settings/data/reminder_service.dart';
 import '../features/session/data/speech_service.dart';
 import '../features/session/data/tts_service.dart';
 import 'api/fake_api.dart';
+import 'billing/billing_service.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
 import 'env.dart';
@@ -151,3 +152,10 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
     );
   },
 );
+
+/// Cobro con RevenueCat; `null` sin clave en el entorno (F4.2): la pantalla
+/// de plan cae a «Disponible pronto».
+final billingServiceProvider = Provider<BillingService?>((ref) {
+  if (Env.useFakeApi || Env.revenuecatKey.isEmpty) return null;
+  return RevenueCatBillingService();
+});

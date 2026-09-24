@@ -2161,6 +2161,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos cargar los modelos.'**
   String get modelPickerLoadError;
+
+  /// No description provided for @planUpgradeButtonWithPrice.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasar a Pro · {price}'**
+  String planUpgradeButtonWithPrice(String price);
+
+  /// No description provided for @planRestoreButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Restaurar compras'**
+  String get planRestoreButton;
+
+  /// No description provided for @planActivating.
+  ///
+  /// In es, this message translates to:
+  /// **'Se activará en unos minutos'**
+  String get planActivating;
+
+  /// No description provided for @planPurchaseError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos completar la compra. Probá de nuevo.'**
+  String get planPurchaseError;
 }
 
 class _AppLocalizationsDelegate

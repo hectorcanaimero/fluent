@@ -249,13 +249,13 @@
     {
       "id": "F3.1.T1",
       "phase": 3,
-      "title": "core/api sin proveedores y con plan",
-      "description": "- `apps/mobile/lib/core/api/fluent_api.dart`: quitar `startOpenRouterPkce`,\n  `completeOpenRouterPkce`, `connectGemini`, `disconnectProvider`,\n  `getProviderStatus`. Mantener `getModels` y `putModelPreference`.\n- `apps/mobile/lib/core/api/models.dart`: `MeResponse` pierde `providers` y la\n  extensión `MeResponseProviders`; gana `plan` (`String`, `'free'` por defecto)\n  y `planExpiresAt` (`DateTime?`), más una extensión `MeResponsePlan` con\n  `bool get isPro` (plan `pro` y fecha nula o futura). Borrar `ProviderInfo`,\n  `ProviderCredits`, `ProviderStatusResult`, `PkceStartResult`.\n  `ModelsCatalog.providers` sigue siendo `Map\u003cString, ModelTierGroups\u003e`.\n- `http_fluent_api.dart` y `fake_api.dart` acordes. El fake devuelve un usuario\n  Free por defecto y expone un `setPlan('pro')` para tests y demo.\n- Regenerar `models.g.dart` y `models.freezed.dart`.\n- Tests en `apps/mobile/test/core/api/` adaptados: parseo de `plan` y\n  `planExpiresAt`, `isPro` con fecha vencida.\n\nDone when: `flutter analyze` sin errores en `lib/core`; `flutter test test/core`\npasa. El resto de la app puede no compilar todavía (lo arreglan F3.2 y F3.3).",
+      "title": "core/api sin proveedores, con plan, y borrado de la pantalla de proveedores",
+      "description": "El job `mobile` del CI corre `flutter analyze` y `flutter test` sobre toda la\napp, así que el cambio de contrato y el borrado de quien lo usaba tienen que\nir en el mismo PR. Esta tarea hace las dos cosas.\n\nParte del trabajo ya está en `main` (PR 41 y PR 46): `fluent_api.dart`,\n`http_fluent_api.dart`, `fake_api.dart` y `models.dart` ya no tienen\nproveedores y `MeResponse` ya tiene `plan`, `planExpiresAt` e `isPro`;\n`models.g.dart` y `models.freezed.dart` pueden estar regenerados o no.\nEmpezar por `flutter analyze` y arreglar todo lo que salga.\n\n**Contrato (`lib/core/api`)**\n- `fluent_api.dart` sin `startOpenRouterPkce`, `completeOpenRouterPkce`,\n  `connectGemini`, `disconnectProvider`, `getProviderStatus`. Se mantienen\n  `getModels` y `putModelPreference`.\n- `models.dart`: `MeResponse` sin `providers` ni `MeResponseProviders`; con\n  `plan` (`String`, `'free'` por defecto), `planExpiresAt` (`DateTime?`) y la\n  extensión `MeResponsePlan` con `bool get isPro`. Sin `ProviderInfo`,\n  `ProviderCredits`, `ProviderStatusResult`, `PkceStartResult`.\n- `fake_api.dart` devuelve un usuario Free y expone `setPlan('pro')`.\n- Regenerar con `dart run build_runner build --delete-conflicting-outputs`.\n\n**Borrado (lo que antes era F3.2)**\n- Mover `lib/features/providers/data/oauth_launcher.dart` a\n  `lib/features/auth/data/oauth_launcher.dart` (lo usa `social_sign_in.dart`)\n  y actualizar imports.\n- Borrar `lib/features/providers/` entera y `test/features/providers/`.\n- `lib/app/router.dart`: quitar la ruta `/providers`.\n- `lib/core/providers.dart`: quitar `ProvidersData`, `canPracticeProvider` y\n  todo provider de Riverpod que dependa de `hasActiveProvider`; `HomeData`\n  deja de mirar proveedores.\n- `lib/features/onboarding/presentation/onboarding_flow.dart`: quitar el\n  salto a `/providers` (MAL-24).\n- `lib/features/home/`: quitar cualquier aviso o CTA de «conecta un proveedor».\n- `lib/features/settings/presentation/settings_screen.dart`: la entrada\n  «Proveedores» se quita; la pantalla de plan la añade F3.3.\n- Tests de home, onboarding y `core/api` adaptados: ya no preparan\n  proveedores; `models_test.dart` cubre `plan`, `planExpiresAt` e `isPro`\n  con fecha vencida.\n\nDone when: `flutter analyze` sin errores ni warnings nuevos y `flutter test`\ncompleto en verde, los dos ejecutados en `apps/mobile` antes de terminar.\n`grep -rn \"ProviderInfo\\|PkceStart\\|/providers\" apps/mobile/lib` no\ndevuelve nada.",
       "model": "claude/claude-sonnet-5",
-      "reason": "Cambio de contrato mecánico con codegen.",
+      "reason": "Cambio de contrato más borrado guiado por el compilador; sin lógica nueva.",
       "status": "backlog",
       "dependencies": [],
-      "estimateHours": 3.0,
+      "estimateHours": 5.0,
       "files": [
         "apps/mobile/lib/core/api/fluent_api.dart",
         "apps/mobile/lib/core/api/http_fluent_api.dart",
@@ -273,15 +273,15 @@
     {
       "id": "F3.2.T1",
       "phase": 3,
-      "title": "Borrar la pantalla y el flujo de proveedores",
-      "description": "- Mover `apps/mobile/lib/features/providers/data/oauth_launcher.dart` a\n  `apps/mobile/lib/features/auth/data/oauth_launcher.dart` (lo usa\n  `social_sign_in.dart`) y actualizar imports.\n- Borrar `apps/mobile/lib/features/providers/` entera y\n  `apps/mobile/test/features/providers/`.\n- `apps/mobile/lib/app/router.dart`: quitar la ruta `/providers`.\n- `apps/mobile/lib/core/providers.dart`: quitar `ProvidersData`,\n  `canPracticeProvider` y cualquier provider de Riverpod que dependa de\n  `hasActiveProvider`; `HomeData` deja de mirar proveedores.\n- `apps/mobile/lib/features/onboarding/presentation/onboarding_flow.dart`:\n  quitar el salto a `/providers` y su comentario (MAL-24).\n- `apps/mobile/lib/features/home/`: cualquier aviso o CTA de «conecta un\n  proveedor» desaparece.\n- Asset `assets/auth/google_g.png` y demás de auth se quedan.\n\nDone when: `flutter analyze` limpio; `flutter test` pasa (los tests de home y\nonboarding dejan de preparar proveedores); `grep -rn \"providers\" apps/mobile/lib --include=*.dart`\nsolo devuelve `core/providers.dart` (Riverpod) y `MeResponse`-nada.",
-      "model": "claude/claude-sonnet-5",
-      "reason": "Borrado guiado por el compilador.",
+      "title": "Absorbida por F3.1.T1",
+      "description": "Sin trabajo. El job `mobile` del CI analiza toda la app, así que el borrado\nde la pantalla de proveedores no puede ir en un PR separado del cambio de\ncontrato: todo está en F3.1.T1. Se conserva el id para no romper las\ndependencias de F3.3 y F5.1. Marcar hecha con nota cuando F3.1.T1 esté en\n`main`.",
+      "model": "claude/claude-haiku-4-5-20251001",
+      "reason": "No hay nada que ejecutar.",
       "status": "backlog",
       "dependencies": [
         "F3.1.T1"
       ],
-      "estimateHours": 3.0,
+      "estimateHours": 0.25,
       "files": [
         "apps/mobile/lib/features/providers/data/oauth_launcher.dart",
         "apps/mobile/lib/features/providers/domain/providers_data.dart",
@@ -310,8 +310,7 @@
       "reason": "UI nueva sencilla más l10n; sin lógica de negocio.",
       "status": "backlog",
       "dependencies": [
-        "F3.1.T1",
-        "F3.2.T1"
+        "F3.1.T1"
       ],
       "estimateHours": 4.0,
       "files": [

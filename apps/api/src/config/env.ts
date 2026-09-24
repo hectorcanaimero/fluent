@@ -49,8 +49,9 @@ export const envSchema = z.object({
   FALLBACK_MODELS: z.string().min(1).optional(),
   PROMPT_VERSION: z.coerce.number().int().default(1),
   OWNER_USER_ID: z.uuid(),
-  // Tope de turnos por día natural del usuario (MAL-23). 0 lo desactiva.
-  TURNS_DAILY_CAP: z.coerce.number().int().min(0).default(120),
+  // Tope de turnos por día natural del usuario según su plan (MAL-23). 0 lo desactiva.
+  TURNS_DAILY_CAP_FREE: z.coerce.number().int().min(0).default(30),
+  TURNS_DAILY_CAP_PRO: z.coerce.number().int().min(0).default(120),
   LOG_LEVEL: z
     .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
     .default('info'),

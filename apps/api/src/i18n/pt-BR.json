@@ -16,6 +16,7 @@
   "GROUP_REQUIRED": "Entre em um grupo com seu código de convite para praticar.",
   "LLM_UNAVAILABLE": "O assistente não está disponível no momento. Tente novamente em alguns minutos.",
   "RATE_LIMITED": "Você fez muitas solicitações. Aguarde um momento e tente novamente.",
+  "PLAN_REQUIRED": "Escolher um modelo pago requer o plano Pro.",
   "TURNS_DAILY_CAP": "Por hoje você atingiu o máximo de turnos. Amanhã continuamos.",
   "NOT_READY": "Ainda não está pronto.",
   "NOT_FOUND": "O recurso solicitado não existe.",

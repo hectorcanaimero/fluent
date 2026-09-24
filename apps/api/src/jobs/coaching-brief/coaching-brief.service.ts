@@ -21,13 +21,13 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 import type { Level } from '../../db/schema.js';
 import type { BriefFactInput } from '../../db/rpc.js';
-import { CredentialsService } from '../../credentials/credentials.service.js';
 import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ModelPreference } from '../../llm/model-resolver.js';
 import { buildBriefMessages } from '../../llm/prompts/brief.js';
 import type { HistoryTurn } from '../../llm/prompts/truncate.js';
 import { BriefOutput } from '../../llm/schemas.js';
+import { effectivePlan } from '../../profiles/plan.js';
 import { CoachingBriefRepository } from './coaching-brief.repository.js';
 import { CONSECUTIVE_PREVIOUS_HINTS, levelToSuggest } from './level-rule.js';
 
@@ -53,7 +53,6 @@ export class CoachingBriefService {
 
   constructor(
     private readonly repository: CoachingBriefRepository,
-    private readonly credentialsService: CredentialsService,
     private readonly llm: LlmService,
     configService: ConfigService<Env, true>,
   ) {
@@ -86,15 +85,13 @@ export class CoachingBriefService {
 
     // --- 2. Contexto --------------------------------------------------------
     const userId = session.user_id;
-    const [turns, profile, previousBrief, knownFacts, preferenceRow, credentials] =
-      await Promise.all([
-        this.repository.loadTurns(sessionId),
-        this.repository.loadProfile(userId),
-        this.repository.loadCurrentBriefText(userId),
-        this.repository.loadKnownFacts(userId),
-        this.repository.loadModelPreference(userId),
-        this.credentialsService.listActive(userId),
-      ]);
+    const [turns, profile, previousBrief, knownFacts, preferenceRow] = await Promise.all([
+      this.repository.loadTurns(sessionId),
+      this.repository.loadProfile(userId),
+      this.repository.loadCurrentBriefText(userId),
+      this.repository.loadKnownFacts(userId),
+      this.repository.loadModelPreference(userId),
+    ]);
 
     if (!profile) {
       throw new Error(`El usuario ${userId} de la sesión ${sessionId} no tiene perfil`);
@@ -126,7 +123,7 @@ export class CoachingBriefService {
       purpose: 'brief',
       messages,
       schema: BriefOutput,
-      credentials,
+      plan: effectivePlan(profile),
       preference,
       promptVersion: this.promptVersion,
     });

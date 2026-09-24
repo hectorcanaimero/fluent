@@ -9,6 +9,8 @@ import {
   ModelCatalogService,
   type CatalogModel,
 } from '../llm/catalog.service.js';
+import { effectivePlan } from '../profiles/plan.js';
+import { ProfilesRepository } from '../profiles/profiles.repository.js';
 import { PROVIDER_FETCH, type FetchLike } from '../providers/provider-api.client.js';
 import { RedisService } from '../redis/redis.service.js';
 import type { UpdateModelPreferencesDto } from './dto/update-model-preferences.dto.js';
@@ -35,6 +37,7 @@ export class ModelsService {
   constructor(
     private readonly modelPreferences: ModelPreferencesRepository,
     private readonly sessionUsage: SessionUsageRepository,
+    private readonly profiles: ProfilesRepository,
     redisService: RedisService,
     @Inject(PROVIDER_FETCH) fetchImpl: FetchLike,
     config: ConfigService<Env, true>,
@@ -61,8 +64,8 @@ export class ModelsService {
   }
 
   /**
-   * `PUT /me/models` (SPEC-02 §4.2): valida la pertenencia al catálogo
-   * (el plan llega en F2.2) para **cada** rol (chat y brief, que pueden usar proveedores
+   * `PUT /me/models` (SPEC-02 §4.2): valida la pertenencia al catálogo y
+   * el plan (`403 PLAN_REQUIRED` si un Free elige un modelo de pago) para **cada** rol (chat y brief, que pueden usar proveedores
    * distintos) antes de escribir nada, y devuelve la preferencia guardada en
    * la forma plana que espera la app.
    */
@@ -74,6 +77,16 @@ export class ModelsService {
 
     this.assertRoleIsAvailable(dto.chatProvider, dto.chatModel, models);
     this.assertRoleIsAvailable(dto.briefProvider, dto.briefModel, models);
+
+    const profile = await this.profiles.findByUserId(userId);
+    if (profile === null || effectivePlan(profile) === 'free') {
+      const paid = models.some(
+        (m) => m.tier !== 'free' && (m.id === dto.chatModel || m.id === dto.briefModel),
+      );
+      if (paid) {
+        throw ApiException.of('PLAN_REQUIRED', 'Elegir un modelo de pago requiere el plan Pro.');
+      }
+    }
 
     const saved = await this.modelPreferences.upsert(userId, {
       chat_provider: dto.chatProvider,

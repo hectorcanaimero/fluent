@@ -2,12 +2,19 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
-import type {
-  ActiveCredential,
-  CredentialsSource,
-} from '../llm/model-resolver.js';
 import type { CredentialErrorCode } from '../llm/llm.service.js';
 import type { ProviderStatusRow } from './credentials.repository.js';
+
+/** Credencial activa del usuario, con la key ya descifrada y solo en memoria. */
+export interface ActiveCredential {
+  readonly provider: Provider;
+  readonly apiKey: string;
+}
+
+/** Fuente de credenciales. Solo credenciales con `status = 'active'`. */
+export interface CredentialsSource {
+  listActive(userId: string): Promise<readonly ActiveCredential[]>;
+}
 
 /**
  * Fase de transición (decisión D4): sesiones y jobs siguen pidiendo

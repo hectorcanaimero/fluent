@@ -12,6 +12,7 @@ import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../../insforge/insforge.constants.js';
 import { TABLES } from '../../db/schema.js';
 import type {
+  Plan,
   BriefJobStatus,
   Level,
   Locale,
@@ -42,6 +43,8 @@ export interface BriefProfileRow {
   readonly level: Level;
   readonly locale: Locale;
   readonly suggested_level: Level | null;
+  readonly plan: Plan;
+  readonly plan_expires_at: string | null;
 }
 
 export interface BriefModelPreferenceRow {
@@ -150,7 +153,7 @@ export class InsforgeCoachingBriefRepository extends CoachingBriefRepository {
   async loadProfile(userId: string): Promise<BriefProfileRow | null> {
     const result = await this.db
       .from(TABLES.profiles)
-      .select('level,locale,suggested_level')
+      .select('level,locale,suggested_level,plan,plan_expires_at')
       .eq('user_id', userId)
       .maybeSingle();
     return unwrap(result as PostgrestLike<BriefProfileRow>, 'leer el perfil');

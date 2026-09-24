@@ -1,24 +1,17 @@
 import type { PushService } from '../../push/push.service.js';
 import type { ConfigService } from '@nestjs/config';
 
-import type { CredentialsService } from '../../credentials/credentials.service.js';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import type { WeeklyLeaderboardEntry } from '../../db/rpc.js';
 import {
   WeeklySummaryNoOwnerCredentialError,
   WeeklySummaryService,
 } from './weekly-summary.service.js';
-import type { WeeklySummaryRepository } from './weekly-summary.repository.js';
+import type { WeeklyOwnerRow, WeeklySummaryRepository } from './weekly-summary.repository.js';
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111';
 const OWNER_ID = '22222222-2222-4222-8222-222222222222';
 const WEEK_START = '2026-09-07';
-function makeCredentials(): CredentialsService {
-  return {
-    listActive: vi.fn(async () => [{ provider: '9router', apiKey: 'operator-key' }]),
-  } as unknown as CredentialsService;
-}
-
 function makeConfig(promptVersion = 3): ConfigService<never, true> {
   return {
     get: (key: string) => (key === 'PROMPT_VERSION' ? promptVersion : undefined),
@@ -55,7 +48,11 @@ function makeRepository(overrides: RepoOverrides = {}) {
       brief_provider: 'openrouter' as const,
       brief_model: 'anthropic/claude-3.5-sonnet',
     })),
-    loadOwnerLocale: vi.fn(async () => 'es' as const),
+    loadOwnerProfile: vi.fn(async (): Promise<WeeklyOwnerRow | null> => ({
+      locale: 'es',
+      plan: 'free',
+      plan_expires_at: null,
+    })),
     insertWeeklySummary: vi.fn(async () => {}),
   };
 }
@@ -85,7 +82,6 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     const llm = makeLlm();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
       fakePush(),
@@ -105,7 +101,6 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     const llm = makeLlm();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
       fakePush(),
@@ -122,7 +117,6 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     const llm = makeLlm();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
       fakePush(),
@@ -141,9 +135,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       provider: 'openrouter',
       model: 'anthropic/claude-3.5-sonnet',
     });
-    expect(request.credentials).toEqual([
-      { provider: '9router', apiKey: 'operator-key' },
-    ]);
+    expect(request.plan).toBe('free');
     expect(request.promptVersion).toBe('3');
 
     expect(repository.insertWeeklySummary).toHaveBeenCalledWith({
@@ -171,7 +163,6 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     });
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
       fakePush(),
@@ -191,7 +182,6 @@ describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
   ) {
     return new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
       fakePush(),
@@ -200,7 +190,11 @@ describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
 
   it('guarda el pie en pt-BR cuando el owner es de pt-BR', async () => {
     const repository = makeRepository();
-    repository.loadOwnerLocale = vi.fn(async () => 'pt-BR' as const);
+    repository.loadOwnerProfile = vi.fn(async () => ({
+      locale: 'pt-BR' as const,
+      plan: 'free' as const,
+      plan_expires_at: null,
+    }));
 
     await buildService(repository).run(GROUP_ID, WEEK_START);
 

@@ -5,14 +5,15 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { getRoleplay } from '../content/index.js';
-import { CredentialsService } from '../credentials/credentials.service.js';
+import { CredentialsService, type ActiveCredential } from '../credentials/credentials.service.js';
 import type { Fact, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
 import type { Provider as LlmProvider } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
+import type { ModelPreference } from '../llm/model-resolver.js';
+import { effectivePlan } from '../profiles/plan.js';
 import { buildTurnMessages, type CallbackFact } from '../llm/prompts/turn.js';
 import { TurnOutput } from '../llm/schemas.js';
 import type { CreateSessionDto } from './dto/create-session.dto.js';
@@ -213,7 +214,7 @@ export class SessionsService {
         purpose: 'turn',
         messages,
         schema: TurnOutput,
-        credentials,
+        plan: effectivePlan(profile),
         preference,
         promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
       });

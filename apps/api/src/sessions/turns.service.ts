@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import { CredentialsService } from '../credentials/credentials.service.js';
+import { CredentialsService, type ActiveCredential } from '../credentials/credentials.service.js';
 import type { Profile, Session } from '../db/schema.js';
 import {
   DEGRADED_REPLY,
@@ -13,7 +13,8 @@ import {
 } from '../llm/config.js';
 import type { Provider as LlmProvider } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
+import type { ModelPreference } from '../llm/model-resolver.js';
+import { effectivePlan, isPro } from '../profiles/plan.js';
 import type { HistoryTurn } from '../llm/prompts/truncate.js';
 import { buildTurnMessages } from '../llm/prompts/turn.js';
 import { TurnOutput, type Correction as CorrectionOutput } from '../llm/schemas.js';
@@ -38,6 +39,8 @@ const SESSION_NOT_ACTIVE_MESSAGE = 'Esta sesión ya no está activa.';
 const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar otro turno.';
 const TURNS_DAILY_CAP_MESSAGE =
   'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.';
+const TURNS_DAILY_CAP_FREE_MESSAGE =
+  'Por hoy alcanzaste el máximo de turnos del plan Free. Mañana seguimos, o pásate a Pro para ampliar el tope.';
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de seguir la conversación.';
@@ -190,13 +193,17 @@ export class TurnsService {
    * su tarde. `Retry-After` lleva los segundos que faltan para su medianoche,
    * que es cuando el contador caduca de verdad.
    *
-   * Con `TURNS_DAILY_CAP=0` el tope queda desactivado. Con Redis caído
+   * El tope depende del plan: `TURNS_DAILY_CAP_PRO` o `TURNS_DAILY_CAP_FREE`.
+   * Con el tope a 0 queda desactivado. Con Redis caído
    * `increment` devuelve `null` y se deja pasar (fail-open), igual que el
    * lock de turno: bloquear a todo el mundo durante una caída de Redis es
    * peor que perder temporalmente el tope.
    */
   private async requireDailyTurnsBudget(userId: string, profile: Profile): Promise<void> {
-    const cap = this.configService.get('TURNS_DAILY_CAP', { infer: true });
+    const pro = isPro(profile);
+    const cap = this.configService.get(pro ? 'TURNS_DAILY_CAP_PRO' : 'TURNS_DAILY_CAP_FREE', {
+      infer: true,
+    });
     if (cap <= 0) {
       return;
     }
@@ -210,7 +217,7 @@ export class TurnsService {
       return;
     }
 
-    throw ApiException.of('TURNS_DAILY_CAP', TURNS_DAILY_CAP_MESSAGE, {
+    throw ApiException.of('TURNS_DAILY_CAP', pro ? TURNS_DAILY_CAP_MESSAGE : TURNS_DAILY_CAP_FREE_MESSAGE, {
       extra: { retryAfter },
     });
   }
@@ -304,7 +311,6 @@ export class TurnsService {
         profile,
         history,
         text,
-        credentials,
         onToken,
         onReset,
       );
@@ -330,7 +336,6 @@ export class TurnsService {
     profile: Profile,
     history: readonly HistoryTurn[],
     text: string,
-    credentials: readonly ActiveCredential[],
     onToken?: (delta: string) => void,
     onReset?: () => void,
   ): Promise<TutorOutcome> {
@@ -381,7 +386,7 @@ export class TurnsService {
         purpose: 'turn',
         messages,
         schema: TurnOutput,
-        credentials,
+        plan: effectivePlan(profile),
         preference,
         promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
         // Dos intentos y no tres (MAL-23): el aprendiz está esperando delante

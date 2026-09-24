@@ -1,79 +1,61 @@
 import { DEFAULT_FALLBACK_MODELS, parseFallbackModels } from './config.js';
-import { ModelResolver, type ActiveCredential } from './model-resolver.js';
+import { ModelResolver } from './model-resolver.js';
 
-const OPENROUTER: ActiveCredential = { provider: 'openrouter', apiKey: 'or-key' };
-const GEMINI: ActiveCredential = { provider: 'gemini', apiKey: 'gem-key' };
+const PREFERENCE = { provider: '9router' as const, model: 'cc/claude-sonnet-4-6' };
 
-const FALLBACKS = [
-  { provider: 'gemini' as const, model: 'gemini-2.5-flash' },
-  { provider: 'openrouter' as const, model: 'google/gemma-3-27b-it:free' },
-  { provider: 'openrouter' as const, model: 'meta-llama/llama-3.3-70b-instruct:free' },
-];
+function models(result: ReturnType<ModelResolver['resolve']>): string[] {
+  return result.candidates.map((c) => `${c.source}:${c.model}`);
+}
 
 describe('ModelResolver', () => {
-  it('pone la preferencia del usuario primero y luego la cadena gratuita', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    const { candidates, preferenceDropped } = resolver.resolve({
-      credentials: [OPENROUTER, GEMINI],
-      preference: { provider: 'openrouter', model: 'anthropic/claude-sonnet-4' },
-    });
+  const resolver = new ModelResolver();
 
-    expect(preferenceDropped).toBe(false);
-    expect(candidates.map((c) => `${c.provider}:${c.model}`)).toEqual([
-      'openrouter:anthropic/claude-sonnet-4',
-      'gemini:gemini-2.5-flash',
-      'openrouter:google/gemma-3-27b-it:free',
-      'openrouter:meta-llama/llama-3.3-70b-instruct:free',
+  it('free sin preferencia: solo fluent-free', () => {
+    const result = resolver.resolve({ plan: 'free' });
+    expect(models(result)).toEqual(['fallback:fluent-free']);
+    expect(result.preferenceDropped).toBe(false);
+  });
+
+  it('free con preferencia: la descarta y marca preferenceDropped', () => {
+    const result = resolver.resolve({ plan: 'free', preference: PREFERENCE });
+    expect(models(result)).toEqual(['fallback:fluent-free']);
+    expect(result.preferenceDropped).toBe(true);
+  });
+
+  it('pro sin preferencia: fluent-pro y luego fluent-free', () => {
+    const result = resolver.resolve({ plan: 'pro', preference: null });
+    expect(models(result)).toEqual(['fallback:fluent-pro', 'fallback:fluent-free']);
+    expect(result.preferenceDropped).toBe(false);
+  });
+
+  it('pro con preferencia: preferencia primero, luego la cadena', () => {
+    const result = resolver.resolve({ plan: 'pro', preference: PREFERENCE });
+    expect(models(result)).toEqual([
+      'preference:cc/claude-sonnet-4-6',
+      'fallback:fluent-pro',
+      'fallback:fluent-free',
     ]);
-    expect(candidates[0]?.source).toBe('preference');
-    expect(candidates[1]?.source).toBe('fallback');
-    expect(candidates[0]?.apiKey).toBe('or-key');
-    expect(candidates[1]?.apiKey).toBe('gem-key');
+    expect(result.preferenceDropped).toBe(false);
   });
 
-  it('filtra la cadena a los proveedores con credencial activa', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    const { candidates } = resolver.resolve({ credentials: [GEMINI] });
-
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.provider).toBe('gemini');
-  });
-
-  it('marca preferenceDropped si no hay credencial del proveedor elegido', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    const { candidates, preferenceDropped } = resolver.resolve({
-      credentials: [GEMINI],
-      preference: { provider: 'openrouter', model: 'openai/gpt-4o' },
+  it('pro no repite el modelo preferido si ya está en la cadena', () => {
+    const result = resolver.resolve({
+      plan: 'pro',
+      preference: { provider: '9router', model: 'fluent-pro' },
     });
-
-    expect(preferenceDropped).toBe(true);
-    expect(candidates.every((c) => c.source === 'fallback')).toBe(true);
+    expect(models(result)).toEqual(['preference:fluent-pro', 'fallback:fluent-free']);
   });
 
-  it('no repite el modelo preferido si también está en la cadena', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    const { candidates } = resolver.resolve({
-      credentials: [GEMINI],
-      preference: { provider: 'gemini', model: 'gemini-2.5-flash' },
+  it('pro añade al final la cadena del operador', () => {
+    const result = resolver.resolve({
+      plan: 'pro',
+      fallbackModels: [{ provider: '9router', model: 'extra/modelo' }],
     });
-
-    expect(candidates).toHaveLength(1);
-    expect(candidates[0]?.source).toBe('preference');
-  });
-
-  it('devuelve lista vacía sin credenciales', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    expect(resolver.resolve({ credentials: [] }).candidates).toEqual([]);
-  });
-
-  it('permite sobreescribir la cadena por llamada', () => {
-    const resolver = new ModelResolver(FALLBACKS);
-    const { candidates } = resolver.resolve({
-      credentials: [OPENROUTER],
-      fallbackModels: [{ provider: 'openrouter', model: 'solo/este:free' }],
-    });
-
-    expect(candidates.map((c) => c.model)).toEqual(['solo/este:free']);
+    expect(models(result)).toEqual([
+      'fallback:fluent-pro',
+      'fallback:fluent-free',
+      'fallback:extra/modelo',
+    ]);
   });
 });
 

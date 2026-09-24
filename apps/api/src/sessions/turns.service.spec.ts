@@ -41,6 +41,8 @@ function profileFixture(overrides: Partial<Profile> = {}): Profile {
     last_session_day: null,
     grace_used_week: null,
     courtesy_session_used_at: null,
+    plan: 'free',
+    plan_expires_at: null,
     sessions_count: 0,
     avatar_url: null,
     onboarded_at: '2026-09-01T10:00:00.000Z',
@@ -348,9 +350,10 @@ function fakeRedis(
  * `PROMPT_VERSION` es 3 (como antes) y el tope diario queda desactivado por
  * defecto, para que los tests que no van de MAL-23 no lo toquen.
  */
-function fakeConfig(turnsDailyCap = 0): ConfigService<never, true> {
+function fakeConfig(capFree = 0, capPro = 0): ConfigService<never, true> {
+  const values: Record<string, number> = { TURNS_DAILY_CAP_FREE: capFree, TURNS_DAILY_CAP_PRO: capPro };
   return {
-    get: (key: string) => (key === 'TURNS_DAILY_CAP' ? turnsDailyCap : 3),
+    get: (key: string) => values[key] ?? 3,
   } as unknown as ConfigService<never, true>;
 }
 
@@ -361,8 +364,10 @@ interface BuildOptions extends FakeSessionsRepoOptions, FakeTurnsRepoOptions, Fa
   readonly redis?: FakeRedis;
   readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
   readonly credentialsByUser?: Record<string, readonly ('openrouter' | 'gemini')[]>;
-  /** Tope diario de turnos (MAL-23). 0 lo desactiva. */
+  /** Tope diario de turnos del plan Free (MAL-23). 0 lo desactiva. */
   readonly turnsDailyCap?: number;
+  /** Tope diario de turnos del plan Pro. 0 lo desactiva. */
+  readonly turnsDailyCapPro?: number;
 }
 
 function buildService(options: BuildOptions = {}) {
@@ -376,7 +381,7 @@ function buildService(options: BuildOptions = {}) {
     fakeCredentials(options.credentialProviders, options.credentialsByUser),
     llm,
     redis,
-    fakeConfig(options.turnsDailyCap ?? 0) as never,
+    fakeConfig(options.turnsDailyCap ?? 0, options.turnsDailyCapPro ?? 0) as never,
   );
   return { service, sessions, turns, llm, redis };
 }
@@ -894,6 +899,41 @@ describe('TurnsService.addTurn · tope diario de turnos (MAL-23)', () => {
     await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
 
     expect(redis.counters.size).toBe(0);
+  });
+
+  it('el mensaje de Free menciona que Pro amplía el tope', async () => {
+    const redis = fakeRedis();
+    const { service } = buildService({ redis, turnsDailyCap: 1, turnsDailyCapPro: 5 });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+    skipPaceWindow(redis);
+
+    await expect(service.addTurn(USER_ID, SESSION_ID, { text: 'dos' })).rejects.toMatchObject({
+      code: 'TURNS_DAILY_CAP',
+      message: expect.stringContaining('Pro'),
+    });
+  });
+
+  it('un perfil Pro usa TURNS_DAILY_CAP_PRO en vez del de Free', async () => {
+    const redis = fakeRedis();
+    const { service, llm } = buildService({
+      redis,
+      turnsDailyCap: 1,
+      turnsDailyCapPro: 2,
+      profile: profileFixture({ plan: 'pro', plan_expires_at: null }),
+    });
+
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
+    skipPaceWindow(redis);
+    await service.addTurn(USER_ID, SESSION_ID, { text: 'dos' });
+    skipPaceWindow(redis);
+
+    const error = await service
+      .addTurn(USER_ID, SESSION_ID, { text: 'tres' })
+      .catch((caught: unknown) => caught);
+    expect((error as ApiException).code).toBe('TURNS_DAILY_CAP');
+    expect((error as ApiException).message).not.toContain('Pro');
+    expect(llm.calls).toHaveLength(2);
   });
 
   it('con Redis caído deja pasar (fail-open, como el lock de turno)', async () => {

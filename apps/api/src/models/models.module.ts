@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { CredentialsModule } from '../credentials/credentials.module.js';
+import { ProfilesModule } from '../profiles/profiles.module.js';
 import { ProviderFetchModule } from '../providers/provider-fetch.module.js';
 import { ModelPreferencesRepository } from './model-preferences.repository.js';
 import { ModelsController } from './models.controller.js';
@@ -17,7 +18,7 @@ import { SessionUsageRepository } from './session-usage.repository.js';
  * `@Global()`.
  */
 @Module({
-  imports: [CredentialsModule, ProviderFetchModule],
+  imports: [CredentialsModule, ProviderFetchModule, ProfilesModule],
   controllers: [ModelsController],
   providers: [ModelsService, ModelPreferencesRepository, SessionUsageRepository],
   exports: [ModelPreferencesRepository],

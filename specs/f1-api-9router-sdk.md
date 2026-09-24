@@ -102,6 +102,11 @@ en vez de `LlmClient`:
   `ds/` → `'none'`, `gemini/gemini-3.8` → `'low'`, resto `undefined`). Ver la
   tabla «Hallazgos del router real» de la arquitectura: con el valor
   equivocado DeepSeek agota `max_tokens` pensando y Gemini 3.8 responde 400.
+- `usage`: 9router suma un buffer fijo de 2 000 a `prompt_tokens` (hallazgo de
+  la arquitectura, `BUFFER_TOKENS` en `open-sse/utils/usageTracking.js`). Al
+  construir `LlmUsage`, restar `NINEROUTER_USAGE_BUFFER = 2000` (constante en
+  `config.ts`) cuando `inputTokens > 2000`; si no, `tokensIn` tal cual. Test
+  que lo cubra.
 - `stream` siempre explícito: `streamObject` ya manda `stream: true`; para
   `generateObject` lo garantiza el `fetch` de F1.1.
 - `mapError(error): LlmErrorStatus` según la tabla de la arquitectura

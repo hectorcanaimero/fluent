@@ -19,8 +19,6 @@
   "errorInvitationUsed": "Ese código de invitación ya se usó.",
   "errorInvitationExpired": "Ese código de invitación venció.",
   "errorAlreadyInGroup": "Ya estás en un grupo.",
-  "errorProviderNotConnected": "Conectá tu cuenta de IA para poder practicar.",
-  "errorProviderKeyInvalid": "Esa clave no es válida.",
   "errorModelNotAvailable": "Ese modelo no está disponible ahora.",
   "errorSessionNotActive": "Esa sesión ya no está activa.",
   "errorSessionAlreadyActive": "Ya tenés una sesión abierta.",
@@ -43,9 +41,24 @@
   "welcomeSessionMorning": "Mañana",
   "welcomeSessionEvening": "Noche",
   "welcomeStreakDays": "{count, plural, one{1 día} other{{count} días}}",
-  "@welcomeStreakDays": {"placeholders": {"count": {"type": "int"}}},
+  "@welcomeStreakDays": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
   "welcomePageLabel": "Página {current} de {total}",
-  "@welcomePageLabel": {"placeholders": {"current": {"type": "int"}, "total": {"type": "int"}}},
+  "@welcomePageLabel": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "registerErrorGeneric": "No pudimos crear la cuenta. Probá de nuevo.",
   "registerErrorInvitationInvalid": "Ese código de invitación no es válido.",
   "registerErrorInvitationUsed": "Ese código de invitación ya se usó.",
@@ -69,7 +82,9 @@
   "onboardingInterestsSelectedCount": "{count, plural, one{1 seleccionado} other{{count} seleccionados}}",
   "@onboardingInterestsSelectedCount": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "onboardingInterestsSeeMore": "Ver más",
@@ -97,52 +112,12 @@
   "interestEnvironment": "Medio ambiente",
   "interestEducationCareer": "Educación y carrera",
   "interestFamilyRelationships": "Vida familiar y relaciones",
-  "providersTitle": "Tu cuenta de IA",
-  "providersGoPractice": "Listo, ir a practicar",
-  "providersOpenRouterTitle": "OpenRouter",
-  "providersGeminiTitle": "Gemini",
-  "providersGeminiRecommendedBadge": "Recomendado",
-  "providersStatusConnected": "Conectado",
-  "providersStatusNotConnected": "No conectado",
-  "providersStatusError": "No funciona: volvé a conectarla",
-  "providersConnectButton": "Conectar",
-  "providersDisconnectButton": "Desconectar",
-  "providersCreditsRemaining": "Crédito restante: {amount} USD",
-  "@providersCreditsRemaining": {
-    "placeholders": {
-      "amount": {"type": "String"}
-    }
-  },
-  "providersErrorGeneric": "No pudimos completar la conexión. Probá de nuevo.",
-  "providersOauthError": "No pudimos conectar con OpenRouter. Probá de nuevo.",
-  "providersLoadError": "No pudimos cargar tus cuentas de IA.",
-  "providersGeminiPasteKeyButton": "Pegar API key",
-  "providersGeminiKeyDialogTitle": "Conectar Gemini",
-  "providersGeminiKeyLabel": "API key de Gemini",
-  "providersGeminiKeyHelpStep1": "1. Entrá a",
-  "providersGeminiKeyHelpStep2": "2. Creá una API key nueva",
-  "providersGeminiKeyHelpStep3": "3. Copiala y pegala acá",
-  "providersGeminiKeyLink": "aistudio.google.com/apikey",
-  "providersGeminiKeyInvalid": "Esa API key no es válida.",
-  "providersGeminiKeyCancel": "Cancelar",
-  "providersGeminiKeyConfirm": "Conectar",
-  "providersModelChatTitle": "Modelo para conversar",
-  "providersModelBriefTitle": "Modelo para las notas del tutor",
-  "providersModelTierFree": "Gratis",
-  "providersModelTierBudget": "Económico",
-  "providersModelTierPremium": "Mejor calidad",
-  "providersModelEstimateFree": "Gratis",
-  "providersModelEstimatePaid": "≈ {amount} USD por sesión",
-  "@providersModelEstimatePaid": {
-    "placeholders": {
-      "amount": {"type": "String"}
-    }
-  },
-  "homeNeedProviderHint": "Conectá tu cuenta de IA para poder practicar",
   "homeGreetingMorning": "Buen día, {name}",
   "@homeGreetingMorning": {
     "placeholders": {
-      "name": {"type": "String"}
+      "name": {
+        "type": "String"
+      }
     }
   },
   "homeGreetingAfternoon": "Buenas tardes, {name}",
@@ -150,7 +125,9 @@
   "homeStreakDays": "{count, plural, one{1 día de racha} other{{count} días de racha}}",
   "@homeStreakDays": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "streakGraceAvailable": "Día de gracia disponible esta semana",
@@ -158,7 +135,9 @@
   "homeXpToNextLevel": "{amount} XP para subir de nivel",
   "@homeXpToNextLevel": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "homePracticeButton": "Practicar 10 min",
@@ -167,7 +146,9 @@
   "homeSessionsTodayStatus": "{done} de 2 sesiones hoy",
   "@homeSessionsTodayStatus": {
     "placeholders": {
-      "done": {"type": "int"}
+      "done": {
+        "type": "int"
+      }
     }
   },
   "homeGroupCardTitle": "Tu grupo esta semana",
@@ -175,17 +156,19 @@
   "homeGroupYourPosition": "Tu posición: #{position}",
   "@homeGroupYourPosition": {
     "placeholders": {
-      "position": {"type": "int"}
+      "position": {
+        "type": "int"
+      }
     }
   },
   "homePendingFactsCard": "{count, plural, one{Tengo 1 cosa nueva para recordar de vos, ¿la revisás?} other{Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?}}",
   "@homePendingFactsCard": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
-  "homeNoProviderBanner": "Conectá tu cuenta de IA para seguir practicando",
-  "homeNoProviderAction": "Conectar",
   "homePendingActionWeeklySummaryCredential": "El resumen de esta semana necesita tu cuenta de IA. Conectala para que siga saliendo.",
   "homePendingActionAction": "Revisar",
   "homeQuickTopicsTitle": "Temas rápidos",
@@ -215,7 +198,9 @@
   "conversationListeningSecondsLeft": "{seconds}s",
   "@conversationListeningSecondsLeft": {
     "placeholders": {
-      "seconds": {"type": "int"}
+      "seconds": {
+        "type": "int"
+      }
     }
   },
   "conversationThinkingHint": "Pensando…",
@@ -232,7 +217,9 @@
   "conversationCorrectionChip": "{count, plural, one{1 corrección} other{{count} correcciones}}",
   "@conversationCorrectionChip": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "conversationCorrectionOriginalLabel": "Dijiste",
@@ -289,15 +276,21 @@
   "groupStreak": "{count, plural, one{1 día en racha grupal} other{{count} días en racha grupal}}",
   "@groupStreak": {
     "placeholders": {
-      "count": {"type": "int"}
+      "count": {
+        "type": "int"
+      }
     }
   },
   "groupChallengesTitle": "Desafíos",
   "groupChallengeText": "{name} practicó sobre {topic}, ¿te animás?",
   "@groupChallengeText": {
     "placeholders": {
-      "name": {"type": "String"},
-      "topic": {"type": "String"}
+      "name": {
+        "type": "String"
+      },
+      "topic": {
+        "type": "String"
+      }
     }
   },
   "groupChallengeAccept": "Aceptar",
@@ -313,8 +306,12 @@
   "progressCorrectionsTrendCounts": "{count7d} en 7 días · {count30d} en 30 días",
   "@progressCorrectionsTrendCounts": {
     "placeholders": {
-      "count7d": {"type": "int"},
-      "count30d": {"type": "int"}
+      "count7d": {
+        "type": "int"
+      },
+      "count30d": {
+        "type": "int"
+      }
     }
   },
   "settingsTitle": "Ajustes",
@@ -350,14 +347,18 @@
   "commonXpAmount": "{amount} XP",
   "@commonXpAmount": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "commonEmptyValue": "—",
   "summaryXpDelta": "+{amount}",
   "@summaryXpDelta": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "correctionCategoryPastSimple": "Pasado simple",
@@ -377,7 +378,9 @@
   "summaryLevelUpBanner": "¡Subiste de nivel! Ahora sos {level}.",
   "@summaryLevelUpBanner": {
     "placeholders": {
-      "level": {"type": "String"}
+      "level": {
+        "type": "String"
+      }
     }
   },
   "summaryShareStreakButton": "Compartir tu racha",
@@ -387,19 +390,24 @@
   "onboardingStepIndicator": "Paso {step} de {total}",
   "@onboardingStepIndicator": {
     "placeholders": {
-      "step": {"type": "int"},
-      "total": {"type": "int"}
+      "step": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
     }
   },
   "onboardingXpAwarded": "¡Perfil completo! +{amount} XP",
   "@onboardingXpAwarded": {
     "placeholders": {
-      "amount": {"type": "int"}
+      "amount": {
+        "type": "int"
+      }
     }
   },
   "homeChecklistTitle": "Para arrancar",
   "homeChecklistProfile": "Perfil listo",
-  "homeChecklistProvider": "Conectar tu cuenta de IA",
   "homeChecklistFirstSession": "Primera sesión de 3 min",
   "homeCourtesyPracticeButton": "Probar una sesión gratis",
   "summaryCourtesyBanner": "Esa fue tu sesión de cortesía. Conectar tu cuenta de IA te lleva 2 minutos y es gratis.",
@@ -411,7 +419,9 @@
   "streakDangerBody": "{days, plural, one{Tu racha de 1 día vence a medianoche. 3 minutos alcanzan.} other{Tu racha de {days} días vence a medianoche. 3 minutos alcanzan.}}",
   "@streakDangerBody": {
     "placeholders": {
-      "days": {"type": "int"}
+      "days": {
+        "type": "int"
+      }
     }
   },
   "streakDangerGraceBody": "Hoy te salva el día de gracia; mañana no.",
@@ -419,7 +429,9 @@
   "groupInviteMessage": "Te invito a mi grupo de inglés en Open Fluent. Código: {code}. 10 minutos por día, con tu cuenta gratis de IA.",
   "@groupInviteMessage": {
     "placeholders": {
-      "code": {"type": "String"}
+      "code": {
+        "type": "String"
+      }
     }
   },
   "errorInvitationLimitReached": "Ya tenés 5 invitaciones sin usar. Esperá a que alguien se sume para crear otra.",
@@ -468,13 +480,61 @@
   "badgesNewUnlocked": "Nueva insignia",
   "badgesLocked": "Bloqueada",
   "badgesEarnedOn": "Ganada el {date}",
-  "@badgesEarnedOn": {"placeholders": {"date": {"type": "String"}}},
+  "@badgesEarnedOn": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  },
   "badgesProgress": "{current} de {target}",
-  "@badgesProgress": {"placeholders": {"current": {"type": "int"}, "target": {"type": "int"}}},
+  "@badgesProgress": {
+    "placeholders": {
+      "current": {
+        "type": "int"
+      },
+      "target": {
+        "type": "int"
+      }
+    }
+  },
   "badgesEarnedCount": "{earned} de {total}",
-  "@badgesEarnedCount": {"placeholders": {"earned": {"type": "int"}, "total": {"type": "int"}}},
+  "@badgesEarnedCount": {
+    "placeholders": {
+      "earned": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "badgesCategoryLevel": "Niveles",
   "badgesCategoryStreak": "Rachas",
   "badgesCategorySessions": "Sesiones",
-  "badgesCategorySpecial": "Especiales"
+  "badgesCategorySpecial": "Especiales",
+  "errorPlanRequired": "Elegir un modelo de pago requiere el plan Pro.",
+  "settingsPlanTitle": "Plan",
+  "settingsFreeModelsNote": "Modelos gratuitos con respaldo automático",
+  "planCurrentFree": "Plan Free",
+  "planCurrentPro": "Plan Pro",
+  "planProUntil": "Vence el {date}",
+  "planProIncludesTitle": "Qué incluye Pro",
+  "planProFeatureModels": "Elegir modelos de pago para conversar",
+  "planProFeatureDailyCap": "Hasta 120 turnos por día",
+  "planProFeatureBrief": "Notas del tutor con un modelo más fuerte",
+  "planUpgradeButton": "Pasar a Pro",
+  "planComingSoonTitle": "Disponible pronto",
+  "planComingSoonBody": "Estamos preparando el plan Pro. Te avisaremos cuando esté listo.",
+  "planComingSoonClose": "Entendido",
+  "modelPickerChatTitle": "Modelo para conversar",
+  "modelPickerBriefTitle": "Modelo para las notas del tutor",
+  "modelPickerLoadError": "No pudimos cargar los modelos.",
+  "@planProUntil": {
+    "placeholders": {
+      "date": {
+        "type": "String"
+      }
+    }
+  }
 }

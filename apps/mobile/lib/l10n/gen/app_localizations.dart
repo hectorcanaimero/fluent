@@ -212,18 +212,6 @@ abstract class AppLocalizations {
   /// **'Ya estás en un grupo.'**
   String get errorAlreadyInGroup;
 
-  /// No description provided for @errorProviderNotConnected.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectá tu cuenta de IA para poder practicar.'**
-  String get errorProviderNotConnected;
-
-  /// No description provided for @errorProviderKeyInvalid.
-  ///
-  /// In es, this message translates to:
-  /// **'Esa clave no es válida.'**
-  String get errorProviderKeyInvalid;
-
   /// No description provided for @errorModelNotAvailable.
   ///
   /// In es, this message translates to:
@@ -638,198 +626,6 @@ abstract class AppLocalizations {
   /// **'Vida familiar y relaciones'**
   String get interestFamilyRelationships;
 
-  /// No description provided for @providersTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Tu cuenta de IA'**
-  String get providersTitle;
-
-  /// No description provided for @providersGoPractice.
-  ///
-  /// In es, this message translates to:
-  /// **'Listo, ir a practicar'**
-  String get providersGoPractice;
-
-  /// No description provided for @providersOpenRouterTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'OpenRouter'**
-  String get providersOpenRouterTitle;
-
-  /// No description provided for @providersGeminiTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Gemini'**
-  String get providersGeminiTitle;
-
-  /// No description provided for @providersGeminiRecommendedBadge.
-  ///
-  /// In es, this message translates to:
-  /// **'Recomendado'**
-  String get providersGeminiRecommendedBadge;
-
-  /// No description provided for @providersStatusConnected.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectado'**
-  String get providersStatusConnected;
-
-  /// No description provided for @providersStatusNotConnected.
-  ///
-  /// In es, this message translates to:
-  /// **'No conectado'**
-  String get providersStatusNotConnected;
-
-  /// No description provided for @providersStatusError.
-  ///
-  /// In es, this message translates to:
-  /// **'No funciona: volvé a conectarla'**
-  String get providersStatusError;
-
-  /// No description provided for @providersConnectButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectar'**
-  String get providersConnectButton;
-
-  /// No description provided for @providersDisconnectButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Desconectar'**
-  String get providersDisconnectButton;
-
-  /// No description provided for @providersCreditsRemaining.
-  ///
-  /// In es, this message translates to:
-  /// **'Crédito restante: {amount} USD'**
-  String providersCreditsRemaining(String amount);
-
-  /// No description provided for @providersErrorGeneric.
-  ///
-  /// In es, this message translates to:
-  /// **'No pudimos completar la conexión. Probá de nuevo.'**
-  String get providersErrorGeneric;
-
-  /// No description provided for @providersOauthError.
-  ///
-  /// In es, this message translates to:
-  /// **'No pudimos conectar con OpenRouter. Probá de nuevo.'**
-  String get providersOauthError;
-
-  /// No description provided for @providersLoadError.
-  ///
-  /// In es, this message translates to:
-  /// **'No pudimos cargar tus cuentas de IA.'**
-  String get providersLoadError;
-
-  /// No description provided for @providersGeminiPasteKeyButton.
-  ///
-  /// In es, this message translates to:
-  /// **'Pegar API key'**
-  String get providersGeminiPasteKeyButton;
-
-  /// No description provided for @providersGeminiKeyDialogTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectar Gemini'**
-  String get providersGeminiKeyDialogTitle;
-
-  /// No description provided for @providersGeminiKeyLabel.
-  ///
-  /// In es, this message translates to:
-  /// **'API key de Gemini'**
-  String get providersGeminiKeyLabel;
-
-  /// No description provided for @providersGeminiKeyHelpStep1.
-  ///
-  /// In es, this message translates to:
-  /// **'1. Entrá a'**
-  String get providersGeminiKeyHelpStep1;
-
-  /// No description provided for @providersGeminiKeyHelpStep2.
-  ///
-  /// In es, this message translates to:
-  /// **'2. Creá una API key nueva'**
-  String get providersGeminiKeyHelpStep2;
-
-  /// No description provided for @providersGeminiKeyHelpStep3.
-  ///
-  /// In es, this message translates to:
-  /// **'3. Copiala y pegala acá'**
-  String get providersGeminiKeyHelpStep3;
-
-  /// No description provided for @providersGeminiKeyLink.
-  ///
-  /// In es, this message translates to:
-  /// **'aistudio.google.com/apikey'**
-  String get providersGeminiKeyLink;
-
-  /// No description provided for @providersGeminiKeyInvalid.
-  ///
-  /// In es, this message translates to:
-  /// **'Esa API key no es válida.'**
-  String get providersGeminiKeyInvalid;
-
-  /// No description provided for @providersGeminiKeyCancel.
-  ///
-  /// In es, this message translates to:
-  /// **'Cancelar'**
-  String get providersGeminiKeyCancel;
-
-  /// No description provided for @providersGeminiKeyConfirm.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectar'**
-  String get providersGeminiKeyConfirm;
-
-  /// No description provided for @providersModelChatTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Modelo para conversar'**
-  String get providersModelChatTitle;
-
-  /// No description provided for @providersModelBriefTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Modelo para las notas del tutor'**
-  String get providersModelBriefTitle;
-
-  /// No description provided for @providersModelTierFree.
-  ///
-  /// In es, this message translates to:
-  /// **'Gratis'**
-  String get providersModelTierFree;
-
-  /// No description provided for @providersModelTierBudget.
-  ///
-  /// In es, this message translates to:
-  /// **'Económico'**
-  String get providersModelTierBudget;
-
-  /// No description provided for @providersModelTierPremium.
-  ///
-  /// In es, this message translates to:
-  /// **'Mejor calidad'**
-  String get providersModelTierPremium;
-
-  /// No description provided for @providersModelEstimateFree.
-  ///
-  /// In es, this message translates to:
-  /// **'Gratis'**
-  String get providersModelEstimateFree;
-
-  /// No description provided for @providersModelEstimatePaid.
-  ///
-  /// In es, this message translates to:
-  /// **'≈ {amount} USD por sesión'**
-  String providersModelEstimatePaid(String amount);
-
-  /// No description provided for @homeNeedProviderHint.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectá tu cuenta de IA para poder practicar'**
-  String get homeNeedProviderHint;
-
   /// No description provided for @homeGreetingMorning.
   ///
   /// In es, this message translates to:
@@ -919,18 +715,6 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'{count, plural, one{Tengo 1 cosa nueva para recordar de vos, ¿la revisás?} other{Tengo {count} cosas nuevas para recordar de vos, ¿las revisás?}}'**
   String homePendingFactsCard(int count);
-
-  /// No description provided for @homeNoProviderBanner.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectá tu cuenta de IA para seguir practicando'**
-  String get homeNoProviderBanner;
-
-  /// No description provided for @homeNoProviderAction.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectar'**
-  String get homeNoProviderAction;
 
   /// No description provided for @homePendingActionWeeklySummaryCredential.
   ///
@@ -1892,12 +1676,6 @@ abstract class AppLocalizations {
   /// **'Perfil listo'**
   String get homeChecklistProfile;
 
-  /// No description provided for @homeChecklistProvider.
-  ///
-  /// In es, this message translates to:
-  /// **'Conectar tu cuenta de IA'**
-  String get homeChecklistProvider;
-
   /// No description provided for @homeChecklistFirstSession.
   ///
   /// In es, this message translates to:
@@ -2281,6 +2059,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Especiales'**
   String get badgesCategorySpecial;
+
+  /// No description provided for @errorPlanRequired.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir un modelo de pago requiere el plan Pro.'**
+  String get errorPlanRequired;
+
+  /// No description provided for @settingsPlanTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Plan'**
+  String get settingsPlanTitle;
+
+  /// No description provided for @settingsFreeModelsNote.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelos gratuitos con respaldo automático'**
+  String get settingsFreeModelsNote;
+
+  /// No description provided for @planCurrentFree.
+  ///
+  /// In es, this message translates to:
+  /// **'Plan Free'**
+  String get planCurrentFree;
+
+  /// No description provided for @planCurrentPro.
+  ///
+  /// In es, this message translates to:
+  /// **'Plan Pro'**
+  String get planCurrentPro;
+
+  /// No description provided for @planProUntil.
+  ///
+  /// In es, this message translates to:
+  /// **'Vence el {date}'**
+  String planProUntil(String date);
+
+  /// No description provided for @planProIncludesTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué incluye Pro'**
+  String get planProIncludesTitle;
+
+  /// No description provided for @planProFeatureModels.
+  ///
+  /// In es, this message translates to:
+  /// **'Elegir modelos de pago para conversar'**
+  String get planProFeatureModels;
+
+  /// No description provided for @planProFeatureDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Hasta 120 turnos por día'**
+  String get planProFeatureDailyCap;
+
+  /// No description provided for @planProFeatureBrief.
+  ///
+  /// In es, this message translates to:
+  /// **'Notas del tutor con un modelo más fuerte'**
+  String get planProFeatureBrief;
+
+  /// No description provided for @planUpgradeButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Pasar a Pro'**
+  String get planUpgradeButton;
+
+  /// No description provided for @planComingSoonTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Disponible pronto'**
+  String get planComingSoonTitle;
+
+  /// No description provided for @planComingSoonBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Estamos preparando el plan Pro. Te avisaremos cuando esté listo.'**
+  String get planComingSoonBody;
+
+  /// No description provided for @planComingSoonClose.
+  ///
+  /// In es, this message translates to:
+  /// **'Entendido'**
+  String get planComingSoonClose;
+
+  /// No description provided for @modelPickerChatTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelo para conversar'**
+  String get modelPickerChatTitle;
+
+  /// No description provided for @modelPickerBriefTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Modelo para las notas del tutor'**
+  String get modelPickerBriefTitle;
+
+  /// No description provided for @modelPickerLoadError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos cargar los modelos.'**
+  String get modelPickerLoadError;
 }
 
 class _AppLocalizationsDelegate

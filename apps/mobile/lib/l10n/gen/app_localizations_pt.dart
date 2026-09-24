@@ -67,13 +67,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get errorAlreadyInGroup => 'Você já está em um grupo.';
 
   @override
-  String get errorProviderNotConnected =>
-      'Conecte sua conta de IA para poder praticar.';
-
-  @override
-  String get errorProviderKeyInvalid => 'Essa chave não é válida.';
-
-  @override
   String get errorModelNotAvailable => 'Esse modelo não está disponível agora.';
 
   @override
@@ -318,110 +311,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interestFamilyRelationships => 'Vida familiar e relacionamentos';
 
   @override
-  String get providersTitle => 'Sua conta de IA';
-
-  @override
-  String get providersGoPractice => 'Pronto, ir praticar';
-
-  @override
-  String get providersOpenRouterTitle => 'OpenRouter';
-
-  @override
-  String get providersGeminiTitle => 'Gemini';
-
-  @override
-  String get providersGeminiRecommendedBadge => 'Recomendado';
-
-  @override
-  String get providersStatusConnected => 'Conectado';
-
-  @override
-  String get providersStatusNotConnected => 'Não conectado';
-
-  @override
-  String get providersStatusError => 'Não está funcionando: conecte de novo';
-
-  @override
-  String get providersConnectButton => 'Conectar';
-
-  @override
-  String get providersDisconnectButton => 'Desconectar';
-
-  @override
-  String providersCreditsRemaining(String amount) {
-    return 'Crédito restante: $amount USD';
-  }
-
-  @override
-  String get providersErrorGeneric =>
-      'Não conseguimos concluir a conexão. Tente de novo.';
-
-  @override
-  String get providersOauthError =>
-      'Não conseguimos conectar com o OpenRouter. Tente de novo.';
-
-  @override
-  String get providersLoadError =>
-      'Não conseguimos carregar suas contas de IA.';
-
-  @override
-  String get providersGeminiPasteKeyButton => 'Colar API key';
-
-  @override
-  String get providersGeminiKeyDialogTitle => 'Conectar Gemini';
-
-  @override
-  String get providersGeminiKeyLabel => 'API key do Gemini';
-
-  @override
-  String get providersGeminiKeyHelpStep1 => '1. Acesse';
-
-  @override
-  String get providersGeminiKeyHelpStep2 => '2. Crie uma nova API key';
-
-  @override
-  String get providersGeminiKeyHelpStep3 => '3. Copie e cole aqui';
-
-  @override
-  String get providersGeminiKeyLink => 'aistudio.google.com/apikey';
-
-  @override
-  String get providersGeminiKeyInvalid => 'Essa API key não é válida.';
-
-  @override
-  String get providersGeminiKeyCancel => 'Cancelar';
-
-  @override
-  String get providersGeminiKeyConfirm => 'Conectar';
-
-  @override
-  String get providersModelChatTitle => 'Modelo para conversar';
-
-  @override
-  String get providersModelBriefTitle => 'Modelo para as notas do tutor';
-
-  @override
-  String get providersModelTierFree => 'Grátis';
-
-  @override
-  String get providersModelTierBudget => 'Econômico';
-
-  @override
-  String get providersModelTierPremium => 'Melhor qualidade';
-
-  @override
-  String get providersModelEstimateFree => 'Grátis';
-
-  @override
-  String providersModelEstimatePaid(String amount) {
-    return '≈ $amount USD por sessão';
-  }
-
-  @override
-  String get homeNeedProviderHint =>
-      'Conecte sua conta de IA para poder praticar';
-
-  @override
   String homeGreetingMorning(String name) {
     return 'Bom dia, $name';
   }
@@ -494,13 +383,6 @@ class AppLocalizationsPt extends AppLocalizations {
     );
     return '$_temp0';
   }
-
-  @override
-  String get homeNoProviderBanner =>
-      'Conecte sua conta de IA para continuar praticando';
-
-  @override
-  String get homeNoProviderAction => 'Conectar';
 
   @override
   String get homePendingActionWeeklySummaryCredential =>
@@ -1042,9 +924,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get homeChecklistProfile => 'Perfil pronto';
 
   @override
-  String get homeChecklistProvider => 'Conectar sua conta de IA';
-
-  @override
   String get homeChecklistFirstSession => 'Primeira sessão de 3 min';
 
   @override
@@ -1259,4 +1138,59 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get badgesCategorySpecial => 'Especiais';
+
+  @override
+  String get errorPlanRequired => 'Escolher um modelo pago requer o plano Pro.';
+
+  @override
+  String get settingsPlanTitle => 'Plano';
+
+  @override
+  String get settingsFreeModelsNote =>
+      'Modelos gratuitos com reserva automática';
+
+  @override
+  String get planCurrentFree => 'Plano Free';
+
+  @override
+  String get planCurrentPro => 'Plano Pro';
+
+  @override
+  String planProUntil(String date) {
+    return 'Vence em $date';
+  }
+
+  @override
+  String get planProIncludesTitle => 'O que o Pro inclui';
+
+  @override
+  String get planProFeatureModels => 'Escolher modelos pagos para conversar';
+
+  @override
+  String get planProFeatureDailyCap => 'Até 120 turnos por dia';
+
+  @override
+  String get planProFeatureBrief => 'Notas do tutor com um modelo mais forte';
+
+  @override
+  String get planUpgradeButton => 'Assinar o Pro';
+
+  @override
+  String get planComingSoonTitle => 'Disponível em breve';
+
+  @override
+  String get planComingSoonBody =>
+      'Estamos preparando o plano Pro. Avisaremos quando estiver pronto.';
+
+  @override
+  String get planComingSoonClose => 'Entendi';
+
+  @override
+  String get modelPickerChatTitle => 'Modelo para conversar';
+
+  @override
+  String get modelPickerBriefTitle => 'Modelo para as notas do tutor';
+
+  @override
+  String get modelPickerLoadError => 'Não conseguimos carregar os modelos.';
 }

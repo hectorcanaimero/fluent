@@ -61,20 +61,6 @@ Map<String, dynamic> _$GroupInfoToJson(_GroupInfo instance) =>
       'isDefault': instance.isDefault,
     };
 
-_ProviderInfo _$ProviderInfoFromJson(Map<String, dynamic> json) =>
-    _ProviderInfo(
-      provider: json['provider'] as String,
-      status: json['status'] as String,
-      connectedAt: json['connectedAt'] as String?,
-    );
-
-Map<String, dynamic> _$ProviderInfoToJson(_ProviderInfo instance) =>
-    <String, dynamic>{
-      'provider': instance.provider,
-      'status': instance.status,
-      'connectedAt': instance.connectedAt,
-    };
-
 _ModelPreference _$ModelPreferenceFromJson(Map<String, dynamic> json) =>
     _ModelPreference(
       chatProvider: json['chatProvider'] as String?,
@@ -96,11 +82,6 @@ _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
   group: json['group'] == null
       ? null
       : GroupInfo.fromJson(json['group'] as Map<String, dynamic>),
-  providers:
-      (json['providers'] as List<dynamic>?)
-          ?.map((e) => ProviderInfo.fromJson(e as Map<String, dynamic>))
-          .toList() ??
-      const <ProviderInfo>[],
   modelPreference: json['modelPreference'] == null
       ? null
       : ModelPreference.fromJson(
@@ -119,19 +100,24 @@ _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
           .toList() ??
       const <String>[],
   courtesySessionAvailable: json['courtesySessionAvailable'] as bool? ?? false,
+  plan: json['plan'] as String? ?? 'free',
+  planExpiresAt: json['planExpiresAt'] == null
+      ? null
+      : DateTime.parse(json['planExpiresAt'] as String),
 );
 
 Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
     <String, dynamic>{
       'profile': instance.profile,
       'group': instance.group,
-      'providers': instance.providers,
       'modelPreference': instance.modelPreference,
       'onboarded': instance.onboarded,
       'activeSessionId': instance.activeSessionId,
       'interestsCatalog': instance.interestsCatalog,
       'pendingActions': instance.pendingActions,
       'courtesySessionAvailable': instance.courtesySessionAvailable,
+      'plan': instance.plan,
+      'planExpiresAt': instance.planExpiresAt?.toIso8601String(),
     };
 
 _GroupMember _$GroupMemberFromJson(Map<String, dynamic> json) => _GroupMember(
@@ -176,45 +162,6 @@ _GroupInvitationResult _$GroupInvitationResultFromJson(
 Map<String, dynamic> _$GroupInvitationResultToJson(
   _GroupInvitationResult instance,
 ) => <String, dynamic>{'code': instance.code, 'expiresAt': instance.expiresAt};
-
-_PkceStartResult _$PkceStartResultFromJson(Map<String, dynamic> json) =>
-    _PkceStartResult(
-      authUrl: json['authUrl'] as String,
-      codeVerifierId: json['codeVerifierId'] as String,
-    );
-
-Map<String, dynamic> _$PkceStartResultToJson(_PkceStartResult instance) =>
-    <String, dynamic>{
-      'authUrl': instance.authUrl,
-      'codeVerifierId': instance.codeVerifierId,
-    };
-
-_ProviderCredits _$ProviderCreditsFromJson(Map<String, dynamic> json) =>
-    _ProviderCredits(
-      total: (json['total'] as num).toDouble(),
-      used: (json['used'] as num).toDouble(),
-    );
-
-Map<String, dynamic> _$ProviderCreditsToJson(_ProviderCredits instance) =>
-    <String, dynamic>{'total': instance.total, 'used': instance.used};
-
-_ProviderStatusResult _$ProviderStatusResultFromJson(
-  Map<String, dynamic> json,
-) => _ProviderStatusResult(
-  status: json['status'] as String,
-  lastError: json['lastError'] as String?,
-  credits: json['credits'] == null
-      ? null
-      : ProviderCredits.fromJson(json['credits'] as Map<String, dynamic>),
-);
-
-Map<String, dynamic> _$ProviderStatusResultToJson(
-  _ProviderStatusResult instance,
-) => <String, dynamic>{
-  'status': instance.status,
-  'lastError': instance.lastError,
-  'credits': instance.credits,
-};
 
 _ModelOption _$ModelOptionFromJson(Map<String, dynamic> json) => _ModelOption(
   id: json['id'] as String,

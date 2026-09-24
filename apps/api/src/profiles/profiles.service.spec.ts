@@ -3,7 +3,6 @@ import {
   WEEKLY_SUMMARY_NEEDS_CREDENTIAL,
 } from './pending-actions.service.js';
 import { ProfilesService } from './profiles.service.js';
-import type { CredentialsRepository } from '../credentials/credentials.repository.js';
 import type { ProfilesRepository } from './profiles.repository.js';
 import type { GroupsRepository } from '../groups/groups.repository.js';
 import type { Profile } from '../db/schema.js';
@@ -26,6 +25,8 @@ function makeProfile(overrides: Partial<Profile> = {}): Profile {
     last_session_day: null,
     grace_used_week: null,
     courtesy_session_used_at: null,
+    plan: 'free',
+    plan_expires_at: null,
     sessions_count: 0,
     avatar_url: null,
     onboarded_at: null,
@@ -69,15 +70,6 @@ function createService(
     findById: vi.fn().mockResolvedValue(group),
   };
 
-  // `provider_credentials` la lee `CredentialsRepository` desde PR-02/T4
-  // (docs/specs/pendientes/PR-02.md PEND-15).
-  const credentialsRepository = {
-    listStatuses: vi.fn().mockResolvedValue([
-      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
-      { provider: 'gemini', status: 'not_connected', connectedAt: null },
-    ]),
-  };
-
   const pendingActionsService = {
     listFor: vi.fn().mockResolvedValue(pendingActions),
   };
@@ -89,7 +81,6 @@ function createService(
   const service = new ProfilesService(
     profilesRepository as unknown as ProfilesRepository,
     groupsRepository as unknown as GroupsRepository,
-    credentialsRepository as unknown as CredentialsRepository,
     pendingActionsService as unknown as PendingActionsService,
     sessionsQuery as unknown as SessionsQueryRepository,
   );
@@ -99,7 +90,6 @@ function createService(
     sessionsQuery,
     profilesRepository,
     groupsRepository,
-    credentialsRepository,
     pendingActionsService,
   };
 }
@@ -328,74 +318,27 @@ describe('ProfilesService.updateProfile · XP por perfil completado (MEJ-14)', (
   });
 });
 
-describe('ProfilesService.getMe · courtesySessionAvailable (MAL-24)', () => {
-  const ownerId = 'owner-1';
-
-  function activeStatuses() {
-    return [
-      { provider: 'openrouter', status: 'active', connectedAt: null },
-      { provider: 'gemini', status: 'not_connected', connectedAt: null },
-    ];
-  }
-
-  function noStatuses() {
-    return [
-      { provider: 'openrouter', status: 'not_connected', connectedAt: null },
-      { provider: 'gemini', status: 'not_connected', connectedAt: null },
-    ];
-  }
-
-  it('es true si no tiene credencial, no la gastó y el owner sí tiene', async () => {
-    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
-    const { service, credentialsRepository, groupsRepository } = createService(profile, {
-      id: 'group-1',
-      name: 'G',
-      owner_id: ownerId,
-      group_streak: 0,
-    });
-    credentialsRepository.listStatuses
-      .mockResolvedValueOnce(noStatuses())
-      .mockResolvedValueOnce(activeStatuses());
-    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
-
-    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(true);
+describe('ProfilesService.getMe · plan', () => {
+  it('devuelve free sin providers', async () => {
+    const { service } = createService(makeProfile());
+    const me = await service.getMe('user-1');
+    expect(me.plan).toBe('free');
+    expect(me.planExpiresAt).toBeNull();
+    expect(me).not.toHaveProperty('providers');
   });
 
-  it('es false si el usuario ya tiene credencial propia', async () => {
-    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
-    const { service, credentialsRepository } = createService(profile);
-    credentialsRepository.listStatuses.mockResolvedValue(activeStatuses());
-
-    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  it('devuelve pro y su vencimiento si sigue vigente', async () => {
+    const expires = new Date(Date.now() + 86_400_000).toISOString();
+    const { service } = createService(makeProfile({ plan: 'pro', plan_expires_at: expires }));
+    const me = await service.getMe('user-1');
+    expect(me.plan).toBe('pro');
+    expect(me.planExpiresAt).toBe(expires);
   });
 
-  it('es false si ya la gastó', async () => {
-    const profile = makeProfile({
-      group_id: 'group-1',
-      courtesy_session_used_at: '2026-09-01T10:00:00.000Z',
-    });
-    const { service, credentialsRepository } = createService(profile);
-    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
-
-    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
-  });
-
-  it('es false si el owner tampoco tiene credencial activa', async () => {
-    const profile = makeProfile({ group_id: 'group-1', courtesy_session_used_at: null });
-    const { service, credentialsRepository, groupsRepository } = createService(profile);
-    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
-    groupsRepository.findById.mockResolvedValue({ id: 'group-1', owner_id: ownerId });
-
-    // Ofrecer una cortesía que va a fallar al abrir la sesión es peor que no
-    // ofrecerla.
-    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
-  });
-
-  it('es false sin grupo', async () => {
-    const profile = makeProfile({ group_id: null, courtesy_session_used_at: null });
-    const { service, credentialsRepository } = createService(profile);
-    credentialsRepository.listStatuses.mockResolvedValue(noStatuses());
-
-    expect((await service.getMe('user-1')).courtesySessionAvailable).toBe(false);
+  it('un pro vencido cuenta como free', async () => {
+    const { service } = createService(
+      makeProfile({ plan: 'pro', plan_expires_at: '2020-01-01T00:00:00.000Z' }),
+    );
+    expect((await service.getMe('user-1')).plan).toBe('free');
   });
 });

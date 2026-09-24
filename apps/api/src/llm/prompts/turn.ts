@@ -7,7 +7,7 @@
 import { CATEGORIES } from '../schemas.js';
 import type { Level, Locale, SessionKind } from '../config.js';
 import { MAX_FACTS_IN_PROMPT } from '../config.js';
-import type { LlmMessage } from '../llm.client.js';
+import type { LlmMessage } from '../types.js';
 import { languageForLocale } from './languages.js';
 import { untrustedBlock, untrustedInline } from './untrusted.js';
 import {

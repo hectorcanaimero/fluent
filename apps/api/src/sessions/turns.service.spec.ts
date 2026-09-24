@@ -5,7 +5,7 @@ import { ROLEPLAYS } from '../content/index.js';
 import type { CredentialsService } from '../credentials/credentials.service.js';
 import type { Fact, NewsItem, Profile, Session } from '../db/schema.js';
 import { DEGRADED_REPLY, HISTORY_TURNS } from '../llm/config.js';
-import type { LlmMessage } from '../llm/llm.client.js';
+import type { LlmMessage } from '../llm/types.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { RedisService } from '../redis/redis.service.js';
 import { TURN_MAX_ATTEMPTS } from '../llm/config.js';

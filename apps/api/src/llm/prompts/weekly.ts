@@ -4,7 +4,7 @@
  * `{summary_language}` usa el locale del owner del grupo.
  */
 import type { Locale } from '../config.js';
-import type { LlmMessage } from '../llm.client.js';
+import type { LlmMessage } from '../types.js';
 import { languageForLocale } from './languages.js';
 import { untrustedBlock } from './untrusted.js';
 

@@ -6,7 +6,7 @@ import { LEGACY_PROVIDERS as PROVIDERS } from '../llm/config.js';
  * OpenRouter y Gemini.
  *
  * Se inyecta (en vez de usar el global directamente) por el mismo motivo que
- * en `apps/api/src/llm/llm.client.ts` y `catalog.service.ts`: los tests
+ * en `apps/api/src/llm/llm.service.ts` y `catalog.service.ts`: los tests
  * sustituyen este provider por un doble y **nunca** se llama a un proveedor
  * real.
  */

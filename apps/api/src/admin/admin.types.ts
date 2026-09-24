@@ -1,3 +1,4 @@
+import type { Plan } from '../db/schema.js';
 import type { QueueMetrics } from './queue-metrics.service.js';
 
 /**
@@ -48,4 +49,11 @@ export interface AdminMetricsDto {
    * (SPEC-05 §9): los «jobs pendientes» de RF-8.2.
    */
   queues: QueueMetrics[];
+}
+
+/** Respuesta de `PUT /admin/users/:id/plan`. */
+export interface UserPlanDto {
+  userId: string;
+  plan: Plan;
+  planExpiresAt: string | null;
 }

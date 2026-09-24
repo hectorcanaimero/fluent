@@ -164,6 +164,11 @@ pero la respuesta es siempre la del operador.
   filas cifradas y de usar `CredentialsCrypto`; construyen `credentials` con
   la del operador (inyectar `CredentialsService` o `ConfigService`). Sus
   repositorios dejan de seleccionar `provider_credentials`.
+- `apps/api/src/providers/providers.service.spec.ts` construye `CredentialsService`
+  real y espera que `saveApiKey`, `find`, `remove` y `markCredentialError`
+  persistan: con el no-op fallan 7 tests. **Borrar ese spec** (F5.1 elimina
+  el módulo `providers/` entero); si `providers.service.ts` deja de compilar
+  por los tipos, el cambio mínimo para que `build` pase.
 - `apps/api/src/jobs/weekly-summary/pending-credential.store.ts` y el aviso
   `weekly_summary_credential_missing` en `profiles/pending-actions.service.ts`
   desaparecen: el resumen semanal ya no puede fallar por credencial. Borrar el
@@ -182,6 +187,8 @@ sesión; ningún job importa `credentials.crypto`.
   - `apps/api/src/credentials/credentials.service.ts`
   - `apps/api/src/credentials/credentials.service.spec.ts`
   - `apps/api/src/credentials/credentials.module.ts`
+  - `apps/api/src/providers/providers.service.spec.ts`
+  - `apps/api/src/providers/providers.service.ts`
   - `apps/api/src/jobs/coaching-brief/coaching-brief.service.ts`
   - `apps/api/src/jobs/coaching-brief/coaching-brief.service.spec.ts`
   - `apps/api/src/jobs/coaching-brief/coaching-brief.repository.ts`

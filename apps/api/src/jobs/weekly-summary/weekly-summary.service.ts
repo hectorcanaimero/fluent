@@ -9,10 +9,8 @@
  *   2. `stats` por miembro: XP y sesiones de `weekly_leaderboard`, top 3
  *      temas de `sessions` agregados en TypeScript (`top-topics.ts`), y
  *      `groupStreak` de `groups.group_streak`.
- *   3. Credencial: la del owner del grupo para el rol `brief`. Sin owner o
- *      sin credencial activa, se marca la incidencia (Redis, ver
- *      `pending-credential.store.ts`) y se lanza para que BullMQ reintente
- *      (SPEC-05 §4 paso 3).
+ *   3. Credencial: la del operador (`CredentialsService`). Sin owner se lanza
+ *      para que BullMQ reintente (SPEC-05 §4 paso 3).
  *   4. `LlmService.complete` con `buildWeeklyMessages` y `WeeklyOutput`.
  *      Guarda `text` y `stats` en `weekly_summaries`.
  *
@@ -26,14 +24,13 @@ import { ConfigService } from '@nestjs/config';
 
 import { appendWeeklyFooter } from '../../common/weekly-footer.js';
 import type { Env } from '../../config/env.js';
-import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
+import { CredentialsService } from '../../credentials/credentials.service.js';
 import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
-import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
+import type { ModelPreference } from '../../llm/model-resolver.js';
 import { buildWeeklyMessages, type WeeklyMember } from '../../llm/prompts/weekly.js';
 import { WeeklyOutput } from '../../llm/schemas.js';
 import type { Locale } from '../../db/schema.js';
-import { WeeklySummaryPendingCredentialStore } from './pending-credential.store.js';
 import { computeTopTopics } from './top-topics.js';
 import { WeeklySummaryRepository } from './weekly-summary.repository.js';
 import { PushService } from '../../push/push.service.js';
@@ -84,9 +81,8 @@ export class WeeklySummaryService {
 
   constructor(
     private readonly repository: WeeklySummaryRepository,
-    private readonly crypto: CredentialsCrypto,
+    private readonly credentialsService: CredentialsService,
     private readonly llm: LlmService,
-    private readonly pendingCredentials: WeeklySummaryPendingCredentialStore,
     configService: ConfigService<Env, true>,
     private readonly push: PushService,
   ) {
@@ -107,7 +103,7 @@ export class WeeklySummaryService {
       return { status: 'skipped', reason: 'group_not_found' };
     }
 
-    // --- 2. Credencial del owner -----------------------------------------
+    // --- 2. Owner -----------------------------------------
     // Se comprueba antes de construir `stats` para no gastar las lecturas de
     // `weekly_leaderboard`/`sessions` si el job va a fallar de todos modos.
     if (!group.owner_id) {
@@ -124,32 +120,7 @@ export class WeeklySummaryService {
     }
     const ownerId = group.owner_id;
 
-    const credentialRows = await this.repository.loadOwnerActiveCredentials(ownerId);
-    const credentials: ActiveCredential[] = [];
-    for (const row of credentialRows) {
-      try {
-        credentials.push({
-          provider: row.provider as LlmProvider,
-          apiKey: this.crypto.decrypt(ownerId, row.provider, row),
-        });
-      } catch (error) {
-        // Nunca se registra la clave, solo el proveedor y el motivo.
-        this.logger.warn(
-          `Credencial de ${row.provider} del owner ${ownerId} ilegible: ${
-            (error as Error).message
-          }`,
-        );
-      }
-    }
-
-    if (credentials.length === 0) {
-      await this.pendingCredentials.markMissing(ownerId, { groupId, weekStart });
-      throw new WeeklySummaryNoOwnerCredentialError(
-        groupId,
-        weekStart,
-        `El owner ${ownerId} del grupo ${groupId} no tiene credencial activa`,
-      );
-    }
+    const credentials = await this.credentialsService.listActive(ownerId);
 
     // --- 3. stats por miembro ---------------------------------------------
     const leaderboard = await this.repository.loadLeaderboard(groupId, weekStart);
@@ -204,10 +175,6 @@ export class WeeklySummaryService {
       text: appendWeeklyFooter(result.data.text, ownerLocale ?? FALLBACK_OWNER_LOCALE),
       stats: { members, groupStreak: group.group_streak, weekStart },
     });
-
-    // Limpieza tras éxito (ver pending-credential.store.ts): si quedaba una
-    // clave pendiente de una semana anterior, ya no aplica.
-    await this.pendingCredentials.clear(ownerId);
 
     // Aviso al grupo: nunca lanza, así que no puede reintentar el job.
     await this.push.notifyWeeklySummary(groupId);

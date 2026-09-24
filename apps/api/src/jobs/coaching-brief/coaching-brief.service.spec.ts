@@ -1,8 +1,6 @@
-import { randomBytes, createCipheriv } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 
-import { CredentialsCrypto, credentialAad } from '../../credentials/credentials.crypto.js';
-import type { Provider } from '../../db/schema.js';
+import type { CredentialsService } from '../../credentials/credentials.service.js';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import { CoachingBriefService } from './coaching-brief.service.js';
 import type {
@@ -13,29 +11,10 @@ import type { BriefJobStatus, Level } from '../../db/schema.js';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '22222222-2222-4222-8222-222222222222';
-const MASTER_KEY = randomBytes(32);
-
-function encryptedKey(plaintext: string, provider: Provider = 'openrouter') {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', MASTER_KEY, iv);
-  cipher.setAAD(Buffer.from(credentialAad(USER_ID, provider), 'utf8'));
-  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+function makeCredentials(): CredentialsService {
   return {
-    provider: provider as 'openrouter',
-    key_ciphertext: `\\x${ciphertext.toString('hex')}`,
-    key_iv: `\\x${iv.toString('hex')}`,
-    key_tag: `\\x${cipher.getAuthTag().toString('hex')}`,
-  };
-}
-
-function makeCipher(): CredentialsCrypto {
-  const values: Record<string, string | undefined> = {
-    CREDENTIALS_MASTER_KEY: MASTER_KEY.toString('base64'),
-    CREDENTIALS_MASTER_KEY_PREVIOUS: undefined,
-  };
-  return new CredentialsCrypto({
-    get: (key: string) => values[key],
-  } as unknown as ConfigService<never, true>);
+    listActive: vi.fn(async () => [{ provider: '9router', apiKey: 'operator-key' }]),
+  } as unknown as CredentialsService;
 }
 
 function makeConfig(promptVersion = 7): ConfigService<never, true> {
@@ -85,7 +64,6 @@ function makeRepository(state: RepoState) {
       brief_provider: 'openrouter' as const,
       brief_model: 'anthropic/claude-3.5-sonnet',
     })),
-    loadActiveCredentials: vi.fn(async () => [encryptedKey('sk-or-v1-test')]),
     applyBrief: vi.fn(async () => {
       state.briefJobStatus = 'done';
       return { applied: true, facts_inserted: 1, facts_skipped: 0 };
@@ -134,7 +112,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -151,7 +129,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     expect(repository.updateSuggestedLevel).toHaveBeenCalledWith(USER_ID, 'B2');
 
     // El prompt recibe el brief anterior y los hechos conocidos, y la llamada
-    // lleva la preferencia de modelo del rol `brief` y la credencial descifrada.
+    // lleva la preferencia de modelo del rol `brief` y la credencial del operador.
     const request = (llm.complete as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
     expect(request.purpose).toBe('brief');
@@ -160,7 +138,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
       model: 'anthropic/claude-3.5-sonnet',
     });
     expect(request.credentials).toEqual([
-      { provider: 'openrouter', apiKey: 'sk-or-v1-test' },
+      { provider: '9router', apiKey: 'operator-key' },
     ]);
     expect(request.promptVersion).toBe('7');
     expect(request.messages[1].content).toContain('Work on past simple.');
@@ -173,7 +151,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -192,7 +170,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const repository = makeRepository(state);
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       makeLlm(),
       makeConfig(),
     );
@@ -210,7 +188,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -232,7 +210,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     });
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -242,27 +220,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     // La sesión queda en `running`, no en `done`: el reintento la reprocesará.
     expect(state.briefJobStatus).toBe('running');
   });
-
-  it('ignora una credencial que no se puede descifrar en vez de romper el job', async () => {
-    const state = baseState();
-    const repository = makeRepository(state);
-    repository.loadActiveCredentials = vi.fn(async () => [
-      { ...encryptedKey('sk-or-v1-test'), key_tag: '\\x00000000000000000000000000000000' },
-    ]) as never;
-    const llm = makeLlm();
-    const service = new CoachingBriefService(
-      repository as unknown as CoachingBriefRepository,
-      makeCipher(),
-      llm,
-      makeConfig(),
-    );
-
-    await service.run(SESSION_ID);
-
-    const request = (llm.complete as unknown as ReturnType<typeof vi.fn>).mock
-      .calls[0][0];
-    expect(request.credentials).toEqual([]);
-  });
 });
 
 describe('CoachingBriefService.markFailed (MAL-20)', () => {
@@ -271,7 +228,7 @@ describe('CoachingBriefService.markFailed (MAL-20)', () => {
     const repository = makeRepository(state);
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCipher(),
+      makeCredentials(),
       makeLlm(),
       makeConfig(),
     );

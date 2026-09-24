@@ -17,7 +17,6 @@ import {
   type WeeklyLeaderboardArgs,
   type WeeklyLeaderboardEntry,
 } from '../../db/rpc.js';
-import type { EncryptedCredential } from '../../credentials/credentials.crypto.js';
 import { weekRangeUtc } from './week-range.js';
 
 /* ============================================================================
@@ -28,10 +27,6 @@ export interface WeeklyGroupRow {
   readonly id: string;
   readonly owner_id: string | null;
   readonly group_streak: number;
-}
-
-export interface WeeklyCredentialRow extends EncryptedCredential {
-  readonly provider: Provider;
 }
 
 export interface WeeklyModelPreferenceRow {
@@ -69,9 +64,6 @@ export abstract class WeeklySummaryRepository {
    * pero el prompt de SPEC-03 §4.3 la pide por miembro (`WeeklyMember.streak`).
    */
   abstract loadMemberStreak(userId: string): Promise<number>;
-  abstract loadOwnerActiveCredentials(
-    ownerId: string,
-  ): Promise<WeeklyCredentialRow[]>;
   abstract loadOwnerModelPreference(
     ownerId: string,
   ): Promise<WeeklyModelPreferenceRow | null>;
@@ -184,22 +176,6 @@ export class InsforgeWeeklySummaryRepository extends WeeklySummaryRepository {
       'leer la racha del miembro',
     );
     return row?.streak ?? 0;
-  }
-
-  async loadOwnerActiveCredentials(
-    ownerId: string,
-  ): Promise<WeeklyCredentialRow[]> {
-    const result = await this.db
-      .from(TABLES.providerCredentials)
-      .select('provider,key_ciphertext,key_iv,key_tag')
-      .eq('user_id', ownerId)
-      .eq('status', 'active');
-    return (
-      unwrap(
-        result as PostgrestLike<WeeklyCredentialRow[]>,
-        'leer las credenciales del owner',
-      ) ?? []
-    );
   }
 
   async loadOwnerModelPreference(

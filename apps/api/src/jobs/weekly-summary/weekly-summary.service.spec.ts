@@ -1,9 +1,7 @@
 import type { PushService } from '../../push/push.service.js';
-import { randomBytes, createCipheriv } from 'node:crypto';
 import type { ConfigService } from '@nestjs/config';
 
-import { CredentialsCrypto, credentialAad } from '../../credentials/credentials.crypto.js';
-import type { Provider } from '../../db/schema.js';
+import type { CredentialsService } from '../../credentials/credentials.service.js';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import type { WeeklyLeaderboardEntry } from '../../db/rpc.js';
 import {
@@ -11,34 +9,14 @@ import {
   WeeklySummaryService,
 } from './weekly-summary.service.js';
 import type { WeeklySummaryRepository } from './weekly-summary.repository.js';
-import type { WeeklySummaryPendingCredentialStore } from './pending-credential.store.js';
 
 const GROUP_ID = '11111111-1111-4111-8111-111111111111';
 const OWNER_ID = '22222222-2222-4222-8222-222222222222';
 const WEEK_START = '2026-09-07';
-const MASTER_KEY = randomBytes(32);
-
-function encryptedKey(plaintext: string, provider: Provider = 'openrouter') {
-  const iv = randomBytes(12);
-  const cipher = createCipheriv('aes-256-gcm', MASTER_KEY, iv);
-  cipher.setAAD(Buffer.from(credentialAad(OWNER_ID, provider), 'utf8'));
-  const ciphertext = Buffer.concat([cipher.update(plaintext, 'utf8'), cipher.final()]);
+function makeCredentials(): CredentialsService {
   return {
-    provider: provider as 'openrouter',
-    key_ciphertext: `\\x${ciphertext.toString('hex')}`,
-    key_iv: `\\x${iv.toString('hex')}`,
-    key_tag: `\\x${cipher.getAuthTag().toString('hex')}`,
-  };
-}
-
-function makeCipher(): CredentialsCrypto {
-  const values: Record<string, string | undefined> = {
-    CREDENTIALS_MASTER_KEY: MASTER_KEY.toString('base64'),
-    CREDENTIALS_MASTER_KEY_PREVIOUS: undefined,
-  };
-  return new CredentialsCrypto({
-    get: (key: string) => values[key],
-  } as unknown as ConfigService<never, true>);
+    listActive: vi.fn(async () => [{ provider: '9router', apiKey: 'operator-key' }]),
+  } as unknown as CredentialsService;
 }
 
 function makeConfig(promptVersion = 3): ConfigService<never, true> {
@@ -55,7 +33,6 @@ const LEADERBOARD: WeeklyLeaderboardEntry[] = [
 interface RepoOverrides {
   summaryExists?: boolean;
   group?: { id: string; owner_id: string | null; group_streak: number } | null;
-  credentialRows?: ReturnType<typeof encryptedKey>[];
 }
 
 function makeRepository(overrides: RepoOverrides = {}) {
@@ -74,9 +51,6 @@ function makeRepository(overrides: RepoOverrides = {}) {
       userId === 'u1' ? ['travel', 'travel', 'food'] : ['sports'],
     ),
     loadMemberStreak: vi.fn(async () => 2),
-    loadOwnerActiveCredentials: vi.fn(
-      async () => overrides.credentialRows ?? [encryptedKey('sk-or-v1-test')],
-    ),
     loadOwnerModelPreference: vi.fn(async () => ({
       brief_provider: 'openrouter' as const,
       brief_model: 'anthropic/claude-3.5-sonnet',
@@ -100,13 +74,6 @@ function makeLlm(overrides?: Partial<Record<string, unknown>>): LlmService {
   } as unknown as LlmService;
 }
 
-function makePendingStore() {
-  return {
-    markMissing: vi.fn(async () => {}),
-    clear: vi.fn(async () => {}),
-  };
-}
-
 /** PushService falso: registra los avisos del resumen semanal. */
 function fakePush() {
   return { notifyWeeklySummary: vi.fn(async () => undefined) } as unknown as PushService;
@@ -116,12 +83,10 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
   it('sale sin llamar al LLM si ya existe el resumen de la semana', async () => {
     const repository = makeRepository({ summaryExists: true });
     const llm = makeLlm();
-    const pending = makePendingStore();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
-      pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
       fakePush(),
     );
@@ -133,42 +98,15 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     expect(repository.loadGroup).not.toHaveBeenCalled();
   });
 
-  it('sin credencial activa del owner: marca la clave de Redis y lanza para reintento', async () => {
-    const repository = makeRepository({ credentialRows: [] });
-    const llm = makeLlm();
-    const pending = makePendingStore();
-    const service = new WeeklySummaryService(
-      repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
-      llm,
-      pending as unknown as WeeklySummaryPendingCredentialStore,
-      makeConfig(),
-      fakePush(),
-    );
-
-    await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
-      WeeklySummaryNoOwnerCredentialError,
-    );
-
-    expect(llm.complete).not.toHaveBeenCalled();
-    expect(repository.insertWeeklySummary).not.toHaveBeenCalled();
-    expect(pending.markMissing).toHaveBeenCalledWith(OWNER_ID, {
-      groupId: GROUP_ID,
-      weekStart: WEEK_START,
-    });
-  });
-
-  it('sin owner_id: lanza sin escribir ninguna clave de Redis (no hay a quién avisar)', async () => {
+  it('sin owner_id: lanza sin llamar al LLM', async () => {
     const repository = makeRepository({
       group: { id: GROUP_ID, owner_id: null, group_streak: 0 },
     });
     const llm = makeLlm();
-    const pending = makePendingStore();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
-      pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
       fakePush(),
     );
@@ -176,19 +114,16 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
       WeeklySummaryNoOwnerCredentialError,
     );
-    expect(pending.markMissing).not.toHaveBeenCalled();
     expect(llm.complete).not.toHaveBeenCalled();
   });
 
   it('con credencial activa: llama al LLM y guarda text/stats en weekly_summaries', async () => {
     const repository = makeRepository();
     const llm = makeLlm();
-    const pending = makePendingStore();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
-      pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
       fakePush(),
     );
@@ -207,7 +142,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
       model: 'anthropic/claude-3.5-sonnet',
     });
     expect(request.credentials).toEqual([
-      { provider: 'openrouter', apiKey: 'sk-or-v1-test' },
+      { provider: '9router', apiKey: 'operator-key' },
     ]);
     expect(request.promptVersion).toBe('3');
 
@@ -225,9 +160,6 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
         ],
       },
     });
-
-    // Éxito: se limpia cualquier clave pendiente de una semana anterior.
-    expect(pending.clear).toHaveBeenCalledWith(OWNER_ID);
   });
 
   it('propaga LlmUnavailableError para que BullMQ reintente', async () => {
@@ -237,12 +169,10 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
         throw new LlmUnavailableError([]);
       }),
     });
-    const pending = makePendingStore();
     const service = new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
-      pending as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
       fakePush(),
     );
@@ -261,9 +191,8 @@ describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
   ) {
     return new WeeklySummaryService(
       repository as unknown as WeeklySummaryRepository,
-      makeCipher(),
+      makeCredentials(),
       llm,
-      makePendingStore() as unknown as WeeklySummaryPendingCredentialStore,
       makeConfig(),
       fakePush(),
     );

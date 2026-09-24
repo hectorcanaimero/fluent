@@ -36,7 +36,6 @@ class FakeApi implements FluentApi {
 
   late Profile _profile;
   GroupInfo? _group;
-  final List<ProviderInfo> _providers = [];
   ModelPreference? _modelPreference;
   bool _onboarded = true;
   String? _activeSessionId;
@@ -71,14 +70,6 @@ class FakeApi implements FluentApi {
       name: 'Los Fluentes',
       groupStreak: 9,
     );
-    _providers.addAll(const [
-      ProviderInfo(
-        provider: 'openrouter',
-        status: 'active',
-        connectedAt: '2026-08-20T10:00:00Z',
-      ),
-      ProviderInfo(provider: 'gemini', status: 'not_connected'),
-    ]);
     _modelPreference = const ModelPreference(
       chatProvider: 'openrouter',
       chatModel: 'meta-llama/llama-3.1-8b-instruct:free',
@@ -174,17 +165,16 @@ class FakeApi implements FluentApi {
   @override
   Future<MeResponse> getMe() async {
     await _delay();
-    final hasProvider = _providers.any((p) => p.status == 'active');
     return MeResponse(
       profile: _profile,
       group: _group,
-      providers: List.unmodifiable(_providers),
       modelPreference: _modelPreference,
       onboarded: _onboarded,
       activeSessionId: _activeSessionId,
       interestsCatalog: kFallbackInterests,
       pendingActions: _pendingActions,
-      courtesySessionAvailable: !hasProvider && !courtesyUsed,
+      plan: _plan,
+      planExpiresAt: _planExpiresAt,
     );
   }
 
@@ -307,70 +297,13 @@ class FakeApi implements FluentApi {
 
   // ---- 4.2 Proveedores y modelos ------------------------------------------
 
-  @override
-  Future<PkceStartResult> startOpenRouterPkce(String callbackUrl) async {
-    await _delay();
-    return const PkceStartResult(
-      authUrl: 'https://openrouter.ai/auth?fake=1',
-      codeVerifierId: 'verifier-fake-1',
-    );
-  }
+  /// Plan del usuario del fake; `setPlan('pro')` para tests y demo.
+  String _plan = 'free';
+  DateTime? _planExpiresAt;
 
-  @override
-  Future<ProviderStatusResult> completeOpenRouterPkce({
-    required String codeVerifierId,
-  }) async {
-    await _delay();
-    _setProviderStatus('openrouter', 'active');
-    return const ProviderStatusResult(
-      status: 'active',
-      credits: ProviderCredits(total: 10, used: 1.2),
-    );
-  }
-
-  @override
-  Future<ProviderStatusResult> connectGemini(String apiKey) async {
-    await _delay();
-    if (apiKey.trim().isEmpty || apiKey.trim().length < 8) {
-      _fail(ApiErrorCode.providerKeyInvalid, 'invalid gemini api key');
-    }
-    _setProviderStatus('gemini', 'active');
-    return const ProviderStatusResult(status: 'active');
-  }
-
-  @override
-  Future<void> disconnectProvider(String provider) async {
-    await _delay();
-    _setProviderStatus(provider, 'not_connected');
-  }
-
-  @override
-  Future<ProviderStatusResult> getProviderStatus(String provider) async {
-    await _delay();
-    final info = _providers.firstWhere(
-      (p) => p.provider == provider,
-      orElse: () => ProviderInfo(provider: provider, status: 'not_connected'),
-    );
-    return ProviderStatusResult(
-      status: info.status,
-      credits: provider == 'openrouter' && info.status == 'active'
-          ? const ProviderCredits(total: 10, used: 1.2)
-          : null,
-    );
-  }
-
-  void _setProviderStatus(String provider, String status) {
-    final idx = _providers.indexWhere((p) => p.provider == provider);
-    final updated = ProviderInfo(
-      provider: provider,
-      status: status,
-      connectedAt: status == 'active' ? DateTime.now().toIso8601String() : null,
-    );
-    if (idx == -1) {
-      _providers.add(updated);
-    } else {
-      _providers[idx] = updated;
-    }
+  void setPlan(String plan, {DateTime? expiresAt}) {
+    _plan = plan;
+    _planExpiresAt = expiresAt;
   }
 
   @override
@@ -426,16 +359,6 @@ class FakeApi implements FluentApi {
     required String briefModel,
   }) async {
     await _delay();
-    final providerConnected = _providers.any(
-      (p) => p.provider == chatProvider && p.status == 'active',
-    );
-    if (!providerConnected) {
-      _fail(
-        ApiErrorCode.modelNotAvailable,
-        'provider not connected',
-        statusCode: 400,
-      );
-    }
     _modelPreference = ModelPreference(
       chatProvider: chatProvider,
       chatModel: chatModel,
@@ -532,18 +455,7 @@ class FakeApi implements FluentApi {
         activeSessionId: _activeSessionId,
       );
     }
-    final providerConnected = _providers.any((p) => p.status == 'active');
-    // MAL-24: sin proveedor propio, la sesión de cortesía (credencial del
-    // owner del grupo, una sola vez) también habilita abrir sesión.
-    if (!providerConnected && courtesyUsed) {
-      _fail(
-        ApiErrorCode.providerNotConnected,
-        'no provider connected and courtesy session already used',
-        statusCode: 409,
-      );
-    }
-    final courtesy = !providerConnected;
-    if (courtesy) courtesyUsed = true;
+    const courtesy = false;
     _sessionCounter++;
     final id = 'session-$_sessionCounter';
     final resolvedTopic = topic ?? roleplayId ?? newsItemId ?? 'Free talk';

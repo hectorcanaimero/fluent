@@ -149,3 +149,66 @@ describe('AdminService · GET /admin/metrics (SPEC-02 §4.6, RF-8.2)', () => {
     });
   });
 });
+
+describe('AdminService · PUT /admin/users/:id/plan', () => {
+  const USER_ID = '11111111-1111-4111-8111-111111111111';
+
+  function makePlanService(row: unknown) {
+    const setPlan = vi.fn().mockResolvedValue(row);
+    const service = new AdminService(
+      new OwnerService(makeConfigService()),
+      { setPlan } as unknown as AdminRepository,
+      {} as QueueMetricsService,
+    );
+    return { service, setPlan };
+  }
+
+  it('403 a un no-owner sin tocar la base', async () => {
+    const { service, setPlan } = makePlanService(null);
+
+    await expect(service.setUserPlan('otro-usuario', USER_ID, 'pro')).rejects.toMatchObject({
+      status: 403,
+    });
+    expect(setPlan).not.toHaveBeenCalled();
+  });
+
+  it('404 NOT_FOUND si el usuario no existe', async () => {
+    const { service } = makePlanService(null);
+
+    try {
+      await service.setUserPlan(OWNER_USER_ID, USER_ID, 'pro');
+      expect.unreachable('debería haber lanzado');
+    } catch (error) {
+      expect((error as ApiException).getStatus()).toBe(404);
+      expect((error as ApiException).getApiBody()).toMatchObject({ error: 'NOT_FOUND' });
+    }
+  });
+
+  it('el owner fija pro con vencimiento y recibe { userId, plan, planExpiresAt }', async () => {
+    const expires = '2026-12-31T00:00:00.000Z';
+    const { service, setPlan } = makePlanService({
+      user_id: USER_ID,
+      plan: 'pro',
+      plan_expires_at: expires,
+    });
+
+    await expect(service.setUserPlan(OWNER_USER_ID, USER_ID, 'pro', expires)).resolves.toEqual({
+      userId: USER_ID,
+      plan: 'pro',
+      planExpiresAt: expires,
+    });
+    expect(setPlan).toHaveBeenCalledWith(USER_ID, 'pro', expires);
+  });
+
+  it('sin expiresAt escribe null (sin vencimiento)', async () => {
+    const { service, setPlan } = makePlanService({
+      user_id: USER_ID,
+      plan: 'free',
+      plan_expires_at: null,
+    });
+
+    await service.setUserPlan(OWNER_USER_ID, USER_ID, 'free');
+
+    expect(setPlan).toHaveBeenCalledWith(USER_ID, 'free', null);
+  });
+});

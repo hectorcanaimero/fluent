@@ -30,7 +30,7 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 ### 4.1 Cuenta y grupo (RF-1.x)
 | Método y ruta | Cuerpo | Respuesta | Notas |
 |---|---|---|---|
-| GET `/me` | | `{ profile, group, providers: [{provider,status,connectedAt}], modelPreference, onboarded, activeSessionId, interestsCatalog, pendingActions[] }` | primera llamada de la app. `pendingActions` avisa al owner, por ejemplo `weekly_summary_credential_missing` |
+| GET `/me` | | `{ profile, group, plan, planExpiresAt, modelPreference, onboarded, activeSessionId, interestsCatalog, pendingActions[] }` | primera llamada de la app. `plan` es el plan efectivo (`free` o `pro`; un `pro` vencido se informa como `free`) y `planExpiresAt` su fin en ISO 8601 o `null`; `providers` ya no existe. `pendingActions` avisa al owner, por ejemplo `weekly_summary_credential_missing` |
 | PUT `/me/profile` | `{ displayName, level, interests[], timezone, locale }` | `profile` | valida 3 a 5 intereses del catálogo; `locale` en `es` o `pt-BR` |
 | POST `/invitations/redeem` | `{ code }` | `{ group }` | RPC `redeem_invitation`; errores `INVITATION_INVALID`, `INVITATION_USED`, `INVITATION_EXPIRED`, `ALREADY_IN_GROUP` |
 | POST `/admin/invitations` | `{ count?: 1..10 }` | `{ codes: [] }` | solo `owner_id` del grupo; RF-8.1 |
@@ -88,6 +88,7 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 |---|---|
 | GET `/health` | `{ ok, version, redis, insforge }` sin auth |
 | GET `/admin/metrics` | RF-8.2, solo owner: sesiones por día 14 d, duración media, tasa de fallo LLM, jobs pendientes |
+| PUT `/admin/users/:id/plan` | `{ plan: 'free' \| 'pro', expiresAt?: ISO 8601 \| null }`; solo owner (`403`), `404` si el `id` no existe; responde `{ userId, plan, planExpiresAt }` |
 
 ## 5. Cifrado de credenciales (RF-2.2)
 

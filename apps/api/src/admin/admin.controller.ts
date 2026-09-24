@@ -1,8 +1,9 @@
-import { Controller, Get } from '@nestjs/common';
+import { Body, Controller, Get, Param, ParseUUIDPipe, Put } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { AdminService } from './admin.service.js';
-import type { AdminMetricsDto } from './admin.types.js';
+import { UpdateUserPlanDto } from './dto/update-user-plan.dto.js';
+import type { AdminMetricsDto, UserPlanDto } from './admin.types.js';
 
 /**
  * Endpoints administrativos (SPEC-02 §4.6).
@@ -26,5 +27,15 @@ export class AdminController {
   @Get('metrics')
   getMetrics(@CurrentUser('id') userId: string): Promise<AdminMetricsDto> {
     return this.adminService.getMetrics(userId);
+  }
+
+  /** `PUT /admin/users/:id/plan`: solo owner del sistema (403), 404 si el `id` no existe. */
+  @Put('users/:id/plan')
+  setUserPlan(
+    @CurrentUser('id') actorId: string,
+    @Param('id', ParseUUIDPipe) userId: string,
+    @Body() dto: UpdateUserPlanDto,
+  ): Promise<UserPlanDto> {
+    return this.adminService.setUserPlan(actorId, userId, dto.plan, dto.expiresAt ?? null);
   }
 }

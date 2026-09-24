@@ -1,5 +1,4 @@
-import type { Level, Locale } from '../db/schema.js';
-import type { ProviderConnectionStatus } from '../credentials/credentials.repository.js';
+import type { Level, Locale, Plan } from '../db/schema.js';
 
 /**
  * `profile` de `GET /me` y cuerpo de `PUT /me/profile` (SPEC-02 §4.1).
@@ -28,13 +27,6 @@ export interface GroupDto {
   isDefault: boolean;
 }
 
-/** Elemento de `providers[]` en `GET /me`. */
-export interface ProviderInfoDto {
-  provider: 'openrouter' | 'gemini';
-  status: ProviderConnectionStatus;
-  connectedAt: string | null;
-}
-
 /** `modelPreference` de `GET /me`, o `null` si el usuario no la tiene todavía. */
 export interface ModelPreferenceDto {
   chatProvider: string | null;
@@ -47,7 +39,10 @@ export interface ModelPreferenceDto {
 export interface MeDto {
   profile: ProfileDto;
   group: GroupDto | null;
-  providers: ProviderInfoDto[];
+  /** Plan efectivo: un `pro` vencido se informa como `free`. */
+  plan: Plan;
+  /** Fin del plan pro; `null` = sin vencimiento (o plan free). */
+  planExpiresAt: string | null;
   modelPreference: ModelPreferenceDto | null;
   onboarded: boolean;
   activeSessionId: string | null;
@@ -69,12 +64,8 @@ export interface MeDto {
    */
   sessionsToday: number;
   /**
-   * `true` si el usuario puede abrir una sesión de cortesía con la credencial
-   * del owner de su grupo (MAL-24): no ha gastado la suya, no tiene credencial
-   * propia y el owner sí tiene una activa.
-   *
-   * Home lo usa para no bloquear el CTA de practicar antes de que el usuario
-   * haya visto para qué sirve conectar un proveedor.
+   * Sesión de cortesía (MAL-24): con planes ya no hay credenciales que
+   * prestar, así que es siempre `false` hasta que F5 la retire.
    */
   courtesySessionAvailable: boolean;
 }

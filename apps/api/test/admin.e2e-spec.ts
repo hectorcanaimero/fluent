@@ -57,6 +57,8 @@ describe('Admin Endpoints (e2e)', () => {
   // configuración real, no contra uno arbitrario.
   const ownerId = '9595625c-aea8-4120-accc-ed149d0a84c6';
   const otherUserId = 'other-user-id';
+  const targetUserId = '11111111-1111-4111-8111-111111111111';
+  const missingUserId = '22222222-2222-4222-8222-222222222222';
 
   /**
    * Un token distinto por caso: el `AuthGuard` global cachea `token ->
@@ -100,6 +102,10 @@ describe('Admin Endpoints (e2e)', () => {
         { duration_sec: 600 },
         { duration_sec: 300 },
       ],
+      setPlan: async (userId: string, plan: string, planExpiresAt: string | null) =>
+        userId === missingUserId
+          ? null
+          : { user_id: userId, plan, plan_expires_at: planExpiresAt },
       listRecentLlmCalls: async () => [
         { status: 'ok' },
         { status: 'ok' },
@@ -263,6 +269,59 @@ describe('Admin Endpoints (e2e)', () => {
 
       // Y las colas siguen ahí: una sola respuesta con las cuatro métricas.
       expect(response.body.queues).toHaveLength(4);
+    });
+  });
+
+  describe('PUT /v1/admin/users/:id/plan', () => {
+    const body = { plan: 'pro', expiresAt: '2026-12-31T00:00:00.000Z' };
+
+    it('200 al owner con { userId, plan, planExpiresAt }', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
+        ok: true,
+        userId: ownerId,
+      });
+
+      const response = await request(app.getHttpServer())
+        .put(`/v1/admin/users/${targetUserId}/plan`)
+        .set('Authorization', `Bearer ${ownerToken('plan-ok')}`)
+        .send(body)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        userId: targetUserId,
+        plan: 'pro',
+        planExpiresAt: body.expiresAt,
+      });
+    });
+
+    it('403 FORBIDDEN a un usuario que no es owner', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
+        ok: true,
+        userId: otherUserId,
+      });
+
+      const response = await request(app.getHttpServer())
+        .put(`/v1/admin/users/${targetUserId}/plan`)
+        .set('Authorization', `Bearer ${otherToken('plan-403')}`)
+        .send(body)
+        .expect(403);
+
+      expect(response.body.error).toBe('FORBIDDEN');
+    });
+
+    it('404 NOT_FOUND si el usuario no existe', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({
+        ok: true,
+        userId: ownerId,
+      });
+
+      const response = await request(app.getHttpServer())
+        .put(`/v1/admin/users/${missingUserId}/plan`)
+        .set('Authorization', `Bearer ${ownerToken('plan-404')}`)
+        .send({ plan: 'free' })
+        .expect(404);
+
+      expect(response.body.error).toBe('NOT_FOUND');
     });
   });
 

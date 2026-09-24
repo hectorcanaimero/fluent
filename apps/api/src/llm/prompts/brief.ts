@@ -6,7 +6,7 @@
  */
 import { CATEGORIES } from '../schemas.js';
 import type { Level, Locale, SessionKind } from '../config.js';
-import type { LlmMessage } from '../llm.client.js';
+import type { LlmMessage } from '../types.js';
 import { languageForLocale } from './languages.js';
 import { formatTranscript, truncateTranscript, type HistoryTurn } from './truncate.js';
 

@@ -5,17 +5,26 @@
  * credenciales rotas con un evento `credential.error`. PR-02 implementa ambas
  * interfaces contra InsForge.
  */
+import {
+  APICallError,
+  generateObject,
+  NoObjectGeneratedError,
+  streamObject,
+  type LanguageModel,
+  type RepairTextFunction,
+} from 'ai';
 import type { ZodType } from 'zod';
 
 import { MAX_ATTEMPTS, PURPOSE_DEFAULTS, type Provider, type Purpose } from './config.js';
+import { extractFirstJsonObject } from './json.js';
+import type { Candidate, ModelPreference, ModelResolver, ActiveCredential } from './model-resolver.js';
 import {
   LlmCallError,
   type LlmCallStatus,
-  type LlmClient,
+  type LlmErrorStatus,
   type LlmMessage,
   type LlmUsage,
-} from './llm.client.js';
-import type { Candidate, ModelPreference, ModelResolver, ActiveCredential } from './model-resolver.js';
+} from './types.js';
 
 /** Fila de `llm_calls` (SPEC-01 §2.14 + PEND-01 y PEND-02). Nunca lleva el prompt. */
 export interface LlmCallRecord {
@@ -85,8 +94,8 @@ export interface LlmServiceRequest<T> {
   readonly timeoutMs?: number;
   readonly maxAttempts?: number;
   /**
-   * Streaming (SPEC-04 §4, RF-3.8): se pasa tal cual al cliente, que pide
-   * `stream: true` y llama con cada delta del campo `reply`.
+   * Streaming (SPEC-04 §4, RF-3.8): con `onToken` el intento usa
+   * `streamObject` y se llama con cada delta del campo `reply`.
    *
    * Ojo con la cadena de fallback: si un intento emite tokens y luego falla
    * (por ejemplo `invalid_json`), el intento siguiente vuelve a emitir desde
@@ -117,7 +126,8 @@ export interface LlmServiceResult<T> {
 }
 
 export interface LlmServiceDeps {
-  readonly client: Pick<LlmClient, 'complete'>;
+  /** `NineRouterProvider` en producción; cualquier `(modelId) => LanguageModel` en tests. */
+  readonly provider: (modelId: string) => LanguageModel;
   readonly resolver: Pick<ModelResolver, 'resolve'>;
   readonly sink?: LlmCallSink;
   readonly events?: LlmEventBus;
@@ -139,14 +149,50 @@ function recordQuietly(sink: LlmCallSink, call: LlmCallRecord): Promise<void> {
 }
 const NOOP_EVENTS: LlmEventBus = { emit: () => {} };
 
+// ponytail: mapa local hasta que F1.4 traiga `reasoningEffortFor` en `ninerouter-models.ts`.
+function reasoningEffortFor(model: string): string | undefined {
+  if (model === 'fluent-free' || model === 'fluent-pro' || model.startsWith('ds/')) return 'none';
+  if (model.startsWith('gemini/gemini-3.8')) return 'low';
+  return undefined;
+}
+
+/** Quita vallas ```json y prosa: algunos modelos las mandan incluso con `response_format`. */
+const repairText: RepairTextFunction = async ({ text }) => {
+  const json = extractFirstJsonObject(text);
+  return json === null ? null : JSON.stringify(json);
+};
+
+function isAbortError(error: unknown): boolean {
+  const name = (error as { name?: unknown } | null)?.name;
+  return name === 'AbortError' || name === 'TimeoutError';
+}
+
+/** Traduce un error del SDK a `llm_calls.status` (tabla `mapError` de la arquitectura). */
+export function mapError(error: unknown, aborted = false): LlmErrorStatus {
+  if (aborted || isAbortError(error)) return 'timeout';
+  if (error instanceof LlmCallError) return error.status;
+  if (NoObjectGeneratedError.isInstance(error)) return 'invalid_json';
+  if (APICallError.isInstance(error)) {
+    if (error.statusCode === 401 || error.statusCode === 403) return 'auth_error';
+    if (error.statusCode === 429) return 'rate_limited';
+  }
+  // Incluye las partes `error` de `fullStream`.
+  return 'provider_error';
+}
+
+interface AttemptResult<T> {
+  readonly data: T;
+  readonly usage: LlmUsage;
+}
+
 export class LlmService {
-  private readonly client: Pick<LlmClient, 'complete'>;
+  private readonly provider: (modelId: string) => LanguageModel;
   private readonly resolver: Pick<ModelResolver, 'resolve'>;
   private readonly sink: LlmCallSink;
   private readonly events: LlmEventBus;
 
   constructor(deps: LlmServiceDeps) {
-    this.client = deps.client;
+    this.provider = deps.provider;
     this.resolver = deps.resolver;
     this.sink = deps.sink ?? NOOP_SINK;
     this.events = deps.events ?? NOOP_EVENTS;
@@ -192,19 +238,12 @@ export class LlmService {
           }
         : undefined;
 
+      const started = Date.now();
+      const signal = AbortSignal.timeout(request.timeoutMs ?? defaults.timeoutMs);
+
       try {
-        const result = await this.client.complete({
-          provider: candidate.provider,
-          model: candidate.model,
-          apiKey: candidate.apiKey,
-          messages: request.messages,
-          schema: request.schema,
-          maxTokens: request.maxTokens ?? defaults.maxTokens,
-          temperature: request.temperature ?? defaults.temperature,
-          purpose: request.purpose,
-          timeoutMs: request.timeoutMs ?? defaults.timeoutMs,
-          onToken,
-        });
+        const result = await this.attempt(request, candidate.model, signal, onToken);
+        const latencyMs = Date.now() - started;
 
         attempts.push({
           attempt,
@@ -212,7 +251,7 @@ export class LlmService {
           model: candidate.model,
           source: candidate.source,
           status: 'ok',
-          latencyMs: result.latencyMs,
+          latencyMs,
         });
 
         // Sin `await` (MEJ-25): `llm_calls` es auditoría, y esperar a que
@@ -227,7 +266,7 @@ export class LlmService {
           model: candidate.model,
           tokensIn: result.usage.tokensIn,
           tokensOut: result.usage.tokensOut,
-          latencyMs: result.latencyMs,
+          latencyMs,
           status: 'ok',
           attempt,
           promptVersion,
@@ -244,10 +283,13 @@ export class LlmService {
           attempts,
         };
       } catch (error) {
-        const callError =
-          error instanceof LlmCallError
-            ? error
-            : new LlmCallError('provider_error', candidate.provider, candidate.model, 0);
+        const callError = new LlmCallError(
+          mapError(error, signal.aborted),
+          candidate.provider,
+          candidate.model,
+          Date.now() - started,
+          APICallError.isInstance(error) ? error.statusCode : undefined,
+        );
 
         attempts.push({
           attempt,
@@ -291,4 +333,69 @@ export class LlmService {
 
     throw new LlmUnavailableError(attempts);
   }
+
+  /** Un intento contra un modelo: `generateObject`, o `streamObject` si hay `onToken`. */
+  private async attempt<T>(
+    request: LlmServiceRequest<T>,
+    model: string,
+    abortSignal: AbortSignal,
+    onToken: ((delta: string) => void) | undefined,
+  ): Promise<AttemptResult<T>> {
+    const defaults = PURPOSE_DEFAULTS[request.purpose];
+    const reasoningEffort = reasoningEffortFor(model);
+    const options = {
+      model: this.provider(model),
+      schema: request.schema,
+      messages: request.messages.map((m) => ({ role: m.role, content: m.content })),
+      // Los prompts abren con un mensaje `system`; el SDK 7 lo rechaza sin esto.
+      allowSystemInMessages: true,
+      temperature: request.temperature ?? defaults.temperature,
+      maxOutputTokens: request.maxTokens ?? defaults.maxTokens,
+      abortSignal,
+      // D6: los reintentos son la cadena de candidatos, no el SDK.
+      maxRetries: 0,
+      repairText,
+      providerOptions:
+        reasoningEffort === undefined ? undefined : { '9router': { reasoningEffort } },
+    };
+
+    if (onToken === undefined) {
+      const result = await generateObject(options);
+      return { data: result.object as T, usage: toUsage(result.usage) };
+    }
+
+    // Los errores llegan como partes `error` de `fullStream`; sin esto el SDK
+    // además los escribe en consola.
+    const result = streamObject({ ...options, onError: () => {} });
+    let previousReply = '';
+    let emitting = true;
+    for await (const part of result.fullStream) {
+      if (part.type === 'error') throw part.error;
+      if (part.type !== 'object' || !emitting) continue;
+      const reply = (part.object as { reply?: unknown } | undefined)?.reply;
+      if (typeof reply !== 'string') continue;
+      // Si el parcial reescribe lo ya emitido se deja de emitir: el `done`
+      // del SSE manda el objeto entero.
+      if (!reply.startsWith(previousReply)) {
+        emitting = false;
+        continue;
+      }
+      const delta = reply.slice(previousReply.length);
+      previousReply = reply;
+      if (delta === '') continue;
+      try {
+        onToken(delta);
+      } catch {
+        // El cliente del SSE colgó: se deja de emitir, pero el turno sigue
+        // hasta el final para poder persistirlo.
+        emitting = false;
+      }
+    }
+    const [object, usage] = await Promise.all([result.object, result.usage]);
+    return { data: object as T, usage: toUsage(usage) };
+  }
+}
+
+function toUsage(usage: { inputTokens: number | undefined; outputTokens: number | undefined }): LlmUsage {
+  return { tokensIn: usage.inputTokens ?? null, tokensOut: usage.outputTokens ?? null };
 }

@@ -11,7 +11,7 @@ import {
 } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import type { LlmMessage } from '../llm/llm.client.js';
+import type { LlmMessage } from '../llm/types.js';
 import { OPENING_USER_MESSAGE } from '../llm/prompts/turn.js';
 import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ChallengesService } from '../social/challenges.service.js';

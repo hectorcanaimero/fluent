@@ -47,22 +47,6 @@ class _ThrowingOnceApi extends FakeApi {
   }
 }
 
-/// OpenRouter arranca sin conectar, para probar el resguardo de MAL-13.
-class _NoActiveProviderApi extends FakeApi {
-  _NoActiveProviderApi() : super(artificialDelay: Duration.zero);
-
-  @override
-  Future<MeResponse> getMe() async {
-    final me = await super.getMe();
-    return me.copyWith(
-      providers: [
-        for (final p in me.providers)
-          ProviderInfo(provider: p.provider, status: 'not_connected'),
-      ],
-    );
-  }
-}
-
 /// Una noticia con fuente de nombre largo, como las que llegan del RSS.
 class _LongNewsSourceApi extends FakeApi {
   _LongNewsSourceApi() : super(artificialDelay: Duration.zero);
@@ -170,7 +154,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('el botón del tema libre se habilita al escribir', (tester) async {
+  testWidgets('el botón del tema libre se habilita al escribir', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -245,46 +231,6 @@ void main() {
       findsOneWidget,
     );
   });
-
-  testWidgets(
-    'MAL-13: sin proveedor activo, redirige a Proveedores aunque se llegue sin pasar por el gate de Home',
-    (tester) async {
-      final router = GoRouter(
-        initialLocation: '/session/new',
-        routes: [
-          GoRoute(
-            path: '/session/new',
-            builder: (context, state) => const NewSessionScreen(),
-          ),
-          GoRoute(
-            path: '/providers',
-            builder: (context, state) => const Text('PROVIDERS_SCREEN'),
-          ),
-        ],
-      );
-      await tester.pumpWidget(
-        ProviderScope(
-          overrides: [
-            fluentApiProvider.overrideWith((ref) => _NoActiveProviderApi()),
-            micPrimerShownProvider.overrideWith((ref) => true),
-          ],
-          child: MaterialApp.router(
-            routerConfig: router,
-            localizationsDelegates: const [
-              AppLocalizations.delegate,
-              GlobalMaterialLocalizations.delegate,
-              GlobalWidgetsLocalizations.delegate,
-              GlobalCupertinoLocalizations.delegate,
-            ],
-            supportedLocales: AppLocalizations.supportedLocales,
-          ),
-        ),
-      );
-      await tester.pumpAndSettle();
-
-      expect(find.text('PROVIDERS_SCREEN'), findsOneWidget);
-    },
-  );
 
   testWidgets(
     'MEJ-10: SESSION_ALREADY_ACTIVE navega a la sesión existente en vez de mostrar un error',

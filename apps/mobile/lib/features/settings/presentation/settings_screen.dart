@@ -116,11 +116,9 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       if (!mounted) return;
       setState(() {
         _invitationErrorMessage = switch (e.code) {
-          ApiErrorCode.invitationInvalid =>
-            l10n.registerErrorInvitationInvalid,
+          ApiErrorCode.invitationInvalid => l10n.registerErrorInvitationInvalid,
           ApiErrorCode.invitationUsed => l10n.registerErrorInvitationUsed,
-          ApiErrorCode.invitationExpired =>
-            l10n.registerErrorInvitationExpired,
+          ApiErrorCode.invitationExpired => l10n.registerErrorInvitationExpired,
           ApiErrorCode.alreadyInGroup => l10n.registerErrorGeneric,
           _ => l10nForApiError(e.code, l10n),
         };
@@ -150,12 +148,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     await Permission.notification.request();
     if (!mounted) return;
     final l10n = AppLocalizations.of(context);
-    await ref.read(reminderServiceProvider).scheduleDaily(
-      morning: _morning,
-      evening: _evening,
-      title: l10n.settingsReminderNotificationTitle,
-      body: l10n.settingsReminderNotificationBody,
-    );
+    await ref
+        .read(reminderServiceProvider)
+        .scheduleDaily(
+          morning: _morning,
+          evening: _evening,
+          title: l10n.settingsReminderNotificationTitle,
+          body: l10n.settingsReminderNotificationBody,
+        );
   }
 
   void _setLocale(Locale? locale) {
@@ -200,9 +200,8 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await ref.read(fluentApiProvider).deleteAccount();
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(apiErrorSnackBar(context, e.code));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(apiErrorSnackBar(context, e.code));
       return;
     }
     await ref.read(authControllerProvider.notifier).logout();
@@ -284,14 +283,6 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   const SizedBox(height: AppSpacing.lg),
                   // Entradas fijas: antes solo se llegaba a estas pantallas
                   // desde avisos que aparecen a veces.
-                  ListTile(
-                    key: const Key('settings_ai_account'),
-                    contentPadding: EdgeInsets.zero,
-                    leading: const Icon(Icons.key_outlined),
-                    title: Text(l10n.providersTitle),
-                    trailing: const Icon(Icons.chevron_right),
-                    onTap: () => context.push('/providers'),
-                  ),
                   ListTile(
                     key: const Key('settings_memory'),
                     contentPadding: EdgeInsets.zero,

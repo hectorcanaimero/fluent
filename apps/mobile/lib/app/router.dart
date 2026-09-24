@@ -16,7 +16,6 @@ import '../features/home/presentation/home_shell.dart';
 import '../features/memory/presentation/memory_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow.dart';
 import '../features/progress/presentation/progress_screen.dart';
-import '../features/providers/presentation/providers_screen.dart';
 import '../features/session/presentation/conversation_screen.dart';
 import '../features/session/presentation/new_session_screen.dart';
 import '../features/session/presentation/session_summary_screen.dart';
@@ -96,8 +95,7 @@ final routerProvider = Provider<GoRouter>((ref) {
   return GoRouter(
     initialLocation: '/splash',
     refreshListenable: notifier,
-    redirect: (context, state) =>
-        computeRedirect(
+    redirect: (context, state) => computeRedirect(
       notifier.authState,
       state.matchedLocation,
       splashDone: notifier.splashDone,
@@ -168,10 +166,6 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/memory',
         builder: (context, state) => const MemoryScreen(),
-      ),
-      GoRoute(
-        path: '/providers',
-        builder: (context, state) => const ProvidersScreen(),
       ),
       GoRoute(
         path: '/settings',

@@ -8,7 +8,7 @@ import 'package:flutter/services.dart';
 import '../../../core/env.dart';
 import '../../../core/errors/api_exception.dart';
 import '../../../core/storage/token_store.dart';
-import '../../providers/data/oauth_launcher.dart';
+import 'oauth_launcher.dart';
 import 'insforge_auth_client.dart';
 
 enum SocialProvider { google, apple }
@@ -87,6 +87,8 @@ class InsforgeSocialSignIn implements SocialSignIn {
 /// Con `USE_FAKE_API` entra directo, sin navegador ni InsForge.
 class FakeSocialSignIn implements SocialSignIn {
   @override
-  Future<AuthTokens?> signIn(SocialProvider provider) async =>
-      const AuthTokens(accessToken: 'fake-access', refreshToken: 'fake-refresh');
+  Future<AuthTokens?> signIn(SocialProvider provider) async => const AuthTokens(
+    accessToken: 'fake-access',
+    refreshToken: 'fake-refresh',
+  );
 }

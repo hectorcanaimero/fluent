@@ -18,10 +18,8 @@ const int _kMaxInterests = 5;
 const int _kInitialInterestsShown = 8;
 
 /// Onboarding de perfil (SPEC-06 §3): nombre, nivel, intereses. El paso 4
-/// ("conectar proveedor") no vive acá: al terminar el paso 3 se guarda el
-/// perfil con `PUT /me/profile` y, si el usuario todavía no tiene ningún
-/// proveedor conectado, se salta a `/providers`; si ya tiene uno (por
-/// ejemplo, en los datos de ejemplo de `FakeApi`), se va directo a `/`.
+/// no vive acá: al terminar el paso 3 se guarda el perfil con
+/// `PUT /me/profile` y se va directo a `/`.
 class OnboardingFlow extends ConsumerStatefulWidget {
   const OnboardingFlow({super.key});
 
@@ -103,9 +101,6 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
         await Future.delayed(const Duration(milliseconds: 900));
         if (!mounted) return;
       }
-      // MAL-24: ya no fuerza `/providers` sin proveedor — con la sesión de
-      // cortesía, Home puede ofrecer practicar igual; el checklist ahí
-      // mismo recuerda "Conectar IA" sin bloquear el paso.
       context.go('/');
     } on ApiException catch (e) {
       setState(() => _errorMessage = l10nForApiError(e.code, l10n));
@@ -186,9 +181,8 @@ class _OnboardingFlowState extends ConsumerState<OnboardingFlow> {
               if (_errorMessage != null) ...[
                 Text(
                   _errorMessage!,
-                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: AppColors.errorText,
-                  ),
+                  style: Theme.of(context).textTheme.bodyMedium
+                      ?.copyWith(color: AppColors.errorText),
                 ),
                 const SizedBox(height: AppSpacing.sm),
               ],
@@ -363,9 +357,8 @@ class _InterestsStep extends StatelessWidget {
                 Text(
                   l10n.onboardingInterestsSelectedCount(selected.length),
                   // `primary` como texto no llega a AA (MEJ-01).
-                  style: Theme.of(context).textTheme.labelLarge?.copyWith(
-                    color: AppColors.textSecondary,
-                  ),
+                  style: Theme.of(context).textTheme.labelLarge
+                      ?.copyWith(color: AppColors.textSecondary),
                 ),
                 const SizedBox(height: AppSpacing.md),
                 Wrap(

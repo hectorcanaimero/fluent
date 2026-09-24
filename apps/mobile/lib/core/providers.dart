@@ -6,14 +6,13 @@ import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
 import '../features/auth/data/social_sign_in.dart';
 import '../features/auth/domain/auth_state.dart';
-import '../features/providers/data/oauth_launcher.dart';
+import '../features/auth/data/oauth_launcher.dart';
 import '../features/settings/data/reminder_service.dart';
 import '../features/session/data/speech_service.dart';
 import '../features/session/data/tts_service.dart';
 import 'api/fake_api.dart';
 import 'api/fluent_api.dart';
 import 'api/http_fluent_api.dart';
-import 'api/models.dart';
 import 'env.dart';
 import 'http/api_client.dart';
 import 'http/token_refresher.dart';
@@ -136,30 +135,19 @@ final timezoneProvider = FutureProvider<String>((ref) async {
   }
 });
 
-/// MAL-13: si se puede empezar una sesión ahora mismo (hay al menos un
-/// proveedor activo). Fuente única para el CTA de Home, sus chips de
-/// temas rápidos y la pestaña Practicar de `HomeShell`, que antes lo
-/// derivaban cada uno por su cuenta y quedaban inconsistentes. Se
-/// invalida al conectar/desconectar un proveedor (`ProvidersScreen`).
-final canPracticeProvider = FutureProvider<bool>((ref) async {
-  final me = await ref.watch(fluentApiProvider).getMe();
-  // MAL-24: sin proveedor propio, la sesión de cortesía también habilita
-  // practicar — ver `HomeData.canPractice`.
-  return me.hasActiveProvider || me.courtesySessionAvailable;
-});
-
-final authControllerProvider =
-    StateNotifierProvider<AuthController, AuthState>((ref) {
-      return AuthController(
-        tokenStore: ref.watch(tokenStoreProvider),
-        api: ref.watch(fluentApiProvider),
-        // Revoca el refresh token en InsForge al cerrar sesión (MAL-02).
-        authClient: ref.watch(insforgeAuthClientProvider),
-        // Un 401 que no se pudo refrescar borra los tokens dentro de
-        // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
-        // la app quedaba "zombi" hasta reiniciarla (MAL-02).
-        sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
-        // Este teléfono deja de recibir push de la cuenta que se va.
-        beforeLogout: () => ref.read(pushServiceProvider).unregister(),
-      );
-    });
+final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
+  (ref) {
+    return AuthController(
+      tokenStore: ref.watch(tokenStoreProvider),
+      api: ref.watch(fluentApiProvider),
+      // Revoca el refresh token en InsForge al cerrar sesión (MAL-02).
+      authClient: ref.watch(insforgeAuthClientProvider),
+      // Un 401 que no se pudo refrescar borra los tokens dentro de
+      // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
+      // la app quedaba "zombi" hasta reiniciarla (MAL-02).
+      sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
+      // Este teléfono deja de recibir push de la cuenta que se va.
+      beforeLogout: () => ref.read(pushServiceProvider).unregister(),
+    );
+  },
+);

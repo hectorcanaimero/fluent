@@ -2,7 +2,7 @@ import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/storage/token_store.dart';
 import 'package:fluent_mobile/features/auth/data/insforge_auth_client.dart';
 import 'package:fluent_mobile/features/auth/data/social_sign_in.dart';
-import 'package:fluent_mobile/features/providers/data/oauth_launcher.dart';
+import 'package:fluent_mobile/features/auth/data/oauth_launcher.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -54,23 +54,26 @@ void main() {
     );
   });
 
-  test('canjea insforge_code con el verifier que corresponde al challenge', () async {
-    final client = _FakeClient();
-    final signIn = InsforgeSocialSignIn(
-      authClient: client,
-      launcher: _Launcher(
-        () async => 'fluent://oauth/insforge?insforge_code=abc',
-      ),
-    );
+  test(
+    'canjea insforge_code con el verifier que corresponde al challenge',
+    () async {
+      final client = _FakeClient();
+      final signIn = InsforgeSocialSignIn(
+        authClient: client,
+        launcher: _Launcher(
+          () async => 'fluent://oauth/insforge?insforge_code=abc',
+        ),
+      );
 
-    final tokens = await signIn.signIn(SocialProvider.google);
+      final tokens = await signIn.signIn(SocialProvider.google);
 
-    expect(tokens?.accessToken, 'access-abc');
-    expect(
-      InsforgeSocialSignIn.codeChallengeFor(client.verifier!),
-      client.challenge,
-    );
-  });
+      expect(tokens?.accessToken, 'access-abc');
+      expect(
+        InsforgeSocialSignIn.codeChallengeFor(client.verifier!),
+        client.challenge,
+      );
+    },
+  );
 
   test('cerrar el navegador devuelve null, no un error', () async {
     final signIn = InsforgeSocialSignIn(

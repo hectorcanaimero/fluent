@@ -527,35 +527,6 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
                   );
                 },
               ),
-              // MAL-24: la sesión de cortesía es de una vez — el resumen es
-              // el mejor momento para convertir ese "probaste gratis" en
-              // "conectá tu cuenta", con el entusiasmo todavía fresco.
-              FutureBuilder<SessionDetailResult>(
-                future: _detailFuture,
-                builder: (context, snapshot) {
-                  if (snapshot.data?.session.courtesy != true) {
-                    return const SizedBox.shrink();
-                  }
-                  return Padding(
-                    padding: const EdgeInsets.only(bottom: AppSpacing.md),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        _Banner(
-                          text: l10n.summaryCourtesyBanner,
-                          color: AppColors.primarySoft,
-                        ),
-                        const SizedBox(height: AppSpacing.sm),
-                        ElevatedButton(
-                          key: const Key('summary_connect_provider_button'),
-                          onPressed: () => context.go('/providers'),
-                          child: Text(l10n.summaryCourtesyConnectButton),
-                        ),
-                      ],
-                    ),
-                  );
-                },
-              ),
               const SizedBox(height: AppSpacing.xl),
               if (tooShort)
                 OutlinedButton(

@@ -66,7 +66,7 @@ void main() {
     expect(find.text('Intermedio'), findsOneWidget);
     expect(find.text('B1'), findsNothing);
     // Entradas fijas a la cuenta de IA y a la memoria del tutor.
-    expect(find.byKey(const Key('settings_ai_account')), findsOneWidget);
+    expect(find.byKey(const Key('settings_ai_account')), findsNothing);
     expect(find.byKey(const Key('settings_memory')), findsOneWidget);
 
     await tester.dragUntilVisible(

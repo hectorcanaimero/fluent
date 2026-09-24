@@ -40,10 +40,6 @@ Future<void> _pumpOnboarding(
         builder: (context, state) => const OnboardingFlow(),
       ),
       GoRoute(
-        path: '/providers',
-        builder: (context, state) => const Text('PROVIDERS_SCREEN'),
-      ),
-      GoRoute(
         path: '/',
         builder: (context, state) => const Text('HOME_SCREEN'),
       ),
@@ -123,46 +119,8 @@ void main() {
     await tester.tap(find.byKey(const Key('onboarding_continue_button')));
     await tester.pumpAndSettle();
 
-    // FakeApi arranca con OpenRouter ya conectado (dato de ejemplo), así
-    // que el onboarding no debería pasar por /providers.
     expect(find.text('HOME_SCREEN'), findsOneWidget);
-    expect(find.text('PROVIDERS_SCREEN'), findsNothing);
   });
-
-  testWidgets(
-    'MAL-24: al terminar sin proveedor conectado, ya no fuerza /providers',
-    (tester) async {
-      final api = FakeApi(artificialDelay: Duration.zero);
-      await api.disconnectProvider('openrouter');
-      final container = ProviderContainer(
-        overrides: [
-          tokenStoreProvider.overrideWithValue(
-            InMemoryTokenStore()
-              ..write(const AuthTokens(accessToken: 'a', refreshToken: 'r')),
-          ),
-          fluentApiProvider.overrideWith((ref) => api),
-          timezoneProvider.overrideWith((ref) async => 'UTC'),
-        ],
-      );
-      await container.read(authControllerProvider.notifier).bootstrap();
-      addTearDown(container.dispose);
-      await _pumpOnboarding(tester, container);
-      await _goThroughLevel(tester);
-
-      await tester.tap(find.byKey(const Key('onboarding_interest_travel')));
-      await tester.tap(find.byKey(const Key('onboarding_interest_technology')));
-      await tester.tap(
-        find.byKey(const Key('onboarding_interest_movies-series')),
-      );
-      await tester.pumpAndSettle();
-
-      await tester.tap(find.byKey(const Key('onboarding_continue_button')));
-      await tester.pumpAndSettle();
-
-      expect(find.text('HOME_SCREEN'), findsOneWidget);
-      expect(find.text('PROVIDERS_SCREEN'), findsNothing);
-    },
-  );
 
   testWidgets(
     'MAL-12: usa la timezone inyectada, no el valor fijo de Buenos Aires',

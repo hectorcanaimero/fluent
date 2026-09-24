@@ -22,6 +22,7 @@ import type { Env } from '../../config/env.js';
 import type { Level } from '../../db/schema.js';
 import type { BriefFactInput } from '../../db/rpc.js';
 import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
+import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
 import { buildBriefMessages } from '../../llm/prompts/brief.js';
@@ -103,7 +104,7 @@ export class CoachingBriefService {
     for (const row of credentialRows) {
       try {
         credentials.push({
-          provider: row.provider,
+          provider: row.provider as LlmProvider,
           apiKey: this.crypto.decrypt(userId, row.provider, row),
         });
       } catch (error) {
@@ -117,7 +118,7 @@ export class CoachingBriefService {
     }
 
     const preference: ModelPreference | null = preferenceRow
-      ? { provider: preferenceRow.brief_provider, model: preferenceRow.brief_model }
+      ? { provider: preferenceRow.brief_provider as LlmProvider, model: preferenceRow.brief_model }
       : null;
 
     // --- 3. LLM -------------------------------------------------------------

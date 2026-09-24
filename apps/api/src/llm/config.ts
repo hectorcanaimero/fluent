@@ -6,7 +6,7 @@
  * módulo LLM, así que viven aquí y se reexportarán desde allí sin duplicar valores.
  */
 
-export type Provider = 'openrouter' | 'gemini';
+export type Provider = '9router';
 export type Purpose = 'turn' | 'brief' | 'weekly';
 export type Locale = 'es' | 'pt-BR';
 export type Level = 'A2' | 'B1' | 'B2';
@@ -21,6 +21,17 @@ export interface ProviderConfig {
 }
 
 export const PROVIDERS: Readonly<Record<Provider, ProviderConfig>> = Object.freeze({
+  '9router': Object.freeze({
+    baseUrl: 'http://localhost:20128/v1',
+    extraHeaders: Object.freeze({}),
+    supportsJsonMode: true,
+  }),
+});
+
+/** Proveedores previos a 9router; siguen en código hasta F1.2–F1.4 y F5. */
+export type LegacyProvider = 'openrouter' | 'gemini';
+
+export const LEGACY_PROVIDERS: Readonly<Record<LegacyProvider, ProviderConfig>> = Object.freeze({
   openrouter: Object.freeze({
     baseUrl: 'https://openrouter.ai/api/v1',
     extraHeaders: Object.freeze({
@@ -36,7 +47,11 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderConfig>> = Object.free
   }),
 });
 
-export const PROVIDER_IDS: readonly Provider[] = Object.freeze(['openrouter', 'gemini'] as const);
+export const PROVIDER_IDS: readonly Provider[] = Object.freeze(['9router'] as const);
+
+/** Combos de 9router: el modelo lógico que se pide, no un modelo concreto. */
+export const PRO_COMBO = 'fluent-pro';
+export const FREE_COMBO = 'fluent-free';
 
 /** SPEC-03 §3: presupuesto de contexto por turno. */
 export const HISTORY_TURNS = 8;
@@ -85,20 +100,14 @@ export interface FallbackModel {
  * entorno `FALLBACK_MODELS` (JSON).
  */
 export const DEFAULT_FALLBACK_MODELS: readonly FallbackModel[] = Object.freeze([
-  Object.freeze({ provider: 'gemini' as const, model: 'gemini-2.5-flash' }),
-  Object.freeze({ provider: 'openrouter' as const, model: 'google/gemma-3-27b-it:free' }),
-  Object.freeze({
-    provider: 'openrouter' as const,
-    model: 'meta-llama/llama-3.3-70b-instruct:free',
-  }),
-  Object.freeze({ provider: 'openrouter' as const, model: 'qwen/qwen3-235b-a22b:free' }),
+  Object.freeze({ provider: '9router' as const, model: FREE_COMBO }),
 ]);
 
 /** SPEC-03 §6: respuesta degradada cuando se agota la cadena en un turno. */
 export const DEGRADED_REPLY = 'Sorry, I lost my train of thought. Could you say that again?';
 
 function isProvider(value: unknown): value is Provider {
-  return value === 'openrouter' || value === 'gemini';
+  return value === '9router';
 }
 
 /** Parsea la variable de entorno `FALLBACK_MODELS`. Ante cualquier error usa el valor por defecto. */

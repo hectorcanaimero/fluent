@@ -24,10 +24,11 @@ function emptyTierGroups(): ModelTierGroupsDto {
 export function groupModelsByProviderAndTier(
   models: readonly CatalogModel[],
 ): Record<Provider, ModelTierGroupsDto> {
-  const result: Record<Provider, ModelTierGroupsDto> = {
+  // ponytail: sin clave '9router' hasta que F5 rehaga el catálogo.
+  const result = {
     openrouter: emptyTierGroups(),
     gemini: emptyTierGroups(),
-  };
+  } as Record<Provider, ModelTierGroupsDto>;
 
   for (const model of models) {
     result[model.provider][model.tier].push(toModelOptionDto(model));

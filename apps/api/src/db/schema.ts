@@ -28,7 +28,8 @@ export type Locale = 'es' | 'pt-BR';
 export type Plan = 'free' | 'pro';
 
 /** Proveedor de LLM (SPEC-01 §2.4, §2.5) */
-export type Provider = 'openrouter' | 'gemini';
+/** Incluye los proveedores previos a 9router hasta que F1.2–F1.4 y F5 los retiren. */
+export type Provider = '9router' | 'openrouter' | 'gemini';
 
 /** Estado de la credencial de proveedor (SPEC-01 §2.4) */
 export type CredentialStatus = 'active' | 'revoked' | 'error';

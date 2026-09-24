@@ -12,6 +12,7 @@ import {
   isValidCallbackUrl,
 } from './pkce.js';
 import { PkceStore } from './pkce.store.js';
+import { FREE_COMBO } from '../llm/config.js';
 import { ProviderApiClient } from './provider-api.client.js';
 import type { PkceStartDtoResponse, ProviderStatusDto } from './providers.types.js';
 
@@ -48,6 +49,7 @@ export function parseProvider(value: string): Provider {
 const DEFAULT_MODEL_BY_PROVIDER: Record<Provider, string> = {
   gemini: 'gemini-2.5-flash',
   openrouter: 'google/gemma-3-27b-it:free',
+  '9router': FREE_COMBO,
 };
 
 @Injectable()

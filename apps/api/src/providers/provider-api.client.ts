@@ -1,5 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
-import { PROVIDERS } from '../llm/config.js';
+import { LEGACY_PROVIDERS as PROVIDERS } from '../llm/config.js';
 
 /**
  * Token de inyección del `fetch` que usan las llamadas salientes a

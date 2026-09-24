@@ -28,29 +28,55 @@ como lo deja F2.3.
 
 ## F3.1 — Package: contrato de API
 
-### F3.1.T1 — core/api sin proveedores y con plan
+### F3.1.T1 — core/api sin proveedores, con plan, y borrado de la pantalla de proveedores
 
-- `apps/mobile/lib/core/api/fluent_api.dart`: quitar `startOpenRouterPkce`,
-  `completeOpenRouterPkce`, `connectGemini`, `disconnectProvider`,
-  `getProviderStatus`. Mantener `getModels` y `putModelPreference`.
-- `apps/mobile/lib/core/api/models.dart`: `MeResponse` pierde `providers` y la
-  extensión `MeResponseProviders`; gana `plan` (`String`, `'free'` por defecto)
-  y `planExpiresAt` (`DateTime?`), más una extensión `MeResponsePlan` con
-  `bool get isPro` (plan `pro` y fecha nula o futura). Borrar `ProviderInfo`,
+El job `mobile` del CI corre `flutter analyze` y `flutter test` sobre toda la
+app, así que el cambio de contrato y el borrado de quien lo usaba tienen que
+ir en el mismo PR. Esta tarea hace las dos cosas.
+
+Parte del trabajo ya está en `main` (PR 41 y PR 46): `fluent_api.dart`,
+`http_fluent_api.dart`, `fake_api.dart` y `models.dart` ya no tienen
+proveedores y `MeResponse` ya tiene `plan`, `planExpiresAt` e `isPro`;
+`models.g.dart` y `models.freezed.dart` pueden estar regenerados o no.
+Empezar por `flutter analyze` y arreglar todo lo que salga.
+
+**Contrato (`lib/core/api`)**
+- `fluent_api.dart` sin `startOpenRouterPkce`, `completeOpenRouterPkce`,
+  `connectGemini`, `disconnectProvider`, `getProviderStatus`. Se mantienen
+  `getModels` y `putModelPreference`.
+- `models.dart`: `MeResponse` sin `providers` ni `MeResponseProviders`; con
+  `plan` (`String`, `'free'` por defecto), `planExpiresAt` (`DateTime?`) y la
+  extensión `MeResponsePlan` con `bool get isPro`. Sin `ProviderInfo`,
   `ProviderCredits`, `ProviderStatusResult`, `PkceStartResult`.
-  `ModelsCatalog.providers` sigue siendo `Map<String, ModelTierGroups>`.
-- `http_fluent_api.dart` y `fake_api.dart` acordes. El fake devuelve un usuario
-  Free por defecto y expone un `setPlan('pro')` para tests y demo.
-- Regenerar `models.g.dart` y `models.freezed.dart`.
-- Tests en `apps/mobile/test/core/api/` adaptados: parseo de `plan` y
-  `planExpiresAt`, `isPro` con fecha vencida.
+- `fake_api.dart` devuelve un usuario Free y expone `setPlan('pro')`.
+- Regenerar con `dart run build_runner build --delete-conflicting-outputs`.
 
-Done when: `flutter analyze` sin errores en `lib/core`; `flutter test test/core`
-pasa. El resto de la app puede no compilar todavía (lo arreglan F3.2 y F3.3).
+**Borrado (lo que antes era F3.2)**
+- Mover `lib/features/providers/data/oauth_launcher.dart` a
+  `lib/features/auth/data/oauth_launcher.dart` (lo usa `social_sign_in.dart`)
+  y actualizar imports.
+- Borrar `lib/features/providers/` entera y `test/features/providers/`.
+- `lib/app/router.dart`: quitar la ruta `/providers`.
+- `lib/core/providers.dart`: quitar `ProvidersData`, `canPracticeProvider` y
+  todo provider de Riverpod que dependa de `hasActiveProvider`; `HomeData`
+  deja de mirar proveedores.
+- `lib/features/onboarding/presentation/onboarding_flow.dart`: quitar el
+  salto a `/providers` (MAL-24).
+- `lib/features/home/`: quitar cualquier aviso o CTA de «conecta un proveedor».
+- `lib/features/settings/presentation/settings_screen.dart`: la entrada
+  «Proveedores» se quita; la pantalla de plan la añade F3.3.
+- Tests de home, onboarding y `core/api` adaptados: ya no preparan
+  proveedores; `models_test.dart` cubre `plan`, `planExpiresAt` e `isPro`
+  con fecha vencida.
+
+Done when: `flutter analyze` sin errores ni warnings nuevos y `flutter test`
+completo en verde, los dos ejecutados en `apps/mobile` antes de terminar.
+`grep -rn "ProviderInfo\|PkceStart\|/providers" apps/mobile/lib` no
+devuelve nada.
 
 - **Model**: claude/claude-sonnet-5
-- **Estimate**: 3h
-- **Reason**: Cambio de contrato mecánico con codegen.
+- **Estimate**: 5h
+- **Reason**: Cambio de contrato más borrado guiado por el compilador; sin lógica nueva.
 - **Dependencies**:
 - **Files**:
   - `apps/mobile/lib/core/api/fluent_api.dart`
@@ -59,52 +85,41 @@ pasa. El resto de la app puede no compilar todavía (lo arreglan F3.2 y F3.3).
   - `apps/mobile/lib/core/api/models.dart`
   - `apps/mobile/lib/core/api/models.g.dart`
   - `apps/mobile/lib/core/api/models.freezed.dart`
-  - `apps/mobile/test/core/api/http_fluent_api_sessions_test.dart`
-  - `apps/mobile/test/core/api/http_fluent_api_turn_stream_test.dart`
-  - `apps/mobile/test/core/api/models_test.dart`
-
-## F3.2 — Package: quitar proveedores
-
-### F3.2.T1 — Borrar la pantalla y el flujo de proveedores
-
-- Mover `apps/mobile/lib/features/providers/data/oauth_launcher.dart` a
-  `apps/mobile/lib/features/auth/data/oauth_launcher.dart` (lo usa
-  `social_sign_in.dart`) y actualizar imports.
-- Borrar `apps/mobile/lib/features/providers/` entera y
-  `apps/mobile/test/features/providers/`.
-- `apps/mobile/lib/app/router.dart`: quitar la ruta `/providers`.
-- `apps/mobile/lib/core/providers.dart`: quitar `ProvidersData`,
-  `canPracticeProvider` y cualquier provider de Riverpod que dependa de
-  `hasActiveProvider`; `HomeData` deja de mirar proveedores.
-- `apps/mobile/lib/features/onboarding/presentation/onboarding_flow.dart`:
-  quitar el salto a `/providers` y su comentario (MAL-24).
-- `apps/mobile/lib/features/home/`: cualquier aviso o CTA de «conecta un
-  proveedor» desaparece.
-- Asset `assets/auth/google_g.png` y demás de auth se quedan.
-
-Done when: `flutter analyze` limpio; `flutter test` pasa (los tests de home y
-onboarding dejan de preparar proveedores); `grep -rn "providers" apps/mobile/lib --include=*.dart`
-solo devuelve `core/providers.dart` (Riverpod) y `MeResponse`-nada.
-
-- **Model**: claude/claude-sonnet-5
-- **Estimate**: 3h
-- **Reason**: Borrado guiado por el compilador.
-- **Dependencies**: F3.1.T1
-- **Files**:
+  - `apps/mobile/lib/core/providers.dart`
+  - `apps/mobile/lib/app/router.dart`
   - `apps/mobile/lib/features/providers/data/oauth_launcher.dart`
   - `apps/mobile/lib/features/providers/domain/providers_data.dart`
   - `apps/mobile/lib/features/providers/presentation/providers_screen.dart`
   - `apps/mobile/lib/features/auth/data/oauth_launcher.dart`
   - `apps/mobile/lib/features/auth/data/social_sign_in.dart`
-  - `apps/mobile/lib/app/router.dart`
-  - `apps/mobile/lib/core/providers.dart`
   - `apps/mobile/lib/features/onboarding/presentation/onboarding_flow.dart`
   - `apps/mobile/lib/features/home/presentation/home_screen.dart`
   - `apps/mobile/lib/features/home/presentation/home_shell.dart`
+  - `apps/mobile/lib/features/settings/presentation/settings_screen.dart`
+  - `apps/mobile/test/core/api/http_fluent_api_sessions_test.dart`
+  - `apps/mobile/test/core/api/http_fluent_api_turn_stream_test.dart`
+  - `apps/mobile/test/core/api/models_test.dart`
   - `apps/mobile/test/features/providers/providers_screen_test.dart`
   - `apps/mobile/test/features/onboarding/onboarding_flow_test.dart`
   - `apps/mobile/test/features/home/home_screen_test.dart`
   - `apps/mobile/test/features/home/home_shell_test.dart`
+  - `apps/mobile/test/features/settings/settings_screen_test.dart`
+
+## F3.2 — Package: quitar proveedores
+
+### F3.2.T1 — Absorbida por F3.1.T1
+
+Sin trabajo. El job `mobile` del CI analiza toda la app, así que el borrado
+de la pantalla de proveedores no puede ir en un PR separado del cambio de
+contrato: todo está en F3.1.T1. Se conserva el id para no romper las
+dependencias de F3.3 y F5.1. Marcar hecha con nota cuando F3.1.T1 esté en
+`main`.
+
+- **Model**: claude/claude-haiku-4-5-20251001
+- **Estimate**: 15m
+- **Reason**: No hay nada que ejecutar.
+- **Dependencies**: F3.1.T1
+- **Files**:
 
 ## F3.3 — Package: pantalla de plan
 
@@ -140,7 +155,7 @@ como Free; ningún `l10n.providers*` queda referenciado.
 - **Model**: claude/claude-sonnet-5
 - **Estimate**: 4h
 - **Reason**: UI nueva sencilla más l10n; sin lógica de negocio.
-- **Dependencies**: F3.1.T1, F3.2.T1
+- **Dependencies**: F3.1.T1
 - **Files**:
   - `apps/mobile/lib/features/settings/presentation/plan_screen.dart`
   - `apps/mobile/lib/features/settings/presentation/model_picker_screen.dart`

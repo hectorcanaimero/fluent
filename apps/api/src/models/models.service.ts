@@ -1,6 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
-import { CredentialsService } from '../credentials/credentials.service.js';
+import type { Env } from '../config/env.js';
 import type { Provider } from '../db/schema.js';
 import {
   DEFAULT_AVG_TOKENS_IN,
@@ -15,14 +16,6 @@ import { buildEstimatePerSession, groupModelsByProviderAndTier } from './models.
 import { ModelPreferencesRepository } from './model-preferences.repository.js';
 import type { ModelPreferenceResultDto, ModelsCatalogDto } from './models.types.js';
 import { SessionUsageRepository } from './session-usage.repository.js';
-
-/** Etiqueta legible del rol, para distinguir el motivo en el `message` (no en el `error`). */
-const ROLE_LABELS = {
-  chat: 'de chat',
-  brief: 'de resumen de sesión (brief)',
-} as const;
-
-type ModelRole = keyof typeof ROLE_LABELS;
 
 /**
  * `ModelsModule` (SPEC-02 §4.2, SPEC-03 §7): catálogo de modelos y
@@ -40,25 +33,23 @@ export class ModelsService {
   private readonly catalog: ModelCatalogService;
 
   constructor(
-    private readonly credentialsService: CredentialsService,
     private readonly modelPreferences: ModelPreferencesRepository,
     private readonly sessionUsage: SessionUsageRepository,
     redisService: RedisService,
     @Inject(PROVIDER_FETCH) fetchImpl: FetchLike,
+    config: ConfigService<Env, true>,
   ) {
-    this.catalog = new ModelCatalogService({ cache: redisService, fetchImpl });
+    this.catalog = new ModelCatalogService({
+      cache: redisService,
+      fetchImpl,
+      baseUrl: config.get('NINEROUTER_URL', { infer: true }),
+      apiKey: config.get('NINEROUTER_API_KEY', { infer: true }),
+    });
   }
 
-  /**
-   * `GET /models` (SPEC-02 §4.2). Descarga el catálogo con la credencial de
-   * OpenRouter del usuario si la tiene (para que el catálogo devuelto
-   * refleje exactamente lo que ese usuario puede usar; la lista pública de
-   * OpenRouter no cambia según la key, pero la llamada sí la necesita si
-   * OpenRouter empieza a exigirla) y, si no, sin `Authorization` (el
-   * endpoint de modelos de OpenRouter es público).
-   */
+  /** `GET /models` (SPEC-02 §4.2): catálogo de 9router con la key del operador, igual para todos. */
   async getCatalog(userId: string): Promise<ModelsCatalogDto> {
-    const models = await this.listCatalogModels(userId);
+    const models = await this.listCatalogModels();
     const { avgTokensIn, avgTokensOut } = await this.averageTokens(userId);
 
     return {
@@ -70,8 +61,8 @@ export class ModelsService {
   }
 
   /**
-   * `PUT /me/models` (SPEC-02 §4.2): valida crédito activo y pertenencia al
-   * catálogo para **cada** rol (chat y brief, que pueden usar proveedores
+   * `PUT /me/models` (SPEC-02 §4.2): valida la pertenencia al catálogo
+   * (el plan llega en F2.2) para **cada** rol (chat y brief, que pueden usar proveedores
    * distintos) antes de escribir nada, y devuelve la preferencia guardada en
    * la forma plana que espera la app.
    */
@@ -79,10 +70,10 @@ export class ModelsService {
     userId: string,
     dto: UpdateModelPreferencesDto,
   ): Promise<ModelPreferenceResultDto> {
-    const models = await this.listCatalogModels(userId);
+    const models = await this.listCatalogModels();
 
-    await this.assertRoleIsAvailable(userId, 'chat', dto.chatProvider, dto.chatModel, models);
-    await this.assertRoleIsAvailable(userId, 'brief', dto.briefProvider, dto.briefModel, models);
+    this.assertRoleIsAvailable(dto.chatProvider, dto.chatModel, models);
+    this.assertRoleIsAvailable(dto.briefProvider, dto.briefModel, models);
 
     const saved = await this.modelPreferences.upsert(userId, {
       chat_provider: dto.chatProvider,
@@ -99,27 +90,12 @@ export class ModelsService {
     };
   }
 
-  /**
-   * `400 MODEL_NOT_AVAILABLE` si el usuario no tiene credencial activa del
-   * proveedor elegido para este rol, o si el modelo no está en el catálogo
-   * de ese proveedor. El `error` es el mismo código en los dos casos (SPEC-02
-   * §6 solo define uno); el `message` sí distingue el motivo.
-   */
-  private async assertRoleIsAvailable(
-    userId: string,
-    role: ModelRole,
+  /** `400 MODEL_NOT_AVAILABLE` si el modelo no está en el catálogo de ese proveedor. */
+  private assertRoleIsAvailable(
     provider: Provider,
     modelId: string,
     models: readonly CatalogModel[],
-  ): Promise<void> {
-    const credential = await this.credentialsService.find(userId, provider);
-    if (credential === null || credential.status !== 'active') {
-      throw ApiException.of(
-        'MODEL_NOT_AVAILABLE',
-        `No tenés una credencial activa de '${provider}' para elegirlo como modelo ${ROLE_LABELS[role]}. Conectá el proveedor primero.`,
-      );
-    }
-
+  ): void {
     const exists = models.some((model) => model.provider === provider && model.id === modelId);
     if (!exists) {
       throw ApiException.of(
@@ -130,17 +106,15 @@ export class ModelsService {
   }
 
   /**
-   * Catálogo completo (OpenRouter + Gemini). Si la descarga de OpenRouter
-   * falla y `ModelCatalogService` no tiene ninguna caché con la que
-   * responder, lanza un error crudo (con la API key ya redactada, ver
-   * `catalog.service.ts::redact`); aquí se convierte en un `ApiException`
+   * Catálogo de 9router. Si la descarga falla y `ModelCatalogService` no
+   * tiene ninguna caché con la que responder, lanza un error crudo (con la
+   * API key ya redactada, ver `catalog.service.ts::redact`); aquí se convierte en un `ApiException`
    * con el formato de SPEC-02 §6 en vez de dejar que llegue como 500 sin
    * formato al cliente.
    */
-  private async listCatalogModels(userId: string): Promise<CatalogModel[]> {
-    const apiKey = await this.credentialsService.getActiveApiKey(userId, 'openrouter');
+  private async listCatalogModels(): Promise<CatalogModel[]> {
     try {
-      return await this.catalog.listModels(apiKey ?? undefined);
+      return await this.catalog.listModels();
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw ApiException.of(

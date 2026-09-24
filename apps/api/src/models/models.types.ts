@@ -24,14 +24,11 @@ export interface ModelTierGroupsDto {
 }
 
 /**
- * Cuerpo de `GET /models` (SPEC-02 §4.2). `providers` siempre trae las dos
- * claves (`openrouter` y `gemini`), con los tres tiers aunque alguno quede
- * vacío — la app (`ModelsCatalog.providers: Map<String, ModelTierGroups>`)
- * no distingue "vacío" de "ausente", pero SPEC-02 §4.2 pide explícitamente
- * las dos claves siempre presentes.
+ * Cuerpo de `GET /models` (SPEC-02 §4.2). `providers` trae la única clave
+ * `9router`, con los tres tiers aunque alguno quede vacío.
  */
 export interface ModelsCatalogDto {
-  readonly providers: Record<Provider, ModelTierGroupsDto>;
+  readonly providers: Record<'9router', ModelTierGroupsDto>;
   readonly estimatePerSession: Record<string, number>;
 }
 

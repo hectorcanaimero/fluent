@@ -1,5 +1,4 @@
 import type { CatalogModel } from '../llm/catalog.service.js';
-import type { Provider } from '../db/schema.js';
 import type { ModelOptionDto, ModelTierGroupsDto } from './models.types.js';
 
 /**
@@ -16,25 +15,17 @@ function emptyTierGroups(): ModelTierGroupsDto {
 }
 
 /**
- * Agrupa el catálogo completo (OpenRouter + Gemini) en
- * `{ openrouter: { free, budget, premium }, gemini: { free, budget, premium } }`
- * (SPEC-02 §4.2). Las dos claves de proveedor y los tres tiers **siempre**
- * están presentes, aunque queden vacíos — la app los espera así.
+ * Agrupa el catálogo en `{ '9router': { free, budget, premium } }` (SPEC-02
+ * §4.2). Los tres tiers siempre están presentes, aunque queden vacíos.
  */
 export function groupModelsByProviderAndTier(
   models: readonly CatalogModel[],
-): Record<Provider, ModelTierGroupsDto> {
-  // ponytail: sin clave '9router' hasta que F5 rehaga el catálogo.
-  const result = {
-    openrouter: emptyTierGroups(),
-    gemini: emptyTierGroups(),
-  } as Record<Provider, ModelTierGroupsDto>;
-
+): Record<'9router', ModelTierGroupsDto> {
+  const group = emptyTierGroups();
   for (const model of models) {
-    result[model.provider][model.tier].push(toModelOptionDto(model));
+    group[model.tier].push(toModelOptionDto(model));
   }
-
-  return result;
+  return { '9router': group };
 }
 
 /**

@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv, Env } from './config/env.js';
 import { buildPinoHttpOptions } from './config/logger.js';
@@ -13,9 +12,7 @@ import { ProfilesModule } from './profiles/profiles.module.js';
 import { BadgesModule } from './badges/badges.module.js';
 import { PushModule } from './push/push.module.js';
 import { GroupsModule } from './groups/groups.module.js';
-import { CredentialsModule } from './credentials/credentials.module.js';
 import { ModelsModule } from './models/models.module.js';
-import { ProvidersModule } from './providers/providers.module.js';
 import { LlmInfraModule } from './llm/llm-infra.module.js';
 import { CommonModule } from './common/common.module.js';
 import { RateLimitModule } from './rate-limit/rate-limit.module.js';
@@ -41,11 +38,6 @@ import { AdminModule } from './admin/admin.module.js';
         }),
       }),
     }),
-    // Bus de eventos en proceso (`@nestjs/event-emitter`): lo usa el evento
-    // `credential.error` de SPEC-03 §2 (`NestLlmEventBus` lo emite,
-    // `CredentialErrorListener` lo consume). Es global, así que basta con
-    // registrarlo una vez aquí.
-    EventEmitterModule.forRoot(),
     RedisModule,
     InsforgeModule,
     I18nModule,
@@ -69,16 +61,8 @@ import { AdminModule } from './admin/admin.module.js';
     BadgesModule,
     PushModule,
     GroupsModule,
-    CredentialsModule,
-    // `ModelsModule` (catálogo y preferencias, SPEC-02 §4.2, PR-02/T5) va
-    // antes de `ProvidersModule`: éste la importa para reutilizar
-    // `ModelPreferencesRepository` en `DELETE /providers/:provider`
-    // (docs/specs/pendientes/PR-02.md PEND-26). El orden de este array no
-    // afecta a la resolución de dependencias entre módulos (solo importa
-    // para el orden de los `APP_GUARD`, ver PEND-23); se declara así para
-    // que se lea en el mismo orden en que se resuelven.
+    // `ModelsModule`: catálogo y preferencias (SPEC-02 §4.2, PR-02/T5).
     ModelsModule,
-    ProvidersModule,
     // Implementaciones de `LlmCallSink` y `LlmEventBus` (PR-03) sobre
     // InsForge y `EventEmitter2`; PR-04 y PR-05 importan este módulo.
     LlmInfraModule,

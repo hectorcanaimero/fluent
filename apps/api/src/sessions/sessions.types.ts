@@ -14,17 +14,6 @@ export interface SessionInfoDto {
   readonly endedAt: string | null;
   readonly xpEarned: number;
   readonly modelUsed: string | null;
-  /**
-   * `true` si esta sesión corre con la credencial del owner del grupo
-   * (MAL-24). La app lo usa para explicar de quién es la key y para pedir
-   * conectar una propia al terminar.
-   *
-   * Sale de `sessions.courtesy`, así que viaja en todas las lecturas de
-   * sesión y no solo en la apertura: tras reiniciar la app a mitad de sesión,
-   * el cliente sigue sabiendo con qué key está hablando. Solo se incluye
-   * cuando es `true`; si falta, es `false`.
-   */
-  readonly courtesy?: boolean;
 }
 
 /**

@@ -10,8 +10,8 @@
  *   ejecución diaria (`RssIngestService.run()`, PR-05/T2, ya fusionado).
  *   Repetirlo aquí sería trabajo duplicado sobre la misma tabla. Ver
  *   PEND-24 de docs/specs/pendientes/PR-05.md.
- * - Tokens de PKCE y locks caducados: los gestiona el TTL de Redis. Nota
- *   informativa de la spec, no una tarea de este job.
+ * - Locks caducados: los gestiona el TTL de Redis. Nota informativa de la
+ *   spec, no una tarea de este job.
  *
  * Clase pura (sin decorador de Nest), mismo patrón que `RssIngestService`:
  * se construye con un `useFactory` en `maintenance.module.ts` para poder

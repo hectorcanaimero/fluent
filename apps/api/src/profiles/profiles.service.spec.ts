@@ -1,7 +1,4 @@
-import {
-  PendingActionsService,
-  WEEKLY_SUMMARY_NEEDS_CREDENTIAL,
-} from './pending-actions.service.js';
+import { PendingActionsService } from './pending-actions.service.js';
 import { ProfilesService } from './profiles.service.js';
 import type { ProfilesRepository } from './profiles.repository.js';
 import type { GroupsRepository } from '../groups/groups.repository.js';
@@ -209,13 +206,13 @@ describe('ProfilesService.getMe', () => {
 
   // `pendingActions` deja de ser siempre `[]` al fusionar PR-05
   // (docs/specs/pendientes/PR-02.md PEND-76).
-  it('expone la acción pendiente que deja el job weekly-summary en Redis', async () => {
+  it('expone las acciones pendientes que devuelve el servicio', async () => {
     const profile = makeProfile();
-    const { service } = createService(profile, null, [WEEKLY_SUMMARY_NEEDS_CREDENTIAL]);
+    const { service } = createService(profile, null, ['SOME_ACTION']);
 
     const me = await service.getMe('user-1');
 
-    expect(me.pendingActions).toEqual(['WEEKLY_SUMMARY_NEEDS_CREDENTIAL']);
+    expect(me.pendingActions).toEqual(['SOME_ACTION']);
   });
 });
 

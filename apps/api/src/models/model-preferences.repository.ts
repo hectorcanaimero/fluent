@@ -19,14 +19,8 @@ export interface ModelPreferenceWriteInput {
  * Repositorio de `model_preferences` (SPEC-01 §2.5) sobre el cliente admin
  * de InsForge.
  *
- * Vivió temporalmente en `apps/api/src/providers/` desde PR-02/T4 (solo con
- * `find`/`deleteIfUsesProvider`, lo mínimo que necesitaba
- * `DELETE /providers/:provider` para «resetear preferencias que usaban» el
- * proveedor desconectado). PR-02/T5 lo mueve aquí, al módulo de catálogo y
- * preferencias de modelo (`GET /models`, `PUT /me/models`), y le añade
- * `upsert` (docs/specs/pendientes/PR-02.md PEND-26, actualizado). Sigue
- * siendo la **única** clase que escribe esta tabla: `ProvidersModule`
- * importa `ModelsModule` para reutilizarla en vez de duplicarla.
+ * Vive en el módulo de catálogo y preferencias de modelo (`GET /models`,
+ * `PUT /me/models`) y es la **única** clase que escribe esta tabla.
  */
 @Injectable()
 export class ModelPreferencesRepository {
@@ -43,40 +37,9 @@ export class ModelPreferencesRepository {
   }
 
   /**
-   * Borra la fila de preferencias si alguno de los dos roles (chat o brief)
-   * usaba el proveedor que se acaba de desconectar. Devuelve `true` si borró
-   * algo.
-   *
-   * Decisión (docs/specs/pendientes/PR-02.md PEND-26): «resetear» es **borrar
-   * la fila entera**, no reasignar el otro proveedor. Es lo más simple y
-   * deja al usuario en el mismo estado que antes de elegir modelo: sin
-   * preferencia, la cadena de fallback del operador (SPEC-03 §2) sigue
-   * funcionando con las credenciales que le queden.
-   */
-  async deleteIfUsesProvider(userId: string, provider: Provider): Promise<boolean> {
-    const preference = await this.find(userId);
-    if (
-      preference === null ||
-      (preference.chat_provider !== provider && preference.brief_provider !== provider)
-    ) {
-      return false;
-    }
-
-    const result = await this.admin.database
-      .from(TABLES.modelPreferences)
-      .delete()
-      .eq('user_id', userId);
-
-    unwrapInsforge(result);
-    return true;
-  }
-
-  /**
    * Escribe la preferencia del usuario (`PUT /me/models`, SPEC-02 §4.2).
    * `user_id` es la PK de la tabla (SPEC-01 §2.5): UPDATE primero y, si no
-   * había fila, INSERT — mismo patrón que
-   * `CredentialsRepository.save` (`provider_credentials`, único también por
-   * `user_id`+`provider`), con el mismo manejo de la carrera de INSERT
+   * había fila, INSERT, con manejo de la carrera de INSERT
    * concurrente (violación de UNIQUE/PK, código `23505`, reintenta con
    * UPDATE).
    */

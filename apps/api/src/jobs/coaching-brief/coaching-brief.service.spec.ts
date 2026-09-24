@@ -56,7 +56,7 @@ function makeRepository(state: RepoState) {
     loadCurrentBriefText: vi.fn(async () => 'Work on past simple.'),
     loadKnownFacts: vi.fn(async () => ['The learner has a dog.']),
     loadModelPreference: vi.fn(async () => ({
-      brief_provider: 'openrouter' as const,
+      brief_provider: '9router' as const,
       brief_model: 'anthropic/claude-3.5-sonnet',
     })),
     applyBrief: vi.fn(async () => {
@@ -82,7 +82,7 @@ function makeLlm(overrides?: Partial<Record<string, unknown>>): LlmService {
         recurring_errors: [{ category: 'past_simple' as const, example: 'I go yesterday' }],
       },
       modelUsed: 'anthropic/claude-3.5-sonnet',
-      provider: 'openrouter' as const,
+      provider: '9router' as const,
       usage: { tokensIn: 100, tokensOut: 50 },
       degraded: false,
       attempts: [],
@@ -128,7 +128,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
       .calls[0][0];
     expect(request.purpose).toBe('brief');
     expect(request.preference).toEqual({
-      provider: 'openrouter',
+      provider: '9router',
       model: 'anthropic/claude-3.5-sonnet',
     });
     expect(request.plan).toBe('pro');

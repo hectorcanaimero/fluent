@@ -23,7 +23,7 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     duration_sec: 600,
     turns_count: 4,
     xp_earned: 60,
-    chat_model_used: 'gemini-2.5-flash',
+    chat_model_used: 'fluent-free',
     callback_fact_id: null,
     brief_job_status: 'done',
     courtesy: false,

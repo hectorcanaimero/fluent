@@ -26,9 +26,7 @@ import { TurnsService } from './turns.service.js';
  * /sessions/:id`, y tras T4 también `POST /sessions/:id/turns/stream` (mismo
  * `TurnsService`, respuesta SSE de `turn-stream.ts`).
  *
- * - `LlmModule` aporta el `LlmService` ya construido **y** reexporta
- *   `LlmInfraModule` → `CredentialsModule`, de donde sale `CredentialsService`
- *   (`CredentialsSource` de SPEC-03 §2).
+ * - `LlmModule` aporta el `LlmService` ya construido.
  * - `InsforgeModule` (cliente admin) y `RedisModule` (`RedisService`) son
  *   globales, así que no hace falta importarlos.
  * - `BossService` es una clase pura de `src/game/` (sin `@Injectable`): se

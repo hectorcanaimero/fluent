@@ -114,16 +114,16 @@ describe('toModelPreferenceDto', () => {
   it('maps the row to the camelCase contract', () => {
     expect(
       toModelPreferenceDto({
-        chatProvider: 'openrouter',
+        chatProvider: '9router',
         chatModel: 'some/model',
-        briefProvider: 'gemini',
-        briefModel: 'gemini-flash',
+        briefProvider: '9router',
+        briefModel: 'fluent-free',
       }),
     ).toEqual({
-      chatProvider: 'openrouter',
+      chatProvider: '9router',
       chatModel: 'some/model',
-      briefProvider: 'gemini',
-      briefModel: 'gemini-flash',
+      briefProvider: '9router',
+      briefModel: 'fluent-free',
     });
   });
 });

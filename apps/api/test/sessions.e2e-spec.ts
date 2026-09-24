@@ -5,7 +5,6 @@ import request from 'supertest';
 import { App } from 'supertest/types';
 import type { InsForgeClient } from '@insforge/sdk';
 import { BOSS_TOPICS, ROLEPLAYS } from '../src/content/index.js';
-import { CredentialsService } from '../src/credentials/credentials.service.js';
 import { LlmService } from '../src/llm/llm.service.js';
 import { SESSION_RANDOM } from '../src/sessions/sessions.constants.js';
 import {
@@ -105,7 +104,6 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
   interface ReadyUserOptions {
     readonly level?: 'A2' | 'B1' | 'B2';
     readonly sessionsCount?: number;
-    readonly withCredential?: boolean;
     readonly onboarded?: boolean;
     /** `false` siembra el perfil sin `group_id` (MEJ-33). */
     readonly withGroup?: boolean;
@@ -126,11 +124,6 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       onboardedAt: options.onboarded === false ? null : undefined,
       groupId: options.withGroup === false ? null : sharedGroupId,
     });
-
-    if (options.withCredential !== false) {
-      // La cifra con la clave maestra de `.env.test`; nunca es una key real.
-      await app.get(CredentialsService).saveApiKey(user.id, 'openrouter', 'clave-falsa');
-    }
 
     return user;
   }
@@ -249,10 +242,6 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       seededUserIds.push(member.user.id);
     }
 
-    await app
-      .get(CredentialsService)
-      .saveApiKey(requester.user.id, 'openrouter', 'clave-falsa');
-
     const topic = `Desafio ${randomUUID().slice(0, 8)}`;
     seededSessionIds.push(
       await seedSession(admin, {
@@ -309,7 +298,6 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
     for (const userId of seededUserIds) {
       await admin.database.from('sessions').delete().eq('user_id', userId);
       await admin.database.from('facts').delete().eq('user_id', userId);
-      await admin.database.from('provider_credentials').delete().eq('user_id', userId);
     }
     await cleanupE2eData(admin, { userIds: seededUserIds, groupIds: seededGroupIds });
     await app.close();
@@ -421,21 +409,6 @@ maybeDescribe('Apertura de sesión (e2e, InsForge)', () => {
       .single();
     expect((data as { last_used_at: string | null }).last_used_at).not.toBeNull();
     expect((data as { use_count: number }).use_count).toBe(1);
-  }, 60_000);
-
-  it('sin credencial activa → 409 PROVIDER_NOT_CONNECTED', async () => {
-    const user = await newReadyUser('S nocred', { withCredential: false });
-
-    const response = await openSession(
-      user,
-      { kind: 'free_topic', topic: 'Sin proveedor' },
-      409,
-    );
-
-    expect(response.body).toMatchObject({
-      error: 'PROVIDER_NOT_CONNECTED',
-      statusCode: 409,
-    });
   }, 60_000);
 
   it('challengeFromUserId de un desafío realmente ofrecido → 201 y se persiste (MAL-19)', async () => {

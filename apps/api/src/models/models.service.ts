@@ -11,13 +11,15 @@ import {
 } from '../llm/catalog.service.js';
 import { effectivePlan } from '../profiles/plan.js';
 import { ProfilesRepository } from '../profiles/profiles.repository.js';
-import { PROVIDER_FETCH, type FetchLike } from '../providers/provider-api.client.js';
 import { RedisService } from '../redis/redis.service.js';
 import type { UpdateModelPreferencesDto } from './dto/update-model-preferences.dto.js';
 import { buildEstimatePerSession, groupModelsByProviderAndTier } from './models.mapper.js';
 import { ModelPreferencesRepository } from './model-preferences.repository.js';
 import type { ModelPreferenceResultDto, ModelsCatalogDto } from './models.types.js';
 import { SessionUsageRepository } from './session-usage.repository.js';
+
+/** `fetch` inyectable para el catálogo de 9router (los tests pasan uno falso). */
+export const MODELS_FETCH = Symbol('MODELS_FETCH');
 
 /**
  * `ModelsModule` (SPEC-02 §4.2, SPEC-03 §7): catálogo de modelos y
@@ -27,8 +29,7 @@ import { SessionUsageRepository } from './session-usage.repository.js';
  * en vez de reescribir el parseo, los tiers o el filtrado: solo le pasa
  * `RedisService` como `CacheStore` (compatible desde PR-02/T1,
  * docs/specs/pendientes/PR-02.md PEND-07) y el `fetch` inyectable de
- * `PROVIDER_FETCH` (mismo token de T4, reutilizado vía `ProviderFetchModule`
- * para no crear uno nuevo).
+ * `MODELS_FETCH`.
  */
 @Injectable()
 export class ModelsService {
@@ -39,7 +40,7 @@ export class ModelsService {
     private readonly sessionUsage: SessionUsageRepository,
     private readonly profiles: ProfilesRepository,
     redisService: RedisService,
-    @Inject(PROVIDER_FETCH) fetchImpl: FetchLike,
+    @Inject(MODELS_FETCH) fetchImpl: typeof fetch,
     config: ConfigService<Env, true>,
   ) {
     this.catalog = new ModelCatalogService({

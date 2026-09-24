@@ -1,6 +1,5 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
-import { EventEmitterModule } from '@nestjs/event-emitter';
 import { LoggerModule } from 'nestjs-pino';
 import { validateEnv, Env } from './config/env.js';
 import { buildPinoHttpOptions } from './config/logger.js';
@@ -40,12 +39,6 @@ import { JobsModule } from './jobs/jobs.module.js';
         }),
       }),
     }),
-    // Bus de eventos en proceso: `NestLlmEventBus` (PR-02/T4) emite
-    // `credential.error` (SPEC-03 §2) y `CredentialErrorListener` lo consume
-    // para marcar `provider_credentials`. El worker es un proceso Nest
-    // independiente, así que necesita su propio `EventEmitterModule.forRoot()`
-    // igual que `AppModule`; sin él los jobs no marcarían la credencial.
-    EventEmitterModule.forRoot(),
     RedisModule,
     InsforgeModule,
     QueuesModule,

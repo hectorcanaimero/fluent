@@ -17,7 +17,7 @@ export interface FactPatch {
  * **Aislamiento entre usuarios (crítico, alcance de T6):** la clave admin no
  * aplica RLS, así que cada UPDATE/DELETE de un hecho concreto filtra
  * **siempre** por `id` **y** `user_id` a la vez, nunca por `id` a secas —
- * igual que `CredentialsRepository.remove`/`updateRow` en PR-02/T4. Un hecho
+ * nunca por `id` a secas. Un hecho
  * de otro usuario simplemente no matchea ninguna fila y el método devuelve
  * `null`/`false`, que el servicio traduce a `403 FORBIDDEN` (PEND-42).
  */
@@ -87,8 +87,8 @@ export class MemoryRepository {
    * Crea o actualiza el `text` del brief del usuario (`PUT /memory/brief`,
    * SPEC-02 §4.4). Solo toca `text`: `level_hint`, `recurring_errors` y
    * `source_session_id` son cosa de `apply_brief` (PR-01 §21), no de esta
-   * edición manual (PEND-44). UPDATE primero e INSERT si no había fila, igual
-   * que `CredentialsRepository.save` en PR-02/T4 (evita depender de `upsert`
+   * edición manual (PEND-44). UPDATE primero e INSERT si no había fila
+   * (evita depender de `upsert`
    * de PostgREST y resuelve la carrera de dos escrituras concurrentes con la
    * violación de UNIQUE de la PK `user_id`).
    */

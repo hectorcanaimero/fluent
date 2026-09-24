@@ -5,7 +5,6 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { getRoleplay } from '../content/index.js';
-import { CredentialsService, type ActiveCredential } from '../credentials/credentials.service.js';
 import type { Fact, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
@@ -44,8 +43,6 @@ const GROUP_REQUIRED_MESSAGE =
   'Unite a un grupo con tu código de invitación para practicar.';
 const SESSION_ALREADY_ACTIVE_MESSAGE =
   'Ya tienes una sesión abierta. Retómala o ciérrala antes de empezar otra.';
-const PROVIDER_NOT_CONNECTED_MESSAGE =
-  'Conecta un proveedor de IA antes de empezar una sesión.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NO_BOSS_TOPIC_MESSAGE =
   'No quedan temas de reto disponibles para tu nivel; elige otro tipo de sesión.';
@@ -81,7 +78,6 @@ export class SessionsService {
 
   constructor(
     private readonly repository: SessionsRepository,
-    private readonly credentials: CredentialsService,
     private readonly llm: LlmService,
     private readonly boss: BossService,
     private readonly challenges: ChallengesService,
@@ -98,8 +94,7 @@ export class SessionsService {
     }
 
     // 1.b Grupo obligatorio para practicar (MEJ-33, SPEC-02 §4.2). Va antes
-    // que todo lo demás, así que **también** cierra la sesión de cortesía: sin
-    // grupo no hay owner del que tomar prestada la key.
+    // que todo lo demás.
     if (profile.group_id === null) {
       throw ApiException.of('GROUP_REQUIRED', GROUP_REQUIRED_MESSAGE);
     }
@@ -112,17 +107,7 @@ export class SessionsService {
       });
     }
 
-    // 3. Credencial activa de algún proveedor (SPEC-04 §3.1, SPEC-03 §2), o
-    // la sesión de cortesía si el usuario todavía no conectó ninguna (MAL-24).
-    const own = await this.credentials.listActive(userId);
-    const courtesy = own.length === 0 ? await this.resolveCourtesy(userId, profile) : null;
-    const credentials = own.length > 0 ? own : (courtesy?.credentials ?? []);
-
-    if (credentials.length === 0) {
-      throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
-    }
-
-    // 4. Validación por `kind` (SPEC-04 §3.2).
+    // 3. Validación por `kind` (SPEC-04 §3.2).
     const scenario = await this.resolveScenario(userId, dto, profile);
 
     // 4.b El desafío se valida contra la lista real del usuario (SPEC-07 §7).
@@ -168,41 +153,15 @@ export class SessionsService {
     // §2.14: la fila de auditoría referencia la sesión). Lo que solo se sabe
     // después (`chat_model_used`, `callback_fact_id`) se escribe en un UPDATE
     // posterior. Ver docs/specs/pendientes/PR-04.md.
-    // Se marca **antes** de crear la sesión: si el marcado falla porque otra
-    // apertura simultánea se la llevó, esta no debe abrirse con la key del
-    // owner. Es la misma razón por la que el UPDATE lleva `is(null)`.
-    if (courtesy !== null) {
-      const claimed = await this.repository.markCourtesySessionUsed(userId);
-      if (!claimed) {
-        throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
-      }
-    }
+    const session: Session = await this.repository.createSession({
+      userId,
+      kind: dto.kind,
+      topic: scenario.topic,
+      newsItemId: scenario.newsItemId,
+      challengeFromUserId: dto.challengeFromUserId ?? null,
+    });
 
-    let session: Session;
-    try {
-      session = await this.repository.createSession({
-        userId,
-        kind: dto.kind,
-        topic: scenario.topic,
-        newsItemId: scenario.newsItemId,
-        challengeFromUserId: dto.challengeFromUserId ?? null,
-        courtesy: courtesy !== null,
-      });
-    } catch (error) {
-      // La cortesía ya está marcada: si la sesión no llega a existir, se
-      // devuelve. Si no, el usuario perdería su única sesión gratuita por un
-      // fallo nuestro sin haber hablado.
-      if (courtesy !== null) {
-        await this.repository.releaseCourtesySession(userId);
-      }
-      throw error;
-    }
-
-    // En una sesión de cortesía **no** se aplica la preferencia de modelo: sin
-    // ella, `ModelResolver` solo ofrece la cadena de `FALLBACK_MODELS`, que es
-    // la gratuita. La key es del owner del grupo y no se le puede gastar
-    // dinero en modelos de pago (MAL-24).
-    const preference = courtesy === null ? await this.findPreference(userId) : null;
+    const preference = await this.findPreference(userId);
 
     let opening: OpeningOutcome;
     let callbackUsed = false;
@@ -236,13 +195,6 @@ export class SessionsService {
         // Fallo inesperado (no "cadena agotada"): no dejamos una sesión
         // `active` fantasma que bloquee al usuario con SESSION_ALREADY_ACTIVE.
         await this.repository.deleteSession(userId, session.id);
-        // Y si era de cortesía, se le devuelve: quemar su única sesión
-        // gratuita por un error nuestro, sin que haya llegado a hablar, es
-        // justo lo contrario de lo que MAL-24 viene a arreglar. La cadena
-        // agotada no entra aquí a propósito: ahí sí hay sesión y saludo.
-        if (courtesy !== null) {
-          await this.repository.releaseCourtesySession(userId);
-        }
         throw error;
       }
 
@@ -330,37 +282,6 @@ export class SessionsService {
     if (pending) {
       await this.boss.recordSkip(userId);
     }
-  }
-
-  /**
-   * Credencial prestada para la sesión de cortesía (MAL-24), o `null` si no
-   * corresponde.
-   *
-   * Solo se ofrece si el usuario no ha gastado la suya, tiene grupo, el grupo
-   * tiene owner, el owner no es él mismo y el owner tiene alguna credencial
-   * activa. La infraestructura de usar la key del owner ya existía para el
-   * resumen semanal (SPEC-05 §4); esto la reutiliza.
-   */
-  private async resolveCourtesy(
-    userId: string,
-    profile: Profile,
-  ): Promise<{ credentials: readonly ActiveCredential[] } | null> {
-    if (profile.courtesy_session_used_at !== null || profile.group_id === null) {
-      return null;
-    }
-
-    const ownerId = await this.repository.findGroupOwnerId(profile.group_id);
-    if (ownerId === null || ownerId === userId) {
-      return null;
-    }
-
-    const credentials = await this.credentials.listActive(ownerId);
-    if (credentials.length === 0) {
-      return null;
-    }
-
-    this.logger.log(`Sesión de cortesía para ${userId} con la credencial de ${ownerId}`);
-    return { credentials };
   }
 
   /**

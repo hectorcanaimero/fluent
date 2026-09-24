@@ -4,7 +4,7 @@ import type { ConfigService } from '@nestjs/config';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import type { WeeklyLeaderboardEntry } from '../../db/rpc.js';
 import {
-  WeeklySummaryNoOwnerCredentialError,
+  WeeklySummaryNoOwnerError,
   WeeklySummaryService,
 } from './weekly-summary.service.js';
 import type { WeeklyOwnerRow, WeeklySummaryRepository } from './weekly-summary.repository.js';
@@ -45,7 +45,7 @@ function makeRepository(overrides: RepoOverrides = {}) {
     ),
     loadMemberStreak: vi.fn(async () => 2),
     loadOwnerModelPreference: vi.fn(async () => ({
-      brief_provider: 'openrouter' as const,
+      brief_provider: '9router' as const,
       brief_model: 'anthropic/claude-3.5-sonnet',
     })),
     loadOwnerProfile: vi.fn(async (): Promise<WeeklyOwnerRow | null> => ({
@@ -62,7 +62,7 @@ function makeLlm(overrides?: Partial<Record<string, unknown>>): LlmService {
     complete: vi.fn(async () => ({
       data: { text: 'GG team! Ana crushed it this week 🎉' },
       modelUsed: 'anthropic/claude-3.5-sonnet',
-      provider: 'openrouter' as const,
+      provider: '9router' as const,
       usage: { tokensIn: 80, tokensOut: 40 },
       degraded: false,
       attempts: [],
@@ -107,7 +107,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     );
 
     await expect(service.run(GROUP_ID, WEEK_START)).rejects.toBeInstanceOf(
-      WeeklySummaryNoOwnerCredentialError,
+      WeeklySummaryNoOwnerError,
     );
     expect(llm.complete).not.toHaveBeenCalled();
   });
@@ -132,7 +132,7 @@ describe('WeeklySummaryService (SPEC-05 §4)', () => {
     expect(request.purpose).toBe('weekly');
     expect(request.userId).toBe(OWNER_ID);
     expect(request.preference).toEqual({
-      provider: 'openrouter',
+      provider: '9router',
       model: 'anthropic/claude-3.5-sonnet',
     });
     expect(request.plan).toBe('free');
@@ -210,7 +210,7 @@ describe('WeeklySummaryService · pie de marca (MEJ-41)', () => {
       complete: vi.fn(async () => ({
         data: { text: 'a'.repeat(1200) },
         modelUsed: 'anthropic/claude-3.5-sonnet',
-        provider: 'openrouter' as const,
+        provider: '9router' as const,
         usage: { tokensIn: 80, tokensOut: 40 },
         degraded: false,
         attempts: [],

@@ -1,9 +1,8 @@
 /**
  * Orquestación de la cadena de fallback (SPEC-03 §2).
  *
- * Módulo puro: registra cada intento a través de `LlmCallSink` y avisa de las
- * credenciales rotas con un evento `credential.error`. PR-02 implementa ambas
- * interfaces contra InsForge.
+ * Módulo puro: registra cada intento a través de `LlmCallSink`; PR-02 lo
+ * implementa contra InsForge.
  */
 import {
   APICallError,
@@ -44,19 +43,6 @@ export interface LlmCallRecord {
 
 export interface LlmCallSink {
   record(call: LlmCallRecord): void | Promise<void>;
-}
-
-export type CredentialErrorCode = 'AUTH_ERROR' | 'NO_CREDITS';
-
-export interface CredentialErrorEvent {
-  readonly userId: string;
-  readonly provider: Provider;
-  readonly code: CredentialErrorCode;
-}
-
-/** Bus mínimo. PR-02 lo conecta con el `EventEmitter` de NestJS. */
-export interface LlmEventBus {
-  emit(event: 'credential.error', payload: CredentialErrorEvent): void;
 }
 
 /** Se lanza cuando se agota la cadena de candidatos (SPEC-03 §2 y §6). */
@@ -131,7 +117,6 @@ export interface LlmServiceDeps {
   readonly provider: (modelId: string) => LanguageModel;
   readonly resolver: Pick<ModelResolver, 'resolve'>;
   readonly sink?: LlmCallSink;
-  readonly events?: LlmEventBus;
 }
 
 const NOOP_SINK: LlmCallSink = { record: () => {} };
@@ -148,7 +133,6 @@ const NOOP_SINK: LlmCallSink = { record: () => {} };
 function recordQuietly(sink: LlmCallSink, call: LlmCallRecord): Promise<void> {
   return Promise.resolve(sink.record(call)).catch(() => undefined);
 }
-const NOOP_EVENTS: LlmEventBus = { emit: () => {} };
 
 // ponytail: mapa local hasta que F1.4 traiga `reasoningEffortFor` en `ninerouter-models.ts`.
 function reasoningEffortFor(model: string): string | undefined {
@@ -190,13 +174,11 @@ export class LlmService {
   private readonly provider: (modelId: string) => LanguageModel;
   private readonly resolver: Pick<ModelResolver, 'resolve'>;
   private readonly sink: LlmCallSink;
-  private readonly events: LlmEventBus;
 
   constructor(deps: LlmServiceDeps) {
     this.provider = deps.provider;
     this.resolver = deps.resolver;
     this.sink = deps.sink ?? NOOP_SINK;
-    this.events = deps.events ?? NOOP_EVENTS;
   }
 
   async complete<T>(request: LlmServiceRequest<T>): Promise<LlmServiceResult<T>> {
@@ -321,13 +303,8 @@ export class LlmService {
           promptVersion,
         });
 
-        if (callError.isCredentialError) {
+        if (callError.isAuthError) {
           bannedProviders.add(candidate.provider);
-          this.events.emit('credential.error', {
-            userId: request.userId,
-            provider: candidate.provider,
-            code: callError.status === 'no_credits' ? 'NO_CREDITS' : 'AUTH_ERROR',
-          });
         }
       }
     }

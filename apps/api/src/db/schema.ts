@@ -28,11 +28,7 @@ export type Locale = 'es' | 'pt-BR';
 export type Plan = 'free' | 'pro';
 
 /** Proveedor de LLM (SPEC-01 §2.4, §2.5) */
-/** Incluye los proveedores previos a 9router hasta que F1.2–F1.4 y F5 los retiren. */
-export type Provider = '9router' | 'openrouter' | 'gemini';
-
-/** Estado de la credencial de proveedor (SPEC-01 §2.4) */
-export type CredentialStatus = 'active' | 'revoked' | 'error';
+export type Provider = '9router';
 
 /** Tipo de sesión (SPEC-01 §2.6) */
 export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss';
@@ -178,22 +174,6 @@ export interface GroupMember {
 }
 
 /**
- * Credencial de proveedor (SPEC-01 §2.4)
- * Tabla: provider_credentials
- */
-export interface ProviderCredential {
-  id: string;
-  user_id: string;
-  provider: Provider;
-  key_ciphertext: string; // PostgREST serializa bytea como texto; la API nunca debe loguearlo
-  key_iv: string; // 12 bytes serializados como texto
-  key_tag: string; // 16 bytes serializados como texto
-  status: CredentialStatus;
-  last_error: string | null;
-  connected_at: string; // ISO 8601 timestamp
-}
-
-/**
  * Preferencias de modelo (SPEC-01 §2.5, RF-2.6, RF-2.7)
  * Tabla: model_preferences
  */
@@ -226,8 +206,6 @@ export interface Session {
   chat_model_used: string | null;
   callback_fact_id: string | null;
   brief_job_status: BriefJobStatus;
-  /** MAL-24: corre con la credencial del owner del grupo. */
-  courtesy: boolean;
 }
 
 /**
@@ -377,7 +355,6 @@ export const TABLES = {
   groups: 'groups',
   invitations: 'invitations',
   groupMembers: 'group_members',
-  providerCredentials: 'provider_credentials',
   modelPreferences: 'model_preferences',
   sessions: 'sessions',
   turns: 'turns',

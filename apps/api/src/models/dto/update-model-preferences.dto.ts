@@ -1,8 +1,8 @@
 import { IsIn, IsNotEmpty, IsString, MaxLength } from 'class-validator';
 import type { Provider } from '../../db/schema.js';
 
-/** Los dos proveedores de SPEC-01 §2.4/§2.5 (CHECK de las columnas `*_provider`). */
-const PROVIDER_IDS: readonly Provider[] = ['openrouter', 'gemini'];
+/** Único proveedor: 9router (CHECK de las columnas `*_provider`). */
+const PROVIDER_IDS: readonly Provider[] = ['9router'];
 
 /** Longitud máxima aceptada para un id de modelo (holgada a propósito). */
 const MAX_MODEL_ID_LENGTH = 200;
@@ -10,9 +10,8 @@ const MAX_MODEL_ID_LENGTH = 200;
 /**
  * Cuerpo de `PUT /me/models` (SPEC-02 §4.2): elige el modelo de chat y el de
  * brief, cada uno con su propio proveedor. `class-validator` solo comprueba
- * la forma (proveedor conocido, cadena no vacía); que exista credencial
- * activa del proveedor y que el modelo esté en su catálogo es una regla de
- * dominio que valida `ModelsService` (`400 MODEL_NOT_AVAILABLE`, no
+ * la forma (proveedor conocido, cadena no vacía); que el modelo esté en su
+ * catálogo y el plan lo permita es una regla de dominio que valida `ModelsService` (`400 MODEL_NOT_AVAILABLE`, no
  * `VALIDATION`, si falla).
  */
 export class UpdateModelPreferencesDto {

@@ -28,25 +28,6 @@ export const PROVIDERS: Readonly<Record<Provider, ProviderConfig>> = Object.free
   }),
 });
 
-/** Proveedores previos a 9router; siguen en código hasta F1.2–F1.4 y F5. */
-export type LegacyProvider = 'openrouter' | 'gemini';
-
-export const LEGACY_PROVIDERS: Readonly<Record<LegacyProvider, ProviderConfig>> = Object.freeze({
-  openrouter: Object.freeze({
-    baseUrl: 'https://openrouter.ai/api/v1',
-    extraHeaders: Object.freeze({
-      'HTTP-Referer': 'https://fluent.app',
-      'X-Title': 'Fluent',
-    }),
-    supportsJsonMode: true,
-  }),
-  gemini: Object.freeze({
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
-    extraHeaders: Object.freeze({}),
-    supportsJsonMode: true,
-  }),
-});
-
 export const PROVIDER_IDS: readonly Provider[] = Object.freeze(['9router'] as const);
 
 /** Combos de 9router: el modelo lógico que se pide, no un modelo concreto. */

@@ -11,7 +11,9 @@ import type { InsForgeClient } from '@insforge/sdk';
 
 import { INSFORGE_ADMIN_CLIENT } from '../../insforge/insforge.constants.js';
 import { TABLES } from '../../db/schema.js';
-import type { Locale, Provider } from '../../db/schema.js';
+import type { Profile, Provider } from '../../db/schema.js';
+
+export type WeeklyOwnerRow = Pick<Profile, 'locale' | 'plan' | 'plan_expires_at'>;
 import {
   RPC,
   type WeeklyLeaderboardArgs,
@@ -67,8 +69,8 @@ export abstract class WeeklySummaryRepository {
   abstract loadOwnerModelPreference(
     ownerId: string,
   ): Promise<WeeklyModelPreferenceRow | null>;
-  /** `profiles.locale` del owner, para `{summary_language}` (SPEC-03 §4.3). */
-  abstract loadOwnerLocale(ownerId: string): Promise<Locale | null>;
+  /** Locale (`{summary_language}`, SPEC-03 §4.3) y plan del owner. */
+  abstract loadOwnerProfile(ownerId: string): Promise<WeeklyOwnerRow | null>;
   abstract insertWeeklySummary(row: InsertWeeklySummaryRow): Promise<void>;
 }
 
@@ -192,17 +194,13 @@ export class InsforgeWeeklySummaryRepository extends WeeklySummaryRepository {
     );
   }
 
-  async loadOwnerLocale(ownerId: string): Promise<Locale | null> {
+  async loadOwnerProfile(ownerId: string): Promise<WeeklyOwnerRow | null> {
     const result = await this.db
       .from(TABLES.profiles)
-      .select('locale')
+      .select('locale,plan,plan_expires_at')
       .eq('user_id', ownerId)
       .maybeSingle();
-    const row = unwrap(
-      result as PostgrestLike<{ locale: Locale }>,
-      'leer el locale del owner',
-    );
-    return row?.locale ?? null;
+    return unwrap(result as PostgrestLike<WeeklyOwnerRow>, 'leer el perfil del owner');
   }
 
   async insertWeeklySummary(row: InsertWeeklySummaryRow): Promise<void> {

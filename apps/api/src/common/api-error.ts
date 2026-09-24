@@ -56,6 +56,8 @@ export const API_ERROR_STATUS = {
    * `GROUP_REQUIRED`: la petición está bien formada y es la regla de negocio
    * la que la rechaza.
    */
+  /** Elegir un modelo de pago con el plan Free (F2.2). */
+  PLAN_REQUIRED: 403,
   /** Agotada la cadena de fallback de proveedores (RF-2.5). */
   LLM_UNAVAILABLE: 503,
   /** Límites de SPEC-02 §7. */

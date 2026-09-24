@@ -9,8 +9,8 @@
  *   2. `stats` por miembro: XP y sesiones de `weekly_leaderboard`, top 3
  *      temas de `sessions` agregados en TypeScript (`top-topics.ts`), y
  *      `groupStreak` de `groups.group_streak`.
- *   3. Credencial: la del operador (`CredentialsService`). Sin owner se lanza
- *      para que BullMQ reintente (SPEC-05 §4 paso 3).
+ *   3. Owner: su plan elige el modelo (la key es la del operador). Sin owner
+ *      se lanza para que BullMQ reintente (SPEC-05 §4 paso 3).
  *   4. `LlmService.complete` con `buildWeeklyMessages` y `WeeklyOutput`.
  *      Guarda `text` y `stats` en `weekly_summaries`.
  *
@@ -24,12 +24,12 @@ import { ConfigService } from '@nestjs/config';
 
 import { appendWeeklyFooter } from '../../common/weekly-footer.js';
 import type { Env } from '../../config/env.js';
-import { CredentialsService } from '../../credentials/credentials.service.js';
 import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ModelPreference } from '../../llm/model-resolver.js';
 import { buildWeeklyMessages, type WeeklyMember } from '../../llm/prompts/weekly.js';
 import { WeeklyOutput } from '../../llm/schemas.js';
+import { effectivePlan } from '../../profiles/plan.js';
 import type { Locale } from '../../db/schema.js';
 import { computeTopTopics } from './top-topics.js';
 import { WeeklySummaryRepository } from './weekly-summary.repository.js';
@@ -81,7 +81,6 @@ export class WeeklySummaryService {
 
   constructor(
     private readonly repository: WeeklySummaryRepository,
-    private readonly credentialsService: CredentialsService,
     private readonly llm: LlmService,
     configService: ConfigService<Env, true>,
     private readonly push: PushService,
@@ -120,8 +119,6 @@ export class WeeklySummaryService {
     }
     const ownerId = group.owner_id;
 
-    const credentials = await this.credentialsService.listActive(ownerId);
-
     // --- 3. stats por miembro ---------------------------------------------
     const leaderboard = await this.repository.loadLeaderboard(groupId, weekStart);
     const members: WeeklyMember[] = await Promise.all(
@@ -140,10 +137,11 @@ export class WeeklySummaryService {
       }),
     );
 
-    const [preferenceRow, ownerLocale] = await Promise.all([
+    const [preferenceRow, owner] = await Promise.all([
       this.repository.loadOwnerModelPreference(ownerId),
-      this.repository.loadOwnerLocale(ownerId),
+      this.repository.loadOwnerProfile(ownerId),
     ]);
+    const ownerLocale = owner?.locale ?? null;
     const preference: ModelPreference | null = preferenceRow
       ? { provider: preferenceRow.brief_provider as LlmProvider, model: preferenceRow.brief_model }
       : null;
@@ -161,7 +159,7 @@ export class WeeklySummaryService {
       purpose: 'weekly',
       messages,
       schema: WeeklyOutput,
-      credentials,
+      plan: owner ? effectivePlan(owner) : 'free',
       preference,
       promptVersion: this.promptVersion,
     });

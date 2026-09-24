@@ -10,7 +10,7 @@ import {
   type LlmCallSink,
   type LlmEventBus,
 } from './llm.service.js';
-import { ModelResolver, type ActiveCredential } from './model-resolver.js';
+import { ModelResolver } from './model-resolver.js';
 import { TurnOutput } from './schemas.js';
 
 const FALLBACKS = [
@@ -18,8 +18,6 @@ const FALLBACKS = [
   { provider: '9router' as const, model: 'fluent-free' },
   { provider: '9router' as const, model: 'cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast' },
 ];
-
-const CREDENTIALS: ActiveCredential[] = [{ provider: '9router', apiKey: 'router-key' }];
 
 const REPLY = { reply: 'Nice! What happened next?', corrections: [] };
 
@@ -138,7 +136,7 @@ function request() {
     purpose: 'turn' as const,
     messages: [{ role: 'system' as const, content: 'You are Fluent.' }],
     schema: TurnOutput,
-    credentials: CREDENTIALS,
+    plan: 'pro' as const,
     promptVersion: '1',
   };
 }
@@ -278,13 +276,17 @@ describe('LlmService.complete', () => {
     expect(sink.rows.map((r) => r.attempt)).toEqual([1, 2, 3]);
   });
 
-  it('sin credenciales falla sin llamar al modelo', async () => {
+  it('plan free solo prueba fluent-free y marca degradado si había preferencia', async () => {
     const { service: svc, calls } = service([OK]);
 
-    await expect(svc.complete({ ...request(), credentials: [] })).rejects.toBeInstanceOf(
-      LlmUnavailableError,
-    );
-    expect(calls).toHaveLength(0);
+    const result = await svc.complete({
+      ...request(),
+      plan: 'free',
+      preference: { provider: '9router', model: 'fluent-pro' },
+    });
+
+    expect(calls.map((c) => c.model)).toEqual(['fluent-free']);
+    expect(result.degraded).toBe(true);
   });
 });
 

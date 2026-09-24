@@ -2,6 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import { DEFAULT_AVG_TOKENS_IN, DEFAULT_AVG_TOKENS_OUT } from '../llm/catalog.service.js';
 import { NINEROUTER_MODELS } from '../llm/ninerouter-models.js';
+import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { ModelPreferencesRepository } from './model-preferences.repository.js';
 import { ModelsService } from './models.service.js';
 import type { SessionUsageRepository } from './session-usage.repository.js';
@@ -27,6 +28,11 @@ function fakeFetch(body = ROUTER_JSON): typeof fetch {
 interface Doubles {
   modelPreferences: { upsert: ReturnType<typeof vi.fn> };
   sessionUsage: { averageTokensForRecentSessions: ReturnType<typeof vi.fn> };
+  profiles: { findByUserId: ReturnType<typeof vi.fn> };
+}
+
+function profileWithPlan(plan: 'free' | 'pro') {
+  return { findByUserId: vi.fn().mockResolvedValue({ plan, plan_expires_at: null }) };
 }
 
 function makeService(overrides: Partial<Doubles> = {}, fetchImpl: typeof fetch = fakeFetch()) {
@@ -42,12 +48,14 @@ function makeService(overrides: Partial<Doubles> = {}, fetchImpl: typeof fetch =
       })),
     },
     sessionUsage: { averageTokensForRecentSessions: vi.fn().mockResolvedValue(null) },
+    profiles: profileWithPlan('pro'),
     ...overrides,
   };
 
   const service = new ModelsService(
     doubles.modelPreferences as unknown as ModelPreferencesRepository,
     doubles.sessionUsage as unknown as SessionUsageRepository,
+    doubles.profiles as unknown as ProfilesRepository,
     new InMemoryCache() as never,
     fetchImpl,
     {
@@ -187,5 +195,24 @@ describe('ModelsService.updatePreferences (PUT /me/models, SPEC-02 §4.2)', () =
       briefProvider: '9router',
       briefModel: 'fluent-pro',
     });
+  });
+
+  it('rejects a paid model with PLAN_REQUIRED (403) when the user is on Free', async () => {
+    const { service, modelPreferences } = makeService({ profiles: profileWithPlan('free') });
+
+    await expect(service.updatePreferences('user-1', dto)).rejects.toSatisfy((error: unknown) => {
+      expect((error as ApiException).code).toBe('PLAN_REQUIRED');
+      expect((error as ApiException).getApiBody().statusCode).toBe(403);
+      return true;
+    });
+    expect(modelPreferences.upsert).not.toHaveBeenCalled();
+  });
+
+  it('lets a Free user pick free models', async () => {
+    const { service, modelPreferences } = makeService({ profiles: profileWithPlan('free') });
+
+    await service.updatePreferences('user-1', { ...dto, briefModel: 'fluent-free' });
+
+    expect(modelPreferences.upsert).toHaveBeenCalledOnce();
   });
 });

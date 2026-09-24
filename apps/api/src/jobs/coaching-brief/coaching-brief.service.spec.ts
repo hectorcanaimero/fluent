@@ -1,6 +1,5 @@
 import type { ConfigService } from '@nestjs/config';
 
-import type { CredentialsService } from '../../credentials/credentials.service.js';
 import { LlmUnavailableError, type LlmService } from '../../llm/llm.service.js';
 import { CoachingBriefService } from './coaching-brief.service.js';
 import type {
@@ -11,12 +10,6 @@ import type { BriefJobStatus, Level } from '../../db/schema.js';
 
 const SESSION_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '22222222-2222-4222-8222-222222222222';
-function makeCredentials(): CredentialsService {
-  return {
-    listActive: vi.fn(async () => [{ provider: '9router', apiKey: 'operator-key' }]),
-  } as unknown as CredentialsService;
-}
-
 function makeConfig(promptVersion = 7): ConfigService<never, true> {
   return {
     get: (key: string) => (key === 'PROMPT_VERSION' ? promptVersion : undefined),
@@ -57,6 +50,8 @@ function makeRepository(state: RepoState) {
       level: state.profileLevel,
       locale: 'es' as const,
       suggested_level: state.suggestedLevel,
+      plan: 'pro' as const,
+      plan_expires_at: null,
     })),
     loadCurrentBriefText: vi.fn(async () => 'Work on past simple.'),
     loadKnownFacts: vi.fn(async () => ['The learner has a dog.']),
@@ -112,7 +107,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -129,7 +123,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     expect(repository.updateSuggestedLevel).toHaveBeenCalledWith(USER_ID, 'B2');
 
     // El prompt recibe el brief anterior y los hechos conocidos, y la llamada
-    // lleva la preferencia de modelo del rol `brief` y la credencial del operador.
+    // lleva la preferencia de modelo del rol `brief` y el plan efectivo del usuario.
     const request = (llm.complete as unknown as ReturnType<typeof vi.fn>).mock
       .calls[0][0];
     expect(request.purpose).toBe('brief');
@@ -137,9 +131,7 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
       provider: 'openrouter',
       model: 'anthropic/claude-3.5-sonnet',
     });
-    expect(request.credentials).toEqual([
-      { provider: '9router', apiKey: 'operator-key' },
-    ]);
+    expect(request.plan).toBe('pro');
     expect(request.promptVersion).toBe('7');
     expect(request.messages[1].content).toContain('Work on past simple.');
     expect(request.messages[1].content).toContain('The learner has a dog.');
@@ -151,7 +143,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -170,7 +161,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const repository = makeRepository(state);
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       makeLlm(),
       makeConfig(),
     );
@@ -188,7 +178,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     const llm = makeLlm();
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -210,7 +199,6 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     });
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       llm,
       makeConfig(),
     );
@@ -228,7 +216,6 @@ describe('CoachingBriefService.markFailed (MAL-20)', () => {
     const repository = makeRepository(state);
     const service = new CoachingBriefService(
       repository as unknown as CoachingBriefRepository,
-      makeCredentials(),
       makeLlm(),
       makeConfig(),
     );

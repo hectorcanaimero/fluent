@@ -17,7 +17,8 @@ import type { ZodType } from 'zod';
 
 import { MAX_ATTEMPTS, PURPOSE_DEFAULTS, type Provider, type Purpose } from './config.js';
 import { extractFirstJsonObject } from './json.js';
-import type { Candidate, ModelPreference, ModelResolver, ActiveCredential } from './model-resolver.js';
+import type { Plan } from '../db/schema.js';
+import type { Candidate, ModelPreference, ModelResolver } from './model-resolver.js';
 import {
   LlmCallError,
   type LlmCallStatus,
@@ -86,7 +87,7 @@ export interface LlmServiceRequest<T> {
   readonly purpose: Purpose;
   readonly messages: readonly LlmMessage[];
   readonly schema: ZodType<T>;
-  readonly credentials: readonly ActiveCredential[];
+  readonly plan: Plan;
   readonly preference?: ModelPreference | null;
   readonly promptVersion?: string;
   readonly maxTokens?: number;
@@ -204,7 +205,7 @@ export class LlmService {
     const promptVersion = request.promptVersion ?? null;
 
     const { candidates, preferenceDropped } = this.resolver.resolve({
-      credentials: request.credentials,
+      plan: request.plan,
       preference: request.preference,
     });
 
@@ -278,7 +279,7 @@ export class LlmService {
           provider: candidate.provider,
           usage: result.usage,
           // PEND-06: degradado si no respondió el primer candidato o si la
-          // preferencia del usuario se descartó por falta de credencial.
+          // preferencia del usuario se descartó porque su plan no la permite.
           degraded: attempt > 1 || preferenceDropped,
           attempts,
         };

@@ -7,7 +7,7 @@ import type { InsForgeClient } from '@insforge/sdk';
 import { ROLEPLAYS } from '../src/content/index.js';
 import { CredentialsService } from '../src/credentials/credentials.service.js';
 import { DEGRADED_REPLY, HISTORY_TURNS } from '../src/llm/config.js';
-import type { LlmMessage } from '../src/llm/llm.client.js';
+import type { LlmMessage } from '../src/llm/types.js';
 import { LlmService, LlmUnavailableError } from '../src/llm/llm.service.js';
 import { REDIS_CACHE_CLIENT } from '../src/redis/redis.constants.js';
 import { ConfigService } from '@nestjs/config';
@@ -424,7 +424,7 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
     // Se siembra el contador en el tope real de producción en vez de bajarlo
     // por env: así se prueba el valor que se va a desplegar y no se perturba
     // al resto de la suite, que comparte la misma app.
-    const cap = app.get(ConfigService).get('TURNS_DAILY_CAP', { infer: true }) as number;
+    const cap = app.get(ConfigService).get('TURNS_DAILY_CAP_FREE', { infer: true }) as number;
     const { data: profile } = await admin.database
       .from('profiles')
       .select('timezone')

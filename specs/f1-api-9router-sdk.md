@@ -98,7 +98,7 @@ en vez de `LlmClient`:
   hace incluso con `response_format`).
 - `providerOptions: { '9router': { reasoningEffort } }` con el valor de
   `reasoningEffortFor(model)` de `ninerouter-models.ts` (F1.4 lo define; hasta
-  que exista, un mapa local: `fluent-free` → `'low'`, `fluent-pro` → `'none'`,
+  que exista, un mapa local: `fluent-free` → `'none'`, `fluent-pro` → `'none'`,
   `ds/` → `'none'`, `gemini/gemini-3.8` → `'low'`, resto `undefined`). Ver la
   tabla «Hallazgos del router real» de la arquitectura: con el valor
   equivocado DeepSeek agota `max_tokens` pensando y Gemini 3.8 responde 400.
@@ -207,13 +207,14 @@ sesión; ningún job importa `credentials.crypto`.
   Exportar también `reasoningEffortFor(modelId): string | undefined` (busca el
   id exacto y, si no, el prefijo `ds/` → `'none'`, `gemini/gemini-3.8` → `'low'`).
   Contenido inicial, medido el 2026-09-23 (tabla «Hallazgos del router real»
-  de la arquitectura): `fluent-free` (tier `free`, precio 0, effort `low`),
+  de la arquitectura): `fluent-free` (tier `free`, precio 0, effort `none`),
   `fluent-pro` (tier `premium`, effort `none`),
+  `nvidia/nvidia/nemotron-3-super-120b-a12b`, `nvidia/mistralai/mistral-nemotron`,
   `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` y
-  `cf/@cf/mistralai/mistral-small-3.1-24b-instruct` (free),
+  `cf/@cf/mistralai/mistral-small-3.1-24b-instruct` (free, effort `none`),
   `ds/deepseek-v4-flash` (budget, effort `none`),
   `gemini/gemini-3.5-flash-lite` (budget), `gemini/gemini-3.8-flash` (premium,
-  effort `low`). **Fuera**: todo `nvidia/*` (fin de vida), `openai/*` (rechaza
+  effort `low`). **Fuera**: los `nvidia/*` de la lista interna de 9router (fin de vida), `openai/*` (rechaza
   `max_tokens`), `cc/*`, `ag/*`, `gc/*` (cuotas de IDE), `openrouter/typesafe/*`.
   En un comentario, la fuente de cada precio. Borrar `gemini-models.ts`.
 - `apps/api/src/llm/catalog.service.ts`: `listModels()` hace

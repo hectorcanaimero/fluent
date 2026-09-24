@@ -35,6 +35,11 @@ Crear `apps/api/src/llm/ninerouter.provider.ts` que exporte el token
 `NINEROUTER_PROVIDER` y una factory `createNineRouterProvider(env)` que devuelva
 `createOpenAICompatible({ name: '9router', baseURL: env.NINEROUTER_URL, apiKey: env.NINEROUTER_API_KEY, includeUsage: true })`.
 No activar `supportsStructuredOutputs` (decisión D3 de la arquitectura).
+Pasar un `fetch` propio que, si el cuerpo JSON de la petición no trae la clave
+`stream`, la añada con `false` antes de llamar a `globalThis.fetch` (hallazgo 1
+de la arquitectura: sin ella 9router responde SSE aunque no se pida). El
+nombre `'9router'` importa: es la clave de `providerOptions` que F1.2 usa para
+`reasoningEffort`.
 Registrar el provider en `LlmInfraModule` (`llm-infra.module.ts`) con
 `ConfigService` y exportarlo; API y worker lo comparten.
 
@@ -88,7 +93,17 @@ en vez de `LlmClient`:
   si no, dejar de emitir (el `done` del SSE manda el objeto entero). Al final
   esperar `object` y `usage`.
 - `experimental_repairText: ({ text }) => JSON.stringify(extractFirstJsonObject(text))`
-  o `null` si no hay objeto, reutilizando `apps/api/src/llm/json.ts`.
+  o `null` si no hay objeto, reutilizando `apps/api/src/llm/json.ts`. Tiene
+  que cubrir el JSON envuelto en vallas ```` ```json ```` (Gemini flash-lite lo
+  hace incluso con `response_format`).
+- `providerOptions: { '9router': { reasoningEffort } }` con el valor de
+  `reasoningEffortFor(model)` de `ninerouter-models.ts` (F1.4 lo define; hasta
+  que exista, un mapa local: `fluent-free` → `'low'`, `fluent-pro` → `'none'`,
+  `ds/` → `'none'`, `gemini/gemini-3.8` → `'low'`, resto `undefined`). Ver la
+  tabla «Hallazgos del router real» de la arquitectura: con el valor
+  equivocado DeepSeek agota `max_tokens` pensando y Gemini 3.8 responde 400.
+- `stream` siempre explícito: `streamObject` ya manda `stream: true`; para
+  `generateObject` lo garantiza el `fetch` de F1.1.
 - `mapError(error): LlmErrorStatus` según la tabla de la arquitectura
   (`NoObjectGeneratedError` → `invalid_json`; `APICallError` 401/403 →
   `auth_error`, 429 → `rate_limited`, otro → `provider_error`; abort →
@@ -188,10 +203,19 @@ sesión; ningún job importa `credentials.crypto`.
 
 - Crear `apps/api/src/llm/ninerouter-models.ts` con `NINEROUTER_MODELS: readonly CatalogModel[]`,
   lista fija del operador con `id`, `name`, `tier`, `pricePerMillionIn`,
-  `pricePerMillionOut`, `contextLength`. Incluir al menos `fluent-free`
-  (tier `free`, precio 0) y `fluent-pro` (tier `premium`) y los modelos de pago
-  del combo Pro con sus precios de referencia, en un comentario la fuente de
-  cada precio. Borrar `gemini-models.ts`.
+  `pricePerMillionOut`, `contextLength` y `reasoningEffort?: 'none' | 'low'`.
+  Exportar también `reasoningEffortFor(modelId): string | undefined` (busca el
+  id exacto y, si no, el prefijo `ds/` → `'none'`, `gemini/gemini-3.8` → `'low'`).
+  Contenido inicial, medido el 2026-09-23 (tabla «Hallazgos del router real»
+  de la arquitectura): `fluent-free` (tier `free`, precio 0, effort `low`),
+  `fluent-pro` (tier `premium`, effort `none`),
+  `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` y
+  `cf/@cf/mistralai/mistral-small-3.1-24b-instruct` (free),
+  `ds/deepseek-v4-flash` (budget, effort `none`),
+  `gemini/gemini-3.5-flash-lite` (budget), `gemini/gemini-3.8-flash` (premium,
+  effort `low`). **Fuera**: todo `nvidia/*` (fin de vida), `openai/*` (rechaza
+  `max_tokens`), `cc/*`, `ag/*`, `gc/*` (cuotas de IDE), `openrouter/typesafe/*`.
+  En un comentario, la fuente de cada precio. Borrar `gemini-models.ts`.
 - `apps/api/src/llm/catalog.service.ts`: `listModels()` hace
   `GET {NINEROUTER_URL}/v1/models` con `Authorization: Bearer` (cache Redis
   `llm:catalog:9router`, 6 h, misma política de caché y `refresh` que hoy) y
@@ -267,6 +291,11 @@ Mantener las métricas: tasa de JSON válido, p50, p90 y detección de al menos 
 de los 2 errores plantados en 20 turnos B1. Salida en tabla por modelo y
 exit code 1 si algún modelo queda por debajo de JSON válido ≥ 95 % o p90 ≥ 8 s.
 `pnpm --filter @fluent/api bench:models` sigue siendo el comando.
+
+Además de la tabla, imprimir por modelo el promedio de `prompt_tokens` que
+reporta el router frente a los tokens estimados del prompt: sirve para vigilar
+el system prompt oculto que inyecta 9router (último hallazgo de la tabla de
+la arquitectura).
 
 Done when: el script compila con `tsc -p tsconfig.scripts.json` y, con
 `NINEROUTER_URL` y `NINEROUTER_API_KEY` reales en el entorno, imprime la tabla.

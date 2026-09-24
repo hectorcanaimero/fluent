@@ -165,6 +165,22 @@ interface LlmServiceRequest<T> {
 | `APICallError` otro / `error` part en `fullStream` | `provider_error` |
 | `AbortError` (signal) | `timeout` |
 
+## Hallazgos del router real (2026-09-23)
+
+Medidos contra `NINEROUTER_URL` con la key del operador. Son contrato para F1.
+
+| Hallazgo | Consecuencia |
+| --- | --- |
+| Sin el campo `stream`, 9router responde `text/event-stream` y para Gemini manda chunks SSE aunque no se pidiera streaming. Con `stream: false` explícito responde `application/json` limpio. | Toda petición lleva `stream` explícito. Como el SDK omite la clave en `generateObject`, `ninerouter.provider.ts` envuelve `fetch` y añade `stream: false` cuando falta. |
+| El SDK manda `reasoning_effort` desde `providerOptions['9router'].reasoningEffort`. `ds/*` sin razonamiento solo con `'none'` (con `'low'` agota `max_tokens` pensando); `gemini/gemini-3.8*` rechaza `'none'` (400) y acepta `'low'`; `openai/gpt-oss-120b` (primer modelo de `fluent-free`, servido por Groq) con `'low'` responde JSON válido en ~1 s; los `cf/*` lo ignoran. | Mapa `REASONING_EFFORT` por modelo o combo en `ninerouter-models.ts`: `fluent-free` → `low`, `fluent-pro` → `none`, `ds/*` → `none`, `gemini/gemini-3.8*` → `low`, resto sin valor. `fluent-pro` no debe contener modelos que rechacen `none`. |
+| `gemini/gemini-3.5-flash-lite` envuelve el JSON en vallas ```` ```json ```` incluso con `response_format: json_object`. | `experimental_repairText` quita vallas y extrae el primer objeto (`json.ts`). |
+| `openai/gpt-5.x` rechaza `max_tokens` (exige `max_completion_tokens`) y el SDK manda `max_tokens`. | OpenAI fuera de los combos y del catálogo. |
+| Los 8 modelos `nvidia/*` responden 410 (fin de vida) o 404. `openrouter/typesafe/jev-1.13` es un modelo de "decisions", no de chat. | NVIDIA fuera. En OpenRouter hay que añadir a mano los `:free` en el panel de 9router. |
+| `cf/@cf/zai-org/glm-4.7-flash`, `cf/@cf/qwen/qwq-32b` y `cf/@cf/moonshotai/kimi-*` razonan hasta agotar `max_tokens`. `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast` (2–6 s) y `cf/@cf/mistralai/mistral-small-3.1-24b-instruct` (1,6 s) dan JSON limpio. | Solo esos dos de Cloudflare en `fluent-free`. |
+| Cloudflare delante del router bloquea el User-Agent de `urllib` de Python (403 código 1010); `curl`, `node` y `undici` pasan. | Nada que hacer en la API. El bench no debe usar `urllib`. |
+| En bastantes llamadas `prompt_tokens` sube unos 2 000 por encima del prompt real y `gpt-oss-120b` confirma que recibe un system prompt oculto. La cabecera `X-9Router-Token-Saver: off` no lo quita. | Revisar en el panel de 9router → Endpoint los inyectores de prompt (Ponytail, Caveman). Mientras esté activo, el coste y las cuotas se multiplican y el tutor puede cambiar de tono. |
+| 9router responde 400 tal cual cuando el primer modelo del combo falla con 400 (id inválido, `json_validate_failed`). | El combo no cubre errores de petición: `LlmService` sigue tratando 4xx como `provider_error` y pasa al siguiente candidato (`fluent-free`). |
+
 ## Decisions
 
 - **D1 — Cliente LLM.** Chosen: Vercel AI SDK 7 con `@ai-sdk/openai-compatible`. Rejected: mantener `llm.client.ts` porque son 700 líneas que hacen lo mismo que el SDK y sin tests de terceros.

@@ -1,6 +1,6 @@
 # ADR 0002 — LLM 100 % BYOK con adaptador compatible con OpenAI
 
-Fecha: 2026-09-08 · Estado: Aceptado
+Fecha: 2026-09-08 · Estado: Reemplazado por ADR 0005
 
 ## Contexto
 Principio rector del PRD: el operador no paga LLM. Cada usuario aporta su propia cuenta. En v1 se soportan OpenRouter (OAuth PKCE, modelos gratuitos y pagos) y Google Gemini vía API key de Google AI Studio (RF-2.1, RF-2.8). El usuario elige modelo por rol: conversación y coaching brief (RF-2.7).

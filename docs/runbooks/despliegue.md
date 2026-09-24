@@ -13,20 +13,79 @@ Piezas a crear, en orden: proyecto → recurso Redis → aplicación `fluent-api
 - Este PR (`feat/infra`) fusionado a `main`, o al menos el `Dockerfile` de `apps/api` disponible en la rama que se vaya a desplegar — Coolify construye desde `main` (SPEC-08 §4).
 - Valores reales de las variables de entorno listadas en SPEC-08 §2, a mano y en un gestor de secretos temporal (no en texto plano en ningún sitio del repo ni de este runbook):
   - `INSFORGE_URL` = `https://c4jzbm8x.us-east.insforge.app` (ver SPEC-08 §6, ya es público, no es secreto).
-  - `INSFORGE_API_KEY` — sacar de `apps/api/.insforge/project.json` (nunca commiteado) o con `npx -y @insforge/cli secrets get ANON_KEY`/equivalente admin key. Es secreto.
+  - `INSFORGE_API_KEY` — sacar de `apps/api/.insforge/project.json` (nunca commiteado) o con `npx -y @insforge/cli secrets get` (admin key). Es secreto.
   - `INSFORGE_ANON_KEY` — `npx -y @insforge/cli secrets get ANON_KEY` (ver `docs/runbooks/insforge.md`).
-  - `CREDENTIALS_MASTER_KEY` — generar con `openssl rand -base64 32` (ver `docs/runbooks/insforge.md` §4). Es secreto, se genera una vez y no se pierde.
-  - `OPENROUTER_OAUTH_CALLBACK` — deep link de la app móvil, p. ej. `fluent://oauth/openrouter` (SPEC-08 §2). No es secreto.
-  - `FALLBACK_MODELS` — JSON de la cadena de fallback de modelos gratuitos (SPEC-03 §2; puede no estar definida todavía si PR-03 no fusionó — usar `[]` como placeholder temporal y anotarlo, nunca dejar la variable vacía porque `apps/api/src/config/env.ts` la valida como string no vacío obligatorio).
+  - `NINEROUTER_URL` y `NINEROUTER_API_KEY` — ver paso §0b arriba (se completan tras arrancar 9router). Es secreto la key.
+  - `TURNS_DAILY_CAP_FREE` = `30`, `TURNS_DAILY_CAP_PRO` = `120` (SPEC-08 §2). No son secretos.
+  - `REVENUECAT_WEBHOOK_SECRET` — para F4 (cobro por RevenueCat); puede dejarse vacío si es F1–F3. Es secreto.
   - `OWNER_USER_ID` — UUID del usuario operador en InsForge (se conoce tras crear la cuenta del operador con PR-02/auth fusionado; hasta entonces, placeholder y anotarlo).
   - `PROMPT_VERSION` = `1` (SPEC-08 §2). No es secreto.
   - `LOG_LEVEL` = `info` en producción (SPEC-08 §2, `apps/api/src/config/env.ts` acepta `fatal|error|warn|info|debug|trace|silent`). No es secreto.
   - `REDIS_URL` — se completa en el paso 2 (Coolify la genera al crear el recurso Redis).
   - `NODE_ENV` = `production`.
   - `PORT` = `3000`.
+- **Borradas desde F5:** `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`, `FALLBACK_MODELS`.
 - Ver `apps/api/.env.example` para la lista completa con comentarios (sin valores reales, es la referencia canónica de qué variables existen).
 
-**No sigas** si falta alguna variable obligatoria: `apps/api/src/config/env.ts` valida con zod al arrancar (`ConfigModule.forRoot({ validate: validateEnv })`) y la API/worker no arrancan si falta cualquiera de las obligatorias (todas menos `CREDENTIALS_MASTER_KEY_PREVIOUS`, que solo se usa durante rotación — ver `docs/runbooks/insforge.md` §4).
+**No sigas** si falta alguna variable obligatoria: `apps/api/src/config/env.ts` valida con zod al arrancar (`ConfigModule.forRoot({ validate: validateEnv })`) y la API/worker no arrancan si falta cualquiera de las obligatorias (las nuevas con F1: `NINEROUTER_URL`, `NINEROUTER_API_KEY`, `TURNS_DAILY_CAP_FREE`, `TURNS_DAILY_CAP_PRO`; si es F5 o posterior, también se borran `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`).
+
+---
+
+## 0b. Configurar 9router en el VPS
+
+Antes de arrancar la API, 9router debe estar corriendo y con los combos configurados.
+
+### Paso 1: Arrancar 9router con docker
+
+En el VPS (dentro de Coolify o junto a él), arrancar 9router con `docker run`:
+
+```bash
+docker run -d \
+  --name fluent-9router \
+  --network <coolify-network> \
+  -e REQUIRE_API_KEY=true \
+  -p 9000:8000 \
+  9router_image:latest
+```
+
+Sustituir `<coolify-network>` por el nombre de la red Docker que usa el proyecto Coolify en ese VPS (típicamente `coolify` o `<proyecto>_network`; es la red a la que conecta Redis y las apps, verla con `docker network ls`). El flag `-p 9000:8000` mapea el puerto 9000 del host al puerto 8000 del contenedor (donde escucha 9router por defecto).
+
+Esperar a que el contenedor esté listo (unos segundos), luego verificar:
+
+```bash
+curl http://localhost:9000/v1/models
+```
+
+Debe responder con la lista de modelos disponibles (JSON). Si no, revisar logs: `docker logs fluent-9router`.
+
+### Paso 2: Crear los combos `fluent-free` y `fluent-pro`
+
+En el panel de 9router (normalmente `http://<IP-VPS>:9000` o la ruta que exponga), o vía API si está documentada:
+
+1. Combo `fluent-free`:
+   - Modelos: según lo validado en el bench de F1.6. Estructura recomendada en `docs/arch/001-9router-y-planes.md` §Hallazgos: `nvidia/nvidia/nemotron-3-super-120b-a12b` → `nvidia/mistralai/mistral-nemotron` → `cf/@cf/mistralai/mistral-small-3.1-24b-instruct` → `cf/@cf/meta/llama-3.3-70b-instruct-fp8-fast`, todos con `reasoning_effort: none`.
+   - Nombre en 9router: `fluent-free`.
+
+2. Combo `fluent-pro`:
+   - Modelos: según bench validado. Recomendado: `ds/deepseek-v4-flash` → `gemini/gemini-3.5-flash-lite`, ambos con `reasoning_effort: none`.
+   - Nombre en 9router: `fluent-pro`.
+
+Guardar ambos combos.
+
+### Paso 3: Generar la API key de Fluent
+
+En el panel de 9router → **API Keys** (o equivalente):
+
+1. **+ New API Key** o `POST /admin/api-keys` (si hay API).
+2. Nombre: `fluent-api`.
+3. Guardar y copiar la key (algo como `9r_…`).
+
+### Paso 4: Configurar la variable de entorno en Coolify
+
+En el paso §2 del runbook de Coolify (cuando configures las variables de `fluent-api` y `fluent-worker`):
+
+- `NINEROUTER_URL` = `http://fluent-9router:9000/v1` (dentro de la red de Coolify) o `http://<IP-VPS>:9000/v1` si 9router corre fuera de Coolify.
+- `NINEROUTER_API_KEY` = la clave generada arriba. Marca como "secreta".
 
 ---
 
@@ -92,15 +151,16 @@ Antes de cada deploy (inicial o tras rotar algo), confirmar en la UI de Coolify 
 | `INSFORGE_API_KEY` | **Sí** | Sí |
 | `INSFORGE_ANON_KEY` | **Sí** | Sí |
 | `REDIS_URL` | No (pero es de red interna) | Sí |
-| `CREDENTIALS_MASTER_KEY` | **Sí** | Sí |
-| `CREDENTIALS_MASTER_KEY_PREVIOUS` | **Sí** (solo durante rotación, ver `docs/runbooks/insforge.md` §4) | Sí, o ausente en ambas |
-| `OPENROUTER_OAUTH_CALLBACK` | No | Sí |
-| `FALLBACK_MODELS` | No (pero no puede estar vacía) | Sí |
-| `PROMPT_VERSION` | No | Sí |
+| `NINEROUTER_URL` | No (pero es de red interna/operador) | Sí |
+| `NINEROUTER_API_KEY` | **Sí** | Sí |
+| `TURNS_DAILY_CAP_FREE` | No | Sí (`30`) |
+| `TURNS_DAILY_CAP_PRO` | No | Sí (`120`) |
+| `REVENUECAT_WEBHOOK_SECRET` | **Sí** (solo desde F4) | No (solo la API; worker no procesa webhooks) |
+| `PROMPT_VERSION` | No | Sí (`1`) |
 | `OWNER_USER_ID` | No (pero es un identificador, no lo publiques innecesariamente) | Sí |
 | `LOG_LEVEL` | No | Sí (`info` en producción) |
 
-Si falta cualquier variable obligatoria (todas salvo `CREDENTIALS_MASTER_KEY_PREVIOUS`), el proceso falla al arrancar con un `ZodError` claro en los logs (ver `apps/api/src/config/env.ts`) — no es un fallo silencioso.
+Si falta cualquier variable obligatoria (todas listadas arriba), el proceso falla al arrancar con un `ZodError` claro en los logs (ver `apps/api/src/config/env.ts`) — no es un fallo silencioso. Variables borradas desde F5: `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`, `FALLBACK_MODELS`.
 
 ---
 
@@ -138,8 +198,38 @@ Debe devolver `200` con un cuerpo JSON con `"ok": true` (y `redis.ok`/`insforge.
 
 ---
 
+## 8. Monitoreo el primer week (con 9router activo)
+
+Una vez desplegada la API y el worker con 9router funcionando, desde `/v1/admin/metrics` (SPEC-02 §4.6, solo owner):
+
+### Primera semana, lo que revisar cada día:
+
+1. **Sesiones por día (14 d):** debe subir la línea desde 0 cuando empiezan los usuarios a practicar. Esperado: al menos 1 sesión/día de prueba el día 1.
+
+2. **Duración media de sesión:** debe estar cercana a 10 min (según el PRD §6.1: "sesiones de 10 minutos dos veces al día").
+
+3. **Tasa de fallo del LLM:** es la métrica más crítica en los primeros días.
+   - **Esperada:** < 5 % fallos (PRD §10, métrica de éxito).
+   - **Si sube:** revisar logs de la API/worker para ver si 9router responde lentamente, si algún combo se rompió, si hay tope de cuota alcanzado, etc.
+   - **Acción:** si un combo tiene > 10 % fallos, reemplazarlo en el panel de 9router o bajar a los candidatos que funcionan.
+
+4. **Jobs pendientes (coaching-brief, weekly-summary):** deben bajar a 0 dentro de pocos minutos después de que una sesión termina. Si suben y se quedan altas, hay un problema en el worker o en 9router.
+   - **Acción:** revisar logs del worker (`docker logs fluent-worker` o pestaña **Logs** de Coolify) y de 9router.
+
+5. **La cuota de 9router:**
+   - Free: si llega a `TURNS_DAILY_CAP_FREE = 30`, usuarios free verán `429 TURNS_DAILY_CAP` al hacer el turno 31. Es correcto (no es un error).
+   - Pro: vigilar que no se agote el crédito del router antes de lo esperado. Si lo hace, revisar con el operador del router o reducir los modelos de pago en `fluent-pro` (usar candidatos más baratos o volver a free).
+
+### Red flags el primer día:
+
+- **Mucho 401/403 de 9router:** key inválida, combo borrado, 9router no arrancó. Revisar `NINEROUTER_URL` y `NINEROUTER_API_KEY` en Coolify.
+- **Latencia p90 > 8 s:** algo anda lento (9router, el VPS, o los modelos elegidos en los combos). Revisar tiempos de respuesta de 9router directamente (`curl -w "@curl-format.txt" http://.../v1/models` para ver latencia).
+- **Crashes de la API/worker:** revisar logs y validar todas las variables de entorno (sección 5 arriba).
+
+---
+
 ## Notas
 
-- Esta tarea (T6) **no se ejecutó** en esta sesión — no se creó ningún recurso real en Coolify. Este documento son los pasos exactos para que el operador los siga en la UI cuando quiera desplegar.
+- Esta tarea (T6, antes §1-6) **no se ejecutó** en esta sesión — no se creó ningún recurso real en Coolify. Este documento son los pasos exactos para que el operador los siga en la UI cuando quiera desplegar. La nueva sección §0b (9router) tampoco se ejecutó; es documentación operativa para que el operador lo haga antes de desplegar la API.
 - Si en el futuro Coolify expone una API/CLI accesible para un agente, se puede reemplazar este runbook manual por un script, pero hoy (2026-09-08) se documenta como procedimiento de UI porque es lo que pide el alcance de T6 ("Si la API de Coolify no está disponible para el agente, dejar el runbook con los pasos exactos para que el operador lo haga en la UI").
 - Dominio propio: cuando el operador tenga un dominio propio, SPEC-08 §1 indica cambiarlo en Coolify (pestaña de dominios de `fluent-api`) y en la variable `API_URL` de la app móvil (fuera del alcance de este runbook, es de PR-06).

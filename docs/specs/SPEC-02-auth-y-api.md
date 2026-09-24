@@ -1,6 +1,6 @@
 # SPEC-02 — Auth y contrato de API
 
-Estado: borrador v0.1 · Cubre: RF-1.x, RF-2.1 a RF-2.9, RF-8.x · ADR 0001, 0002
+Estado: borrador v0.2 · Cubre: RF-1.x, RF-2.1 a RF-2.9, RF-8.x · ADR 0001, 0005
 
 ## 1. Identidad
 
@@ -37,19 +37,13 @@ Base: `https://fluent-api.<host>/v1`. Todos requieren bearer salvo `/health`. Re
 | POST `/groups/invitations` | — | `{ code, expiresAt }` | cualquier miembro, sin tope; sin grupo `GROUP_REQUIRED`; MEJ-41 y SPEC-07 §8.b |
 | GET `/group` | | `{ group, members: [{userId, displayName, level, xp, streak, lastSessionDay}] }` | RF-6.5 |
 
-### 4.2 Proveedores y modelos (RF-2.x)
+### 4.2 Modelos y planes (RF-2.x)
 | Método y ruta | Cuerpo | Respuesta | Notas |
 |---|---|---|---|
-| POST `/providers/openrouter/pkce/start` | `{ callbackUrl }` | `{ authUrl, codeVerifierId }` | la API genera y guarda el `code_verifier` en Redis 10 min; la app abre `authUrl` |
-| POST `/providers/openrouter/pkce/complete` | `{ codeVerifierId }` | `{ provider: 'openrouter', status }` | la API canjea el código en `https://openrouter.ai/api/v1/auth/keys` y cifra la key |
-| GET `/providers/openrouter/callback/:id?code=…` | — (público) | HTML que redirige al deep link | **solo guarda** el `code` junto al `code_verifier` |
-| POST `/providers/gemini` | `{ apiKey }` | `{ provider: 'gemini', status }` | la API valida con una llamada a `/models` antes de guardar; error `PROVIDER_KEY_INVALID` |
-| DELETE `/providers/:provider` | | `204` | borra la credencial y resetea preferencias que la usaban |
-| GET `/providers/:provider/status` | | `{ status, lastError, credits? }` | para OpenRouter consulta `GET /api/v1/credits` y devuelve `{ total, used }` (RF-2.3) |
-| GET `/models` | | `{ providers: { openrouter: { free: [], budget: [], premium: [] }, gemini: { free: [] } }, estimatePerSession: { [modelId]: usd } }` | catálogo cacheado 6 h en Redis; tiers y estimación en SPEC-03 §7 |
-| PUT `/me/models` | `{ chatProvider, chatModel, briefProvider, briefModel }` | `modelPreference` | valida que exista credencial activa del proveedor y que el modelo esté en el catálogo |
-
-**Flujo PKCE (§4.2).** `start` acepta como `callbackUrl` únicamente el deep link de la app (`fluent://…`) o el valor de `OPENROUTER_OAUTH_CALLBACK`; cualquier otra URL es `400 VALIDATION` (si no, la API sería un redirector abierto). OpenRouter devuelve el navegador al callback HTTPS público, que **no canjea nada**: guarda el `code` en la entrada de Redis del intento —conservando su vencimiento original, y solo la primera vez— y redirige a `fluent://oauth/openrouter?done=1` (o `?error=…`). El canje y la escritura de la credencial ocurren solo en `pkce/complete`, que exige bearer y comprueba que el intento es de quien llama; si no existe, caducó o es de otro usuario responde el mismo `403 FORBIDDEN`. `code` en el cuerpo de `complete` se sigue aceptando por compatibilidad, pero el guardado por el callback tiene prioridad.
+| GET `/models` | | `{ providers: { '9router': { free: [], budget: [], premium: [] } }, estimatePerSession: { [modelId]: usd } }` | catálogo cacheado 6 h en Redis desde 9router, cruzado con lista fija del operador para tiers y precios (RF-2.9); `estimatePerSession` usa promedio real de tokens del usuario |
+| PUT `/me/models` | `{ chatProvider: '9router', chatModel, briefProvider: '9router', briefModel }` | `modelPreference` | valida que el modelo esté en el catálogo; `403 PLAN_REQUIRED` si Free y algún modelo tiene tier ≠ free; `400 MODEL_NOT_AVAILABLE` si el id no existe |
+| PUT `/admin/users/:id/plan` | `{ plan: 'free'\|'pro', expiresAt?: ISO 8601\|null }` | `{ userId, plan, planExpiresAt }` | solo `OWNER_USER_ID`; otro usuario `403 FORBIDDEN`; `404` si el usuario no existe |
+| POST `/webhooks/revenuecat` | cabecera `Authorization: Bearer ${REVENUECAT_WEBHOOK_SECRET}` | `204` | escribe `plan` y `plan_expires_at` por `app_user_id = userId` (F4, RF-2.13) |
 
 ### 4.3 Sesiones (RF-3.x) — detalle de comportamiento en SPEC-04
 | Método y ruta | Cuerpo | Respuesta |
@@ -90,30 +84,22 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 | GET `/admin/metrics` | RF-8.2, solo owner: sesiones por día 14 d, duración media, tasa de fallo LLM, jobs pendientes |
 | PUT `/admin/users/:id/plan` | `{ plan: 'free'\|'pro', expiresAt?: ISO 8601\|null }` → `{ userId, plan, planExpiresAt }`; solo owner (`403`), `404` si el usuario no existe |
 
-## 5. Cifrado de credenciales (RF-2.2)
-
-- Clave maestra `CREDENTIALS_MASTER_KEY` (32 bytes, base64) en variables de entorno de Coolify.
-- AES-256-GCM, IV aleatorio de 12 bytes por registro, AAD = `user_id:provider`.
-- Descifrado solo en memoria dentro del `LlmClient`, nunca se loguea ni se serializa.
-- Rotación: variable `CREDENTIALS_MASTER_KEY_PREVIOUS` permite recifrar en un job de mantenimiento.
-
-## 6. Códigos de error
+## 5. Códigos de error
 
 | Código | HTTP | Cuándo |
 |---|---|---|
 | UNAUTHENTICATED | 401 | token ausente o inválido |
 | FORBIDDEN | 403 | recurso de otro usuario o acción de owner |
+| PLAN_REQUIRED | 403 | usuario Free elige modelo con tier ≠ free |
 | NOT_ONBOARDED | 409 | falta perfil o grupo para la acción |
 | VALIDATION | 400 | DTO inválido; `details[]` con campo y motivo |
 | INVITATION_INVALID / USED / EXPIRED | 400 | |
 | ALREADY_IN_GROUP | 409 | |
-| PROVIDER_NOT_CONNECTED | 409 | intenta sesión sin credencial activa |
-| PROVIDER_KEY_INVALID | 400 | |
-| MODEL_NOT_AVAILABLE | 400 | modelo fuera del catálogo o sin credencial |
+| MODEL_NOT_AVAILABLE | 400 | modelo fuera del catálogo |
 | SESSION_NOT_ACTIVE | 409 | turno sobre sesión cerrada |
 | SESSION_ALREADY_ACTIVE | 409 | intenta abrir otra con una activa; respuesta incluye `activeSessionId` |
-| LLM_UNAVAILABLE | 503 | agotada la cadena de fallback (RF-2.5) |
-| RATE_LIMITED | 429 | ver §7 |
+| LLM_UNAVAILABLE | 503 | agotada la cadena de fallback |
+| RATE_LIMITED | 429 | ver §6 |
 | CHALLENGE_NOT_AVAILABLE | 422 | `challengeFromUserId` que no corresponde a un desafío ofrecido (SPEC-07 §7) |
 | GROUP_REQUIRED | 422 | la acción exige pertenecer a un grupo y el perfil no tiene `group_id` (MEJ-33) |
 | TURNS_DAILY_CAP | 429 | tope diario de turnos alcanzado; respuesta con `Retry-After` y `retryAfter` |
@@ -121,13 +107,13 @@ La app también puede hacer estas operaciones directamente contra InsForge graci
 | NOT_FOUND | 404 | ruta o recurso inexistente |
 | INTERNAL | 500 | error no controlado; sin detalles en producción |
 
-## 7. Límites
+## 6. Límites
 
 - 60 peticiones por minuto por usuario en general; 20 por minuto en `/sessions/:id/turns`.
 - Un turno como máximo cada 2 segundos por sesión.
 - Cuerpo de turno: 1 a 1 000 caracteres.
-- **Tope diario de turnos** (`TURNS_DAILY_CAP`, 120 por defecto; `0` lo desactiva): contador en Redis `turns:day:<userId>:<YYYY-MM-DD>` por **día natural del usuario** según `profiles.timezone`, no UTC. Al pasarse, `429 TURNS_DAILY_CAP` con la cabecera `Retry-After` y el campo `retryAfter` en el cuerpo, ambos con los segundos que faltan para su medianoche. Se comprueba antes de insertar el turno y antes de llamar al modelo, así que un turno rechazado no escribe nada ni gasta la key del aprendiz. Con Redis caído se deja pasar (fail-open), igual que el lock de turno.
-- El turno de conversación usa **2 intentos** de la cadena de fallback y no 3 (`TURN_MAX_ATTEMPTS`): el aprendiz espera delante de la pantalla y tres intentos de 25 s son 75 s de silencio. El brief y el resumen semanal, que corren en el worker, mantienen 3.
+- **Tope diario de turnos** por plan (`TURNS_DAILY_CAP_FREE = 30`, `TURNS_DAILY_CAP_PRO = 120`; `0` desactiva): contador en Redis `turns:day:<userId>:<YYYY-MM-DD>` por **día natural del usuario** según `profiles.timezone`, no UTC. Al pasarse, `429 TURNS_DAILY_CAP` con la cabecera `Retry-After` y el campo `retryAfter` en el cuerpo, ambos con los segundos que faltan para su medianoche. Se comprueba antes de insertar el turno y antes de llamar al modelo, así que un turno rechazado no escribe nada. Con Redis caído se deja pasar (fail-open), igual que el lock de turno.
+- El turno de conversación usa **2 intentos** máximo (`TURN_MAX_ATTEMPTS = 2`): el aprendiz espera delante de la pantalla y dos intentos de 25 s son 50 s de silencio. El brief y el resumen semanal, que corren en el worker, mantienen 3.
 
 ## 8. Validación y documentación
 

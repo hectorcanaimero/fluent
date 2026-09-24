@@ -10,6 +10,7 @@ Estado: borrador v0.1 · Cubre: RNF de costo, disponibilidad, seguridad, portabi
 | API NestJS | VPS, Coolify | aplicación desde el repo, Dockerfile en `apps/api`, comando `node dist/main.js` |
 | Worker | VPS, Coolify | misma imagen, comando `node dist/worker.js` |
 | Redis | VPS, Coolify | recurso Redis 7, sin exposición pública |
+| 9router | VPS, docker nativo | imagen del operador, comando con `REQUIRE_API_KEY=true`, puerto 9000 en red interna; sin exposición pública |
 | App móvil | dispositivos | builds locales en la Mac del operador; distribución por APK directo e TestFlight interno |
 
 Dominio de la API: `https://fluent.usebot.chat` (Cloudflare proxy → Traefik con Let's Encrypt), con `fluent-api.13.140.175.146.sslip.io` como alias de respaldo. Configurado el 2026-09-08.
@@ -24,15 +25,16 @@ Dominio de la API: `https://fluent.usebot.chat` (Cloudflare proxy → Traefik co
 | INSFORGE_API_KEY | ik_… | admin; solo backend |
 | INSFORGE_ANON_KEY | anon_… | para llamadas con token de usuario si hicieran falta |
 | REDIS_URL | redis://fluent-redis:6379 | red interna de Coolify |
-| CREDENTIALS_MASTER_KEY | base64 de 32 bytes | SPEC-02 §5 |
-| CREDENTIALS_MASTER_KEY_PREVIOUS | | solo durante rotación |
-| OPENROUTER_OAUTH_CALLBACK | fluent://oauth/openrouter | |
-| FALLBACK_MODELS | JSON | SPEC-03 §2 |
+| NINEROUTER_URL | https://llm.operador.io/v1 | endpoint de 9router; F1.1 |
+| NINEROUTER_API_KEY | … | clave API de 9router del operador; solo backend |
+| TURNS_DAILY_CAP_FREE | 30 | tope diario de turnos para plan Free; F2.2 |
+| TURNS_DAILY_CAP_PRO | 120 | tope diario de turnos para plan Pro; F2.2 |
+| REVENUECAT_WEBHOOK_SECRET | … | para webhook de facturación; F4.1 |
 | PROMPT_VERSION | 1 | |
 | OWNER_USER_ID | uuid | quién es el operador |
 | LOG_LEVEL | info | |
 
-Secretos solo en Coolify. `apps/api/.env.example` lista todas con comentario y sin valores.
+Secretos solo en Coolify. `apps/api/.env.example` lista todas con comentario y sin valores. Borradas en F5: `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`.
 
 ## 3. Dockerfile de la API
 

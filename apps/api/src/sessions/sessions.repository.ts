@@ -30,8 +30,6 @@ export interface CreateSessionRow {
   /** Solo se escribe con `kind = 'news'` (CHECK de la migración 3). */
   readonly newsItemId?: string | null;
   readonly challengeFromUserId?: string | null;
-  /** MAL-24: corre con la credencial del owner del grupo. */
-  readonly courtesy?: boolean;
 }
 
 /** Datos del turno de apertura del tutor (`turns[idx=0]`, SPEC-04 §3.5). */
@@ -175,52 +173,6 @@ export class SessionsRepository {
   }
 
   /**
-   * `owner_id` del grupo del usuario, o `null` si no tiene grupo o el grupo
-   * no tiene owner (MAL-24).
-   */
-  async findGroupOwnerId(groupId: string): Promise<string | null> {
-    const result = await this.admin.database
-      .from(TABLES.groups)
-      .select('owner_id')
-      .eq('id', groupId)
-      .maybeSingle();
-
-    const row = unwrapInsforge<{ owner_id: string | null }>(result);
-    return row?.owner_id ?? null;
-  }
-
-  /**
-   * Marca la sesión de cortesía como gastada (MAL-24), solo si aún estaba
-   * libre. El `is` en el WHERE es lo que hace la operación idempotente
-   * incluso con dos aperturas simultáneas: la segunda no encuentra fila que
-   * actualizar.
-   */
-  async markCourtesySessionUsed(userId: string, at: Date = new Date()): Promise<boolean> {
-    const result = await this.admin.database
-      .from(TABLES.profiles)
-      .update({ courtesy_session_used_at: at.toISOString() })
-      .eq('user_id', userId)
-      .is('courtesy_session_used_at', null)
-      .select('user_id');
-
-    const rows = unwrapInsforge<{ user_id: string }[]>(result) ?? [];
-    return rows.length > 0;
-  }
-
-  /**
-   * Devuelve la sesión de cortesía al usuario (MAL-24). Solo se usa cuando la
-   * apertura falla por un error nuestro después de haberla consumido.
-   */
-  async releaseCourtesySession(userId: string): Promise<void> {
-    const result = await this.admin.database
-      .from(TABLES.profiles)
-      .update({ courtesy_session_used_at: null })
-      .eq('user_id', userId);
-
-    unwrapInsforge(result);
-  }
-
-  /**
    * Última sesión cerrada del usuario cuyo brief quedó `failed` (MAL-20), si
    * terminó hace menos de `maxAgeDays` días.
    *
@@ -280,7 +232,6 @@ export class SessionsRepository {
         // CHECK `kind = 'news' OR news_item_id IS NULL` (migración 3).
         news_item_id: row.kind === 'news' ? (row.newsItemId ?? null) : null,
         challenge_from_user_id: row.challengeFromUserId ?? null,
-        courtesy: row.courtesy ?? false,
         status: 'active',
       })
       .select('*')

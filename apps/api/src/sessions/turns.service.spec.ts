@@ -2,7 +2,6 @@ import type { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import { ROLEPLAYS } from '../content/index.js';
-import type { CredentialsService } from '../credentials/credentials.service.js';
 import type { Fact, NewsItem, Profile, Session } from '../db/schema.js';
 import { DEGRADED_REPLY, HISTORY_TURNS } from '../llm/config.js';
 import type { LlmMessage } from '../llm/types.js';
@@ -66,10 +65,9 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     duration_sec: null,
     turns_count: 1,
     xp_earned: 0,
-    chat_model_used: 'gemini-2.5-flash',
+    chat_model_used: 'fluent-free',
     callback_fact_id: null,
     brief_job_status: 'pending',
-    courtesy: false,
     ...overrides,
   };
 }
@@ -92,9 +90,7 @@ interface FakeSessionsRepoOptions {
   readonly newsItem?: NewsItem | null;
   readonly brief?: string | null;
   readonly facts?: Fact[];
-  readonly preference?: { provider: 'openrouter' | 'gemini'; model: string } | null;
-  /** Owner del grupo, para los turnos de cortesía (MAL-24). */
-  readonly groupOwnerId?: string | null;
+  readonly preference?: { provider: '9router'; model: string } | null;
 }
 
 type FakeSessionsRepo = SessionsRepository & { readonly callCounts: Map<string, number> };
@@ -126,10 +122,6 @@ function fakeSessionsRepository(options: FakeSessionsRepoOptions = {}): FakeSess
     findChatModelPreference: async () => {
       count('findChatModelPreference');
       return options.preference ?? null;
-    },
-    findGroupOwnerId: async () => {
-      count('findGroupOwnerId');
-      return options.groupOwnerId ?? null;
     },
   } as unknown as FakeSessionsRepo;
 }
@@ -218,16 +210,6 @@ function fakeTurnsRepository(options: FakeTurnsRepoOptions = {}): FakeTurnsRepo 
   } as unknown as FakeTurnsRepo;
 }
 
-function fakeCredentials(
-  providers: readonly ('openrouter' | 'gemini')[] = ['openrouter'],
-  byUser: Record<string, readonly ('openrouter' | 'gemini')[]> = {},
-) {
-  return {
-    listActive: async (userId: string) =>
-      (byUser[userId] ?? providers).map((provider) => ({ provider, apiKey: 'k' })),
-  } as unknown as CredentialsService;
-}
-
 interface FakeLlmOptions {
   readonly reply?: string;
   readonly corrections?: Array<{
@@ -281,15 +263,15 @@ function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
           reply: options.reply ?? 'Nice! Where did you go?',
           corrections: options.corrections ?? [],
         },
-        modelUsed: 'gemini-2.5-flash',
-        provider: 'gemini' as const,
+        modelUsed: 'fluent-free',
+        provider: '9router' as const,
         usage: { tokensIn: 300, tokensOut: 70 },
         degraded: false,
         attempts: [
           {
             attempt: 1,
-            provider: 'gemini' as const,
-            model: 'gemini-2.5-flash',
+            provider: '9router' as const,
+            model: 'fluent-free',
             source: 'fallback' as const,
             status: 'ok' as const,
             latencyMs: 987.4,
@@ -362,8 +344,6 @@ function fakeConfig(capFree = 0, capPro = 0): ConfigService<never, true> {
 interface BuildOptions extends FakeSessionsRepoOptions, FakeTurnsRepoOptions, FakeLlmOptions {
   readonly llm?: FakeLlm;
   readonly redis?: FakeRedis;
-  readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
-  readonly credentialsByUser?: Record<string, readonly ('openrouter' | 'gemini')[]>;
   /** Tope diario de turnos del plan Free (MAL-23). 0 lo desactiva. */
   readonly turnsDailyCap?: number;
   /** Tope diario de turnos del plan Pro. 0 lo desactiva. */
@@ -378,7 +358,6 @@ function buildService(options: BuildOptions = {}) {
   const service = new TurnsService(
     sessions,
     turns,
-    fakeCredentials(options.credentialProviders, options.credentialsByUser),
     llm,
     redis,
     fakeConfig(options.turnsDailyCap ?? 0, options.turnsDailyCapPro ?? 0) as never,
@@ -441,14 +420,6 @@ describe('TurnsService.addTurn · validación (SPEC-04 §4 paso 1)', () => {
     expect((error as ApiException).code).toBe('VALIDATION');
     expect((error as ApiException).getApiBody()).toMatchObject({
       details: [{ field: 'text' }],
-    });
-  });
-
-  it('sin credencial activa → 409 PROVIDER_NOT_CONNECTED', async () => {
-    const { service } = buildService({ credentialProviders: [] });
-
-    await expect(service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' })).rejects.toMatchObject({
-      code: 'PROVIDER_NOT_CONNECTED',
     });
   });
 });
@@ -595,7 +566,7 @@ describe('TurnsService.addTurn · persistencia (SPEC-04 §4 pasos 2, 5 y 6)', ()
         idx: 6,
         role: 'tutor',
         text: 'Nice! Where did you go?',
-        model: 'gemini-2.5-flash',
+        model: 'fluent-free',
         tokensIn: 300,
         tokensOut: 70,
         latencyMs: 987, // redondeada (PEND-19)
@@ -685,8 +656,8 @@ describe('TurnsService.addTurn · persistencia (SPEC-04 §4 pasos 2, 5 y 6)', ()
 
     const result = await service.addTurn(USER_ID, SESSION_ID, { text: 'Hi' });
 
-    expect(turns.updates).toEqual([{ turnsCount: 5, chatModelUsed: 'gemini-2.5-flash' }]);
-    expect(result.modelUsed).toBe('gemini-2.5-flash');
+    expect(turns.updates).toEqual([{ turnsCount: 5, chatModelUsed: 'fluent-free' }]);
+    expect(result.modelUsed).toBe('fluent-free');
   });
 
   it('un fallo inesperado del modelo deshace el turno del usuario y se propaga', async () => {
@@ -738,7 +709,7 @@ describe('TurnsService.addTurn · degradación (SPEC-03 §6, RF-2.5)', () => {
 
   it('`turns_count` avanza igualmente y `chat_model_used` se conserva', async () => {
     const { service, turns } = buildService({
-      session: sessionFixture({ turns_count: 2, chat_model_used: 'gemini-2.5-flash' }),
+      session: sessionFixture({ turns_count: 2, chat_model_used: 'fluent-free' }),
       unavailable: true,
     });
 
@@ -1046,14 +1017,6 @@ describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
     // Y no consume cupo diario: el orden de validación no cambió.
     expect(redis.counters.size).toBe(0);
   });
-
-  it('sin credenciales sigue dando PROVIDER_NOT_CONNECTED', async () => {
-    const { service } = buildService({ credentialProviders: [] });
-
-    await expect(
-      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-  });
 });
 
 describe('TurnsService.addTurn · escritura atómica del turno (MEJ-25)', () => {
@@ -1075,7 +1038,7 @@ describe('TurnsService.addTurn · escritura atómica del turno (MEJ-25)', () => 
     // que lo que se comprueba aquí es que llegan juntos y coherentes.
     expect(turns.corrections).toHaveLength(1);
     expect(turns.corrections[0]).toHaveLength(1);
-    expect(turns.updates[0]).toMatchObject({ chatModelUsed: 'gemini-2.5-flash' });
+    expect(turns.updates[0]).toMatchObject({ chatModelUsed: 'fluent-free' });
   });
 
   it('una respuesta degradada avanza turns_count igualmente', async () => {
@@ -1085,72 +1048,5 @@ describe('TurnsService.addTurn · escritura atómica del turno (MEJ-25)', () => 
 
     // `turns_count` cuenta turnos del usuario (PEND-18): el aprendiz habló.
     expect(turns.updates[0]!.turnsCount).toBe(2);
-  });
-});
-
-const COURTESY_OWNER_ID = '99999999-9999-4999-8999-999999999999';
-
-describe('TurnsService.addTurn · turnos de una sesión de cortesía (MAL-24)', () => {
-  function courtesyOptions(overrides: Record<string, unknown> = {}) {
-    return {
-      session: sessionFixture({ courtesy: true }),
-      profile: profileFixture({ group_id: 'group-1' }),
-      credentialsByUser: { [USER_ID]: [], [COURTESY_OWNER_ID]: ['openrouter' as const] },
-      groupOwnerId: COURTESY_OWNER_ID,
-      ...overrides,
-    };
-  }
-
-  it('usa la credencial del owner y no falla con PROVIDER_NOT_CONNECTED', async () => {
-    const { service, llm } = buildService(courtesyOptions());
-
-    // Sin esto el aprendiz se quedaba con el saludo y nada más, habiendo
-    // gastado ya su única sesión gratuita.
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
-
-    expect(llm.calls).toHaveLength(1);
-  });
-
-  it('no aplica la preferencia de modelo: la key es prestada', async () => {
-    const { service, sessions } = buildService(
-      courtesyOptions({ preference: { provider: 'openrouter', model: 'modelo/caro' } }),
-    );
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
-
-    expect(sessions.callCounts.get('findChatModelPreference')).toBeUndefined();
-  });
-
-  it('si el aprendiz conectó su propia key, se usa la suya', async () => {
-    const { service, sessions } = buildService(
-      courtesyOptions({
-        credentialsByUser: { [USER_ID]: ['gemini' as const] },
-      }),
-    );
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
-
-    // Mejor gastar la del dueño de la cuenta que la prestada.
-    expect(sessions.callCounts.get('findGroupOwnerId')).toBeUndefined();
-  });
-
-  it('una sesión normal no pide el owner del grupo', async () => {
-    const { service, sessions } = buildService({});
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'hola' });
-
-    expect(sessions.callCounts.get('findGroupOwnerId')).toBeUndefined();
-  });
-
-  it('si el owner se quedó sin credencial, el turno da PROVIDER_NOT_CONNECTED', async () => {
-    const { service } = buildService(
-      courtesyOptions({
-        credentialsByUser: { [USER_ID]: [], [COURTESY_OWNER_ID]: [] },
-      }),
-    );
-
-    await expect(
-      service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
   });
 });

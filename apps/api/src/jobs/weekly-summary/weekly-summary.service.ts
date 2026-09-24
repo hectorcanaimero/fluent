@@ -57,13 +57,12 @@ export interface WeeklySummaryJobResult {
 }
 
 /**
- * Se lanza cuando el owner del grupo no tiene credencial activa (o no hay
- * owner). El processor la deja propagar para que BullMQ reintente, igual que
+ * Se lanza cuando el grupo no tiene owner. El processor la deja propagar para que BullMQ reintente, igual que
  * `LlmUnavailableError` en `coaching-brief` (SPEC-05 §4 paso 3).
  */
-export class WeeklySummaryNoOwnerCredentialError extends Error {
-  readonly name = 'WeeklySummaryNoOwnerCredentialError';
-  readonly code = 'NO_OWNER_CREDENTIAL';
+export class WeeklySummaryNoOwnerError extends Error {
+  readonly name = 'WeeklySummaryNoOwnerError';
+  readonly code = 'NO_OWNER';
 
   constructor(
     readonly groupId: string,
@@ -109,9 +108,9 @@ export class WeeklySummaryService {
       // Sin owner (cuenta borrada, ver pendientes/PR-01 §1) no hay a quién
       // avisar por `pendingActions`: no hay clave de Redis que escribir.
       this.logger.warn(
-        `Grupo ${groupId} sin owner_id; no se puede elegir credencial`,
+        `Grupo ${groupId} sin owner_id`,
       );
-      throw new WeeklySummaryNoOwnerCredentialError(
+      throw new WeeklySummaryNoOwnerError(
         groupId,
         weekStart,
         `El grupo ${groupId} no tiene owner`,

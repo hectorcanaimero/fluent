@@ -64,13 +64,13 @@ describe('parseFallbackModels', () => {
     expect(parseFallbackModels(undefined)).toBe(DEFAULT_FALLBACK_MODELS);
     expect(parseFallbackModels('   ')).toBe(DEFAULT_FALLBACK_MODELS);
     expect(parseFallbackModels('no es json')).toBe(DEFAULT_FALLBACK_MODELS);
-    expect(parseFallbackModels('{"provider":"gemini"}')).toBe(DEFAULT_FALLBACK_MODELS);
+    expect(parseFallbackModels('{"provider":"x"}')).toBe(DEFAULT_FALLBACK_MODELS);
     expect(parseFallbackModels('[{"provider":"otro","model":"x"}]')).toBe(DEFAULT_FALLBACK_MODELS);
   });
 
   it('acepta una lista válida y descarta las entradas mal formadas', () => {
     const parsed = parseFallbackModels(
-      '[{"provider":"9router","model":"fluent-pro"},{"provider":"x","model":"y"},{"provider":"gemini","model":"a"}]',
+      '[{"provider":"9router","model":"fluent-pro"},{"provider":"x","model":"y"},{"provider":"x","model":"a"}]',
     );
     expect(parsed).toEqual([
       { provider: '9router', model: 'fluent-pro' },

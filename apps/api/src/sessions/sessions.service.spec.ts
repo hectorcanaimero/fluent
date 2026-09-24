@@ -2,7 +2,6 @@ import type { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { BOSS_TOPICS, ROLEPLAYS, TOPICS } from '../content/index.js';
-import type { CredentialsService } from '../credentials/credentials.service.js';
 import type { Fact, NewsItem, Profile, Session } from '../db/schema.js';
 import {
   BossService,
@@ -72,7 +71,6 @@ function sessionFixture(overrides: Partial<Session> = {}): Session {
     chat_model_used: null,
     callback_fact_id: null,
     brief_job_status: 'pending',
-    courtesy: false,
     ...overrides,
   };
 }
@@ -110,7 +108,7 @@ function newsFixture(overrides: Partial<NewsItem> = {}): NewsItem {
 interface FakeRepoOptions {
   readonly profile?: Profile | null;
   readonly activeSessionId?: string | null;
-  readonly preference?: { provider: 'openrouter' | 'gemini'; model: string } | null;
+  readonly preference?: { provider: '9router'; model: string } | null;
   readonly newsItem?: NewsItem | null;
   readonly brief?: string | null;
   readonly facts?: Fact[];
@@ -118,15 +116,9 @@ interface FakeRepoOptions {
   readonly callbackFact?: Fact | null;
   /** Sesión con el brief fallido que `openSession` debe reencolar (MAL-20). */
   readonly failedBriefSessionId?: string | null;
-  /** Owner del grupo, para la sesión de cortesía (MAL-24). */
-  readonly groupOwnerId?: string | null;
-  /** Simula que otra apertura se llevó la cortesía primero (MAL-24). */
-  readonly courtesyAlreadyClaimed?: boolean;
 }
 
 type FakeRepo = SessionsRepository & {
-  readonly courtesyClaims: number[];
-  readonly courtesyReleases: number[];
   readonly created: unknown[];
   readonly updates: unknown[];
   readonly turns: unknown[];
@@ -136,8 +128,6 @@ type FakeRepo = SessionsRepository & {
 
 function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
   const created: unknown[] = [];
-  const courtesyClaims: number[] = [];
-  const courtesyReleases: number[] = [];
   const updates: unknown[] = [];
   const turns: unknown[] = [];
   const deleted: string[] = [];
@@ -145,8 +135,6 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
   let inserted: Session | null = null;
 
   const repo = {
-    courtesyClaims,
-    courtesyReleases,
     created,
     updates,
     turns,
@@ -162,14 +150,6 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
     findLastSessionCallback: async () =>
       options.lastSession ?? { found: false, callbackFactId: null },
     findRecentFailedBriefSessionId: async () => options.failedBriefSessionId ?? null,
-    findGroupOwnerId: async () => options.groupOwnerId ?? null,
-    markCourtesySessionUsed: async () => {
-      courtesyClaims.push(1);
-      return options.courtesyAlreadyClaimed !== true;
-    },
-    releaseCourtesySession: async () => {
-      courtesyReleases.push(1);
-    },
     pickCallbackFact: async (userId: string) => {
       pickCallbackCalls.push(userId);
       return options.callbackFact ?? null;
@@ -180,14 +160,11 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
         kind: Session['kind'];
         topic: string;
         newsItemId?: string | null;
-        courtesy?: boolean;
       };
       inserted = sessionFixture({
         kind: typed.kind,
         topic: typed.topic,
         news_item_id: typed.kind === 'news' ? (typed.newsItemId ?? null) : null,
-        // La columna es lo que decide el `courtesy` de la respuesta (MAL-24).
-        courtesy: typed.courtesy ?? false,
       });
       return inserted;
     },
@@ -214,20 +191,6 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
   return repo as unknown as FakeRepo;
 }
 
-/**
- * Credenciales por usuario. Para MAL-24 hace falta distinguir las del
- * aprendiz de las del owner del grupo, que es de quien se presta la key.
- */
-function fakeCredentials(
-  providers: readonly ('openrouter' | 'gemini')[] = ['openrouter'],
-  byUser: Record<string, readonly ('openrouter' | 'gemini')[]> = {},
-) {
-  return {
-    listActive: async (userId: string) =>
-      (byUser[userId] ?? providers).map((provider) => ({ provider, apiKey: 'k' })),
-  } as unknown as CredentialsService;
-}
-
 interface FakeLlmOptions {
   readonly reply?: string;
   readonly unavailable?: boolean;
@@ -246,15 +209,15 @@ function fakeLlm(options: FakeLlmOptions = {}): FakeLlm {
       if (options.unavailable) throw new LlmUnavailableError([]);
       return {
         data: { reply: options.reply ?? 'Hello! What did you do today?', corrections: [] },
-        modelUsed: 'gemini-2.5-flash',
-        provider: 'gemini' as const,
+        modelUsed: 'fluent-free',
+        provider: '9router' as const,
         usage: { tokensIn: 120, tokensOut: 40 },
         degraded: false,
         attempts: [
           {
             attempt: 1,
-            provider: 'gemini' as const,
-            model: 'gemini-2.5-flash',
+            provider: '9router' as const,
+            model: 'fluent-free',
             source: 'fallback' as const,
             status: 'ok' as const,
             latencyMs: 1234.6,
@@ -320,8 +283,6 @@ const configService = { get: () => 3 } as unknown as ConfigService<never, true>;
 interface BuildOptions extends FakeRepoOptions {
   readonly llm?: FakeLlm;
   readonly random?: number;
-  readonly credentialProviders?: readonly ('openrouter' | 'gemini')[];
-  readonly credentialsByUser?: Record<string, readonly ('openrouter' | 'gemini')[]>;
   readonly boss?: ReturnType<typeof fakeBoss>;
   readonly challenges?: ReturnType<typeof fakeChallenges>;
 }
@@ -334,7 +295,6 @@ function buildService(options: BuildOptions = {}) {
   const jobs = fakeJobs();
   const service = new SessionsService(
     repository,
-    fakeCredentials(options.credentialProviders, options.credentialsByUser),
     llm,
     boss.service,
     challenges.service,
@@ -409,14 +369,6 @@ describe('SessionsService.openSession · validación previa (SPEC-04 §3.1, §2)
       activeSessionId,
     });
   });
-
-  it('sin credencial activa → 409 PROVIDER_NOT_CONNECTED', async () => {
-    const { service } = buildService({ credentialProviders: [] });
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-  });
 });
 
 describe('SessionsService.openSession · los cuatro kind (SPEC-04 §3.2)', () => {
@@ -435,7 +387,6 @@ describe('SessionsService.openSession · los cuatro kind (SPEC-04 §3.2)', () =>
         topic: 'Viajes',
         newsItemId: undefined,
         challengeFromUserId: null,
-        courtesy: false,
       },
     ]);
     // El mensaje del usuario en la apertura es el fijo de SPEC-04 §3.4.
@@ -830,13 +781,13 @@ describe('SessionsService.openSession · persistencia (SPEC-04 §3.5)', () => {
     await service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' });
 
     expect(repository.updates[0]).toMatchObject({
-      patch: { chatModelUsed: 'gemini-2.5-flash', callbackFactId: null },
+      patch: { chatModelUsed: 'fluent-free', callbackFactId: null },
     });
     expect(repository.turns).toEqual([
       {
         sessionId: '22222222-2222-4222-8222-222222222222',
         text: 'Hello! What did you do today?',
-        model: 'gemini-2.5-flash',
+        model: 'fluent-free',
         tokensIn: 120,
         tokensOut: 40,
         latencyMs: 1235,
@@ -951,7 +902,6 @@ describe('SessionsService.openSession · recuperación del brief fallido (MAL-20
     const jobs = fakeJobs({ fails: true });
     const service = new SessionsService(
       repository,
-      fakeCredentials(),
       fakeLlm(),
       fakeBoss().service,
       fakeChallenges().service,
@@ -970,124 +920,9 @@ describe('SessionsService.openSession · recuperación del brief fallido (MAL-20
   });
 });
 
-const OWNER_ID = '99999999-9999-4999-8999-999999999999';
-
-describe('SessionsService.openSession · sesión de cortesía (MAL-24)', () => {
-  /** Aprendiz sin credencial propia, con grupo y cortesía sin gastar. */
-  function courtesyOptions(overrides: Record<string, unknown> = {}) {
-    return {
-      profile: profileFixture({ group_id: 'group-1', courtesy_session_used_at: null }),
-      credentialsByUser: { [USER_ID]: [], [OWNER_ID]: ['openrouter' as const] },
-      groupOwnerId: OWNER_ID,
-      ...overrides,
-    };
-  }
-
-  it('abre la sesión con la credencial del owner y la marca como cortesía', async () => {
-    const { service, repository } = buildService(courtesyOptions());
-
-    const result = await service.openSession(USER_ID, {
-      kind: 'free_topic',
-      topic: 'Viajes',
-    });
-
-    expect(result.session.courtesy).toBe(true);
-    expect(repository.courtesyClaims).toHaveLength(1);
-  });
-
-  it('no usa la preferencia de modelo: solo la cadena gratuita', async () => {
-    const { service, repository } = buildService(
-      courtesyOptions({ preference: { provider: 'openrouter', model: 'modelo/caro' } }),
-    );
-
-    await service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' });
-
-    // La key es del owner: no se le puede gastar dinero en modelos de pago.
-    expect(repository.created).toHaveLength(1);
-  });
-
-  it('con credencial propia no es cortesía y no se marca nada', async () => {
-    const { service, repository } = buildService(
-      courtesyOptions({ credentialsByUser: { [USER_ID]: ['openrouter' as const] } }),
-    );
-
-    const result = await service.openSession(USER_ID, {
-      kind: 'free_topic',
-      topic: 'Viajes',
-    });
-
-    expect(result.session.courtesy).toBeUndefined();
-    expect(repository.courtesyClaims).toHaveLength(0);
-  });
-
-  it('si ya la gastó, sigue siendo PROVIDER_NOT_CONNECTED', async () => {
-    const { service } = buildService(
-      courtesyOptions({
-        profile: profileFixture({
-          group_id: 'group-1',
-          courtesy_session_used_at: '2026-09-01T10:00:00.000Z',
-        }),
-      }),
-    );
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-  });
-
-  it('sin grupo no hay cortesía: ni siquiera se llega a mirar la credencial (MEJ-33)', async () => {
-    const { service } = buildService(
-      courtesyOptions({ profile: profileFixture({ group_id: null }) }),
-    );
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'GROUP_REQUIRED' });
-  });
-
-  it('si el owner tampoco tiene credencial, no hay cortesía', async () => {
-    const { service } = buildService(
-      courtesyOptions({ credentialsByUser: { [USER_ID]: [], [OWNER_ID]: [] } }),
-    );
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-  });
-
-  it('el owner de su propio grupo no se presta la key a sí mismo', async () => {
-    const { service } = buildService(
-      courtesyOptions({
-        groupOwnerId: USER_ID,
-        credentialsByUser: { [USER_ID]: [] },
-      }),
-    );
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-  });
-
-  it('si otra apertura simultánea se llevó la cortesía, esta no abre', async () => {
-    const { service, repository } = buildService(
-      courtesyOptions({ courtesyAlreadyClaimed: true }),
-    );
-
-    await expect(
-      service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
-    ).rejects.toMatchObject({ code: 'PROVIDER_NOT_CONNECTED' });
-
-    // Y no se llegó a crear ninguna sesión con la key del owner.
-    expect(repository.created).toHaveLength(0);
-  });
-});
-
-describe('SessionsService.openSession · la cortesía se devuelve si falla (MAL-24)', () => {
-  it('un error inesperado del LLM no quema la sesión de cortesía', async () => {
+describe('SessionsService.openSession · fallo del LLM', () => {
+  it('un error inesperado borra la sesión recién creada', async () => {
     const { service, repository } = buildService({
-      profile: profileFixture({ group_id: 'group-1', courtesy_session_used_at: null }),
-      credentialsByUser: { [USER_ID]: [], [OWNER_ID]: ['openrouter' as const] },
-      groupOwnerId: OWNER_ID,
       llm: fakeLlm({ error: new Error('InsForge caído') }),
     });
 
@@ -1095,26 +930,6 @@ describe('SessionsService.openSession · la cortesía se devuelve si falla (MAL-
       service.openSession(USER_ID, { kind: 'free_topic', topic: 'Viajes' }),
     ).rejects.toThrow('InsForge caído');
 
-    // Quemar su única sesión gratuita por un error nuestro, sin que haya
-    // llegado a hablar, es lo contrario de lo que MAL-24 arregla.
-    expect(repository.courtesyClaims).toHaveLength(1);
-    expect(repository.courtesyReleases).toHaveLength(1);
-  });
-
-  it('la cadena agotada sí la consume: hay sesión y saludo degradado', async () => {
-    const { service, repository } = buildService({
-      profile: profileFixture({ group_id: 'group-1', courtesy_session_used_at: null }),
-      credentialsByUser: { [USER_ID]: [], [OWNER_ID]: ['openrouter' as const] },
-      groupOwnerId: OWNER_ID,
-      llm: fakeLlm({ unavailable: true }),
-    });
-
-    const result = await service.openSession(USER_ID, {
-      kind: 'free_topic',
-      topic: 'Viajes',
-    });
-
-    expect(result.session.courtesy).toBe(true);
-    expect(repository.courtesyReleases).toHaveLength(0);
+    expect(repository.deleted).toHaveLength(1);
   });
 });

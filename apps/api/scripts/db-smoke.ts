@@ -8,8 +8,7 @@
  *   3. El usuario A SÍ ve a B en la vista `group_members`, y solo las columnas
  *      visibles de RF-6.5.
  *   4. El usuario A no puede tocar columnas protegidas de su propio perfil (xp).
- *   5. (T2) El usuario A no lee `provider_credentials` (403/4xx o vacío).
- *   6. (T2) El usuario A solo ve su propia fila en `model_preferences` y
+ *   5. (T2) El usuario A solo ve su propia fila en `model_preferences` y
  *      puede hacer PATCH de `chat_model` sobre ella.
  *   7. (T3) El usuario A solo ve sus sesiones, turnos y correcciones, no lee
  *      `xp_events` ni `llm_calls`, y no puede invocar `close_session`.
@@ -245,14 +244,7 @@ async function main(): Promise<void> {
     { status: invPeek.status, body: invPeek.body },
   );
 
-  // --- T2: provider_credentials y model_preferences (migración 2) ----------
-  const credsPeek = await call('/api/database/records/provider_credentials', { token: tokenA });
-  check(
-    'A no lee provider_credentials',
-    credsPeek.status >= 400 || (Array.isArray(credsPeek.body) && credsPeek.body.length === 0),
-    { status: credsPeek.status, body: credsPeek.body },
-  );
-
+  // --- T2: model_preferences (migración 2) ----------------------------------
   const prefsRes = await call('/api/database/records/model_preferences', {
     admin: true,
     method: 'POST',

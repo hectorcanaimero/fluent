@@ -7,9 +7,8 @@
  * `LlmService` ya viene construido de `LlmModule` (PR-04/T1): el `useFactory`
  * que este módulo duplicaba con `WeeklySummaryModule` se movió allí, que es
  * lo que pedía PEND-07 de docs/specs/pendientes/PR-05.md. `LlmModule`
- * reexporta `LlmInfraModule` (y con él `CredentialsModule`), así que
- * `CredentialsCrypto` y los tokens `LLM_CALL_SINK`/`LLM_EVENT_BUS` siguen
- * disponibles para el resto de providers de aquí.
+ * reexporta `LlmInfraModule`, así que el token `LLM_CALL_SINK` sigue
+ * disponible para el resto de providers de aquí.
  */
 import { Module } from '@nestjs/common';
 

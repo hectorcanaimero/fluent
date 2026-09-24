@@ -5,10 +5,8 @@ import {
   LlmService,
   LlmUnavailableError,
   mapError,
-  type CredentialErrorEvent,
   type LlmCallRecord,
   type LlmCallSink,
-  type LlmEventBus,
 } from './llm.service.js';
 import { ModelResolver } from './model-resolver.js';
 import { TurnOutput } from './schemas.js';
@@ -111,12 +109,7 @@ function memorySink(): LlmCallSink & { rows: LlmCallRecord[] } {
   return { rows, record: (call) => void rows.push(call) };
 }
 
-function memoryBus(): LlmEventBus & { events: CredentialErrorEvent[] } {
-  const events: CredentialErrorEvent[] = [];
-  return { events, emit: (_name, payload) => void events.push(payload) };
-}
-
-function service(steps: readonly Step[], extra: { sink?: LlmCallSink; events?: LlmEventBus } = {}) {
+function service(steps: readonly Step[], extra: { sink?: LlmCallSink } = {}) {
   const { provider, calls } = scriptedProvider(steps);
   return {
     calls,
@@ -124,7 +117,6 @@ function service(steps: readonly Step[], extra: { sink?: LlmCallSink; events?: L
       provider,
       resolver: new ModelResolver(FALLBACKS),
       sink: extra.sink,
-      events: extra.events,
     }),
   };
 }
@@ -237,12 +229,10 @@ describe('LlmService.complete', () => {
     expect(sink.rows[0]).toMatchObject({ tokensIn: null, tokensOut: null });
   });
 
-  it('401 emite credential.error y descarta el proveedor', async () => {
-    const bus = memoryBus();
-    const { service: svc, calls } = service([httpError(401), OK], { events: bus });
+  it('401 descarta el proveedor', async () => {
+    const { service: svc, calls } = service([httpError(401), OK]);
 
     await expect(svc.complete(request())).rejects.toBeInstanceOf(LlmUnavailableError);
-    expect(bus.events).toEqual([{ userId: 'user-1', provider: '9router', code: 'AUTH_ERROR' }]);
     expect(calls).toHaveLength(1);
   });
 

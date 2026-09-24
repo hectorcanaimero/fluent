@@ -43,7 +43,7 @@ describe('toSessionInfoDto', () => {
         status: 'ended',
         ended_at: '2026-09-08T10:10:00.000Z',
         xp_earned: 160,
-        chat_model_used: 'gemini-2.5-flash',
+        chat_model_used: 'fluent-free',
       }),
     );
 
@@ -51,7 +51,7 @@ describe('toSessionInfoDto', () => {
       kind: 'boss',
       endedAt: '2026-09-08T10:10:00.000Z',
       xpEarned: 160,
-      modelUsed: 'gemini-2.5-flash',
+      modelUsed: 'fluent-free',
     });
   });
 

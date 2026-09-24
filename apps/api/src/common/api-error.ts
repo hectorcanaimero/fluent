@@ -28,8 +28,6 @@ export const API_ERROR_STATUS = {
   INVITATION_EXPIRED: 400,
   ALREADY_IN_GROUP: 409,
   /** Intenta abrir sesión sin credencial activa del proveedor. */
-  PROVIDER_NOT_CONNECTED: 409,
-  PROVIDER_KEY_INVALID: 400,
   /** Modelo fuera del catálogo o sin credencial del proveedor. */
   MODEL_NOT_AVAILABLE: 400,
   /** Turno sobre una sesión ya cerrada. */

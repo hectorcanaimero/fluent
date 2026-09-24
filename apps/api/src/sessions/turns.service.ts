@@ -3,7 +3,6 @@ import { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import { CredentialsService, type ActiveCredential } from '../credentials/credentials.service.js';
 import type { Profile, Session } from '../db/schema.js';
 import {
   DEGRADED_REPLY,
@@ -44,7 +43,6 @@ const TURNS_DAILY_CAP_FREE_MESSAGE =
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de seguir la conversación.';
-const PROVIDER_NOT_CONNECTED_MESSAGE = 'Conecta un proveedor de IA para seguir la conversación.';
 
 /**
  * `corrections.note` tiene un CHECK de 140 caracteres (migración 3). El
@@ -98,7 +96,6 @@ export class TurnsService {
   constructor(
     private readonly sessions: SessionsRepository,
     private readonly turns: TurnsRepository,
-    private readonly credentials: CredentialsService,
     private readonly llm: LlmService,
     private readonly redis: RedisService,
     private readonly configService: ConfigService<Env, true>,
@@ -159,29 +156,6 @@ export class TurnsService {
     } finally {
       await this.redis.del(lockKey);
     }
-  }
-
-  /**
-   * Credenciales de una sesión de cortesía (MAL-24): las del owner del grupo.
-   *
-   * Si el aprendiz conectó su propia key a mitad de sesión, se usa la suya:
-   * es mejor gastar la del dueño de la cuenta que la prestada, y evita que
-   * una sesión larga siga consumiendo del owner más de lo necesario.
-   */
-  private async courtesyCredentials(
-    profile: Profile,
-    own: readonly ActiveCredential[],
-  ): Promise<readonly ActiveCredential[]> {
-    if (own.length > 0 || profile.group_id === null) {
-      return own;
-    }
-
-    const ownerId = await this.sessions.findGroupOwnerId(profile.group_id);
-    if (ownerId === null || ownerId === profile.user_id) {
-      return own;
-    }
-
-    return this.credentials.listActive(ownerId);
   }
 
   /**
@@ -258,9 +232,8 @@ export class TurnsService {
     // El historial se lee **antes** de insertar el turno del usuario, porque
     // ese va aparte como `userMessage` y no dentro de `history`: por eso la
     // inserción sigue siendo secuencial y posterior.
-    const [profile, ownCredentials, history] = await Promise.all([
+    const [profile, history] = await Promise.all([
       this.sessions.findProfile(userId),
-      this.credentials.listActive(userId),
       this.turns.listRecentTurns(session.id, HISTORY_TURNS),
     ]);
 
@@ -272,22 +245,6 @@ export class TurnsService {
     // del usuario y de llamar al modelo: pasado el tope no se escribe nada ni
     // se gasta un céntimo de la key del aprendiz.
     await this.requireDailyTurnsBudget(userId, profile);
-
-    // En una sesión de cortesía la key es la del owner del grupo (MAL-24), y
-    // eso vale para **todos** los turnos, no solo para la apertura: si aquí
-    // se mirara solo `listActive(userId)`, el primer mensaje del aprendiz
-    // fallaría con PROVIDER_NOT_CONNECTED y se habría quedado con el saludo
-    // y nada más, con su única sesión gratuita ya gastada.
-    const credentials = session.courtesy
-      ? await this.courtesyCredentials(profile, ownCredentials)
-      : ownCredentials;
-
-    if (credentials.length === 0) {
-      // El usuario borró la credencial con la sesión abierta: sin ninguna
-      // key no hay cadena de fallback que agotar, así que no es una
-      // degradación (SPEC-03 §6) sino el mismo error que al abrir.
-      throw ApiException.of('PROVIDER_NOT_CONNECTED', PROVIDER_NOT_CONNECTED_MESSAGE);
-    }
 
     // La apertura del tutor es `idx = 0`; cada turno toma el último + 1. Con
     // la sesión sin ningún turno (imposible hoy: la apertura siempre inserta
@@ -350,9 +307,7 @@ export class TurnsService {
         : this.sessions.findNewsItem(session.news_item_id),
       this.sessions.findBriefText(userId),
       this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
-      // En cortesía no se aplica la preferencia: sin ella `ModelResolver`
-      // solo ofrece la cadena gratuita, y la key es prestada (MAL-24).
-      session.courtesy ? Promise.resolve(null) : this.findPreference(userId),
+      this.findPreference(userId),
     ]);
 
     const scenario = rebuildScenario(session, newsItem);

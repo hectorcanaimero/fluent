@@ -5,7 +5,6 @@ import { App } from 'supertest/types';
 import type { InsForgeClient } from '@insforge/sdk';
 
 import { ROLEPLAYS } from '../src/content/index.js';
-import { CredentialsService } from '../src/credentials/credentials.service.js';
 import { DEGRADED_REPLY, HISTORY_TURNS } from '../src/llm/config.js';
 import type { LlmMessage } from '../src/llm/types.js';
 import { LlmService, LlmUnavailableError } from '../src/llm/llm.service.js';
@@ -214,8 +213,6 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
       level: 'B1',
       groupId: sharedGroupId,
     });
-    // La cifra con la clave maestra de `.env.test`; nunca es una key real.
-    await app.get(CredentialsService).saveApiKey(user.id, 'openrouter', 'clave-falsa');
     return user;
   }
 
@@ -325,7 +322,6 @@ maybeDescribe('Turno de conversación (e2e, InsForge)', () => {
     for (const userId of seededUserIds) {
       await admin.database.from('corrections').delete().eq('user_id', userId);
       await admin.database.from('sessions').delete().eq('user_id', userId);
-      await admin.database.from('provider_credentials').delete().eq('user_id', userId);
     }
     await cleanupE2eData(admin, { userIds: seededUserIds, groupIds: seededGroupIds });
     await app.close();

@@ -67,10 +67,6 @@ export function localPartOfEmail(email: string | null | undefined): string | nul
  * esas dos tablas todavía no tienen su propio repositorio (llegan en
  * PR-02/T5 y T7), así que se leen aquí de forma mínima en vez de bloquear T2
  * en tareas que no le tocan. Ver docs/specs/pendientes/PR-02.md PEND-15.
- *
- * La lectura equivalente de `provider_credentials` sí migró ya a
- * `CredentialsRepository.listStatuses` (PR-02/T4), que es quien manda sobre
- * esa tabla.
  */
 /** Lee el escalar que devuelve `award_profile_completed` (MEJ-14). */
 function readAwardedAmount(data: unknown): number {
@@ -259,7 +255,6 @@ export class ProfilesRepository {
       TABLES.facts,
       TABLES.coachingBriefHistory,
       TABLES.coachingBriefs,
-      TABLES.providerCredentials,
       TABLES.modelPreferences,
       TABLES.xpEvents,
     ];

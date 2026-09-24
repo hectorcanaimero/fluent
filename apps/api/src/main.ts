@@ -3,7 +3,7 @@ import type { NestExpressApplication } from '@nestjs/platform-express';
 import { ConfigService } from '@nestjs/config';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
-import { Env, suspiciousEnvWarnings } from './config/env.js';
+import type { Env } from './config/env.js';
 import { setupOpenApi } from './openapi.js';
 import { mountBullBoard } from './admin/bull-board.js';
 import { createOwnerBearerMiddleware } from './auth/owner-bearer.middleware.js';
@@ -16,18 +16,6 @@ async function bootstrap() {
   });
 
   app.useLogger(app.get(Logger));
-
-  // Configuración sospechosa: no impide arrancar, pero explica errores que de
-  // otro modo cuestan horas (por ejemplo, volver del PKCE a la API de
-  // producción desde una API local).
-  const logger = app.get(Logger);
-  const config = app.get(ConfigService<Env, true>);
-  for (const warning of suspiciousEnvWarnings({
-    NODE_ENV: config.get('NODE_ENV', { infer: true }),
-    API_PUBLIC_URL: config.get('API_PUBLIC_URL', { infer: true }),
-  })) {
-    logger.warn(warning);
-  }
 
   // Coolify manda SIGTERM en cada deploy. Sin los shutdown hooks, Nest no
   // ejecuta los `onModuleDestroy`/`onApplicationShutdown` (conexiones de

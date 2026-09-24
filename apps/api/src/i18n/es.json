@@ -7,8 +7,6 @@
   "INVITATION_USED": "El código de invitación ya fue usado.",
   "INVITATION_EXPIRED": "El código de invitación caducó.",
   "ALREADY_IN_GROUP": "Ya pertenecés a un grupo.",
-  "PROVIDER_NOT_CONNECTED": "Conectá un proveedor de IA para poder practicar.",
-  "PROVIDER_KEY_INVALID": "La clave del proveedor no es válida.",
   "MODEL_NOT_AVAILABLE": "Ese modelo no está disponible para tu cuenta.",
   "SESSION_NOT_ACTIVE": "Esta sesión ya está cerrada.",
   "SESSION_ALREADY_ACTIVE": "Ya tenés una sesión activa.",

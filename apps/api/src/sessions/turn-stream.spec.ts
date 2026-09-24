@@ -23,7 +23,7 @@ function turnResult(overrides: Partial<TurnResultDto> = {}): TurnResultDto {
     turnIdx: 3,
     reply: 'Nice! What did you do at the gym?',
     corrections: [CORRECTION],
-    modelUsed: 'gemini-2.5-flash',
+    modelUsed: 'fluent-free',
     degraded: false,
     ...overrides,
   };

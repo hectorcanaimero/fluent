@@ -23,7 +23,7 @@ const RESULT: TurnResultDto = {
   turnIdx: 3,
   reply: 'Nice! Where did you go?',
   corrections: [],
-  modelUsed: 'gemini-2.5-flash',
+  modelUsed: 'fluent-free',
   degraded: false,
 };
 

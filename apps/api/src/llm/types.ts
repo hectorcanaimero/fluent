@@ -46,8 +46,8 @@ export class LlmCallError extends Error {
     super(`${status}${httpStatus !== undefined ? ` (HTTP ${httpStatus})` : ''} en ${provider}/${model}`);
   }
 
-  /** ¿Es un fallo de credencial? Entonces no se reintenta con ese proveedor (SPEC-03 §2). */
-  get isCredentialError(): boolean {
+  /** ¿Es un fallo de autenticación o de saldo? Entonces no se reintenta con ese proveedor (SPEC-03 §2). */
+  get isAuthError(): boolean {
     return this.status === 'auth_error' || this.status === 'no_credits';
   }
 }

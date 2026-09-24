@@ -13,15 +13,14 @@ import {
   type InsforgeE2eCredentials,
 } from './insforge-e2e.js';
 import { REDIS_CACHE_CLIENT } from '../src/redis/redis.constants.js';
-import { PROVIDER_FETCH } from '../src/providers/provider-api.client.js';
+import { MODELS_FETCH } from '../src/models/models.service.js';
 import { NINEROUTER_MODELS } from '../src/llm/ninerouter-models.js';
 
 /**
  * e2e de PR-02/T5 (catálogo y preferencias de modelo) contra la rama real de
- * InsForge `feat-api`: las escrituras en `provider_credentials` y
- * `model_preferences` son de verdad; **solo** se simulan las llamadas
- * salientes a 9router (`GET /models`, catálogo), como hace `providers.e2e-spec.ts` de T4 — el mismo patrón:
- * `PROVIDER_FETCH` inyectado y un doble en memoria de Redis.
+ * InsForge `feat-api`: las escrituras en `model_preferences` son de verdad;
+ * **solo** se simulan las llamadas salientes a 9router (`GET /models`,
+ * catálogo): `MODELS_FETCH` inyectado y un doble en memoria de Redis.
  *
  * Necesita `INSFORGE_URL` / `INSFORGE_API_KEY` / `INSFORGE_ANON_KEY` en
  * `process.env` o en el archivo gitignored `apps/api/.env.test.local`; si no
@@ -109,7 +108,7 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
       imports: [AppModule],
     })
       // Nunca se llama a 9router de verdad.
-      .overrideProvider(PROVIDER_FETCH)
+      .overrideProvider(MODELS_FETCH)
       .useValue(fakeFetch)
       // El catálogo se cachea en Redis (`ModelCatalogService`, PR-03); aquí
       // no hay uno real levantado (docs/specs/pendientes/PR-02.md PEND-32).
@@ -128,7 +127,6 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
 
   afterAll(async () => {
     for (const userId of seededUserIds) {
-      await admin.database.from('provider_credentials').delete().eq('user_id', userId);
       await admin.database.from('model_preferences').delete().eq('user_id', userId);
     }
     await cleanupE2eData(admin, { userIds: seededUserIds });

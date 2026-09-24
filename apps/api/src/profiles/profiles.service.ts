@@ -1,6 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { INTERESTS } from '../content/index.js';
-import { CredentialsRepository } from '../credentials/credentials.repository.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
 import { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
 import { startOfUserDay } from '../sessions/user-day.js';
@@ -9,34 +8,8 @@ import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper
 import { ProfilesRepository } from './profiles.repository.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
 import { XP_PROFILE_COMPLETED } from '../config/product.js';
-import type { Profile } from '../db/schema.js';
-import type {
-  MeDto,
-  ProviderInfoDto,
-  UpdateProfileResultDto,
-} from './profiles.types.js';
-
-/**
- * ¿Le queda al usuario la sesión de cortesía de MAL-24?
- *
- * Función pura: recibe lo que ya se cargó para el resto de `GET /me`. Se
- * exige que el owner tenga credencial activa porque ofrecer una cortesía que
- * va a fallar al abrir la sesión es peor que no ofrecerla; `ownerProviders`
- * viene de `listStatuses`, que no descifra ninguna key.
- */
-export function isCourtesyAvailable(args: {
-  profile: Profile;
-  providers: ProviderInfoDto[];
-  ownerProviders: ProviderInfoDto[];
-}): boolean {
-  if (args.profile.courtesy_session_used_at !== null || args.profile.group_id === null) {
-    return false;
-  }
-  if (args.providers.some((provider) => provider.status === 'active')) {
-    return false;
-  }
-  return args.ownerProviders.some((provider) => provider.status === 'active');
-}
+import { effectivePlan } from './plan.js';
+import type { MeDto, UpdateProfileResultDto } from './profiles.types.js';
 
 /** Catálogo de ids de interés, calculado una sola vez (SPEC-02 §4.1). */
 const INTERESTS_CATALOG_IDS = INTERESTS.map((interest) => interest.id);
@@ -51,9 +24,6 @@ export class ProfilesService {
   constructor(
     private readonly profilesRepository: ProfilesRepository,
     private readonly groupsRepository: GroupsRepository,
-    // `provider_credentials` la lee su propio repositorio desde PR-02/T4
-    // (docs/specs/pendientes/PR-02.md PEND-15).
-    private readonly credentialsRepository: CredentialsRepository,
     // `pendingActions` (SPEC-02 §4.1): hoy solo el aviso que deja el job
     // `weekly-summary` de PR-05 en Redis (PEND-76).
     private readonly pendingActions: PendingActionsService,
@@ -70,7 +40,6 @@ export class ProfilesService {
 
     const [
       group,
-      providers,
       modelPreference,
       activeSessionId,
       pendingActions,
@@ -78,7 +47,6 @@ export class ProfilesService {
       avatarUrl,
     ] = await Promise.all([
       profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
-      this.credentialsRepository.listStatuses(userId),
       this.profilesRepository.getModelPreference(userId),
       this.profilesRepository.getActiveSessionId(userId),
       this.pendingActions.listFor(userId),
@@ -90,30 +58,20 @@ export class ProfilesService {
         : this.profilesRepository.refreshAvatar(userId).catch(() => null),
     ]);
 
-    // La cortesía necesita saber si el owner del grupo tiene credencial
-    // activa (MAL-24). Depende del grupo, así que no cabe en el `Promise.all`
-    // de arriba; se resuelve con el grupo ya cargado, sin volver a pedirlo.
-    const ownerId = group?.owner_id ?? null;
-    const ownerProviders =
-      ownerId !== null && ownerId !== userId && profile.courtesy_session_used_at === null
-        ? await this.credentialsRepository.listStatuses(ownerId)
-        : [];
-
     return {
       profile: toProfileDto({ ...profile, avatar_url: avatarUrl }),
       group: group ? toGroupDto(group) : null,
-      providers,
+      plan: effectivePlan(profile),
+      planExpiresAt: profile.plan_expires_at,
       modelPreference: toModelPreferenceDto(modelPreference),
       onboarded: profile.onboarded_at !== null,
       activeSessionId,
       interestsCatalog: INTERESTS_CATALOG_IDS,
       pendingActions,
       sessionsToday,
-      courtesySessionAvailable: isCourtesyAvailable({
-        profile,
-        providers,
-        ownerProviders,
-      }),
+      // La sesión de cortesía desaparece en F5; sin credenciales de usuario
+      // ya no hay nada que ofrecer. Se conserva el campo para la app actual.
+      courtesySessionAvailable: false,
     };
   }
 

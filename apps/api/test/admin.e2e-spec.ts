@@ -106,6 +106,11 @@ describe('Admin Endpoints (e2e)', () => {
         { status: 'timeout' },
         { status: 'provider_error' },
       ],
+      // Solo existe el usuario `existing-user`.
+      setPlan: async (userId: string, plan: string, expiresAt: string | null) =>
+        userId === 'existing-user'
+          ? { user_id: userId, plan, plan_expires_at: expiresAt }
+          : null,
     };
 
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -263,6 +268,50 @@ describe('Admin Endpoints (e2e)', () => {
 
       // Y las colas siguen ahí: una sola respuesta con las cuatro métricas.
       expect(response.body.queues).toHaveLength(4);
+    });
+  });
+
+  describe('PUT /v1/admin/users/:id/plan', () => {
+    const body = { plan: 'pro', expiresAt: '2027-01-01T00:00:00.000Z' };
+
+    it('returns 200 with the new plan for the owner', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({ ok: true, userId: ownerId });
+
+      const response = await request(app.getHttpServer())
+        .put('/v1/admin/users/existing-user/plan')
+        .set('Authorization', `Bearer ${ownerToken('plan-ok')}`)
+        .send(body)
+        .expect(200);
+
+      expect(response.body).toEqual({
+        userId: 'existing-user',
+        plan: 'pro',
+        planExpiresAt: body.expiresAt,
+      });
+    });
+
+    it('returns 403 for a non-owner', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({ ok: true, userId: otherUserId });
+
+      const response = await request(app.getHttpServer())
+        .put('/v1/admin/users/existing-user/plan')
+        .set('Authorization', `Bearer ${otherToken('plan')}`)
+        .send(body)
+        .expect(403);
+
+      expect(response.body.error).toBe('FORBIDDEN');
+    });
+
+    it('returns 404 when the user does not exist', async () => {
+      vi.mocked(insforgeHttpMock.getCurrentSession).mockResolvedValue({ ok: true, userId: ownerId });
+
+      const response = await request(app.getHttpServer())
+        .put('/v1/admin/users/ghost/plan')
+        .set('Authorization', `Bearer ${ownerToken('plan-404')}`)
+        .send(body)
+        .expect(404);
+
+      expect(response.body.error).toBe('NOT_FOUND');
     });
   });
 

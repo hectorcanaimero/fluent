@@ -2,7 +2,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
-import { TABLES } from '../db/schema.js';
+import { TABLES, type Plan, type Profile } from '../db/schema.js';
 import type { SessionRow, SessionDurationRow, LlmCallRow } from './metrics-aggregation.js';
 
 /**
@@ -61,5 +61,21 @@ export class AdminRepository {
       .limit(50000);
 
     return unwrapInsforge<LlmCallRow[]>(result) ?? [];
+  }
+
+  /** Escribe el plan; `null` si el usuario no existe. */
+  async setPlan(
+    userId: string,
+    plan: Plan,
+    expiresAt: string | null,
+  ): Promise<Pick<Profile, 'user_id' | 'plan' | 'plan_expires_at'> | null> {
+    const result = await this.admin.database
+      .from(TABLES.profiles)
+      .update({ plan, plan_expires_at: expiresAt })
+      .eq('user_id', userId)
+      .select('user_id, plan, plan_expires_at')
+      .maybeSingle();
+
+    return unwrapInsforge<Pick<Profile, 'user_id' | 'plan' | 'plan_expires_at'>>(result);
   }
 }

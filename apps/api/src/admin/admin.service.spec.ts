@@ -149,3 +149,52 @@ describe('AdminService · GET /admin/metrics (SPEC-02 §4.6, RF-8.2)', () => {
     });
   });
 });
+
+describe('AdminService · PUT /admin/users/:id/plan (F2.3.T1)', () => {
+  function makePlanService(found: boolean) {
+    const setPlan = vi.fn(async (userId: string, plan: string, expiresAt: string | null) =>
+      found ? { user_id: userId, plan, plan_expires_at: expiresAt } : null,
+    );
+    const service = new AdminService(
+      new OwnerService(makeConfigService()),
+      { setPlan } as unknown as AdminRepository,
+      {} as QueueMetricsService,
+    );
+    return { service, setPlan };
+  }
+
+  it('el owner escribe el plan y recibe { userId, plan, planExpiresAt }', async () => {
+    const { service, setPlan } = makePlanService(true);
+    const result = await service.setUserPlan(OWNER_USER_ID, 'u1', {
+      plan: 'pro',
+      expiresAt: '2027-01-01T00:00:00.000Z',
+    });
+    expect(setPlan).toHaveBeenCalledWith('u1', 'pro', '2027-01-01T00:00:00.000Z');
+    expect(result).toEqual({
+      userId: 'u1',
+      plan: 'pro',
+      planExpiresAt: '2027-01-01T00:00:00.000Z',
+    });
+  });
+
+  it('expiresAt ausente se guarda como null', async () => {
+    const { service, setPlan } = makePlanService(true);
+    await service.setUserPlan(OWNER_USER_ID, 'u1', { plan: 'free' });
+    expect(setPlan).toHaveBeenCalledWith('u1', 'free', null);
+  });
+
+  it('403 FORBIDDEN a un no owner, sin tocar la base', async () => {
+    const { service, setPlan } = makePlanService(true);
+    await expect(service.setUserPlan('otro', 'u1', { plan: 'pro' })).rejects.toMatchObject({
+      code: 'FORBIDDEN',
+    });
+    expect(setPlan).not.toHaveBeenCalled();
+  });
+
+  it('404 NOT_FOUND si el usuario no existe', async () => {
+    const { service } = makePlanService(false);
+    await expect(service.setUserPlan(OWNER_USER_ID, 'nadie', { plan: 'pro' })).rejects.toMatchObject({
+      code: 'NOT_FOUND',
+    });
+  });
+});

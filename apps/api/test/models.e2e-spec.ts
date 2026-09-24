@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import { fileURLToPath } from 'node:url';
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import request from 'supertest';
@@ -15,15 +13,14 @@ import {
   type InsforgeE2eCredentials,
 } from './insforge-e2e.js';
 import { REDIS_CACHE_CLIENT } from '../src/redis/redis.constants.js';
-import { GEMINI_MODELS_URL, PROVIDER_FETCH } from '../src/providers/provider-api.client.js';
-import { PROVIDERS } from '../src/llm/config.js';
+import { PROVIDER_FETCH } from '../src/providers/provider-api.client.js';
+import { NINEROUTER_MODELS } from '../src/llm/ninerouter-models.js';
 
 /**
  * e2e de PR-02/T5 (catálogo y preferencias de modelo) contra la rama real de
  * InsForge `feat-api`: las escrituras en `provider_credentials` y
  * `model_preferences` son de verdad; **solo** se simulan las llamadas
- * salientes a OpenRouter (`GET /models`, catálogo) y Gemini (validación de
- * key), como hace `providers.e2e-spec.ts` de T4 — el mismo patrón:
+ * salientes a 9router (`GET /models`, catálogo), como hace `providers.e2e-spec.ts` de T4 — el mismo patrón:
  * `PROVIDER_FETCH` inyectado y un doble en memoria de Redis.
  *
  * Necesita `INSFORGE_URL` / `INSFORGE_API_KEY` / `INSFORGE_ANON_KEY` en
@@ -44,14 +41,8 @@ if (credentials) {
 
 const maybeDescribe = credentials ? describe : describe.skip;
 
-/** Catálogo real de OpenRouter (fixture de PR-03), usado como respuesta simulada. */
-const OPENROUTER_MODELS_URL = `${PROVIDERS.openrouter.baseUrl}/models`;
-const FIXTURE_PATH = fileURLToPath(
-  new URL('../fixtures/llm/openrouter-models.json', import.meta.url),
-);
-const FIXTURE_JSON = readFileSync(FIXTURE_PATH, 'utf-8');
-
-const FAKE_GEMINI_KEY = 'AIza-FAKE-e2e-gemini-key-0123456789';
+/** Respuesta simulada de `GET {NINEROUTER_URL}/models`: todos los ids de la lista fija. */
+const ROUTER_MODELS_BODY = { data: NINEROUTER_MODELS.map((m) => ({ id: m.id })) };
 
 function authHeader(accessToken: string): { Authorization: string } {
   return { Authorization: `Bearer ${accessToken}` };
@@ -82,8 +73,6 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
 
   const seededUserIds: string[] = [];
 
-  /** Respuestas simuladas de OpenRouter/Gemini, por URL. Cada test añade las suyas. */
-  let handlers: Record<string, () => Response>;
   let fetchCalls: FetchCall[];
 
   const fakeFetch = async (input: RequestInfo | URL, init?: RequestInit): Promise<Response> => {
@@ -93,11 +82,10 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
       headers: Object.fromEntries(Object.entries((init?.headers ?? {}) as Record<string, string>)),
     });
 
-    const handler = handlers[url];
-    if (!handler) {
+    if (!url.endsWith('/models')) {
       throw new Error(`Llamada saliente no simulada en el e2e: ${url}`);
     }
-    return handler();
+    return jsonResponse(ROUTER_MODELS_BODY);
   };
 
   function jsonResponse(body: unknown, status = 200): Response {
@@ -113,17 +101,6 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
     return user;
   }
 
-  /** Conecta Gemini con una key simulada como válida (POST /providers/gemini). */
-  async function connectGemini(user: E2eTestUser): Promise<void> {
-    handlers[GEMINI_MODELS_URL] = () => jsonResponse({ data: [{ id: 'gemini-2.5-flash' }] });
-
-    await request(app.getHttpServer())
-      .post('/v1/providers/gemini')
-      .set(authHeader(user.accessToken))
-      .send({ apiKey: FAKE_GEMINI_KEY })
-      .expect(201);
-  }
-
   beforeAll(async () => {
     admin = createE2eAdminClient(credentials!);
 
@@ -131,7 +108,7 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
     })
-      // Nunca se llama a OpenRouter ni a Google de verdad.
+      // Nunca se llama a 9router de verdad.
       .overrideProvider(PROVIDER_FETCH)
       .useValue(fakeFetch)
       // El catálogo se cachea en Redis (`ModelCatalogService`, PR-03); aquí
@@ -146,10 +123,6 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
   }, 30_000);
 
   beforeEach(() => {
-    // El catálogo de OpenRouter se necesita en casi todos los tests: `GET
-    // /models` y `PUT /me/models` siempre bajan el catálogo completo antes
-    // de validar el rol elegido.
-    handlers = { [OPENROUTER_MODELS_URL]: () => jsonResponse(JSON.parse(FIXTURE_JSON) as unknown) };
     fetchCalls = [];
   });
 
@@ -163,7 +136,7 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
   }, 30_000);
 
   it(
-    'GET /models devuelve las dos claves de proveedor, los tres tiers y un estimatePerSession con una entrada por modelo',
+    'GET /models devuelve providers[9router] con fluent-free en free y un estimatePerSession con una entrada por modelo',
     async () => {
       const user = await newUser('Catalogo');
 
@@ -172,159 +145,69 @@ maybeDescribe('Catálogo y preferencias de modelo (e2e, InsForge feat-api)', () 
         .set(authHeader(user.accessToken))
         .expect(200);
 
-      expect(Object.keys(response.body.providers).sort()).toEqual(['gemini', 'openrouter']);
-      for (const provider of ['openrouter', 'gemini'] as const) {
-        expect(response.body.providers[provider]).toEqual(
-          expect.objectContaining({
-            free: expect.any(Array),
-            budget: expect.any(Array),
-            premium: expect.any(Array),
-          }),
-        );
-      }
+      expect(Object.keys(response.body.providers)).toEqual(['9router']);
+      const group = response.body.providers['9router'] as Record<
+        'free' | 'budget' | 'premium',
+        Array<{ id: string; name: string; pricePerMillionUsd: number }>
+      >;
+      expect(group.free.map((m) => m.id)).toContain('fluent-free');
+      expect(group.premium.map((m) => m.id)).toContain('fluent-pro');
 
-      // Los 3 modelos fijos de Gemini (SPEC-03 §7) están todos, repartidos
-      // entre budget/premium (ninguno es gratis).
-      expect(
-        response.body.providers.gemini.budget.length + response.body.providers.gemini.premium.length,
-      ).toBe(3);
-      expect(response.body.providers.gemini.free.length).toBe(0);
-      // El fixture de OpenRouter trae modelos en los tres tiers.
-      expect(response.body.providers.openrouter.free.length).toBeGreaterThan(0);
-      expect(response.body.providers.openrouter.budget.length).toBeGreaterThan(0);
-      expect(response.body.providers.openrouter.premium.length).toBeGreaterThan(0);
-
-      const allModelIds = (
-        [
-          ...response.body.providers.openrouter.free,
-          ...response.body.providers.openrouter.budget,
-          ...response.body.providers.openrouter.premium,
-          ...response.body.providers.gemini.free,
-          ...response.body.providers.gemini.budget,
-          ...response.body.providers.gemini.premium,
-        ] as Array<{ id: string; name: string; pricePerMillionUsd: number }>
-      ).map((m) => m.id);
-
+      const allModelIds = [...group.free, ...group.budget, ...group.premium].map((m) => m.id);
       expect(Object.keys(response.body.estimatePerSession).sort()).toEqual([...allModelIds].sort());
       for (const id of allModelIds) {
         expect(typeof response.body.estimatePerSession[id]).toBe('number');
       }
+      expect(fetchCalls[0]?.headers.Authorization).toMatch(/^Bearer /);
     },
     30_000,
   );
 
   it(
-    'usuario sin Gemini elige un modelo de Gemini para el rol de chat -> 400 MODEL_NOT_AVAILABLE',
+    'PUT /me/models con modelos del catálogo -> 200 y GET /me lo refleja',
     async () => {
-      const user = await newUser('Sin Gemini');
-
-      const response = await request(app.getHttpServer())
-        .put('/v1/me/models')
-        .set(authHeader(user.accessToken))
-        .send({
-          chatProvider: 'gemini',
-          chatModel: 'gemini-2.5-flash',
-          briefProvider: 'openrouter',
-          briefModel: 'anthropic/claude-sonnet-4.5',
-        })
-        .expect(400);
-
-      expect(response.body).toMatchObject({ error: 'MODEL_NOT_AVAILABLE', statusCode: 400 });
-      expect(response.body.message).toMatch(/credencial activa/);
-    },
-    30_000,
-  );
-
-  it(
-    'con credencial de Gemini activa, elegir modelos de Gemini -> 200 y GET /me lo refleja',
-    async () => {
-      const user = await newUser('Con Gemini');
-      await connectGemini(user);
+      const user = await newUser('Con Modelos');
+      const body = {
+        chatProvider: '9router',
+        chatModel: 'fluent-free',
+        briefProvider: '9router',
+        briefModel: 'fluent-pro',
+      };
 
       const putResponse = await request(app.getHttpServer())
         .put('/v1/me/models')
         .set(authHeader(user.accessToken))
-        .send({
-          chatProvider: 'gemini',
-          chatModel: 'gemini-2.5-flash',
-          briefProvider: 'gemini',
-          briefModel: 'gemini-2.5-flash-lite',
-        })
+        .send(body)
         .expect(200);
-
-      expect(putResponse.body).toEqual({
-        chatProvider: 'gemini',
-        chatModel: 'gemini-2.5-flash',
-        briefProvider: 'gemini',
-        briefModel: 'gemini-2.5-flash-lite',
-      });
+      expect(putResponse.body).toEqual(body);
 
       const meResponse = await request(app.getHttpServer())
         .get('/v1/me')
         .set(authHeader(user.accessToken))
         .expect(200);
-
-      expect(meResponse.body.modelPreference).toEqual({
-        chatProvider: 'gemini',
-        chatModel: 'gemini-2.5-flash',
-        briefProvider: 'gemini',
-        briefModel: 'gemini-2.5-flash-lite',
-      });
+      expect(meResponse.body.modelPreference).toEqual(body);
     },
     30_000,
   );
 
   it(
-    'un modelo que no está en el catálogo del proveedor -> 400 MODEL_NOT_AVAILABLE (aunque haya credencial)',
+    'un modelo que no está en el catálogo -> 400 MODEL_NOT_AVAILABLE',
     async () => {
       const user = await newUser('Modelo Invalido');
-      await connectGemini(user);
 
       const response = await request(app.getHttpServer())
         .put('/v1/me/models')
         .set(authHeader(user.accessToken))
         .send({
-          chatProvider: 'gemini',
-          chatModel: 'gemini-no-existe',
-          briefProvider: 'gemini',
-          briefModel: 'gemini-2.5-flash',
+          chatProvider: '9router',
+          chatModel: 'no-existe',
+          briefProvider: '9router',
+          briefModel: 'fluent-free',
         })
         .expect(400);
 
       expect(response.body).toMatchObject({ error: 'MODEL_NOT_AVAILABLE', statusCode: 400 });
       expect(response.body.message).toMatch(/no está en el catálogo/);
-    },
-    30_000,
-  );
-
-  it(
-    'desconectar el proveedor borra la preferencia que lo usaba (PEND-26, integración con T4)',
-    async () => {
-      const user = await newUser('Reset Preferencias');
-      await connectGemini(user);
-
-      await request(app.getHttpServer())
-        .put('/v1/me/models')
-        .set(authHeader(user.accessToken))
-        .send({
-          chatProvider: 'gemini',
-          chatModel: 'gemini-2.5-flash',
-          briefProvider: 'gemini',
-          briefModel: 'gemini-2.5-flash-lite',
-        })
-        .expect(200);
-
-      await request(app.getHttpServer())
-        .delete('/v1/providers/gemini')
-        .set(authHeader(user.accessToken))
-        .expect(204);
-
-      const meResponse = await request(app.getHttpServer())
-        .get('/v1/me')
-        .set(authHeader(user.accessToken))
-        .expect(200);
-
-      expect(meResponse.body.modelPreference).toBeNull();
     },
     30_000,
   );

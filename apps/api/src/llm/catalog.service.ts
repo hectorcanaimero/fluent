@@ -6,8 +6,7 @@
  * Redis; en tests se usa una implementación en memoria).
  */
 import type { Provider } from '../db/schema.js';
-import { LEGACY_PROVIDERS as PROVIDERS } from './config.js';
-import { GEMINI_MODELS } from './gemini-models.js';
+import { NINEROUTER_MODELS } from './ninerouter-models.js';
 
 /**
  * Almacén de caché mínimo. PR-08/T3 lo implementará con Redis; en tests se usa una
@@ -29,40 +28,20 @@ export interface CatalogModel {
   readonly pricePerMillionIn: number;
   readonly pricePerMillionOut: number;
   readonly tier: ModelTier;
+  /** `reasoning_effort` que 9router acepta para este modelo; ausente = no se manda. */
+  readonly reasoningEffort?: 'none' | 'low';
 }
 
-/** SPEC-03 §7: 6 h de caché para el catálogo de OpenRouter. */
+/** SPEC-03 §7: 6 h de caché para el catálogo de 9router. */
 export const CACHE_TTL_SECONDS = 6 * 60 * 60;
-const CACHE_KEY = 'llm:catalog:openrouter';
-
-/** SPEC-03 §7: contexto mínimo para no descartar el modelo. */
-const MIN_CONTEXT_LENGTH = 8000;
+const CACHE_KEY = 'llm:catalog:9router';
 
 /** SPEC-03 §7: valores por defecto cuando el usuario no tiene historial de sesiones. */
 export const DEFAULT_AVG_TOKENS_IN = 9000;
 export const DEFAULT_AVG_TOKENS_OUT = 2500;
 
-interface OpenRouterArchitecture {
-  readonly modality?: unknown;
-  readonly input_modalities?: unknown;
-  readonly output_modalities?: unknown;
-}
-
-interface OpenRouterPricing {
-  readonly prompt?: unknown;
-  readonly completion?: unknown;
-}
-
-interface OpenRouterRawModel {
-  readonly id?: unknown;
-  readonly name?: unknown;
-  readonly context_length?: unknown;
-  readonly architecture?: OpenRouterArchitecture;
-  readonly pricing?: OpenRouterPricing;
-}
-
-interface OpenRouterModelsResponse {
-  readonly data?: readonly OpenRouterRawModel[];
+interface NineRouterModelsResponse {
+  readonly data?: ReadonlyArray<{ readonly id?: unknown }>;
 }
 
 /**
@@ -82,106 +61,41 @@ export function tierFromOutputPrice(pricePerMillionOut: number): ModelTier {
   return 'premium';
 }
 
-/** Convierte un precio de OpenRouter (string, USD por token) a USD por millón de tokens. */
-function parsePricePerMillion(raw: unknown): number | null {
-  if (typeof raw !== 'string') return null;
-  const value = Number(raw);
-  if (!Number.isFinite(value) || value < 0) return null;
-  return value * 1_000_000;
-}
-
-/**
- * SPEC-03 §7: se excluyen los modelos sin `text` en las modalidades de entrada o de
- * salida. Se usan `architecture.input_modalities` / `output_modalities`; si no
- * existen (formato antiguo de OpenRouter), se cae a `architecture.modality`
- * (formato `"in1+in2->out1+out2"`).
- */
-function hasTextModalities(architecture: OpenRouterArchitecture | undefined): boolean {
-  if (!architecture) return false;
-
-  const input = architecture.input_modalities;
-  const output = architecture.output_modalities;
-  if (Array.isArray(input) && Array.isArray(output)) {
-    return input.includes('text') && output.includes('text');
-  }
-
-  const modality = architecture.modality;
-  if (typeof modality === 'string') {
-    const [inPart, outPart] = modality.split('->');
-    const inputModalities = (inPart ?? '').split('+');
-    const outputModalities = (outPart ?? '').split('+');
-    return inputModalities.includes('text') && outputModalities.includes('text');
-  }
-
-  return false;
-}
-
-function parseOpenRouterModel(raw: OpenRouterRawModel): CatalogModel | null {
-  if (typeof raw.id !== 'string' || raw.id.length === 0) return null;
-  if (!hasTextModalities(raw.architecture)) return null;
-
-  const contextLength = typeof raw.context_length === 'number' ? raw.context_length : 0;
-  if (contextLength < MIN_CONTEXT_LENGTH) return null;
-
-  const pricePerMillionIn = parsePricePerMillion(raw.pricing?.prompt);
-  const pricePerMillionOut = parsePricePerMillion(raw.pricing?.completion);
-  if (pricePerMillionIn === null || pricePerMillionOut === null) return null;
-
-  const name = typeof raw.name === 'string' && raw.name.length > 0 ? raw.name : raw.id;
-
-  return {
-    id: raw.id,
-    provider: 'openrouter',
-    name,
-    contextLength,
-    pricePerMillionIn,
-    pricePerMillionOut,
-    tier: tierFromOutputPrice(pricePerMillionOut),
-  };
-}
-
 export interface ModelCatalogServiceOptions {
   readonly cache: CacheStore;
   readonly fetchImpl?: typeof fetch;
-  /** Sobrescribe la lista fija de Gemini. Por defecto `GEMINI_MODELS`. */
-  readonly geminiModels?: readonly CatalogModel[];
+  /** `NINEROUTER_URL`. Por defecto, la variable de entorno. */
+  readonly baseUrl?: string;
+  /** `NINEROUTER_API_KEY` del operador. Por defecto, la variable de entorno. */
+  readonly apiKey?: string;
+  /** Sobrescribe la lista fija. Por defecto `NINEROUTER_MODELS`. */
+  readonly models?: readonly CatalogModel[];
 }
 
 export class ModelCatalogService {
   private readonly cache: CacheStore;
   private readonly fetchImpl: typeof fetch;
-  private readonly geminiModels: readonly CatalogModel[];
+  private readonly baseUrl: string;
+  private readonly apiKey: string;
+  private readonly models: readonly CatalogModel[];
 
   constructor(options: ModelCatalogServiceOptions) {
     this.cache = options.cache;
     this.fetchImpl = options.fetchImpl ?? globalThis.fetch;
-    this.geminiModels = options.geminiModels ?? GEMINI_MODELS;
-  }
-
-  /** Catálogo de OpenRouter (descargado o de caché) más la lista fija de Gemini. */
-  async listModels(apiKey?: string): Promise<CatalogModel[]> {
-    const openRouterModels = await this.listOpenRouterModels(apiKey);
-    return [...openRouterModels, ...this.geminiModels];
+    this.baseUrl = (options.baseUrl ?? process.env.NINEROUTER_URL ?? '').replace(/\/+$/, '');
+    this.apiKey = options.apiKey ?? process.env.NINEROUTER_API_KEY ?? '';
+    this.models = options.models ?? NINEROUTER_MODELS;
   }
 
   /**
-   * SPEC-03 §7: `GET ${baseUrl}/models`, cacheado 6 h. Si la descarga falla y hay
-   * caché, se usa la caché; si falla y no hay caché, se lanza un error claro.
-   *
-   * La API key nunca se registra ni se serializa: solo se usa, si se pasa, para
-   * construir la cabecera `Authorization` de la petición.
+   * Intersección entre `GET {NINEROUTER_URL}/v1/models` (cacheado 6 h) y la lista
+   * fija: un id que 9router no devuelve no se expone, y los datos (tier, precio,
+   * contexto) son siempre los de la lista fija.
    */
-  async listOpenRouterModels(apiKey?: string): Promise<CatalogModel[]> {
-    const rawJson = await this.fetchRawCatalog(apiKey);
-    const parsed = JSON.parse(rawJson) as OpenRouterModelsResponse;
-    const data = Array.isArray(parsed.data) ? parsed.data : [];
-
-    const models: CatalogModel[] = [];
-    for (const raw of data) {
-      const model = parseOpenRouterModel(raw);
-      if (model !== null) models.push(model);
-    }
-    return models;
+  async listModels(): Promise<CatalogModel[]> {
+    const parsed = JSON.parse(await this.fetchRawCatalog()) as NineRouterModelsResponse;
+    const available = new Set<unknown>((Array.isArray(parsed.data) ? parsed.data : []).map((m) => m.id));
+    return this.models.filter((model) => available.has(model.id));
   }
 
   /**
@@ -189,24 +103,24 @@ export class ModelCatalogService {
    * obtenerlo. Primero comprueba la caché (así una segunda llamada dentro de las 6 h
    * no vuelve a pegarle a la red); si no hay entrada válida, descarga y cachea.
    */
-  private async fetchRawCatalog(apiKey?: string): Promise<string> {
+  private async fetchRawCatalog(): Promise<string> {
     const cached = await this.cache.get(CACHE_KEY);
     if (cached !== null) return cached;
 
     try {
-      return await this.downloadAndCache(apiKey);
+      return await this.downloadAndCache();
     } catch (error) {
       const cached = await this.cache.get(CACHE_KEY);
       if (cached !== null) return cached;
       const message = error instanceof Error ? error.message : String(error);
       throw new Error(
-        `No se pudo descargar el catálogo de OpenRouter y no hay caché disponible: ${redact(message, apiKey)}`,
+        `No se pudo descargar el catálogo de 9router y no hay caché disponible: ${redact(message, this.apiKey)}`,
       );
     }
   }
 
   /**
-   * Fuerza una descarga real del catálogo de OpenRouter, ignorando la caché, y
+   * Fuerza una descarga real del catálogo de 9router, ignorando la caché, y
    * sobreescribe la entrada cacheada (job `model-catalog`, SPEC-05 §8).
    *
    * Si la descarga falla, la excepción se propaga tal cual (sin el mensaje
@@ -216,20 +130,15 @@ export class ModelCatalogService {
    * fallo de red no borra el catálogo previo (SPEC-05 §8: «si falla, se
    * conserva el anterior»).
    */
-  async refresh(apiKey?: string): Promise<void> {
-    await this.downloadAndCache(apiKey);
+  async refresh(): Promise<void> {
+    await this.downloadAndCache();
   }
 
   /** Descarga real (sin mirar la caché) y sobreescribe `CACHE_KEY`. Lanza si la petición falla. */
-  private async downloadAndCache(apiKey?: string): Promise<string> {
-    const headers: Record<string, string> = { ...PROVIDERS.openrouter.extraHeaders };
-    if (apiKey !== undefined && apiKey.length > 0) {
-      headers.Authorization = `Bearer ${apiKey}`;
-    }
-
-    const response = await this.fetchImpl(`${PROVIDERS.openrouter.baseUrl}/models`, {
+  private async downloadAndCache(): Promise<string> {
+    const response = await this.fetchImpl(`${this.baseUrl}/models`, {
       method: 'GET',
-      headers,
+      headers: { Authorization: `Bearer ${this.apiKey}` },
     });
 
     if (!response.ok) {

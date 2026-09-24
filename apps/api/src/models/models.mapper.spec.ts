@@ -4,7 +4,7 @@ import { buildEstimatePerSession, groupModelsByProviderAndTier } from './models.
 function model(overrides: Partial<CatalogModel> = {}): CatalogModel {
   return {
     id: 'some/model',
-    provider: 'openrouter',
+    provider: '9router',
     name: 'Some Model',
     contextLength: 100_000,
     pricePerMillionIn: 1,
@@ -15,51 +15,31 @@ function model(overrides: Partial<CatalogModel> = {}): CatalogModel {
 }
 
 describe('groupModelsByProviderAndTier', () => {
-  it('always returns the two provider keys with the three tiers, even when empty', () => {
+  it('always returns the 9router key with the three tiers, even when empty', () => {
     const result = groupModelsByProviderAndTier([]);
 
-    expect(Object.keys(result).sort()).toEqual(['gemini', 'openrouter']);
-    expect(result.openrouter).toEqual({ free: [], budget: [], premium: [] });
-    expect(result.gemini).toEqual({ free: [], budget: [], premium: [] });
+    expect(Object.keys(result)).toEqual(['9router']);
+    expect(result['9router']).toEqual({ free: [], budget: [], premium: [] });
   });
 
-  it('groups each model under its provider and tier', () => {
-    const freeOpenRouter = model({ id: 'or/free', provider: 'openrouter', tier: 'free' });
-    const budgetOpenRouter = model({ id: 'or/budget', provider: 'openrouter', tier: 'budget' });
-    const premiumGemini = model({
-      id: 'gemini-2.5-pro',
-      provider: 'gemini',
-      tier: 'premium',
-      name: 'Gemini 2.5 Pro',
-    });
+  it('groups each model under its tier', () => {
+    const result = groupModelsByProviderAndTier([
+      model({ id: 'a', tier: 'free' }),
+      model({ id: 'b', tier: 'budget' }),
+      model({ id: 'c', tier: 'premium', name: 'C' }),
+    ]);
 
-    const result = groupModelsByProviderAndTier([freeOpenRouter, budgetOpenRouter, premiumGemini]);
-
-    expect(result.openrouter.free).toEqual([
-      { id: 'or/free', name: 'Some Model', pricePerMillionUsd: 2 },
-    ]);
-    expect(result.openrouter.budget).toEqual([
-      { id: 'or/budget', name: 'Some Model', pricePerMillionUsd: 2 },
-    ]);
-    expect(result.openrouter.premium).toEqual([]);
-    expect(result.gemini.premium).toEqual([
-      { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro', pricePerMillionUsd: 2 },
-    ]);
-    expect(result.gemini.free).toEqual([]);
+    expect(result['9router'].free).toEqual([{ id: 'a', name: 'Some Model', pricePerMillionUsd: 2 }]);
+    expect(result['9router'].budget).toEqual([{ id: 'b', name: 'Some Model', pricePerMillionUsd: 2 }]);
+    expect(result['9router'].premium).toEqual([{ id: 'c', name: 'C', pricePerMillionUsd: 2 }]);
   });
 
   it('the exact DTO shape of an element is {id, name, pricePerMillionUsd} — the output price, not the input one', () => {
-    const cheapIn = model({ id: 'm', name: 'M', pricePerMillionIn: 0.1, pricePerMillionOut: 7 });
-
-    const result = groupModelsByProviderAndTier([cheapIn]);
-
-    expect(result.openrouter.budget).toEqual([{ id: 'm', name: 'M', pricePerMillionUsd: 7 }]);
-    // No debe colarse ningún otro campo (contextLength, tier, pricePerMillionIn...).
-    expect(Object.keys(result.openrouter.budget[0]!).sort()).toEqual([
-      'id',
-      'name',
-      'pricePerMillionUsd',
+    const result = groupModelsByProviderAndTier([
+      model({ id: 'm', name: 'M', pricePerMillionIn: 0.1, pricePerMillionOut: 7 }),
     ]);
+
+    expect(result['9router'].budget).toEqual([{ id: 'm', name: 'M', pricePerMillionUsd: 7 }]);
   });
 });
 

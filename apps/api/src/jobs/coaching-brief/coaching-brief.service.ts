@@ -21,10 +21,10 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../../config/env.js';
 import type { Level } from '../../db/schema.js';
 import type { BriefFactInput } from '../../db/rpc.js';
-import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
+import { CredentialsService } from '../../credentials/credentials.service.js';
 import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
-import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
+import type { ModelPreference } from '../../llm/model-resolver.js';
 import { buildBriefMessages } from '../../llm/prompts/brief.js';
 import type { HistoryTurn } from '../../llm/prompts/truncate.js';
 import { BriefOutput } from '../../llm/schemas.js';
@@ -53,7 +53,7 @@ export class CoachingBriefService {
 
   constructor(
     private readonly repository: CoachingBriefRepository,
-    private readonly crypto: CredentialsCrypto,
+    private readonly credentialsService: CredentialsService,
     private readonly llm: LlmService,
     configService: ConfigService<Env, true>,
   ) {
@@ -86,35 +86,18 @@ export class CoachingBriefService {
 
     // --- 2. Contexto --------------------------------------------------------
     const userId = session.user_id;
-    const [turns, profile, previousBrief, knownFacts, preferenceRow, credentialRows] =
+    const [turns, profile, previousBrief, knownFacts, preferenceRow, credentials] =
       await Promise.all([
         this.repository.loadTurns(sessionId),
         this.repository.loadProfile(userId),
         this.repository.loadCurrentBriefText(userId),
         this.repository.loadKnownFacts(userId),
         this.repository.loadModelPreference(userId),
-        this.repository.loadActiveCredentials(userId),
+        this.credentialsService.listActive(userId),
       ]);
 
     if (!profile) {
       throw new Error(`El usuario ${userId} de la sesión ${sessionId} no tiene perfil`);
-    }
-
-    const credentials: ActiveCredential[] = [];
-    for (const row of credentialRows) {
-      try {
-        credentials.push({
-          provider: row.provider as LlmProvider,
-          apiKey: this.crypto.decrypt(userId, row.provider, row),
-        });
-      } catch (error) {
-        // Nunca se registra la clave, solo el proveedor y el motivo.
-        this.logger.warn(
-          `Credencial de ${row.provider} del usuario ${userId} ilegible: ${
-            (error as Error).message
-          }`,
-        );
-      }
     }
 
     const preference: ModelPreference | null = preferenceRow

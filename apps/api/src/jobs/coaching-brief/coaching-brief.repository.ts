@@ -20,7 +20,6 @@ import type {
   TurnRole,
 } from '../../db/schema.js';
 import { RPC, type ApplyBriefArgs, type ApplyBriefResult } from '../../db/rpc.js';
-import type { EncryptedCredential } from '../../credentials/credentials.crypto.js';
 
 /* ============================================================================
    Formas mínimas que el job necesita de cada tabla
@@ -50,10 +49,6 @@ export interface BriefModelPreferenceRow {
   readonly brief_model: string;
 }
 
-export interface BriefCredentialRow extends EncryptedCredential {
-  readonly provider: Provider;
-}
-
 /* ============================================================================
    Contrato
    ========================================================================== */
@@ -73,7 +68,6 @@ export abstract class CoachingBriefRepository {
   abstract loadModelPreference(
     userId: string,
   ): Promise<BriefModelPreferenceRow | null>;
-  abstract loadActiveCredentials(userId: string): Promise<BriefCredentialRow[]>;
   abstract applyBrief(args: ApplyBriefArgs): Promise<ApplyBriefResult>;
   /** `level_hint` de las N entradas más recientes de `coaching_brief_history`. */
   abstract recentHistoryLevelHints(
@@ -197,20 +191,6 @@ export class InsforgeCoachingBriefRepository extends CoachingBriefRepository {
     return unwrap(
       result as PostgrestLike<BriefModelPreferenceRow>,
       'leer las preferencias de modelo',
-    );
-  }
-
-  async loadActiveCredentials(userId: string): Promise<BriefCredentialRow[]> {
-    const result = await this.db
-      .from(TABLES.providerCredentials)
-      .select('provider,key_ciphertext,key_iv,key_tag')
-      .eq('user_id', userId)
-      .eq('status', 'active');
-    return (
-      unwrap(
-        result as PostgrestLike<BriefCredentialRow[]>,
-        'leer las credenciales',
-      ) ?? []
     );
   }
 

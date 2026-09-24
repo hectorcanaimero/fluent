@@ -14,17 +14,13 @@ Future<void> _pumpAndShow(WidgetTester tester, ApiErrorCode code) async {
         builder: (context, _) => Scaffold(
           body: Builder(
             builder: (context) => TextButton(
-              onPressed: () => ScaffoldMessenger.of(
-                context,
-              ).showSnackBar(apiErrorSnackBar(context, code)),
+              onPressed: () =>
+                  ScaffoldMessenger.of(context)
+                      .showSnackBar(apiErrorSnackBar(context, code)),
               child: const Text('fallar'),
             ),
           ),
         ),
-      ),
-      GoRoute(
-        path: '/providers',
-        builder: (context, _) => const Text('PROVIDERS_SCREEN'),
       ),
     ],
   );
@@ -45,16 +41,6 @@ Future<void> _pumpAndShow(WidgetTester tester, ApiErrorCode code) async {
 }
 
 void main() {
-  testWidgets('sin cuenta de IA el aviso lleva a conectarla', (tester) async {
-    await _pumpAndShow(tester, ApiErrorCode.providerNotConnected);
-    final l10n = await AppLocalizations.delegate.load(const Locale('es'));
-
-    expect(find.text(l10n.errorProviderNotConnected), findsOneWidget);
-    await tester.tap(find.text(l10n.homeNoProviderAction));
-    await tester.pumpAndSettle();
-    expect(find.text('PROVIDERS_SCREEN'), findsOneWidget);
-  });
-
   testWidgets('otros errores no llevan acción', (tester) async {
     await _pumpAndShow(tester, ApiErrorCode.rateLimited);
     expect(find.byType(SnackBarAction), findsNothing);

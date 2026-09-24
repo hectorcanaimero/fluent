@@ -30,29 +30,15 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
   bool _starting = false;
 
   void _reload() {
-    ref.invalidate(canPracticeProvider);
     ref.invalidate(homeDataProvider);
   }
 
   /// [kind] es siempre el `kind` real de `POST /sessions` (SPEC-04 §3.2):
   /// `'boss'` para el botón de reto y `'free_topic'` (con [topic]) para un
   /// tema rápido de la Home.
-  ///
-  /// MAL-13: si no hay proveedor activo, manda a conectar uno en vez de
-  /// intentar crear la sesión (que siempre fallaría con un snackbar
-  /// genérico). El CTA principal ya se deshabilita en ese caso, pero los
-  /// chips de temas rápidos pasan por acá también.
   Future<void> _startSession({required String kind, String? topic}) async {
     if (_starting) return;
     final l10n = AppLocalizations.of(context);
-    final data = await ref.read(homeDataProvider.future);
-    if (!mounted) return;
-    if (!data.canPractice) {
-      context.push('/providers');
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.homeNeedProviderHint)));
-      return;
-    }
     setState(() => _starting = true);
     try {
       final result = await ref
@@ -114,14 +100,6 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
                 // MAL-24: con la sesión de cortesía disponible, el banner de
                 // "conectá un proveedor" no aplica — la promesa es
                 // justamente que se puede practicar sin conectar nada.
-                if (!data.hasActiveProvider && !data.hasCourtesySession) ...[
-                  _NoProviderBanner(),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
-                if (data.hasWeeklySummaryCredentialPending) ...[
-                  _PendingActionBanner(),
-                  const SizedBox(height: AppSpacing.lg),
-                ],
                 _PrimaryCta(
                   data: data,
                   starting: _starting,
@@ -252,72 +230,59 @@ class _OnboardingChecklist extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     // Mientras se lee la preferencia no se muestra nada: mostrarlo y
     // esconderlo un instante después era justamente el parpadeo.
-    return ref.watch(firstValidSessionDoneProvider).when(
-      loading: () => const SizedBox.shrink(),
-      error: (_, _) => const SizedBox.shrink(),
-      data: (firstSessionDone) {
-        final providerConnected = data.hasActiveProvider;
-        if (providerConnected && firstSessionDone) {
-          return const SizedBox.shrink();
-        }
-        final l10n = AppLocalizations.of(context);
-        return Padding(
-          padding: const EdgeInsets.only(bottom: AppSpacing.lg),
-          child: Container(
-            padding: const EdgeInsets.all(AppSpacing.lg),
-            decoration: BoxDecoration(
-              color: AppColors.surface,
-              borderRadius: BorderRadius.circular(AppRadius.lg),
-              border: Border.all(color: AppColors.border),
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  l10n.homeChecklistTitle,
-                  style: Theme.of(context).textTheme.titleMedium,
+    return ref
+        .watch(firstValidSessionDoneProvider)
+        .when(
+          loading: () => const SizedBox.shrink(),
+          error: (_, _) => const SizedBox.shrink(),
+          data: (firstSessionDone) {
+            if (firstSessionDone) {
+              return const SizedBox.shrink();
+            }
+            final l10n = AppLocalizations.of(context);
+            return Padding(
+              padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+              child: Container(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                decoration: BoxDecoration(
+                  color: AppColors.surface,
+                  borderRadius: BorderRadius.circular(AppRadius.lg),
+                  border: Border.all(color: AppColors.border),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                _ChecklistItem(label: l10n.homeChecklistProfile, done: true),
-                _ChecklistItem(
-                  key: const Key('home_checklist_provider'),
-                  label: l10n.homeChecklistProvider,
-                  done: providerConnected,
-                  // Antes era solo texto: no había cómo llegar a conectar.
-                  onTap: providerConnected
-                      ? null
-                      : () => context.push('/providers'),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      l10n.homeChecklistTitle,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    const SizedBox(height: AppSpacing.sm),
+                    _ChecklistItem(
+                      label: l10n.homeChecklistProfile,
+                      done: true,
+                    ),
+                    _ChecklistItem(
+                      label: l10n.homeChecklistFirstSession,
+                      done: firstSessionDone,
+                    ),
+                  ],
                 ),
-                _ChecklistItem(
-                  label: l10n.homeChecklistFirstSession,
-                  done: firstSessionDone,
-                ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
-      },
-    );
   }
 }
 
 class _ChecklistItem extends StatelessWidget {
-  const _ChecklistItem({
-    super.key,
-    required this.label,
-    required this.done,
-    this.onTap,
-  });
+  const _ChecklistItem({required this.label, required this.done});
 
   final String label;
   final bool done;
 
-  /// Pendiente y accionable: la fila lleva a donde se completa.
-  final VoidCallback? onTap;
-
   @override
   Widget build(BuildContext context) {
-    final row = Padding(
+    return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
       child: Row(
         children: [
@@ -331,28 +296,12 @@ class _ChecklistItem extends StatelessWidget {
             child: Text(
               label,
               style: TextStyle(
-                color: done
-                    ? AppColors.textPrimary
-                    : onTap != null
-                    ? AppColors.primaryDark
-                    : AppColors.textSecondary,
-                fontWeight: onTap != null ? FontWeight.w600 : null,
+                color: done ? AppColors.textPrimary : AppColors.textSecondary,
                 decoration: done ? TextDecoration.lineThrough : null,
               ),
             ),
           ),
-          if (onTap != null)
-            const Icon(Icons.chevron_right, color: AppColors.primaryDark),
         ],
-      ),
-    );
-    if (onTap == null) return row;
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.md),
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(minHeight: 48),
-        child: row,
       ),
     );
   }
@@ -399,10 +348,7 @@ class _StreakCard extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 if (graceText != null)
-                  Text(
-                    graceText,
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
+                  Text(graceText, style: Theme.of(context).textTheme.bodySmall),
               ],
             ),
           ),
@@ -460,68 +406,6 @@ class _LevelCard extends StatelessWidget {
   }
 }
 
-class _NoProviderBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      key: const Key('home_no_provider_banner'),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.warning_amber_rounded, color: AppColors.goldText),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              l10n.homeNoProviderBanner,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.push('/providers'),
-            child: Text(l10n.homeNoProviderAction),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class _PendingActionBanner extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
-    final l10n = AppLocalizations.of(context);
-    return Container(
-      key: const Key('home_pending_action_banner'),
-      padding: const EdgeInsets.all(AppSpacing.lg),
-      decoration: BoxDecoration(
-        color: AppColors.goldSoft,
-        borderRadius: BorderRadius.circular(AppRadius.lg),
-      ),
-      child: Row(
-        children: [
-          const Icon(Icons.info_outline, color: AppColors.goldText),
-          const SizedBox(width: AppSpacing.md),
-          Expanded(
-            child: Text(
-              l10n.homePendingActionWeeklySummaryCredential,
-              style: Theme.of(context).textTheme.bodyMedium,
-            ),
-          ),
-          TextButton(
-            onPressed: () => context.push('/providers'),
-            child: Text(l10n.homePendingActionAction),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
 class _PrimaryCta extends StatelessWidget {
   const _PrimaryCta({
     required this.data,
@@ -538,7 +422,7 @@ class _PrimaryCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final blocked = !data.canPractice || starting;
+    final blocked = starting;
     if (data.suggestions.bossPending) {
       return Column(
         // stretch: el ElevatedButton ya no ocupa todo el ancho por tema.
@@ -560,12 +444,7 @@ class _PrimaryCta extends StatelessWidget {
         ],
       );
     }
-    // MAL-24: sin proveedor propio pero con cortesía disponible, el botón
-    // adelanta la promesa ("no hace falta conectar nada") en vez de mostrar
-    // el texto genérico de siempre.
-    final label = (!data.hasActiveProvider && data.hasCourtesySession)
-        ? l10n.homeCourtesyPracticeButton
-        : l10n.homePracticeButton;
+    final label = l10n.homePracticeButton;
     return ElevatedButton(
       key: const Key('home_practice_button'),
       onPressed: blocked ? null : onPractice,

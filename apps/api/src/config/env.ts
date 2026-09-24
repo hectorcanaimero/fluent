@@ -43,7 +43,10 @@ export const envSchema = z.object({
   // API local que no la defina manda el navegador a producción, cuyo Redis no
   // conoce el intento (ver `warnIfSuspiciousEnv`).
   API_PUBLIC_URL: z.url().default(PRODUCTION_API_PUBLIC_URL),
-  FALLBACK_MODELS: z.string().min(1),
+  // Router 9router (OpenAI-compatible): URL base y key del operador.
+  NINEROUTER_URL: z.url(),
+  NINEROUTER_API_KEY: z.string().min(1),
+  FALLBACK_MODELS: z.string().min(1).optional(),
   PROMPT_VERSION: z.coerce.number().int().default(1),
   OWNER_USER_ID: z.uuid(),
   // Tope de turnos por día natural del usuario (MAL-23). 0 lo desactiva.

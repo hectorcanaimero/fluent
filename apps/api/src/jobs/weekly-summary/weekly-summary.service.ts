@@ -27,6 +27,7 @@ import { ConfigService } from '@nestjs/config';
 import { appendWeeklyFooter } from '../../common/weekly-footer.js';
 import type { Env } from '../../config/env.js';
 import { CredentialsCrypto } from '../../credentials/credentials.crypto.js';
+import type { Provider as LlmProvider } from '../../llm/config.js';
 import { LlmService } from '../../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../../llm/model-resolver.js';
 import { buildWeeklyMessages, type WeeklyMember } from '../../llm/prompts/weekly.js';
@@ -128,7 +129,7 @@ export class WeeklySummaryService {
     for (const row of credentialRows) {
       try {
         credentials.push({
-          provider: row.provider,
+          provider: row.provider as LlmProvider,
           apiKey: this.crypto.decrypt(ownerId, row.provider, row),
         });
       } catch (error) {
@@ -173,7 +174,7 @@ export class WeeklySummaryService {
       this.repository.loadOwnerLocale(ownerId),
     ]);
     const preference: ModelPreference | null = preferenceRow
-      ? { provider: preferenceRow.brief_provider, model: preferenceRow.brief_model }
+      ? { provider: preferenceRow.brief_provider as LlmProvider, model: preferenceRow.brief_model }
       : null;
 
     // --- 4. LLM -------------------------------------------------------------

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import type { Provider as LlmProvider } from '../llm/config.js';
 import type { Provider, ProviderCredential } from '../db/schema.js';
 import type {
   ActiveCredential,
@@ -51,7 +52,7 @@ export class CredentialsService implements CredentialsSource {
     for (const row of rows) {
       const apiKey = this.tryDecrypt(row);
       if (apiKey !== null) {
-        credentials.push({ provider: row.provider, apiKey });
+        credentials.push({ provider: row.provider as LlmProvider, apiKey });
       }
     }
 

@@ -1,7 +1,9 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { CredentialsModule } from '../credentials/credentials.module.js';
 import { LLM_CALL_SINK, LLM_EVENT_BUS } from './llm-infra.constants.js';
 import { InsforgeLlmCallSink } from './llm-calls.sink.js';
+import { createNineRouterProvider, NINEROUTER_PROVIDER } from './ninerouter.provider.js';
 import { NestLlmEventBus } from './nest-llm-event-bus.js';
 
 /**
@@ -28,6 +30,15 @@ import { NestLlmEventBus } from './nest-llm-event-bus.js';
     NestLlmEventBus,
     { provide: LLM_CALL_SINK, useExisting: InsforgeLlmCallSink },
     { provide: LLM_EVENT_BUS, useExisting: NestLlmEventBus },
+    {
+      provide: NINEROUTER_PROVIDER,
+      inject: [ConfigService],
+      useFactory: (config: ConfigService) =>
+        createNineRouterProvider({
+          NINEROUTER_URL: config.getOrThrow<string>('NINEROUTER_URL'),
+          NINEROUTER_API_KEY: config.getOrThrow<string>('NINEROUTER_API_KEY'),
+        }),
+    },
   ],
   exports: [
     CredentialsModule,
@@ -35,6 +46,7 @@ import { NestLlmEventBus } from './nest-llm-event-bus.js';
     NestLlmEventBus,
     LLM_CALL_SINK,
     LLM_EVENT_BUS,
+    NINEROUTER_PROVIDER,
   ],
 })
 export class LlmInfraModule {}

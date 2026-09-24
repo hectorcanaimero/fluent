@@ -88,11 +88,10 @@ describe('parseFallbackModels', () => {
 
   it('acepta una lista válida y descarta las entradas mal formadas', () => {
     const parsed = parseFallbackModels(
-      '[{"provider":"gemini","model":"gemini-2.5-flash"},{"provider":"x","model":"y"},{"provider":"openrouter","model":"a/b:free"}]',
+      '[{"provider":"9router","model":"fluent-pro"},{"provider":"x","model":"y"},{"provider":"gemini","model":"a"}]',
     );
     expect(parsed).toEqual([
-      { provider: 'gemini', model: 'gemini-2.5-flash' },
-      { provider: 'openrouter', model: 'a/b:free' },
+      { provider: '9router', model: 'fluent-pro' },
     ]);
   });
 });

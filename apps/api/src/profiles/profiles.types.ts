@@ -1,4 +1,4 @@
-import type { Level, Locale } from '../db/schema.js';
+import type { Level, Locale, Provider } from '../db/schema.js';
 import type { ProviderConnectionStatus } from '../credentials/credentials.repository.js';
 
 /**
@@ -30,7 +30,7 @@ export interface GroupDto {
 
 /** Elemento de `providers[]` en `GET /me`. */
 export interface ProviderInfoDto {
-  provider: 'openrouter' | 'gemini';
+  provider: Provider;
   status: ProviderConnectionStatus;
   connectedAt: string | null;
 }

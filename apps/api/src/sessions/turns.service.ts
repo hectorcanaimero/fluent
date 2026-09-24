@@ -11,6 +11,7 @@ import {
   MAX_FACTS_IN_PROMPT,
   TURN_MAX_ATTEMPTS,
 } from '../llm/config.js';
+import type { Provider as LlmProvider } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
 import type { HistoryTurn } from '../llm/prompts/truncate.js';
@@ -484,7 +485,7 @@ export class TurnsService {
     const preference = await this.sessions.findChatModelPreference(userId);
     return preference === null
       ? null
-      : { provider: preference.provider, model: preference.model };
+      : { provider: preference.provider as LlmProvider, model: preference.model };
   }
 
   /** Borrado best-effort: nunca debe tapar el error original. */

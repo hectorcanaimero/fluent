@@ -10,6 +10,7 @@ import type { Fact, NewsItem, Profile, Session, SessionKind } from '../db/schema
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
+import type { Provider as LlmProvider } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { ActiveCredential, ModelPreference } from '../llm/model-resolver.js';
 import { buildTurnMessages, type CallbackFact } from '../llm/prompts/turn.js';
@@ -285,7 +286,7 @@ export class SessionsService {
     const preference = await this.repository.findChatModelPreference(userId);
     return preference === null
       ? null
-      : { provider: preference.provider, model: preference.model };
+      : { provider: preference.provider as LlmProvider, model: preference.model };
   }
 
   /**

@@ -9,7 +9,13 @@
  */
 import type { ZodType } from 'zod';
 
-import { PROVIDERS, type Provider, type Purpose } from './config.js';
+import { LEGACY_PROVIDERS, PROVIDERS, type Provider, type Purpose } from './config.js';
+
+// ponytail: F1.2 reescribe el cliente sobre el AI SDK y esto desaparece.
+const ALL_PROVIDERS: Readonly<Record<string, (typeof PROVIDERS)[Provider]>> = {
+  ...LEGACY_PROVIDERS,
+  ...PROVIDERS,
+};
 import { extractFirstJsonObject } from './json.js';
 import { StreamReplyParser } from './stream-reply-parser.js';
 
@@ -113,7 +119,7 @@ function buildHeaders(provider: Provider, apiKey: string): Record<string, string
   return {
     'Content-Type': 'application/json',
     Authorization: `Bearer ${apiKey}`,
-    ...PROVIDERS[provider].extraHeaders,
+    ...ALL_PROVIDERS[provider]!.extraHeaders,
   };
 }
 
@@ -198,7 +204,7 @@ export class LlmClient {
   ): Promise<LlmResult<T>> {
     const { provider, model, apiKey, messages, schema, maxTokens, temperature, purpose, timeoutMs } =
       request;
-    const config = PROVIDERS[provider];
+    const config = ALL_PROVIDERS[provider]!;
     const started = this.now();
 
     const body: Record<string, unknown> = {

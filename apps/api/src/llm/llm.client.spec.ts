@@ -1,5 +1,5 @@
 import { LlmCallError, LlmClient, type LlmLogger, type LlmMessage } from './llm.client.js';
-import { PROVIDERS } from './config.js';
+import { LEGACY_PROVIDERS as PROVIDERS } from './config.js';
 import { TurnOutput } from './schemas.js';
 
 const API_KEY = 'sk-or-v1-SUPERSECRETA-0123456789';

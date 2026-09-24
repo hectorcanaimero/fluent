@@ -5,7 +5,8 @@
  * para poder testear sin red ni Redis real (PR-08/T3 implementará `CacheStore` con
  * Redis; en tests se usa una implementación en memoria).
  */
-import { PROVIDERS, type Provider } from './config.js';
+import type { Provider } from '../db/schema.js';
+import { LEGACY_PROVIDERS as PROVIDERS } from './config.js';
 import { GEMINI_MODELS } from './gemini-models.js';
 
 /**

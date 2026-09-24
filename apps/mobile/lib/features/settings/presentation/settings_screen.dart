@@ -18,6 +18,7 @@ import '../../../features/home/domain/home_data.dart';
 import '../../../features/onboarding/domain/interest_labels.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/reminder_prefs.dart';
+import 'model_picker_screen.dart';
 
 /// Ajustes (Pen "10 Profile" -> `/settings`). Perfil, zona horaria,
 /// recordatorios locales (SPEC-06 §8), idioma, cuenta y borrar cuenta.
@@ -291,6 +292,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     trailing: const Icon(Icons.chevron_right),
                     onTap: () => context.push('/memory'),
                   ),
+                  ListTile(
+                    key: const Key('settings_plan'),
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.workspace_premium_outlined),
+                    title: Text(l10n.settingsPlanTitle),
+                    trailing: const Icon(Icons.chevron_right),
+                    onTap: () => context.push('/settings/plan'),
+                  ),
+                  if (me.isPro)
+                    ModelPicker(preference: me.modelPreference)
+                  else
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        vertical: AppSpacing.sm,
+                      ),
+                      child: Text(
+                        l10n.settingsFreeModelsNote,
+                        key: const Key('settings_free_models_note'),
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                    ),
                   const SizedBox(height: AppSpacing.xl),
                   Text(
                     l10n.settingsLanguageTitle,

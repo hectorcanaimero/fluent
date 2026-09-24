@@ -19,6 +19,7 @@ import '../features/progress/presentation/progress_screen.dart';
 import '../features/session/presentation/conversation_screen.dart';
 import '../features/session/presentation/new_session_screen.dart';
 import '../features/session/presentation/session_summary_screen.dart';
+import '../features/settings/presentation/plan_screen.dart';
 import '../features/settings/presentation/settings_screen.dart';
 import '../features/welcome/presentation/welcome_screen.dart';
 import 'splash_screen.dart';
@@ -170,6 +171,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/settings',
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: '/settings/plan',
+        builder: (context, state) => const PlanScreen(),
       ),
     ],
     errorBuilder: (context, state) => const _NotFoundScreen(),

@@ -10,8 +10,7 @@ enum ApiErrorCode {
   invitationUsed,
   invitationExpired,
   alreadyInGroup,
-  providerNotConnected,
-  providerKeyInvalid,
+  planRequired,
   modelNotAvailable,
   sessionNotActive,
   sessionAlreadyActive,
@@ -64,10 +63,8 @@ enum ApiErrorCode {
         return ApiErrorCode.invitationExpired;
       case 'ALREADY_IN_GROUP':
         return ApiErrorCode.alreadyInGroup;
-      case 'PROVIDER_NOT_CONNECTED':
-        return ApiErrorCode.providerNotConnected;
-      case 'PROVIDER_KEY_INVALID':
-        return ApiErrorCode.providerKeyInvalid;
+      case 'PLAN_REQUIRED':
+        return ApiErrorCode.planRequired;
       case 'MODEL_NOT_AVAILABLE':
         return ApiErrorCode.modelNotAvailable;
       case 'SESSION_NOT_ACTIVE':

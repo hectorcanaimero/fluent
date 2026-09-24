@@ -24,7 +24,7 @@ Piezas a crear, en orden: proyecto → recurso Redis → aplicación `fluent-api
   - `REDIS_URL` — se completa en el paso 2 (Coolify la genera al crear el recurso Redis).
   - `NODE_ENV` = `production`.
   - `PORT` = `3000`.
-- **Borradas desde F5:** `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`, `FALLBACK_MODELS`.
+- **Borradas desde F5:** `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`. `FALLBACK_MODELS` sigue existiendo pero es opcional desde F1 (por defecto `[{"provider":"9router","model":"fluent-free"}]`).
 - Ver `apps/api/.env.example` para la lista completa con comentarios (sin valores reales, es la referencia canónica de qué variables existen).
 
 **No sigas** si falta alguna variable obligatoria: `apps/api/src/config/env.ts` valida con zod al arrancar (`ConfigModule.forRoot({ validate: validateEnv })`) y la API/worker no arrancan si falta cualquiera de las obligatorias (las nuevas con F1: `NINEROUTER_URL`, `NINEROUTER_API_KEY`, `TURNS_DAILY_CAP_FREE`, `TURNS_DAILY_CAP_PRO`; si es F5 o posterior, también se borran `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`).
@@ -132,7 +132,7 @@ En el paso §2 del runbook de Coolify (cuando configures las variables de `fluen
 3. **Proceso**: añade la variable de entorno `FLUENT_PROCESS=worker`. El `CMD` de la imagen arranca `node dist/worker.js` cuando esa variable vale `worker` y la API en cualquier otro caso. Ver `apps/api/Dockerfile` y `apps/api/src/worker.ts`.
 4. **Sin dominio** (SPEC-08 §4: "sin dominio"): no asignes ningún dominio/puerto público a esta aplicación — el worker no expone HTTP (no llama a `app.listen()`, solo `app.init()`, ver `apps/api/src/worker.ts`).
 5. **Sin healthcheck HTTP**: como no hay endpoint HTTP, desactiva cualquier healthcheck basado en URL para esta app (o dejar el `HEALTHCHECK` de Docker de la imagen desactivado/sin usar para este servicio si Coolify lo permite; si Coolify exige un healthcheck, usar uno de tipo "proceso corriendo" en vez de HTTP, si esa opción existe, o documentar que se deja sin healthcheck en este PR).
-6. **Variables de entorno**: las mismas que `fluent-api` (mismo `REDIS_URL`, mismas credenciales de InsForge, mismo `CREDENTIALS_MASTER_KEY`, etc.) — el worker valida el mismo schema `Env` (zod) que la API (`apps/api/src/worker.module.ts` importa `ConfigModule` con el mismo `validateEnv`).
+6. **Variables de entorno**: las mismas que `fluent-api` (mismo `REDIS_URL`, mismas credenciales de InsForge, misma `NINEROUTER_API_KEY`, etc.) — el worker valida el mismo schema `Env` (zod) que la API (`apps/api/src/worker.module.ts` importa `ConfigModule` con el mismo `validateEnv`).
 7. **Límite de memoria**: 768 MB (SPEC-08 §3: "768 MB para el worker").
 8. **Auto-deploy**: igual que `fluent-api`, webhook por push a `main`.
 9. Deploy inicial: botón **Deploy**. Como no hay healthcheck HTTP, verificar que arrancó bien revisando los logs (ver sección 6): debe verse el log de arranque de Nest sin errores, sin el `ZodError` de variables faltantes.
@@ -160,7 +160,7 @@ Antes de cada deploy (inicial o tras rotar algo), confirmar en la UI de Coolify 
 | `OWNER_USER_ID` | No (pero es un identificador, no lo publiques innecesariamente) | Sí |
 | `LOG_LEVEL` | No | Sí (`info` en producción) |
 
-Si falta cualquier variable obligatoria (todas listadas arriba), el proceso falla al arrancar con un `ZodError` claro en los logs (ver `apps/api/src/config/env.ts`) — no es un fallo silencioso. Variables borradas desde F5: `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`, `FALLBACK_MODELS`.
+Si falta cualquier variable obligatoria (todas listadas arriba), el proceso falla al arrancar con un `ZodError` claro en los logs (ver `apps/api/src/config/env.ts`) — no es un fallo silencioso. Variables borradas desde F5: `CREDENTIALS_MASTER_KEY`, `CREDENTIALS_MASTER_KEY_PREVIOUS`, `OPENROUTER_OAUTH_CALLBACK`. `FALLBACK_MODELS` sigue existiendo pero es opcional desde F1 (por defecto `[{"provider":"9router","model":"fluent-free"}]`).
 
 ---
 

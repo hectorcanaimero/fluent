@@ -66,6 +66,14 @@ fecha inválida; `build` pasa.
   `turns.service.ts`, `coaching-brief.service.ts`, `weekly-summary.service.ts`)
   pasan `effectivePlan(profile)` en vez de credenciales. No borrar aún la
   sesión de cortesía (es de F5), solo dejar de pasarle credenciales al LLM.
+- Pendiente de F1.2 (no lo hizo): al construir `LlmUsage` en `llm.service.ts`,
+  restar `NINEROUTER_USAGE_BUFFER = 2000` (constante nueva en `llm/config.ts`)
+  a `inputTokens` cuando `inputTokens > 2000`. 9router suma ese buffer fijo
+  a `prompt_tokens` (`open-sse/utils/usageTracking.js`, ver «Hallazgos del
+  router real» en la arquitectura) y sin restarlo la estimación de coste
+  por sesión sale 2 a 3 veces alta. Un test en `llm.service.spec.ts`.
+- Sustituir el mapa local de `reasoningEffort` marcado `ponytail:` en
+  `llm.service.ts` por `reasoningEffortFor` de `ninerouter-models.ts` (F1.4).
 - `apps/api/src/common/api-error.ts`: `PLAN_REQUIRED: 403`.
 - `apps/api/src/models/models.service.ts`: en `updatePreferences`, si
   `effectivePlan(profile) === 'free'` y algún modelo elegido tiene tier ≠ `free`
@@ -91,6 +99,7 @@ y sin preferencia, pro con y sin preferencia); `models.service.spec.ts` cubre
   - `apps/api/src/llm/llm.service.ts`
   - `apps/api/src/llm/llm.service.spec.ts`
   - `apps/api/src/common/api-error.ts`
+  - `apps/api/src/llm/config.ts`
   - `apps/api/src/models/models.service.ts`
   - `apps/api/src/models/models.service.spec.ts`
   - `apps/api/src/config/env.ts`

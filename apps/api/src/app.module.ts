@@ -22,6 +22,7 @@ import { SocialModule } from './social/social.module.js';
 import { SessionsModule } from './sessions/sessions.module.js';
 import { QueuesModule } from './jobs/queues.module.js';
 import { AdminModule } from './admin/admin.module.js';
+import { BillingModule } from './billing/billing.module.js';
 
 @Module({
   imports: [
@@ -86,6 +87,8 @@ import { AdminModule } from './admin/admin.module.js';
     // SPEC-05 §9): `GET /admin/metrics` (métricas de producto **y** colas).
     // Va después de `QueuesModule` porque inyecta las 4 colas de BullMQ.
     AdminModule,
+    // Webhook de RevenueCat que escribe el plan Pro (F4.1).
+    BillingModule,
   ],
   controllers: [],
   providers: [],

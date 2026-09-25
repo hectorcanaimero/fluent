@@ -35,6 +35,12 @@ export const envSchema = z.object({
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.string().min(1).optional(),
   ),
+  // Secreto del webhook de RevenueCat (F4.1). Sin él `POST /webhooks/revenuecat`
+  // responde 404: el cobro queda desactivado.
+  REVENUECAT_WEBHOOK_SECRET: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
 });
 
 export type Env = z.infer<typeof envSchema>;

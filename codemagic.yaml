@@ -51,7 +51,12 @@ definitions:
         for var in API_URL INSFORGE_URL INSFORGE_ANON_KEY; do
           if [ -z "${!var}" ]; then echo "Falta $var en el grupo fluent_prod"; exit 1; fi
         done
-        echo "DART_DEFINES=--dart-define=API_URL=$API_URL --dart-define=INSFORGE_URL=$INSFORGE_URL --dart-define=INSFORGE_ANON_KEY=$INSFORGE_ANON_KEY --dart-define=USE_FAKE_API=false" >> $CM_ENV
+        # Claves públicas de RevenueCat: sin ellas la app compila pero la
+        # pantalla de plan queda en "Disponible pronto" (SDK desactivado).
+        for var in REVENUECAT_KEY_IOS REVENUECAT_KEY_ANDROID; do
+          if [ -z "${!var}" ]; then echo "AVISO: falta $var en fluent_prod; la compra de Pro queda desactivada"; fi
+        done
+        echo "DART_DEFINES=--dart-define=API_URL=$API_URL --dart-define=INSFORGE_URL=$INSFORGE_URL --dart-define=INSFORGE_ANON_KEY=$INSFORGE_ANON_KEY --dart-define=USE_FAKE_API=false --dart-define=REVENUECAT_KEY_IOS=$REVENUECAT_KEY_IOS --dart-define=REVENUECAT_KEY_ANDROID=$REVENUECAT_KEY_ANDROID" >> $CM_ENV
         echo "BUILD_NAME=$(grep '^version:' pubspec.yaml | sed -E 's/version: *([^+]+).*/\1/')" >> $CM_ENV
 
 workflows:

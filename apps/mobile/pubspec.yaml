@@ -57,6 +57,7 @@ dependencies:
   firebase_crashlytics: ^5.4.0
   firebase_analytics: ^12.6.0
   firebase_messaging: ^16.7.0
+  purchases_flutter: ^10.13.1
 
 dev_dependencies:
   flutter_test:

@@ -1191,4 +1191,19 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get modelPickerLoadError => 'No pudimos cargar los modelos.';
+
+  @override
+  String planUpgradeButtonWithPrice(String price) {
+    return 'Pasar a Pro · $price';
+  }
+
+  @override
+  String get planRestoreButton => 'Restaurar compras';
+
+  @override
+  String get planActivating => 'Se activará en unos minutos';
+
+  @override
+  String get planPurchaseError =>
+      'No pudimos completar la compra. Probá de nuevo.';
 }

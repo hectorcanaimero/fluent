@@ -24,7 +24,7 @@ El proyecto tiene doble propósito: mejorar el inglés del grupo de forma medibl
 ### Objetivos v1
 - O1. Que cada usuario complete al menos una sesión de voz de 10 minutos al día, de forma sostenida.
 - O2. Que el tutor demuestre memoria entre sesiones (callback de hechos personales y coaching brief) sin fine-tuning ni RAG.
-- O3. Costo marginal de LLM para el operador: **0 USD** (BYOK con modelos gratuitos de OpenRouter).
+- O3. **Cero fricción de login.** Los aprendices usan Google u Apple; el operador gestiona planes y presupuesto.
 - O4. Que el grupo interactúe: leaderboard semanal, resumen compartible, desafíos cruzados.
 - O5. Que la arquitectura quede documentada como material de estudio (ADRs, diagramas, decisiones).
 
@@ -44,7 +44,7 @@ El proyecto tiene doble propósito: mejorar el inglés del grupo de forma medibl
 | Persona | Descripción | Necesidad principal |
 |---|---|---|
 | Miembro del grupo | Adulto hispanohablante, nivel A2 a B2, quiere hablar inglés con más soltura. Tiene 10 minutos libres, no una hora. | Práctica corta, sin fricción, que note progreso. |
-| Operador | El autor del proyecto. Administra el VPS, invita al grupo. | Cero costo de LLM, operación sencilla, código que valga la pena estudiar. |
+| Operador | El autor del proyecto. Administra el VPS, invita al grupo. | Operación sencilla, código que valga la pena estudiar, presupuesto previsible de LLM. |
 
 Niveles: se soportan varios niveles desde el día uno. En el onboarding el usuario elige su nivel percibido (A2, B1, B2) y el tutor lo ajusta con el coaching brief a partir de la tercera sesión.
 
@@ -55,7 +55,7 @@ Niveles: se soportan varios niveles desde el día uno. En el onboarding el usuar
 1. **Una llamada por turno.** El modelo responde y corrige en la misma llamada, con salida JSON estructurada.
 2. **Una llamada extra por sesión, no por turno**, para el coaching brief, ejecutada en background.
 3. **Contexto pequeño y estructurado.** El "conocimiento" del usuario cabe entero en el prompt.
-4. **Gratis por defecto, pago por elección del usuario.** El operador nunca paga LLM. Cada usuario usa modelos gratuitos salvo que elija uno pago con su propia cuenta. Debajo de cualquier elección hay una cadena de fallback gratuita.
+4. **Planes simple.** Todos comienzan en Free: combo curado de free tiers. Pro desbloquea modelos de pago; se compra vía RevenueCat. El operador controla presupuesto y calidad con los combos de 9router.
 5. **Voz en el dispositivo.** STT y TTS con las APIs nativas del sistema operativo, sin servicios externos de audio.
 6. **Magia dosificada.** El callback de memoria no aparece en todas las aperturas.
 7. **El usuario ve y edita lo que el tutor recuerda.** Transparencia y corrección de alucinaciones.
@@ -70,30 +70,30 @@ sequenceDiagram
     participant U as Usuario
     participant App as Flutter
     participant API as NestJS
-    participant OR as OpenRouter (BYOK)
+    participant R as 9router (operador)
     participant Q as BullMQ
 
     U->>App: Abre sesión, elige tema / noticia / roleplay
     App->>API: POST /sessions {topic}
     API->>API: Arma prompt: perfil + coaching brief + hechos + tema
-    API->>OR: Primer turno (apertura, a veces con callback)
-    OR-->>API: {reply, corrections:[]}
+    API->>R: Primer turno (apertura, a veces con callback)
+    R-->>API: {reply, corrections:[]}
     API-->>App: Apertura del tutor
     App->>App: TTS nativo reproduce
     loop hasta 10 min o fin manual
         U->>App: Habla
         App->>App: STT nativo transcribe
         App->>API: POST /sessions/:id/turns {text}
-        API->>OR: Turno (historial acotado)
-        OR-->>API: {reply, corrections[]}
+        API->>R: Turno (historial acotado)
+        R-->>API: {reply, corrections[]}
         API-->>App: Respuesta + correcciones
         App->>App: TTS + muestra correcciones
     end
     App->>API: POST /sessions/:id/end
     API->>Q: Encola job coaching-brief
     API-->>App: Resumen inmediato (XP, correcciones, streak)
-    Q->>OR: Una llamada: brief + extracción de hechos
-    OR-->>Q: {brief, facts[], level_hint}
+    Q->>R: Una llamada: brief + extracción de hechos
+    R-->>Q: {brief, facts[], level_hint}
     Q->>API: Guarda brief y hechos (pendientes de confirmación)
 ```
 
@@ -113,20 +113,18 @@ Prioridad: **P0** imprescindible para v1, **P1** deseable en v1, **P2** después
 | RF-1.3 | Perfil: nombre visible, nivel declarado (A2/B1/B2), intereses iniciales (3 a 5 tags), idioma de interfaz (`es` o `pt-BR`). | P0 |
 | RF-1.4 | Pertenencia a un único grupo en v1. | P0 |
 
-### 6.2 Proveedores y modelos (BYOK)
+### 6.2 Planes y 9router
 | ID | Requisito | Prioridad |
 |---|---|---|
-| RF-2.1 | Conexión de cuenta OpenRouter vía OAuth PKCE desde la app (flujo validado en el POC). Es el proveedor por defecto. | P0 |
-| RF-2.2 | Las credenciales de cada proveedor se guardan cifradas en el backend y nunca se exponen a la app después de la conexión. | P0 |
-| RF-2.3 | Pantalla de estado por proveedor: conectado, revocado, con error. Reconexión en un toque. Para OpenRouter se muestra el crédito restante de la key. | P0 |
-| RF-2.4 | Cadena de fallback de modelos gratuitos configurable por el operador, en orden de preferencia. Se aplica siempre debajo del modelo elegido por el usuario. | P0 |
-| RF-2.5 | Si ningún modelo responde, la sesión se degrada a un mensaje claro, sin consumir intentos ni romper el streak. | P0 |
-| RF-2.6 | Selector de modelo por usuario. El catálogo se obtiene del endpoint de modelos de OpenRouter y se agrupa en Gratis, Económico y Premium, con precio por millón de tokens y costo estimado por sesión calculado con el promedio real de tokens del usuario. | P0 |
-| RF-2.7 | Dos roles de modelo configurables por separado: conversación (prioriza latencia) y coaching brief (prioriza calidad, corre async). Por defecto ambos usan el gratuito. | P1 |
-| RF-2.8 | Segundo proveedor desde v1: Google Gemini mediante API key de Google AI Studio pegada por el usuario, usando el endpoint compatible con OpenAI. Mismo adaptador que OpenRouter con otra URL base. El onboarding lo presenta como opción recomendada por calidad y estabilidad del free tier frente a los modelos gratuitos de OpenRouter. | P0 |
-| RF-2.9 | Si el modelo pago falla por crédito agotado o cuota, se cae a la cadena gratuita y se avisa al usuario en la sesión y en la pantalla de proveedores. | P0 |
-
-Nota sobre Google: una suscripción a Google AI Pro da acceso a la app de Gemini, no a la API. El free tier de la API existe para cualquier cuenta en Google AI Studio, con límites por minuto y por día que alcanzan para dos sesiones diarias. Cargar la key de Gemini dentro de OpenRouter es posible, pero añade comisión y un salto; no se hace en v1.
+| RF-2.1 | La API llama a 9router (`NINEROUTER_URL`, `NINEROUTER_API_KEY`) como único proveedor de LLM. Ningún usuario aporta credenciales. | P0 |
+| RF-2.2 | El cliente LLM es el Vercel AI SDK (`ai` + `@ai-sdk/openai-compatible`): `generateObject` para brief y resumen semanal, `streamObject` para el turno. Los esquemas zod existentes no cambian. | P0 |
+| RF-2.3 | Cada perfil tiene `plan` (`free` o `pro`) y `plan_expires_at`. Un usuario es Pro si `plan = 'pro'` y la fecha es nula o futura. Por defecto todos son Free. | P0 |
+| RF-2.4 | Free usa siempre el combo `fluent-free`. No elige modelo. La preferencia de modelo se ignora. | P0 |
+| RF-2.5 | Pro usa su preferencia de modelo (chat y brief por separado), después `fluent-pro`, después `fluent-free`. Elegir un modelo de pago sin ser Pro responde `403 PLAN_REQUIRED`. | P0 |
+| RF-2.6 | Tope diario de turnos por plan: `TURNS_DAILY_CAP_FREE` (30) y `TURNS_DAILY_CAP_PRO` (120). | P0 |
+| RF-2.7 | El owner puede fijar el plan de un usuario con `PUT /admin/users/:id/plan`. | P0 |
+| RF-2.8 | `GET /me` devuelve `plan` y `planExpiresAt` y deja de devolver `providers`. | P0 |
+| RF-2.9 | El catálogo `GET /models` sale de `GET {9router}/v1/models` cruzado con una lista fija del operador que fija tier y precio de referencia. | P1 |
 
 ### 6.3 Conversación por voz
 | ID | Requisito | Prioridad |
@@ -209,10 +207,10 @@ flowchart LR
     subgraph VPS[VPS Contabo · Coolify]
         N[NestJS API<br/>sesiones, XP, prompts]
         W[NestJS Worker<br/>BullMQ]
+        R9[9router<br/>llm.operador.io]
         R[(Redis)]
     end
     I[InsForge Cloud<br/>Auth · Postgres · Storage]
-    OR[OpenRouter<br/>BYOK por usuario]
     RSS[Fuentes RSS]
 
     F -->|HTTPS| N
@@ -221,18 +219,19 @@ flowchart LR
     N --> R
     W --> R
     W --> I
-    N -->|turnos| OR
-    W -->|briefs, resumen semanal| OR
+    N -->|turnos| R9
+    W -->|briefs, resumen semanal| R9
     W -->|diario| RSS
 ```
 
-Nota: el brief original menciona Hetzner. La infraestructura real es el VPS de Contabo donde ya corre Coolify. Los proyectos existentes en ese VPS ya usan NestJS y Coolify, así que no se añade ninguna pieza nueva de operación.
+Nota: el brief original menciona Hetzner. La infraestructura real es el VPS de Contabo donde ya corre Coolify. El 9router corre en el mismo VPS con `docker run`. Los proyectos existentes en ese VPS ya usan NestJS y Coolify, así que no se añade ninguna pieza nueva de operación.
 
 ### 8.1 Responsabilidades
 - **Flutter:** UI, captura y reproducción de voz, auth con InsForge, llamadas a la API.
-- **NestJS API:** construcción de prompts, adaptador de LLM compatible con OpenAI (OpenRouter, Gemini) con las credenciales del usuario, selección de modelo por rol y fallback, reglas de XP y streaks, endpoints de sesión.
+- **NestJS API:** construcción de prompts, cliente del Vercel AI SDK a 9router (única key), selección de modelo por plan y rol, resolución de preferencias con fallback a combo gratuito, reglas de XP y streaks, endpoints de sesión.
 - **NestJS Worker:** jobs de coaching brief, noticias diarias, resumen semanal, recordatorios.
 - **InsForge Cloud:** identidad, Postgres y storage. Sin lógica de negocio. Gestionado; mismo software open source si algún día se autoaloja (ADR 0001).
+- **9router:** router LLM del operador con conexiones a múltiples proveedores. Combos `fluent-free` y `fluent-pro` curados por el operador.
 - **Redis:** cola BullMQ y caché corta de prompts y noticias.
 
 ### 8.2 Modelo de datos (borrador)
@@ -243,7 +242,6 @@ erDiagram
     USER ||--|| PROFILE : has
     USER ||--o{ FACT : remembers
     USER ||--o| COACHING_BRIEF : current
-    USER ||--o{ PROVIDER_CREDENTIAL : owns
     USER ||--o| MODEL_PREFERENCE : sets
     USER }o--|| GROUP : belongs
     SESSION ||--o{ TURN : contains
@@ -253,8 +251,7 @@ erDiagram
     NEWS_ITEM }o--o{ SESSION : seeds
 
     USER { uuid id  text email  timestamptz created_at }
-    PROFILE { uuid user_id  text display_name  text level  text[] interests  int xp  int streak  date last_session_day }
-    PROVIDER_CREDENTIAL { uuid id  uuid user_id  text provider  bytea key_encrypted  text status  timestamptz connected_at }
+    PROFILE { uuid user_id  text display_name  text level  text[] interests  int xp  int streak  date last_session_day  text plan  timestamptz plan_expires_at }
     MODEL_PREFERENCE { uuid user_id  text chat_provider  text chat_model  text brief_provider  text brief_model }
     SESSION { uuid id  uuid user_id  text kind  text topic  timestamptz started_at  timestamptz ended_at  int xp_earned  text model_used }
     TURN { uuid id  uuid session_id  int idx  text role  text text  int tokens_in  int tokens_out  int latency_ms }

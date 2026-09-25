@@ -1,53 +1,42 @@
-# SPEC-03 — LLM, proveedores y prompts
+# SPEC-03 — LLM, planes y prompts
 
-Estado: borrador v0.1 · Cubre: RF-2.4 a RF-2.9, RF-3.4, RF-3.5, RF-4.1, RF-6.3, RF-7.2, RF-7.3 · ADR 0002
+Estado: borrador v0.2 · Cubre: RF-2.1 a RF-2.9, RF-3.4, RF-3.5, RF-4.1, RF-6.3, RF-7.2, RF-7.3 · ADR 0005
 
-## 1. Adaptador único
+## 1. Cliente LLM: Vercel AI SDK + 9router
 
+El cliente es el Vercel AI SDK 7 (`ai` + `@ai-sdk/openai-compatible`):
+
+```ts
+interface LlmServiceRequest<T> {
+  userId: string; sessionId?: string | null; purpose: 'turn' | 'brief' | 'weekly';
+  messages: readonly LlmMessage[]; schema: ZodType<T>;
+  plan: 'free' | 'pro';              // RF-2.3
+  preference?: ModelPreference | null;
+  promptVersion?: string; maxTokens?: number; temperature?: number;
+  timeoutMs?: number; maxAttempts?: number;
+  onToken?: (delta: string) => void; onReset?: () => void;
+}
 ```
-LlmClient.complete(request: {
-  provider: 'openrouter' | 'gemini',
-  model: string,
-  apiKey: string,          // ya descifrada, solo en memoria
-  messages: [{role, content}],
-  schema: ZodSchema,        // salida obligatoria
-  maxTokens: number,
-  temperature: number,
-  purpose: 'turn' | 'brief' | 'weekly',
-  timeoutMs: number
-}) → { data, usage: {tokensIn, tokensOut}, latencyMs, model }
-```
 
-Implementación: `fetch` a `<baseUrl>/chat/completions` con `response_format: { type: 'json_object' }` cuando el proveedor lo soporta, y siempre con la instrucción de JSON en el prompt. Se parsea con tolerancia (se extrae el primer bloque `{...}` balanceado) y se valida con el esquema.
+Proveedor: `createOpenAICompatible({ name: '9router', baseURL, apiKey: env.NINEROUTER_API_KEY, includeUsage: true })`. La key solo vive en variables de entorno de la API y el worker, nunca en cliente ni logs.
 
-| Proveedor | baseUrl | Auth | Cabeceras extra |
-|---|---|---|---|
-| openrouter | `https://openrouter.ai/api/v1` | `Authorization: Bearer <key>` | `HTTP-Referer: https://fluent.app`, `X-Title: Fluent` |
-| gemini | `https://generativelanguage.googleapis.com/v1beta/openai` | `Authorization: Bearer <key>` | ninguna |
+Implementación: `streamObject` cuando hay `onToken`, `generateObject` si no. SDK con `maxRetries: 0` en turnos para evitar reintentos acumulados. El `LlmService` maneja reintentos con `TURN_MAX_ATTEMPTS = 2` máximo.
 
-## 2. Resolución de modelo y fallback (RF-2.4, RF-2.9)
+## 2. Resolución de modelo por plan (RF-2.4, RF-2.5)
 
-Para cada llamada, `ModelResolver` construye una lista ordenada:
+Para cada llamada, `ModelResolver` construye una lista ordenada según el plan:
 
-1. El modelo elegido por el usuario para ese rol (`model_preferences`), si tiene credencial activa del proveedor.
-2. La cadena gratuita del operador, variable `FALLBACK_MODELS` (JSON), filtrada a proveedores para los que el usuario tiene credencial. Valor inicial propuesto, a validar con la prueba de 20 turnos de la pregunta abierta 1 del PRD:
-   ```json
-   [
-     {"provider":"gemini","model":"gemini-2.5-flash"},
-     {"provider":"openrouter","model":"google/gemma-3-27b-it:free"},
-     {"provider":"openrouter","model":"meta-llama/llama-3.3-70b-instruct:free"},
-     {"provider":"openrouter","model":"qwen/qwen3-235b-a22b:free"}
-   ]
-   ```
+**Free:** siempre `[fluent-free]`. Ignora `preference`.
 
-Política de intentos por llamada:
+**Pro:** `[preference?, fluent-pro, fluent-free]` sin duplicados. Si el usuario elige un modelo con tier ≠ free, queda resuelto en `ModelsService.updatePreferences` con `403 PLAN_REQUIRED`.
+
+Política de intentos:
 - Intento 1 con el candidato 1.
-- Si `invalid_json`, `provider_error` 5xx, `rate_limited` 429 o timeout: pasar al siguiente candidato. Máximo 3 intentos en total.
-- 401/403 del proveedor: marcar `provider_credentials.status='error'` con `last_error`, no reintentar con ese proveedor, seguir la cadena.
-- 402 en OpenRouter (sin crédito): igual que 401 pero `last_error='NO_CREDITS'`; la app lo muestra en la pantalla de proveedores (RF-2.9).
+- Si `invalid_json`, `provider_error` 5xx, `rate_limited` 429 o timeout: pasar al siguiente candidato. Máximo `TURN_MAX_ATTEMPTS = 2` para turnos; 3 para jobs.
+- 401/403: error de configuración (key inválida, combo roto); se registra, no reintentar.
 - Agotados: para `turn`, respuesta degradada (§6); para jobs, `failed` con reintento de BullMQ.
 
-Cada intento se registra en `llm_calls`. El campo `degraded` en la respuesta del turno indica que se usó un modelo distinto del elegido.
+Cada intento se registra en `llm_calls`. El campo `degraded` en la respuesta del turno indica que se usó un combo distinto del preferido.
 
 Timeouts: `turn` 25 s, `brief` 60 s, `weekly` 60 s.
 
@@ -159,10 +148,10 @@ export const WeeklyOutput = z.object({ text: z.string().min(50).max(1200) });
 
 Si un turno agota la cadena: la API responde `200` con `reply` fijo en inglés (`"Sorry, I lost my train of thought. Could you say that again?"`), `corrections: []`, `degraded: true`, `unavailable: true`. La app muestra un aviso discreto y no cuenta el turno. Si ocurren 3 seguidos, la app ofrece terminar la sesión y `POST /end` la cierra con `reason:'user'` sin penalizar el streak (la sesión cuenta si duró ≥ `MIN_SESSION_SEC`).
 
-## 7. Catálogo y costo estimado (RF-2.6)
+## 7. Catálogo y costo estimado (RF-2.9)
 
-- Fuente: `GET https://openrouter.ai/api/v1/models` cacheado 6 h. Para Gemini, lista fija en configuración (`gemini-2.5-flash`, `gemini-2.5-flash-lite`, `gemini-2.5-pro`) con precios de referencia.
-- Tiers por precio de salida por millón de tokens: `free` = 0; `budget` ≤ 1 USD; `premium` > 1 USD. Se excluyen modelos sin `text` en modalidades o con contexto < 8k.
+- Fuente: `GET {NINEROUTER_URL}/v1/models` cacheado 6 h en Redis (clave `llm:catalog:9router`) cruzado con `NINEROUTER_MODELS`, lista fija en `apps/api/src/llm/ninerouter-models.ts` que incluye `{ id, name, tier, pricePerMillionIn, pricePerMillionOut }`. Solo se exponen los ids presentes en ambos. `fluent-free` va en tier `free`; `fluent-pro` en tier `premium`.
+- Tiers por precio de salida por millón de tokens: `free` = 0; `budget` ≤ 1 USD; `premium` > 1 USD.
 - Estimación por sesión: `avgTokensIn * priceIn + avgTokensOut * priceOut`, con promedios del usuario de sus últimas 10 sesiones (`llm_calls`), o valores por defecto 9 000 entrada / 2 500 salida por sesión si no tiene historial.
 
 ## 8. Escenarios semilla de roleplay (RF-7.3)

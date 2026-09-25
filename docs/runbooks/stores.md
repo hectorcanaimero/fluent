@@ -150,6 +150,8 @@ Codemagic → Team settings → **Global variables and secrets** → crear el gr
 | `INSFORGE_ANON_KEY` | anon key de InsForge |
 | `GCLOUD_SERVICE_ACCOUNT_CREDENTIALS` | el JSON completo de la cuenta de servicio de Google Play (paso 3) |
 | `APP_STORE_APPLE_ID` | el Apple ID numérico de la app en App Store Connect (App Information) |
+| `REVENUECAT_KEY_IOS` | clave pública de RevenueCat de la app iOS (`appl_…`). Sin ella la compra de Pro queda desactivada |
+| `REVENUECAT_KEY_ANDROID` | clave pública de RevenueCat de la app Android (`goog_…`) |
 | `GOOGLE_SERVICES_JSON` | opcional (hoy no hace falta: el archivo está en el repo). Alternativa: `base64 -w0 google-services.json` |
 | `GOOGLE_SERVICE_INFO_PLIST` | ídem para `GoogleService-Info.plist` |
 

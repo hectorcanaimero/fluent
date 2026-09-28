@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_tts/flutter_tts.dart';
 
 /// Abstrae `flutter_tts` (SPEC-06 §5) para poder simular la voz del tutor
@@ -42,6 +43,18 @@ class FlutterTtsService implements TtsService {
 
   @override
   Future<void> speak(String text) async {
+    // iOS: al terminar de escuchar, `speech_to_text` restaura la categoría
+    // por defecto (soloAmbient, que el switch de silencio calla) y desactiva
+    // la sesión de audio — el tutor "hablaba" sin sonido. Se fija
+    // `playback` y se reactiva la sesión antes de cada frase.
+    if (defaultTargetPlatform == TargetPlatform.iOS) {
+      await _tts.setIosAudioCategory(
+        IosTextToSpeechAudioCategory.playback,
+        const [IosTextToSpeechAudioCategoryOptions.duckOthers],
+        IosTextToSpeechAudioMode.voicePrompt,
+      );
+      await _tts.setSharedInstance(true);
+    }
     await _tts.speak(text);
   }
 

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -11,16 +12,13 @@ import '../data/social_sign_in.dart';
 /// la sesión en `AuthController` y el router hace el resto (onboarding para
 /// usuarios nuevos, Home para los que ya estaban).
 ///
-/// Apple va en las dos plataformas: la guía 4.8 de la App Store lo exige
-/// cuando la app ofrece otro login social, y en Android el flujo web de
-/// InsForge funciona igual.
+/// Apple va en iOS (y web): la guía 4.8 de la App Store lo exige cuando la
+/// app ofrece otro login social. En Android no se muestra.
 class SocialLoginButtons extends ConsumerStatefulWidget {
-  const SocialLoginButtons({
-    super.key,
-    this.providers = const [SocialProvider.google, SocialProvider.apple],
-  });
+  const SocialLoginButtons({super.key, this.providers});
 
-  final List<SocialProvider> providers;
+  /// `null`: Google en Android; Google y Apple en el resto.
+  final List<SocialProvider>? providers;
 
   @override
   ConsumerState<SocialLoginButtons> createState() => _SocialLoginButtonsState();
@@ -50,11 +48,16 @@ class _SocialLoginButtonsState extends ConsumerState<SocialLoginButtons> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final providers =
+        widget.providers ??
+        (defaultTargetPlatform == TargetPlatform.android
+            ? const [SocialProvider.google]
+            : const [SocialProvider.google, SocialProvider.apple]);
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        for (final provider in widget.providers) ...[
+        for (final provider in providers) ...[
           _ProviderButton(
             key: Key('social_login_${provider.name}'),
             provider: provider,

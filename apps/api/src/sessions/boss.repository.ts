@@ -12,9 +12,9 @@ import { BOSS_TOPIC_ROW_LIMIT } from './sessions.constants.js';
  * InsForge, que es lo que dejó pendiente PR-07/T3.
  *
  * Criterio de "tema ya usado" (docs/specs/pendientes/PR-07.md T3 §2): ids de
- * `BOSS_TOPICS` cuyo `title_es` aparece como `sessions.topic` en alguna sesión
+ * `BOSS_TOPICS` cuyo título (es o pt) aparece como `sessions.topic` en alguna sesión
  * `kind = 'boss'` del usuario con `status <> 'active'` (o sea, `ended` o
- * `abandoned`). Se compara por `title_es` porque `sessions` no guarda el id del
+ * `abandoned`). Se compara por título porque `sessions` no guarda el id del
  * tema: `topic` es la etiqueta legible que se muestra en el leaderboard y en
  * los desafíos (SPEC-07 §7/§9), y es exactamente lo que escribe
  * `SessionsService` al abrir un boss.
@@ -37,7 +37,7 @@ export class InsforgeBossRepository implements BossRepository {
 
     const usedIds = new Set<string>();
     for (const topic of BOSS_TOPICS) {
-      if (usedTitles.has(topic.title_es)) {
+      if (usedTitles.has(topic.title_es) || usedTitles.has(topic.title_pt)) {
         usedIds.add(topic.id);
       }
     }

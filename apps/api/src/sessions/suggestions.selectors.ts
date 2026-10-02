@@ -15,8 +15,8 @@
  * `interestTagSet` hace esa traducción antes de cualquier intersección.
  */
 import type { Interest, Roleplay, Topic } from '../content/index.js';
-import { INTERESTS } from '../content/index.js';
-import type { Level, NewsItem } from '../db/schema.js';
+import { INTERESTS, titleFor } from '../content/index.js';
+import type { Level, Locale, NewsItem } from '../db/schema.js';
 import type { SessionRandom } from './sessions.constants.js';
 import {
   SUGGESTIONS_NEWS,
@@ -93,14 +93,16 @@ export function interestTagSet(
  * intereses) antes que devolver menos de 8: con las 60 entradas del catálogo
  * actual y solo 3 niveles esto no debería ocurrir en producción, pero la
  * función nunca falla si el catálogo es más pequeño (por ejemplo en tests).
- * Devuelve `title_es`, que es lo que la app manda de vuelta como `topic` en
- * `POST /sessions` (`topic-prompt.ts` lo traduce a `prompt_en`).
+ * Devuelve el título en el idioma del usuario, que es lo que la app manda de
+ * vuelta como `topic` en `POST /sessions` (`topic-prompt.ts` lo traduce a
+ * `prompt_en`).
  */
 export function pickSuggestedTopics(
   topics: readonly Topic[],
   interestTags: ReadonlySet<string>,
   level: Level,
   random: SessionRandom,
+  locale: Locale = 'es',
 ): string[] {
   const reachable = topics.filter((topic) => isReachable(topic.level_min, level));
   const matching = reachable.filter((topic) => intersects(topic.tags, interestTags));
@@ -134,7 +136,7 @@ export function pickSuggestedTopics(
   addFrom(shuffledMatching, SUGGESTIONS_TOPICS_TOTAL);
   addFrom(shuffledOutside, SUGGESTIONS_TOPICS_TOTAL);
 
-  return selected.map((topic) => topic.title_es);
+  return selected.map((topic) => titleFor(topic, locale));
 }
 
 /**
@@ -153,7 +155,9 @@ export function pickSuggestedRoleplays(
   recentTitles: ReadonlySet<string>,
 ): Roleplay[] {
   const reachable = roleplays.filter((roleplay) => isReachable(roleplay.level_min, level));
-  const fresh = reachable.filter((roleplay) => !recentTitles.has(roleplay.title_es));
+  const fresh = reachable.filter(
+    (roleplay) => !recentTitles.has(roleplay.title_es) && !recentTitles.has(roleplay.title_pt),
+  );
 
   const selected = fresh.slice(0, SUGGESTIONS_ROLEPLAYS);
   if (selected.length < SUGGESTIONS_ROLEPLAYS) {

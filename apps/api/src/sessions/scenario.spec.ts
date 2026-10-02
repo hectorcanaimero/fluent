@@ -108,6 +108,28 @@ describe('rebuildScenario (SPEC-04 §4: mismo escenario en cada turno)', () => {
     });
   });
 
+  it('roleplay guardado en portugués se reconstruye y conserva ese título', () => {
+    const scenario = rebuildScenario(
+      sessionRow({ kind: 'roleplay', topic: ROLEPLAY.title_pt }),
+    );
+
+    expect(scenario).toMatchObject({
+      kind: 'roleplay',
+      fallback: false,
+      topic: ROLEPLAY.title_pt,
+      roleplay: { role: ROLEPLAY.role, situation: ROLEPLAY.situation },
+    });
+  });
+
+  it('roleplay y boss en pt-BR guardan `title_pt`', () => {
+    expect(roleplayScenario(ROLEPLAY, 'pt-BR').topic).toBe(ROLEPLAY.title_pt);
+    expect(bossScenario(BOSS_TOPIC, 'pt-BR').topic).toBe(BOSS_TOPIC.title_pt);
+  });
+
+  it('free_topic con un tema del catálogo en portugués traduce a su `prompt_en`', () => {
+    expect(freeTopicScenario(CATALOG_TOPIC.title_pt).promptTopic).toBe(CATALOG_TOPIC.prompt_en);
+  });
+
   it('boss se reconstruye buscando el `title_es` en BOSS_TOPICS', () => {
     const scenario = rebuildScenario(
       sessionRow({ kind: 'boss', topic: BOSS_TOPIC.title_es }),

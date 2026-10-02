@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { join, dirname } from 'node:path';
 import { z } from 'zod';
+import type { Locale } from '../db/schema.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
@@ -20,6 +21,7 @@ export const InterestSchema = z.object({
 export const RoleplaySchema = z.object({
   id: z.string().min(1),
   title_es: z.string().min(1),
+  title_pt: z.string().min(1),
   role: z.string().min(1),
   situation: z.string().min(1),
   level_min: z.enum(['A2', 'B1', 'B2']),
@@ -28,6 +30,7 @@ export const RoleplaySchema = z.object({
 export const TopicSchema = z.object({
   id: z.string().min(1),
   title_es: z.string().min(1),
+  title_pt: z.string().min(1),
   prompt_en: z.string().min(1),
   tags: z.array(z.string().min(1)).min(1).max(3),
   level_min: z.enum(['A2', 'B1', 'B2']),
@@ -36,6 +39,7 @@ export const TopicSchema = z.object({
 export const BossTopicSchema = z.object({
   id: z.string().min(1),
   title_es: z.string().min(1),
+  title_pt: z.string().min(1),
   prompt_en: z.string().min(1),
   level_min: z.enum(['B1', 'B2']),
 });
@@ -62,6 +66,26 @@ export type Roleplay = z.infer<typeof RoleplaySchema>;
 export type Topic = z.infer<typeof TopicSchema>;
 export type BossTopic = z.infer<typeof BossTopicSchema>;
 export type Feed = z.infer<typeof FeedSchema>;
+
+/** Entrada del catálogo con título en los dos idiomas de la app. */
+interface Titled {
+  readonly title_es: string;
+  readonly title_pt: string;
+}
+
+/** Título en el idioma del usuario (`profiles.locale`). */
+export function titleFor(entry: Titled, locale: Locale): string {
+  return locale === 'pt-BR' ? entry.title_pt : entry.title_es;
+}
+
+/**
+ * `true` si [title] es el título de [entry] en cualquiera de los dos idiomas.
+ * `sessions.topic` guarda el título que vio el usuario, así que puede estar
+ * en español o en portugués.
+ */
+export function hasTitle(entry: Titled, title: string): boolean {
+  return entry.title_es === title || entry.title_pt === title;
+}
 
 // ============================================================================
 // Carga

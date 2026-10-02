@@ -5,7 +5,7 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { getRoleplay } from '../content/index.js';
-import type { Fact, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
+import type { Fact, Locale, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
@@ -384,7 +384,7 @@ export class SessionsService {
       case 'free_topic':
         return this.resolveFreeTopic(dto.topic);
       case 'roleplay':
-        return this.resolveRoleplay(dto.roleplayId);
+        return this.resolveRoleplay(dto.roleplayId, profile.locale);
       case 'news':
         return this.resolveNews(dto.newsItemId);
       case 'boss':
@@ -400,7 +400,7 @@ export class SessionsService {
     return freeTopicScenario(trimmed);
   }
 
-  private resolveRoleplay(roleplayId: string | undefined): SessionScenario {
+  private resolveRoleplay(roleplayId: string | undefined, locale: Locale): SessionScenario {
     if (!roleplayId) {
       throw validationError('roleplayId', 'roleplayId es obligatorio para kind=roleplay.');
     }
@@ -408,7 +408,7 @@ export class SessionsService {
     if (!roleplay) {
       throw validationError('roleplayId', 'roleplayId no existe en el catálogo de escenarios.');
     }
-    return roleplayScenario(roleplay);
+    return roleplayScenario(roleplay, locale);
   }
 
   private async resolveNews(newsItemId: string | undefined): Promise<SessionScenario> {
@@ -440,7 +440,7 @@ export class SessionsService {
         extra: { details: [{ field: 'kind', reason: NO_BOSS_TOPIC_MESSAGE }] },
       });
     }
-    return bossScenario(topic);
+    return bossScenario(topic, profile.locale);
   }
 }
 

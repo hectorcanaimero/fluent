@@ -992,6 +992,21 @@ class AppLocalizationsPt extends AppLocalizations {
   String get authSignInError => 'Não conseguimos entrar. Tente de novo.';
 
   @override
+  String get authContinueWithEmail => 'Entrar com email';
+
+  @override
+  String get authEmailLabel => 'Email';
+
+  @override
+  String get authPasswordLabel => 'Senha';
+
+  @override
+  String get authSignIn => 'Entrar';
+
+  @override
+  String get authEmailSignInError => 'Email ou senha incorretos.';
+
+  @override
   String get summaryTitleNoCorrections => 'Sessão sem correções';
 
   @override

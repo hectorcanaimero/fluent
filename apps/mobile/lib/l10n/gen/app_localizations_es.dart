@@ -988,6 +988,21 @@ class AppLocalizationsEs extends AppLocalizations {
   String get authSignInError => 'No pudimos iniciar sesión. Probá de nuevo.';
 
   @override
+  String get authContinueWithEmail => 'Entrar con email';
+
+  @override
+  String get authEmailLabel => 'Email';
+
+  @override
+  String get authPasswordLabel => 'Contraseña';
+
+  @override
+  String get authSignIn => 'Entrar';
+
+  @override
+  String get authEmailSignInError => 'Email o contraseña incorrectos.';
+
+  @override
   String get summaryTitleNoCorrections => 'Sesión sin correcciones';
 
   @override

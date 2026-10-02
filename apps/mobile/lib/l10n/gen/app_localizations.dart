@@ -1778,6 +1778,36 @@ abstract class AppLocalizations {
   /// **'No pudimos iniciar sesión. Probá de nuevo.'**
   String get authSignInError;
 
+  /// No description provided for @authContinueWithEmail.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar con email'**
+  String get authContinueWithEmail;
+
+  /// No description provided for @authEmailLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Email'**
+  String get authEmailLabel;
+
+  /// No description provided for @authPasswordLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Contraseña'**
+  String get authPasswordLabel;
+
+  /// No description provided for @authSignIn.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrar'**
+  String get authSignIn;
+
+  /// No description provided for @authEmailSignInError.
+  ///
+  /// In es, this message translates to:
+  /// **'Email o contraseña incorrectos.'**
+  String get authEmailSignInError;
+
   /// No description provided for @summaryTitleNoCorrections.
   ///
   /// In es, this message translates to:

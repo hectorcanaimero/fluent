@@ -61,13 +61,22 @@ void main() {
 
     expect(_opacityOf(tester, find.text('Un tutor que se acuerda de vos')), 1);
     expect(find.byType(SocialLoginButtons), findsOneWidget);
-    // Los dos proveedores: sin Apple, la guía 4.8 rechaza la app.
+    // Los tests corren como Android: solo Google, sin Apple.
     expect(find.byKey(const Key('social_login_google')), findsOneWidget);
-    expect(find.byKey(const Key('social_login_apple')), findsOneWidget);
+    expect(find.byKey(const Key('social_login_apple')), findsNothing);
     expect(find.textContaining('I went', findRichText: true), findsOneWidget);
     // Sin email/contraseña: solo login social.
     expect(find.byType(TextFormField), findsNothing);
   });
+
+  testWidgets('en iOS también aparece Apple (guía 4.8 de la App Store)', (
+    tester,
+  ) async {
+    await _pumpWelcome(tester);
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('social_login_google')), findsOneWidget);
+    expect(find.byKey(const Key('social_login_apple')), findsOneWidget);
+  }, variant: TargetPlatformVariant.only(TargetPlatform.iOS));
 
   testWidgets('con animaciones desactivadas todo aparece ya en su estado '
       'final', (tester) async {

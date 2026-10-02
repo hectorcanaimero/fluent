@@ -1,5 +1,5 @@
 import { TOPICS } from '../content/index.js';
-import { findTopicByTitleEs, resolveFreeTopicPrompt } from './topic-prompt.js';
+import { findTopicByTitle, resolveFreeTopicPrompt } from './topic-prompt.js';
 
 const CATALOG_TOPIC = TOPICS[0]!;
 
@@ -25,12 +25,12 @@ describe('resolveFreeTopicPrompt', () => {
   });
 });
 
-describe('findTopicByTitleEs', () => {
+describe('findTopicByTitle', () => {
   it('encuentra la entrada del catálogo', () => {
-    expect(findTopicByTitleEs(CATALOG_TOPIC.title_es)?.id).toBe(CATALOG_TOPIC.id);
+    expect(findTopicByTitle(CATALOG_TOPIC.title_es)?.id).toBe(CATALOG_TOPIC.id);
   });
 
   it('devuelve undefined si no existe', () => {
-    expect(findTopicByTitleEs('nada-de-esto')).toBeUndefined();
+    expect(findTopicByTitle('nada-de-esto')).toBeUndefined();
   });
 });

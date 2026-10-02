@@ -16,10 +16,12 @@
 import {
   BOSS_TOPICS,
   ROLEPLAYS,
+  hasTitle,
+  titleFor,
   type BossTopic,
   type Roleplay,
 } from '../content/index.js';
-import type { NewsItem, Session, SessionKind } from '../db/schema.js';
+import type { Locale, NewsItem, Session, SessionKind } from '../db/schema.js';
 import type { NewsScenario, RoleplayScenario } from '../llm/prompts/turn.js';
 import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
@@ -39,10 +41,10 @@ export function freeTopicScenario(topic: string): SessionScenario {
   return { topic, promptTopic: resolveFreeTopicPrompt(topic) };
 }
 
-/** `roleplay`: `sessions.topic` guarda `title_es`; el prompt, rol y situación. */
-export function roleplayScenario(roleplay: Roleplay): SessionScenario {
+/** `roleplay`: `sessions.topic` guarda el título en el idioma del usuario. */
+export function roleplayScenario(roleplay: Roleplay, locale: Locale = 'es'): SessionScenario {
   return {
-    topic: roleplay.title_es,
+    topic: titleFor(roleplay, locale),
     roleplay: { role: roleplay.role, situation: roleplay.situation },
   };
 }
@@ -56,19 +58,19 @@ export function newsScenario(item: NewsItem): SessionScenario {
   };
 }
 
-/** `boss`: `sessions.topic` guarda `title_es`; el prompt usa `prompt_en`. */
-export function bossScenario(topic: BossTopic): SessionScenario {
-  return { topic: topic.title_es, promptTopic: topic.prompt_en };
+/** `boss`: `sessions.topic` guarda el título en el idioma del usuario; el prompt usa `prompt_en`. */
+export function bossScenario(topic: BossTopic, locale: Locale = 'es'): SessionScenario {
+  return { topic: titleFor(topic, locale), promptTopic: topic.prompt_en };
 }
 
-/** Entrada de `ROLEPLAYS` cuyo `title_es` es exactamente `topic`. */
-export function findRoleplayByTitleEs(topic: string): Roleplay | undefined {
-  return ROLEPLAYS.find((entry) => entry.title_es === topic);
+/** Entrada de `ROLEPLAYS` cuyo título (es o pt) es exactamente `topic`. */
+export function findRoleplayByTitle(topic: string): Roleplay | undefined {
+  return ROLEPLAYS.find((entry) => hasTitle(entry, topic));
 }
 
-/** Entrada de `BOSS_TOPICS` cuyo `title_es` es exactamente `topic`. */
-export function findBossTopicByTitleEs(topic: string): BossTopic | undefined {
-  return BOSS_TOPICS.find((entry) => entry.title_es === topic);
+/** Entrada de `BOSS_TOPICS` cuyo título (es o pt) es exactamente `topic`. */
+export function findBossTopicByTitle(topic: string): BossTopic | undefined {
+  return BOSS_TOPICS.find((entry) => hasTitle(entry, topic));
 }
 
 /** Escenario reconstruido a partir de una sesión ya existente. */
@@ -87,13 +89,14 @@ export interface RebuiltScenario extends SessionScenario {
  * siguientes (SPEC-04 §4 paso 4).
  *
  * `sessions` no guarda el `roleplayId` ni el `bossTopicId`: solo el `topic`
- * legible, que por decisión de la sesión líder es exactamente el `title_es`
- * de la entrada del catálogo. Por eso la búsqueda es por `title_es`. Para
+ * legible, que es exactamente el título (`title_es` o `title_pt`, según el
+ * idioma del usuario) de la entrada del catálogo. Por eso la búsqueda es por
+ * título en los dos idiomas. Para
  * `news` sí hay `news_item_id`, pero la fila puede haberse borrado por
  * retención (SPEC-01 §4), así que `newsItem` puede llegar `null`.
  *
  * **Nunca falla** (decisión documentada en docs/specs/pendientes/PR-04.md): si
- * el escenario original ya no existe —noticia purgada, `title_es` que
+ * el escenario original ya no existe —noticia purgada, título que
  * desapareció del catálogo tras editarlo— se cae al bloque `free_topic` con el
  * `topic` guardado. Una sesión a medias no puede quedarse sin poder continuar
  * porque cambiara un JSON del catálogo; el aprendiz pierde el matiz del rol o
@@ -108,9 +111,9 @@ export function rebuildScenario(
       return { kind: 'free_topic', fallback: false, ...freeTopicScenario(session.topic) };
 
     case 'roleplay': {
-      const roleplay = findRoleplayByTitleEs(session.topic);
+      const roleplay = findRoleplayByTitle(session.topic);
       return roleplay
-        ? { kind: 'roleplay', fallback: false, ...roleplayScenario(roleplay) }
+        ? { kind: 'roleplay', fallback: false, ...roleplayScenario(roleplay), topic: session.topic }
         : degradeToFreeTopic(session.topic);
     }
 
@@ -120,9 +123,9 @@ export function rebuildScenario(
         : degradeToFreeTopic(session.topic);
 
     case 'boss': {
-      const bossTopic = findBossTopicByTitleEs(session.topic);
+      const bossTopic = findBossTopicByTitle(session.topic);
       return bossTopic
-        ? { kind: 'boss', fallback: false, ...bossScenario(bossTopic) }
+        ? { kind: 'boss', fallback: false, ...bossScenario(bossTopic), topic: session.topic }
         : degradeToFreeTopic(session.topic);
     }
   }

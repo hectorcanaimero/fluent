@@ -1,5 +1,5 @@
 import { Inject, Injectable } from '@nestjs/common';
-import { ROLEPLAYS, TOPICS } from '../content/index.js';
+import { ROLEPLAYS, TOPICS, titleFor } from '../content/index.js';
 import { ApiException } from '../common/api-error.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
@@ -50,13 +50,19 @@ export class SuggestionsService {
       ),
     ]);
 
-    const topics = pickSuggestedTopics(TOPICS, interestTags, profile.level, this.random);
+    const topics = pickSuggestedTopics(
+      TOPICS,
+      interestTags,
+      profile.level,
+      this.random,
+      profile.locale,
+    );
 
     const roleplays: RoleplaySuggestionDto[] = pickSuggestedRoleplays(
       ROLEPLAYS,
       profile.level,
       new Set(recentRoleplayTopics),
-    ).map((roleplay) => ({ id: roleplay.id, title: roleplay.title_es }));
+    ).map((roleplay) => ({ id: roleplay.id, title: titleFor(roleplay, profile.locale) }));
 
     const news: NewsSuggestionDto[] = pickSuggestedNews(recentNews, interestTags).map((item) => ({
       id: item.id,

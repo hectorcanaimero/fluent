@@ -17,6 +17,7 @@ function topic(overrides: Partial<Topic> = {}): Topic {
   return {
     id: 'topic-1',
     title_es: 'Tema 1',
+    title_pt: 'Tema 1 pt',
     prompt_en: 'Prompt 1',
     tags: ['tech'],
     level_min: 'A2',
@@ -28,6 +29,7 @@ function roleplay(overrides: Partial<Roleplay> = {}): Roleplay {
   return {
     id: 'role-1',
     title_es: 'Escenario 1',
+    title_pt: 'Cenário 1',
     role: 'Waiter',
     situation: 'A restaurant',
     level_min: 'A2',
@@ -156,6 +158,12 @@ describe('pickSuggestedTopics', () => {
     const result = pickSuggestedTopics(topics, new Set(['tech']), 'B2', fixedRandom(0));
     expect(result).toEqual(['Único']);
   });
+
+  it('en pt-BR devuelve el título en portugués', () => {
+    const topics = [topic({ id: 't0', title_es: 'Único', title_pt: 'Único pt', tags: ['tech'] })];
+    const result = pickSuggestedTopics(topics, new Set(['tech']), 'B2', fixedRandom(0), 'pt-BR');
+    expect(result).toEqual(['Único pt']);
+  });
 });
 
 describe('pickSuggestedRoleplays', () => {
@@ -170,6 +178,16 @@ describe('pickSuggestedRoleplays', () => {
     expect(result.map((r) => r.title_es)).not.toEqual(
       expect.arrayContaining(['Escenario 0', 'Escenario 1']),
     );
+  });
+
+  it('excluye también los recientes guardados con el título en portugués', () => {
+    const roleplays = Array.from({ length: 5 }, (_unused, i) =>
+      roleplay({ id: `r${i}`, title_es: `Escenario ${i}`, title_pt: `Cenário ${i}` }),
+    );
+
+    const result = pickSuggestedRoleplays(roleplays, 'B2', new Set(['Cenário 0']));
+
+    expect(result.map((r) => r.id)).not.toContain('r0');
   });
 
   it('devuelve como máximo 4', () => {

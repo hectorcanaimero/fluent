@@ -17,7 +17,7 @@ export class SuggestionsRepository {
   /**
    * `topic` de las últimas `limit` sesiones `kind='roleplay'` del usuario,
    * en cualquier estado (SPEC-04 §7: «evitando los 5 últimos usados»; el
-   * `topic` guardado es el `title_es` del escenario, ver `scenario.ts`).
+   * `topic` guardado es el título del escenario en es o pt, ver `scenario.ts`).
    */
   async listRecentRoleplayTopics(
     userId: string,

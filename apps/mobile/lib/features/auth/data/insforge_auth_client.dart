@@ -76,6 +76,25 @@ class InsforgeAuthClient implements TokenRefresher {
     }
   }
 
+  /// Login con email y contraseña. Solo para la cuenta demo de los
+  /// revisores de App Store / Google Play: la app no ofrece registro con email.
+  Future<AuthTokens> login({
+    required String email,
+    required String password,
+  }) async {
+    try {
+      final res = await dio.post(
+        '/api/auth/sessions',
+        queryParameters: _clientTypeQuery,
+        options: _anonAuthOptions,
+        data: {'email': email, 'password': password},
+      );
+      return _tokensFromResponse(res.data as Map<String, dynamic>);
+    } on DioException catch (e) {
+      throw _mapError(e);
+    }
+  }
+
   @override
   Future<AuthTokens?> refresh(String refreshToken) async {
     try {

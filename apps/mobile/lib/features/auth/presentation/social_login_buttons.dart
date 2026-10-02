@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/theme.dart';
+import '../../../core/env.dart';
 import '../../../core/providers.dart';
 import '../../../l10n/gen/app_localizations.dart';
 import '../data/social_sign_in.dart';
@@ -66,14 +67,24 @@ class _SocialLoginButtonsState extends ConsumerState<SocialLoginButtons> {
           ),
           const SizedBox(height: AppSpacing.sm),
         ],
+        TextButton(
+          key: const Key('email_login'),
+          onPressed: _pending == null
+              ? () => showModalBottomSheet<void>(
+                  context: context,
+                  isScrollControlled: true,
+                  builder: (_) => const _EmailSignInSheet(),
+                )
+              : null,
+          child: Text(l10n.authContinueWithEmail),
+        ),
         if (_errorMessage != null)
           Text(
             _errorMessage!,
             key: const Key('social_login_error'),
             textAlign: TextAlign.center,
-            style: Theme.of(
-              context,
-            ).textTheme.bodyMedium?.copyWith(color: AppColors.errorText),
+            style: Theme.of(context).textTheme.bodyMedium
+                ?.copyWith(color: AppColors.errorText),
           ),
       ],
     );
@@ -111,7 +122,10 @@ class _ProviderButton extends StatelessWidget {
           ? SizedBox(
               height: 20,
               width: 20,
-              child: CircularProgressIndicator(strokeWidth: 2, color: foreground),
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: foreground,
+              ),
             )
           : Row(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -119,13 +133,121 @@ class _ProviderButton extends StatelessWidget {
                 if (isApple)
                   const Icon(Icons.apple, size: 22)
                 else
-                  Image.asset('assets/auth/google_g.png', height: 20, width: 20),
+                  Image.asset(
+                    'assets/auth/google_g.png',
+                    height: 20,
+                    width: 20,
+                  ),
                 const SizedBox(width: AppSpacing.sm),
-                Flexible(
-                  child: Text(label, overflow: TextOverflow.ellipsis),
-                ),
+                Flexible(child: Text(label, overflow: TextOverflow.ellipsis)),
               ],
             ),
+    );
+  }
+}
+
+/// Login con email y contraseña, sin registro. Existe para la cuenta demo
+/// que piden los revisores de App Store y Google Play.
+class _EmailSignInSheet extends ConsumerStatefulWidget {
+  const _EmailSignInSheet();
+
+  @override
+  ConsumerState<_EmailSignInSheet> createState() => _EmailSignInSheetState();
+}
+
+class _EmailSignInSheetState extends ConsumerState<_EmailSignInSheet> {
+  final _email = TextEditingController();
+  final _password = TextEditingController();
+  bool _loading = false;
+  String? _error;
+
+  @override
+  void dispose() {
+    _email.dispose();
+    _password.dispose();
+    super.dispose();
+  }
+
+  Future<void> _submit() async {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _loading = true;
+      _error = null;
+    });
+    try {
+      final tokens = Env.useFakeApi
+          ? await FakeSocialSignIn().signIn(SocialProvider.google)
+          : await ref
+                .read(insforgeAuthClientProvider)
+                .login(email: _email.text.trim(), password: _password.text);
+      await ref.read(authControllerProvider.notifier).setAuthenticated(tokens!);
+      if (mounted) Navigator.of(context).pop();
+    } catch (_) {
+      if (mounted) setState(() => _error = l10n.authEmailSignInError);
+    } finally {
+      if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Padding(
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.screenPad,
+        AppSpacing.xl,
+        AppSpacing.screenPad,
+        MediaQuery.viewInsetsOf(context).bottom + AppSpacing.xl,
+      ),
+      child: AutofillGroup(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextField(
+              key: const Key('email_login_email'),
+              controller: _email,
+              decoration: InputDecoration(labelText: l10n.authEmailLabel),
+              keyboardType: TextInputType.emailAddress,
+              autofillHints: const [AutofillHints.email],
+              textInputAction: TextInputAction.next,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            TextField(
+              key: const Key('email_login_password'),
+              controller: _password,
+              decoration: InputDecoration(labelText: l10n.authPasswordLabel),
+              obscureText: true,
+              autofillHints: const [AutofillHints.password],
+              onSubmitted: (_) => _loading ? null : _submit(),
+            ),
+            if (_error != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Text(
+                _error!,
+                key: const Key('email_login_error'),
+                style: Theme.of(context).textTheme.bodyMedium
+                    ?.copyWith(color: AppColors.errorText),
+              ),
+            ],
+            const SizedBox(height: AppSpacing.lg),
+            FilledButton(
+              key: const Key('email_login_submit'),
+              onPressed: _loading ? null : _submit,
+              style: FilledButton.styleFrom(
+                minimumSize: const Size.fromHeight(52),
+              ),
+              child: _loading
+                  ? const SizedBox(
+                      height: 20,
+                      width: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Text(l10n.authSignIn),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

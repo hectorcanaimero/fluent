@@ -122,14 +122,16 @@ script, avisa y sigue).
 ## Codemagic (recomendado)
 
 El VPS no tiene Mac, así que los builds de release se hacen en Codemagic con
-`codemagic.yaml` (raíz del repo). Hay dos workflows, que corren en `apps/mobile`:
+`codemagic.yaml` (raíz del repo). Hay tres workflows, que corren en `apps/mobile`:
 
 | Workflow | Máquina | Hace | Publica en |
 |---|---|---|---|
 | `android-release` | Mac mini M2 | tests, `flutter build appbundle --release` firmado | Google Play, pista **internal** |
 | `ios-release` | Mac mini M2 | tests, `flutter build ipa --release` firmado | App Store Connect → **TestFlight** |
+| `android-promote` | Mac mini M2 | promueve el último release de internal, sin recompilar | Google Play, **producción** (rollout `ROLLOUT`, 0.2 por defecto) |
 
-Los dos se disparan con un tag `v*` o a mano desde Codemagic. Este archivo no se puede correr
+`android-release` e `ios-release` se disparan con un tag `v*` o a mano desde Codemagic.
+`android-promote` solo a mano, después de probar el build de internal; `ROLLOUT=1` lo libera al 100 %. Este archivo no se puede correr
 desde el servidor: validé la sintaxis del YAML, pero la primera corrida real va a mostrar si falta
 algo de la configuración de la cuenta.
 

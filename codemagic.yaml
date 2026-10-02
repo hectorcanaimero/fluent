@@ -110,6 +110,35 @@ workflows:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal
 
+  # Pasa a producción el último release de `internal`, sin recompilar: sale
+  # el mismo AAB que ya se probó. Solo a mano (sin `triggering`). Arranca
+  # como rollout parcial; se sube a 100 % desde Play Console o se vuelve a
+  # correr con ROLLOUT=1. Al iniciar el build se puede cambiar ROLLOUT.
+  android-promote:
+    name: Android · internal → producción
+    instance_type: mac_mini_m2
+    max_build_duration: 10
+    environment:
+      groups:
+        - fluent_prod
+      vars:
+        PACKAGE_NAME: com.guria.openfluent
+        ROLLOUT: "0.2"
+    scripts:
+      - name: Promover a producción
+        script: |
+          if [ "$ROLLOUT" = "1" ]; then
+            ARGS="--release-status completed"
+          else
+            ARGS="--release-status inProgress --user-fraction $ROLLOUT"
+          fi
+          google-play tracks promote-release \
+            --credentials @env:GCLOUD_SERVICE_ACCOUNT_CREDENTIALS \
+            --package-name "$PACKAGE_NAME" \
+            --source-track internal \
+            --target-track production \
+            $ARGS
+
   ios-release:
     name: iOS · TestFlight
     instance_type: mac_mini_m2

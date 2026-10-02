@@ -40,6 +40,24 @@ void main() {
     expect(seenAuthHeader, 'Bearer anon-test-key');
   });
 
+  test('login con email devuelve los tokens de client_type=mobile', () async {
+    Object? seenBody;
+    adapter.onPost(
+      '/api/auth/sessions',
+      (server) => server.replyCallback(200, (options) {
+        seenBody = options.data;
+        return {'accessToken': 'access-1', 'refreshToken': 'refresh-1'};
+      }),
+      data: Matchers.any,
+      queryParameters: {'client_type': 'mobile'},
+    );
+
+    final tokens = await client.login(email: 'demo@x.com', password: 'pw');
+
+    expect(tokens.refreshToken, 'refresh-1');
+    expect(seenBody, {'email': 'demo@x.com', 'password': 'pw'});
+  });
+
   test('exchangeOAuthCode devuelve los tokens de client_type=mobile', () async {
     Object? seenBody;
     adapter.onPost(

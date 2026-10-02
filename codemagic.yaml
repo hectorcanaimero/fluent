@@ -109,6 +109,11 @@ workflows:
       google_play:
         credentials: $GCLOUD_SERVICE_ACCOUNT_CREDENTIALS
         track: internal
+        # Con un rechazo o una revisión pendiente, Play no deja que la API
+        # mande los cambios a revisión ("Changes cannot be sent for review
+        # automatically"). Se suben igual y se envían desde Play Console →
+        # Visão geral da publicação.
+        changes_not_sent_for_review: true
 
   # Pasa a producción el último release de `internal`, sin recompilar: sale
   # el mismo AAB que ya se probó. Solo a mano (sin `triggering`). Arranca

@@ -61,5 +61,14 @@
             <action android:name="android.intent.action.PROCESS_TEXT"/>
             <data android:mimeType="text/plain"/>
         </intent>
+        <!-- Android 11+: sin esto el motor de voz (flutter_tts) y el
+             reconocedor (speech_to_text) no son visibles para la app y el
+             micrófono/parlantes de la conversación no responden. -->
+        <intent>
+            <action android:name="android.intent.action.TTS_SERVICE"/>
+        </intent>
+        <intent>
+            <action android:name="android.speech.RecognitionService"/>
+        </intent>
     </queries>
 </manifest>

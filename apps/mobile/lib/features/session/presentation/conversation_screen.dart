@@ -259,7 +259,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
 
   Future<void> _endSession({required String reason}) async {
     if (_endingSession) return;
-    _endingSession = true;
+    // Repinta para mostrar el spinner en el botón de cerrar: el /end puede
+    // tardar y, sin aviso, parecía que "Terminar" no respondía.
+    setState(() => _endingSession = true);
     _timer?.cancel();
     SessionSummary? summary;
     try {
@@ -278,6 +280,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         extra: summary,
       );
     } else {
+      // Sin esto `computeRedirect` ve la sesión todavía activa y devuelve a
+      // `/session/:id`: el usuario quedaba atrapado en la conversación.
+      ref
+          .read(authControllerProvider.notifier)
+          .clearActiveSession(widget.sessionId);
       context.go('/');
     }
   }
@@ -934,8 +941,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
             ),
             IconButton(
               key: const Key('conversation_end_button'),
-              icon: const Icon(Icons.close),
-              onPressed: _confirmEndByUser,
+              icon: _endingSession
+                  ? const SizedBox.square(
+                      dimension: 20,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : const Icon(Icons.close),
+              onPressed: _endingSession ? null : _confirmEndByUser,
               tooltip: l10n.conversationEndButton,
             ),
           ],

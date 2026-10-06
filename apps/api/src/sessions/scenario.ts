@@ -79,7 +79,7 @@ export interface RebuiltScenario extends SessionScenario {
    * `kind` **efectivo** para el prompt. Normalmente el de la sesión; es
    * `'free_topic'` cuando el original no se pudo reconstruir (ver abajo).
    */
-  readonly kind: SessionKind;
+  readonly kind: Exclude<SessionKind, 'group'>;
   /** `true` si se cayó al bloque `free_topic` por no poder reconstruir. */
   readonly fallback: boolean;
 }
@@ -128,6 +128,12 @@ export function rebuildScenario(
         ? { kind: 'boss', fallback: false, ...bossScenario(bossTopic), topic: session.topic }
         : degradeToFreeTopic(session.topic);
     }
+
+    // `sessions.kind = 'group'` solo existe en la fila que crea
+    // `close_group_session` (F9.1) por participante al cerrar la sala; esta
+    // función reconstruye turnos 1:1 y nunca se llama sobre esa fila.
+    case 'group':
+      return degradeToFreeTopic(session.topic);
   }
 }
 

@@ -269,6 +269,10 @@ export interface Session {
   brief_job_status: BriefJobStatus;
   /** Sala grupal de origen cuando `kind = 'group'` (F6). */
   group_session_id: string | null;
+  /** Entrevista de la sesión cuando `kind = 'interview'` (F10.1.T1). */
+  interview_id: string | null;
+  /** Tiempo activo acumulado en segundos (D4); solo lo usa `interview`. */
+  active_sec: number;
 }
 
 /**
@@ -285,6 +289,9 @@ export interface Turn {
   tokens_in: number | null; // solo para role='tutor'
   tokens_out: number | null; // solo para role='tutor'
   latency_ms: number | null; // solo para role='tutor'
+  /** Pregunta del plan (1..8) y si es repregunta; solo en `kind = 'interview'` (F12.1.T2). */
+  question_idx: number | null;
+  is_follow_up: boolean | null;
   created_at: string; // ISO 8601 timestamp
 }
 
@@ -507,6 +514,8 @@ export interface Interview {
   feedback: InterviewFeedback | null;
   error_code: string | null;
   answered_count: number;
+  /** `too_short` que se puede retomar en su misma sesión (D5, F12.1.T2). */
+  resumable: boolean;
   created_at: string; // ISO 8601 timestamp
   updated_at: string; // ISO 8601 timestamp
 }

@@ -23,6 +23,7 @@ import {
 } from '../content/index.js';
 import type { Locale, NewsItem, OpenableSessionKind, Session } from '../db/schema.js';
 import type { NewsScenario, RoleplayScenario } from '../llm/prompts/turn.js';
+import type { InterviewPlan } from '../interviews/interviews.types.js';
 import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
 /** Lo que se resuelve del `kind` antes de tocar la base (SPEC-04 §3.2). */
@@ -61,6 +62,27 @@ export function newsScenario(item: NewsItem): SessionScenario {
 /** `boss`: `sessions.topic` guarda el título en el idioma del usuario; el prompt usa `prompt_en`. */
 export function bossScenario(topic: BossTopic, locale: Locale = 'es'): SessionScenario {
   return { topic: titleFor(topic, locale), promptTopic: topic.prompt_en };
+}
+
+/** `sessions.topic` de toda sesión `interview` (F12.1.T2). */
+export const INTERVIEW_TOPIC = 'Entrevista';
+
+/** `interview`: el turno usa su propio prompt (I3) armado desde el plan. */
+export interface InterviewScenario {
+  readonly topic: string;
+  readonly plan: InterviewPlan;
+  readonly totalQuestions: number;
+}
+
+export function interviewScenario(plan: InterviewPlan): InterviewScenario {
+  return { topic: INTERVIEW_TOPIC, plan, totalQuestions: plan.questions.length };
+}
+
+/** Nombre de la competencia de la pregunta `questionIdx` del plan (FR-24). */
+export function competencyFor(plan: InterviewPlan, questionIdx: number): string {
+  const question = plan.questions.find((q) => q.idx === questionIdx);
+  const competency = plan.rubric.find((c) => c.id === question?.competencyId);
+  return competency?.name ?? '';
 }
 
 /** Entrada de `ROLEPLAYS` cuyo título (es o pt) es exactamente `topic`. */
@@ -132,8 +154,8 @@ export function rebuildScenario(
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
-    // F10: `interview`/`study` tampoco: el turno de entrevista usa su propio
-    // prompt (I3).
+    // `interview` tampoco: su turno usa `interviewScenario(plan)` (I3) y
+    // `study` espera a que F13 traiga `studyScenario`.
     case 'group':
     case 'interview':
     case 'study':

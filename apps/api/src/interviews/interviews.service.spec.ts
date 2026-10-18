@@ -86,6 +86,7 @@ function interviewFixture(overrides: Partial<Interview> = {}): Interview {
     feedback: null,
     error_code: null,
     answered_count: 0,
+    resumable: true,
     created_at: '2026-03-10T09:00:00.000Z',
     updated_at: '2026-03-10T09:00:00.000Z',
     ...overrides,
@@ -390,6 +391,15 @@ describe('InterviewsService.detail', () => {
     ]);
     const serialized = JSON.stringify(detail);
     expect(serialized).not.toContain('secret question text');
+  });
+
+  it('expone resumable: un too_short cerrado por tiempo no se puede retomar (D5)', async () => {
+    const interview = interviewFixture({ status: 'too_short', resumable: false });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const detail = await service.detail(USER_ID, INTERVIEW_ID);
+
+    expect(detail).toMatchObject({ status: 'too_short', resumable: false });
   });
 
   it('con una entrevista de otro usuario responde 404', async () => {

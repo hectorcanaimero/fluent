@@ -54,3 +54,19 @@ export function toCorrectionDto(row: {
     note: row.note ?? '',
   };
 }
+
+/**
+ * `corrections.note` tiene un CHECK de 140 caracteres (migración 3). El
+ * esquema zod `Correction` ya lo limita, pero el modelo escribe ese texto y no
+ * se confía en que el `.max(140)` haya recortado en vez de rechazar: se vuelve
+ * a recortar antes del INSERT.
+ */
+const CORRECTION_NOTE_MAX_CHARS = 140;
+
+/** Recorte defensivo al CHECK de 140 caracteres de `corrections.note`. */
+export function clampNote(note: string | null | undefined): string | null {
+  if (note === null || note === undefined) {
+    return null;
+  }
+  return note.length > CORRECTION_NOTE_MAX_CHARS ? note.slice(0, CORRECTION_NOTE_MAX_CHARS) : note;
+}

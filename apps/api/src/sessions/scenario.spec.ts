@@ -213,4 +213,9 @@ describe('rebuildScenario (SPEC-04 §4: mismo escenario en cada turno)', () => {
     expect(prompt).toContain('Session type: free_topic. Topic: Un reto que ya no existe.');
     expect(prompt).not.toContain('Challenge session');
   });
+
+  it('interview: no tiene escenario 1:1 (su turno usa interviewScenario)', () => {
+    expect(() => rebuildScenario(sessionRow({ kind: 'interview' }))).toThrow(/interview/);
+  });
 });
+

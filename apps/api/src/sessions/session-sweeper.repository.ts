@@ -1,17 +1,23 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 
-import { TABLES } from '../db/schema.js';
+import { TABLES, type SessionKind } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
+import { quotePostgrestValue } from '../jobs/interviews/interview-prepare.repository.js';
 
 /** Sesión `active` tal y como la necesita el barrido (SPEC-04 §6). */
 export interface ActiveSessionRow {
   readonly id: string;
   readonly userId: string;
+  readonly kind: SessionKind;
   readonly startedAt: string; // ISO 8601
   /** Turnos **del usuario** (decisión de la sesión líder, PR-04/T1). */
   readonly turnsCount: number;
+  /** Solo `kind = 'interview'`; `null` en el resto. */
+  readonly interviewId: string | null;
+  /** Tiempo activo (D4); solo lo usa `interview`. */
+  readonly activeSec: number;
 }
 
 /**
@@ -33,25 +39,44 @@ export class SessionSweeperRepository {
    * `SESSION_SWEEPER_BATCH_LIMIT` en `session-sweeper.service.ts`) corta la
    * lista, así no son siempre las mismas sesiones nuevas las que se quedan
    * sin barrer en cada ejecución.
+   *
+   * Las entrevistas que empezaron después de `interviewStartedBeforeIso` no
+   * pueden llevar aún 24 h inactivas (D5): se dejan fuera para que una pila
+   * de entrevistas en pausa no ocupe el lote y deje sin barrer al resto.
    */
-  async listActiveSessions(limit: number): Promise<ActiveSessionRow[]> {
+  async listActiveSessions(
+    limit: number,
+    interviewStartedBeforeIso: string,
+  ): Promise<ActiveSessionRow[]> {
     const result = await this.admin.database
       .from(TABLES.sessions)
-      .select('id, user_id, started_at, turns_count')
+      .select('id, user_id, kind, started_at, turns_count, interview_id, active_sec')
       .eq('status', 'active')
+      .or(`kind.neq.interview,started_at.lt.${quotePostgrestValue(interviewStartedBeforeIso)}`)
       .order('started_at', { ascending: true })
       .limit(limit);
 
     const rows =
       unwrapInsforge<
-        Array<{ id: string; user_id: string; started_at: string; turns_count: number }>
+        Array<{
+          id: string;
+          user_id: string;
+          kind: SessionKind;
+          started_at: string;
+          turns_count: number;
+          interview_id: string | null;
+          active_sec: number;
+        }>
       >(result) ?? [];
 
     return rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
+      kind: row.kind,
       startedAt: row.started_at,
       turnsCount: row.turns_count,
+      interviewId: row.interview_id,
+      activeSec: row.active_sec,
     }));
   }
 

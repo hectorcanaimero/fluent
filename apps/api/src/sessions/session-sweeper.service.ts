@@ -2,6 +2,7 @@ import { Logger } from '@nestjs/common';
 
 import { ABANDON_AFTER_SEC, MIN_SESSION_SEC, SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { SessionSweeper, SessionSweeperResult } from '../jobs/session-sweeper.js';
+import type { InterviewCloserService } from './interview-closer.service.js';
 import { SessionCloserService } from './session-closer.service.js';
 import { SessionSweeperRepository, type ActiveSessionRow } from './session-sweeper.repository.js';
 
@@ -38,6 +39,12 @@ import { SessionSweeperRepository, type ActiveSessionRow } from './session-sweep
  * `active` en el momento de leerlas, así que cada cierre es la primera vez
  * que esa sesión concreta deja de estarlo).
  *
+ * **Entrevistas** (`kind = 'interview'`, D5): ni abandono a los 30 min ni hard
+ * cap, para poder retomarlas (FR-25). A `interviewAbandonAfterSec` (24 h) de
+ * inactividad se cierran con `InterviewCloserService.closeSession` (duración =
+ * `active_sec`, D4): la entrevista pasa a `feedback_pending` (≥ 4 respuestas)
+ * o a `too_short` sin poder retomarse.
+ *
  * Clase pura (sin decorador de Nest), mismo patrón que `RetentionService`
  * (`src/jobs/maintenance/retention.service.ts`): se construye con un
  * `useFactory` en `session-sweeper.module.ts` para poder inyectar un reloj
@@ -46,10 +53,15 @@ import { SessionSweeperRepository, type ActiveSessionRow } from './session-sweep
 export interface SessionSweeperServiceOptions {
   readonly repository: SessionSweeperRepository;
   readonly closer: SessionCloserService;
+  readonly interviewCloser: Pick<InterviewCloserService, 'closeSession'>;
   /** Reloj inyectable para que los tests fijen "ahora". Por defecto `() => new Date()`. */
   readonly now?: () => Date;
   readonly batchLimit?: number;
+  /** `INTERVIEW_ABANDON_AFTER_SEC`; por defecto 24 h. */
+  readonly interviewAbandonAfterSec?: number;
 }
+
+const DEFAULT_INTERVIEW_ABANDON_AFTER_SEC = 86_400;
 
 /**
  * Sesiones `active` que se procesan por ejecución. El cron corre cada minuto
@@ -72,19 +84,27 @@ export class SessionSweeperService implements SessionSweeper {
   private readonly logger = new Logger(SessionSweeperService.name);
   private readonly repository: SessionSweeperRepository;
   private readonly closer: SessionCloserService;
+  private readonly interviewCloser: Pick<InterviewCloserService, 'closeSession'>;
   private readonly now: () => Date;
   private readonly batchLimit: number;
+  private readonly interviewAbandonAfterSec: number;
 
   constructor(options: SessionSweeperServiceOptions) {
     this.repository = options.repository;
     this.closer = options.closer;
+    this.interviewCloser = options.interviewCloser;
     this.now = options.now ?? (() => new Date());
     this.batchLimit = options.batchLimit ?? SESSION_SWEEPER_BATCH_LIMIT;
+    this.interviewAbandonAfterSec =
+      options.interviewAbandonAfterSec ?? DEFAULT_INTERVIEW_ABANDON_AFTER_SEC;
   }
 
   async run(): Promise<SessionSweeperResult> {
     const nowDate = this.now();
-    const sessions = await this.repository.listActiveSessions(this.batchLimit);
+    const sessions = await this.repository.listActiveSessions(
+      this.batchLimit,
+      new Date(nowDate.getTime() - this.interviewAbandonAfterSec * 1000).toISOString(),
+    );
 
     let closedByHardCap = 0;
     let closedAsAbandoned = 0;
@@ -124,6 +144,22 @@ export class SessionSweeperService implements SessionSweeper {
       (await this.repository.findLastTurnCreatedAt(session.id)) ?? session.startedAt;
 
     const idleSec = secondsBetween(lastTurnAtIso, nowIso);
+
+    // 0. Entrevista: solo se cierra a las 24 h de inactividad, con su regla.
+    if (session.kind === 'interview') {
+      if (idleSec < this.interviewAbandonAfterSec) return 'none';
+      await this.interviewCloser.closeSession(
+        session.userId,
+        {
+          id: session.id,
+          interview_id: session.interviewId,
+          active_sec: session.activeSec,
+          turns_count: session.turnsCount,
+        },
+        true,
+      );
+      return 'abandonedWithXp';
+    }
 
     // 1. Abandono primero (ver cabecera del archivo: por qué antes que el hard cap).
     if (idleSec >= ABANDON_AFTER_SEC) {

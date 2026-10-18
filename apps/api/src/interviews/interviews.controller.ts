@@ -9,6 +9,8 @@ import {
   type InterviewListResultDto,
   type InterviewQuotaDto,
 } from './interviews.service.js';
+import { InterviewSessionService } from './interview-session.service.js';
+import type { InterviewSessionDto } from '../sessions/sessions.types.js';
 
 /**
  * `GET /interviews/quota`, `POST /interviews`, `GET /interviews`,
@@ -22,7 +24,10 @@ import {
 @ApiBearerAuth()
 @Controller()
 export class InterviewsController {
-  constructor(private readonly interviewsService: InterviewsService) {}
+  constructor(
+    private readonly interviewsService: InterviewsService,
+    private readonly interviewSessions: InterviewSessionService,
+  ) {}
 
   @Get('interviews/quota')
   quota(@CurrentUser('id') userId: string): Promise<InterviewQuotaDto> {
@@ -61,5 +66,16 @@ export class InterviewsController {
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewDto> {
     return this.interviewsService.retry(userId, id, acceptLanguage);
+  }
+
+  /** Abre (`ready`) o retoma (`in_progress`/`too_short`) la sesión de la entrevista (FR-25). */
+  @Post('interviews/:id/session')
+  @HttpCode(200)
+  openSession(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<InterviewSessionDto> {
+    return this.interviewSessions.open(userId, id, acceptLanguage);
   }
 }

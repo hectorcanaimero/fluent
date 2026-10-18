@@ -354,7 +354,7 @@ function buildService(options: BuildOptions = {}) {
   const llm = options.llm ?? fakeLlm(options);
   const redis = options.redis ?? fakeRedis();
   const budget = options.budget ?? fakeBudget();
-  const service = new TurnsService(sessions, turns, llm, redis, fakeConfig() as never, budget);
+  const service = new TurnsService(sessions, turns, llm, redis, fakeConfig() as never, budget, {} as never);
   return { service, sessions, turns, llm, redis, budget };
 }
 
@@ -403,7 +403,7 @@ describe('TurnsService.addTurn · validación (SPEC-04 §4 paso 1)', () => {
     expect((error as ApiException).getApiBody().statusCode).toBe(409);
   });
 
-  it.each(['interview', 'study', 'group'] as const)(
+  it.each(['study', 'group'] as const)(
     "kind='%s' → 409 WRONG_SESSION_KIND sin insertar el turno",
     async (kind) => {
       const { service, turns } = buildService({ session: sessionFixture({ kind }) });

@@ -15,8 +15,12 @@
   "GROUP_REQUIRED": "Unite a un grupo con tu código de invitación para practicar.",
   "LLM_UNAVAILABLE": "El asistente no está disponible en este momento. Probá de nuevo en unos minutos.",
   "RATE_LIMITED": "Hiciste demasiadas peticiones. Esperá un momento y volvé a intentarlo.",
-  "PLAN_REQUIRED": "Elegir un modelo de pago requiere el plan Pro.",
+  "PLAN_REQUIRED": "Esta función requiere el plan Pro.",
   "TURNS_DAILY_CAP": "Por hoy alcanzaste el máximo de turnos. Mañana seguimos.",
+  "INTERVIEWS_DAILY_CAP": "Hoy ya usaste tus entrevistas. Mañana tienes más.",
+  "OFFER_UNREADABLE": "No pudimos leer esa oferta de LinkedIn. Copia el texto y pégalo en vez del enlace.",
+  "INTERVIEW_NOT_RETRYABLE": "Solo se puede reintentar una entrevista cuya preparación falló.",
+  "INTERVIEW_AGENT_UNAVAILABLE": "El simulador de entrevistas no está disponible en este momento.",
   "NOT_READY": "Todavía no está listo.",
   "NOT_FOUND": "El recurso solicitado no existe.",
   "INTERNAL": "Ocurrió un error inesperado. Probá de nuevo en unos minutos."

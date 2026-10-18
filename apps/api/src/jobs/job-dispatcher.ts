@@ -11,11 +11,21 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
-import { JOB_COACHING_BRIEF, QUEUE_BRIEF } from './jobs.constants.js';
+import {
+  JOB_COACHING_BRIEF,
+  JOB_INTERVIEW_PREPARE,
+  QUEUE_BRIEF,
+  QUEUE_INTERVIEWS,
+} from './jobs.constants.js';
 
 /** Carga de un job `coaching-brief` (SPEC-05 §2: «Entrada: `{ sessionId }`»). */
 export interface CoachingBriefJobData {
   readonly sessionId: string;
+}
+
+/** Carga de un job `interview-prepare` (F10.3, arch 003 §Components C3). */
+export interface InterviewPrepareJobData {
+  readonly interviewId: string;
 }
 
 export interface JobDispatcher {
@@ -25,6 +35,14 @@ export interface JobDispatcher {
    * se usa `jobId = sessionId`.
    */
   enqueueCoachingBrief(sessionId: string): Promise<void>;
+
+  /**
+   * Encola la preparación de una entrevista (`POST /interviews` y
+   * `POST /interviews/:id/retry`, F10.3). La creación usa
+   * `jobId = interviewId` (un doble POST no duplica el job); el reintento
+   * usa un `jobId` por intento para que BullMQ no lo descarte.
+   */
+  enqueueInterviewPrepare(interviewId: string, options?: { retry?: boolean }): Promise<void>;
 }
 
 /** Token de inyección. `QueuesModule` (global) lo provee. */
@@ -36,6 +54,7 @@ export class BullJobDispatcher implements JobDispatcher {
 
   constructor(
     @InjectQueue(QUEUE_BRIEF) private readonly briefQueue: Queue,
+    @InjectQueue(QUEUE_INTERVIEWS) private readonly interviewsQueue: Queue,
   ) {}
 
   async enqueueCoachingBrief(sessionId: string): Promise<void> {
@@ -52,9 +71,29 @@ export class BullJobDispatcher implements JobDispatcher {
     );
     this.logger.debug(`coaching-brief encolado para la sesión ${sessionId}`);
   }
+
+  async enqueueInterviewPrepare(
+    interviewId: string,
+    options: { retry?: boolean } = {},
+  ): Promise<void> {
+    // Creación: `jobId = interviewId`, igual que `enqueueCoachingBrief`.
+    // Reintento: el job fallido sigue guardado con ese mismo id (failed no
+    // se limpia al instante), y BullMQ ignoraría un `add` con el mismo
+    // `jobId`; por eso cada reintento lleva uno propio. Sin `:` (BullMQ lo
+    // rechaza en ids personalizados). La exclusión entre reintentos la da
+    // `markRetrying` (solo uno pasa de `prep_failed` a `preparing`).
+    const jobId = options.retry ? `${interviewId}-retry-${Date.now()}` : interviewId;
+    await this.interviewsQueue.add(
+      JOB_INTERVIEW_PREPARE,
+      { interviewId } satisfies InterviewPrepareJobData,
+      { jobId },
+    );
+    this.logger.debug(`interview-prepare encolado para la entrevista ${interviewId}`);
+  }
 }
 
 /** Token opcional para tests: implementación que no hace nada. */
 export const NOOP_JOB_DISPATCHER: JobDispatcher = {
   enqueueCoachingBrief: async () => {},
+  enqueueInterviewPrepare: async () => {},
 };

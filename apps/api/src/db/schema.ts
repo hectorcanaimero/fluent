@@ -13,7 +13,17 @@
  * - 20260908191927_noticias-y-social.sql
  * - 20260923130000_planes.sql
  * - 20261006120000_sesion-grupal.sql
+ * - 20261018130000_simulador-entrevistas.sql
  */
+
+import type {
+  InterviewFeedback,
+  InterviewPlan,
+  InterviewStatus,
+  InterviewType,
+  PrepStep,
+  SeniorityLevel,
+} from '../interviews/interviews.types.js';
 
 /* ============================================================================
    Tipos unión (CHECKs de lista cerrada en SQL)
@@ -469,6 +479,38 @@ export interface GroupSessionCorrection {
   note: string | null;
 }
 
+/**
+ * Entrevista del simulador (docs/arch/003-simulador-entrevistas.md §Data
+ * model, F10). Tabla: interviews.
+ *
+ * `plan`/`feedback` reutilizan los tipos de I1 (`interviews.types.ts`, F10.1)
+ * en vez de duplicar sus formas aquí: son el mismo contrato que valida la
+ * respuesta de `interview-agent`, y `plan.questions` solo debe llegar hasta
+ * `interview-agent.client.ts`/el job de preparación — nunca a un DTO de
+ * salida de la API (FR-7).
+ */
+export interface Interview {
+  id: string;
+  user_id: string;
+  parent_interview_id: string | null;
+  type: InterviewType;
+  offer_text: string | null;
+  offer_url: string | null;
+  offer_hash: string;
+  status: InterviewStatus;
+  prep_step: PrepStep | null;
+  company: { name: string; industry?: string; city?: string; workMode?: string } | null;
+  role: string | null;
+  area: string | null;
+  seniority: SeniorityLevel | null;
+  plan: InterviewPlan | null;
+  feedback: InterviewFeedback | null;
+  error_code: string | null;
+  answered_count: number;
+  created_at: string; // ISO 8601 timestamp
+  updated_at: string; // ISO 8601 timestamp
+}
+
 /* ============================================================================
    Constantes de tablas y vistas (para usar en repos sin strings sueltos)
    ========================================================================== */
@@ -496,4 +538,5 @@ export const TABLES = {
   groupSessionParticipants: 'group_session_participants',
   groupSessionMessages: 'group_session_messages',
   groupSessionCorrections: 'group_session_corrections',
+  interviews: 'interviews',
 } as const;

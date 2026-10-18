@@ -359,6 +359,22 @@ describe('InterviewSessionService.open', () => {
     expect((error as ApiException).getApiBody().statusCode).toBe(409);
   });
 
+  it('retomar un too_short con una sesión normal activa → 409 SESSION_ALREADY_ACTIVE, sigue en pausa', async () => {
+    const { service, calls, status } = build({
+      status: 'too_short',
+      answered: 2,
+      latest: sessionRow(),
+      transcript: [tutor(4, 'Question 3?', 3)],
+      activeSessionId: 'free-session',
+    });
+
+    expect(await codeOf(service.open(USER_ID, INTERVIEW_ID))).toBe(
+      'SESSION_ALREADY_ACTIVE',
+    );
+    expect(status()).toBe('too_short');
+    expect(calls.turns).toEqual([]);
+  });
+
   it('con otra sesión activa → 409 SESSION_ALREADY_ACTIVE', async () => {
     const { service } = build({ status: 'ready', activeSessionId: 'other' });
 

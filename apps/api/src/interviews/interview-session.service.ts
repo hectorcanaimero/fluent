@@ -182,7 +182,15 @@ export class InterviewSessionService {
       });
     }
 
-    // `too_short` retomable: misma sesión, "welcome back" y la pregunta pendiente.
+    // `too_short` retomable: misma sesión, "welcome back" y la pregunta
+    // pendiente. En pausa no bloqueaba otras sesiones; al retomarla vuelve a
+    // contar, así que con otra activa (normal) es 409 como al abrir.
+    const activeSessionId = await this.sessions.findActiveSessionId(userId);
+    if (activeSessionId !== null) {
+      throw this.error('SESSION_ALREADY_ACTIVE', locale, {
+        extra: { activeSessionId },
+      });
+    }
     if (
       (await this.repository.markInProgress(userId, interviewId, [
         'too_short',

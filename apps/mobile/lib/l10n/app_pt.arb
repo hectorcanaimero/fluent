@@ -468,5 +468,10 @@
     }
   },
   "interviewHistoryStatusReinterviewDone": "Reentrevista feita",
-  "interviewCyclePlaceholderTitle": "Ciclo de estudo"
+  "interviewCyclePlaceholderTitle": "Ciclo de estudo",
+  "interviewHistoryStatusPrepFailed": "Não foi possível preparar",
+  "interviewHistoryStatusFeedbackPending": "Montando seu parecer",
+  "interviewHistoryStatusFeedbackFailed": "Parecer com erro",
+  "interviewHistoryStatusFinishedNoFeedback": "Terminada sem parecer",
+  "interviewHistoryUnknownDate": "Data desconhecida"
 }

@@ -9,63 +9,87 @@ import '../../../../core/widgets/async_body.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/interviews_repository.dart';
 
-/// Estado visible de una fila del historial (FR-31) y la pantalla a la que
-/// navega: solo tres destinos posibles (IE-03/03b/04, el parecer IE-06/06a/08
-/// o el ciclo IE-07), aunque la API tenga más estados internos.
-enum InterviewHistoryStatus { preparing, unfinished, feedbackReady, cycle, reinterviewDone }
+/// Estado visible de una fila del historial (FR-31). Cada uno tiene su
+/// etiqueta y su destino (IE-03/03b/04, el parecer IE-06/06a/08 o el ciclo
+/// IE-07).
+enum InterviewHistoryStatus {
+  preparing,
+  prepFailed,
+  unfinished,
+  finishedNoFeedback,
+  feedbackPending,
+  feedbackReady,
+  feedbackFailed,
+  cycle,
+  reinterviewDone,
+}
 
 typedef InterviewHistoryEntry = ({
   InterviewHistoryStatus status,
   int? cycleSession,
 });
 
-/// Un ciclo sin terminar manda sobre el estado de la entrevista (FR-29); una
-/// re-entrevista con parecer listo se distingue de una entrevista normal
-/// (FR-30, IE-08).
+/// Un ciclo sin terminar manda sobre todo lo demás, también sobre
+/// "Re-entrevista hecha" (FR-29); una re-entrevista con parecer listo se
+/// distingue de una entrevista normal (FR-30, IE-08).
 @visibleForTesting
 InterviewHistoryEntry interviewHistoryStatus(InterviewSummary interview) {
-  if (interview.isReinterview && interview.status == 'feedback_ready') {
-    return (status: InterviewHistoryStatus.reinterviewDone, cycleSession: null);
-  }
   final completed = interview.cycleCompletedSessions;
   if (completed != null && completed < 5) {
     return (status: InterviewHistoryStatus.cycle, cycleSession: completed + 1);
   }
-  return switch (interview.status) {
-    'preparing' || 'prep_failed' => (
-      status: InterviewHistoryStatus.preparing,
-      cycleSession: null,
-    ),
-    'feedback_ready' => (
-      status: InterviewHistoryStatus.feedbackReady,
-      cycleSession: null,
-    ),
-    _ => (status: InterviewHistoryStatus.unfinished, cycleSession: null),
+  final status = switch (interview.status) {
+    'preparing' => InterviewHistoryStatus.preparing,
+    'prep_failed' => InterviewHistoryStatus.prepFailed,
+    'too_short' when !interview.resumable =>
+      InterviewHistoryStatus.finishedNoFeedback,
+    'feedback_pending' => InterviewHistoryStatus.feedbackPending,
+    'feedback_ready' when interview.isReinterview =>
+      InterviewHistoryStatus.reinterviewDone,
+    'feedback_ready' => InterviewHistoryStatus.feedbackReady,
+    'feedback_failed' => InterviewHistoryStatus.feedbackFailed,
+    // ready, in_progress, too_short retomable y cualquier estado nuevo: el
+    // detalle decide (continuar, empezar o ver el parecer).
+    _ => InterviewHistoryStatus.unfinished,
   };
+  return (status: status, cycleSession: null);
 }
 
 @visibleForTesting
 String interviewHistoryRoute(String id, InterviewHistoryStatus status) =>
     switch (status) {
       InterviewHistoryStatus.preparing ||
-      InterviewHistoryStatus.unfinished => '/interviews/$id',
+      InterviewHistoryStatus.prepFailed ||
+      InterviewHistoryStatus.unfinished ||
+      InterviewHistoryStatus.finishedNoFeedback => '/interviews/$id',
       InterviewHistoryStatus.cycle => '/interviews/$id/cycle',
+      InterviewHistoryStatus.feedbackPending ||
       InterviewHistoryStatus.feedbackReady ||
+      InterviewHistoryStatus.feedbackFailed ||
       InterviewHistoryStatus.reinterviewDone => '/interviews/$id/feedback',
     };
 
-String _statusLabel(AppLocalizations l10n, InterviewHistoryEntry entry) =>
-    switch (entry.status) {
-      InterviewHistoryStatus.preparing => l10n.interviewHistoryStatusPreparing,
-      InterviewHistoryStatus.unfinished =>
-        l10n.interviewHistoryStatusUnfinished,
-      InterviewHistoryStatus.feedbackReady =>
-        l10n.interviewHistoryStatusFeedbackReady,
-      InterviewHistoryStatus.cycle =>
-        l10n.interviewHistoryStatusCycle(entry.cycleSession!),
-      InterviewHistoryStatus.reinterviewDone =>
-        l10n.interviewHistoryStatusReinterviewDone,
-    };
+String _statusLabel(
+  AppLocalizations l10n,
+  InterviewHistoryEntry entry,
+) => switch (entry.status) {
+  InterviewHistoryStatus.preparing => l10n.interviewHistoryStatusPreparing,
+  InterviewHistoryStatus.prepFailed => l10n.interviewHistoryStatusPrepFailed,
+  InterviewHistoryStatus.unfinished => l10n.interviewHistoryStatusUnfinished,
+  InterviewHistoryStatus.finishedNoFeedback =>
+    l10n.interviewHistoryStatusFinishedNoFeedback,
+  InterviewHistoryStatus.feedbackPending =>
+    l10n.interviewHistoryStatusFeedbackPending,
+  InterviewHistoryStatus.feedbackReady =>
+    l10n.interviewHistoryStatusFeedbackReady,
+  InterviewHistoryStatus.feedbackFailed =>
+    l10n.interviewHistoryStatusFeedbackFailed,
+  InterviewHistoryStatus.cycle => l10n.interviewHistoryStatusCycle(
+    entry.cycleSession!,
+  ),
+  InterviewHistoryStatus.reinterviewDone =>
+    l10n.interviewHistoryStatusReinterviewDone,
+};
 
 /// `/interviews` (IE-09, FR-31): historial agrupado por mes con el botón de
 /// nueva entrevista; cada fila navega a la pantalla de su estado.
@@ -77,8 +101,10 @@ class InterviewHistoryScreen extends ConsumerWidget {
     final l10n = AppLocalizations.of(context);
     final asyncInterviews = ref.watch(interviewsProvider);
     final snapshot = asyncInterviews.when(
-      data: (d) =>
-          AsyncSnapshot<List<InterviewSummary>>.withData(ConnectionState.done, d),
+      data: (d) => AsyncSnapshot<List<InterviewSummary>>.withData(
+        ConnectionState.done,
+        d,
+      ),
       error: (e, st) => AsyncSnapshot<List<InterviewSummary>>.withError(
         ConnectionState.done,
         e,
@@ -86,68 +112,85 @@ class InterviewHistoryScreen extends ConsumerWidget {
       ),
       loading: () => const AsyncSnapshot<List<InterviewSummary>>.waiting(),
     );
+    // Al volver de una fila o de "nueva entrevista" el estado pudo cambiar
+    // (preparación lista, parecer armado): se vuelve a pedir la lista.
+    Future<void> open(String route) async {
+      await context.push(route);
+      if (context.mounted) ref.invalidate(interviewsProvider);
+    }
+
+    Future<void> refresh() => ref.refresh(interviewsProvider.future);
+
     return Scaffold(
       appBar: AppBar(title: Text(l10n.interviewHistoryTitle)),
       floatingActionButton: FloatingActionButton(
         key: const Key('interview_history_new_button'),
         tooltip: l10n.interviewHistoryNewCta,
-        onPressed: () => context.push('/interviews/new'),
+        onPressed: () => open('/interviews/new'),
         child: const Icon(Icons.add),
       ),
       body: SafeArea(
         child: AsyncBody<List<InterviewSummary>>(
           snapshot: snapshot,
           onRetry: () => ref.invalidate(interviewsProvider),
-          builder: (interviews) => interviews.isEmpty
-              ? Center(
-                  child: Padding(
+          builder: (interviews) => RefreshIndicator(
+            onRefresh: refresh,
+            child: interviews.isEmpty
+                ? ListView(
                     padding: const EdgeInsets.all(AppSpacing.xl),
-                    child: Text(
-                      l10n.interviewHistoryEmpty,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                  ),
-                )
-              : _HistoryList(interviews: interviews),
+                    children: [
+                      Text(
+                        l10n.interviewHistoryEmpty,
+                        textAlign: TextAlign.center,
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  )
+                : _HistoryList(interviews: interviews, onOpen: open),
+          ),
         ),
       ),
     );
   }
 }
 
+/// Mes del grupo; `null` = fecha ilegible ("Fecha desconocida", al final).
 class _MonthGroup {
-  _MonthGroup(this.month, this.interviews);
+  _MonthGroup(this.month);
 
-  final DateTime month;
-  final List<InterviewSummary> interviews;
+  final DateTime? month;
+  final List<({InterviewSummary interview, DateTime? date})> rows = [];
 }
 
 /// Agrupa conservando el orden de la API (más reciente primero,
 /// `interviews_user_created_idx ... created_at desc`): no reordena, solo
-/// junta filas del mismo mes.
+/// junta filas del mismo mes. `createdAt` se parsea una sola vez.
 List<_MonthGroup> _groupByMonth(List<InterviewSummary> interviews) {
-  final byMonth = <DateTime, List<InterviewSummary>>{};
-  final order = <DateTime>[];
+  final groups = <DateTime?, _MonthGroup>{};
   for (final interview in interviews) {
-    final date =
-        DateTime.tryParse(interview.createdAt)?.toLocal() ?? DateTime.now();
-    final month = DateTime(date.year, date.month);
-    if (!byMonth.containsKey(month)) order.add(month);
-    byMonth.putIfAbsent(month, () => []).add(interview);
+    final date = DateTime.tryParse(interview.createdAt)?.toLocal();
+    final month = date == null ? null : DateTime(date.year, date.month);
+    groups.putIfAbsent(month, () => _MonthGroup(month)).rows.add((
+      interview: interview,
+      date: date,
+    ));
   }
-  return [for (final month in order) _MonthGroup(month, byMonth[month]!)];
+  final unknown = groups.remove(null);
+  return [...groups.values, ?unknown];
 }
 
 class _HistoryList extends StatelessWidget {
-  const _HistoryList({required this.interviews});
+  const _HistoryList({required this.interviews, required this.onOpen});
 
   final List<InterviewSummary> interviews;
+  final void Function(String route) onOpen;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
     final locale = Localizations.localeOf(context).toLanguageTag();
+    final monthFormat = DateFormat.yMMMM(locale);
+    final dayFormat = DateFormat.yMMMd(locale);
     final groups = _groupByMonth(interviews);
     return ListView(
       padding: const EdgeInsets.fromLTRB(
@@ -161,12 +204,19 @@ class _HistoryList extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
             child: Text(
-              DateFormat.yMMMM(locale).format(group.month),
+              group.month == null
+                  ? l10n.interviewHistoryUnknownDate
+                  : monthFormat.format(group.month!),
               style: Theme.of(context).textTheme.titleMedium,
             ),
           ),
-          for (final interview in group.interviews)
-            _HistoryRow(interview: interview, l10n: l10n, locale: locale),
+          for (final row in group.rows)
+            _HistoryRow(
+              interview: row.interview,
+              date: row.date == null ? null : dayFormat.format(row.date!),
+              l10n: l10n,
+              onOpen: onOpen,
+            ),
         ],
       ],
     );
@@ -176,25 +226,26 @@ class _HistoryList extends StatelessWidget {
 class _HistoryRow extends StatelessWidget {
   const _HistoryRow({
     required this.interview,
+    required this.date,
     required this.l10n,
-    required this.locale,
+    required this.onOpen,
   });
 
   final InterviewSummary interview;
+  final String? date;
   final AppLocalizations l10n;
-  final String locale;
+  final void Function(String route) onOpen;
 
   @override
   Widget build(BuildContext context) {
     final entry = interviewHistoryStatus(interview);
-    final date = DateTime.tryParse(interview.createdAt)?.toLocal();
     final typeLabel = interview.type == 'mixed'
         ? l10n.interviewTypeMixed
         : l10n.interviewTypeTechnical;
     final subtitle = [
       if (interview.role != null) interview.role!,
       typeLabel,
-      if (date != null) DateFormat.yMMMd(locale).format(date),
+      ?date,
     ].join(' · ');
     return Card(
       margin: const EdgeInsets.only(bottom: AppSpacing.sm),
@@ -205,8 +256,7 @@ class _HistoryRow extends StatelessWidget {
         ),
         subtitle: Text(subtitle),
         trailing: Text(_statusLabel(l10n, entry)),
-        onTap: () =>
-            context.push(interviewHistoryRoute(interview.id, entry.status)),
+        onTap: () => onOpen(interviewHistoryRoute(interview.id, entry.status)),
       ),
     );
   }

@@ -18,7 +18,11 @@ class InterviewsRepository {
     required String type,
     String? offerText,
     String? offerUrl,
-  }) => _api.createInterview(type: type, offerText: offerText, offerUrl: offerUrl);
+  }) => _api.createInterview(
+    type: type,
+    offerText: offerText,
+    offerUrl: offerUrl,
+  );
 
   Future<List<InterviewSummary>> list() => _api.getInterviews();
 
@@ -29,7 +33,8 @@ class InterviewsRepository {
   Future<InterviewSessionStart> startSession(String id) =>
       _api.startInterviewSession(id);
 
-  Future<InterviewFeedback> feedback(String id) => _api.getInterviewFeedback(id);
+  Future<InterviewFeedback> feedback(String id) =>
+      _api.getInterviewFeedback(id);
 
   Future<StudyCycle> createCycle(String id) => _api.createStudyCycle(id);
 

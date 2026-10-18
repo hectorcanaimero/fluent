@@ -99,4 +99,22 @@ void main() {
     await tester.pumpAndSettle();
     expect(api.pushTokens, isEmpty);
   });
+
+  testWidgets(
+    'un push a /interviews/<id>/feedback deja el historial debajo: atrás '
+    'vuelve a /interviews',
+    (tester) async {
+      final (container, platform, _) = await _pumpSignedIn(tester);
+      const id = '0f8fad5b-d9cb-469f-a165-70867728950e';
+      platform.opened.add('/interviews/$id/feedback');
+      await tester.pumpAndSettle();
+      expect(_location(container), '/interviews/$id/feedback');
+
+      final router = container.read(routerProvider);
+      expect(router.canPop(), isTrue);
+      router.pop();
+      await tester.pumpAndSettle();
+      expect(_location(container), '/interviews');
+    },
+  );
 }

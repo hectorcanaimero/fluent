@@ -164,40 +164,47 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
+      // Todo `/interviews/...` cuelga del historial: un push que abre
+      // `/interviews/<id>/feedback` con `go` deja el historial debajo y
+      // "atrás" vuelve a él en vez de cerrar la app (FR-32).
       GoRoute(
         path: '/interviews',
         builder: (context, state) => const InterviewHistoryScreen(),
-      ),
-      GoRoute(
-        path: '/interviews/new',
-        builder: (context, state) => const NewInterviewScreen(),
-      ),
-      GoRoute(
-        path: '/interviews/:id',
-        builder: (context, state) => InterviewPrepScreen(
-          interviewId: state.pathParameters['id']!,
-        ),
-      ),
-      // F12.4.T1 reemplaza esto por la sesión de entrevista (IE-05).
-      GoRoute(
-        path: '/interviews/:id/session',
-        builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context).interviewSessionPlaceholderTitle,
-        ),
-      ),
-      // F12 reemplaza esto por el parecer (IE-06).
-      GoRoute(
-        path: '/interviews/:id/feedback',
-        builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context).interviewFeedbackPlaceholderTitle,
-        ),
-      ),
-      // F12 reemplaza esto por el ciclo de estudio (IE-07).
-      GoRoute(
-        path: '/interviews/:id/cycle',
-        builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context).interviewCyclePlaceholderTitle,
-        ),
+        routes: [
+          GoRoute(
+            path: 'new',
+            builder: (context, state) => const NewInterviewScreen(),
+          ),
+          GoRoute(
+            path: ':id',
+            builder: (context, state) =>
+                InterviewPrepScreen(interviewId: state.pathParameters['id']!),
+          ),
+          // F12.4.T1 reemplaza esto por la sesión de entrevista (IE-05).
+          GoRoute(
+            path: ':id/session',
+            builder: (context, state) => PlaceholderScreen(
+              title: AppLocalizations.of(context)
+                  .interviewSessionPlaceholderTitle,
+            ),
+          ),
+          // F12 reemplaza esto por el parecer (IE-06).
+          GoRoute(
+            path: ':id/feedback',
+            builder: (context, state) => PlaceholderScreen(
+              title: AppLocalizations.of(context)
+                  .interviewFeedbackPlaceholderTitle,
+            ),
+          ),
+          // F12 reemplaza esto por el ciclo de estudio (IE-07).
+          GoRoute(
+            path: ':id/cycle',
+            builder: (context, state) => PlaceholderScreen(
+              title: AppLocalizations.of(context)
+                  .interviewCyclePlaceholderTitle,
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: '/badges',

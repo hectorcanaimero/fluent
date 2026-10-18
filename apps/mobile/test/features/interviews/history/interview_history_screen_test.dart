@@ -1,6 +1,7 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
 import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
+import 'package:fluent_mobile/features/interviews/presentation/entry/new_interview_screen.dart';
 import 'package:fluent_mobile/features/interviews/presentation/history/interview_history_screen.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
 import 'package:flutter/material.dart';
@@ -14,13 +15,17 @@ import 'package:intl/intl.dart';
 class _FixedListApi extends FakeApi {
   _FixedListApi(this.summaries) : super(artificialDelay: Duration.zero);
 
-  final List<InterviewSummary> summaries;
+  List<InterviewSummary> summaries;
+  int listCalls = 0;
 
   @override
-  Future<List<InterviewSummary>> getInterviews() async => summaries;
+  Future<List<InterviewSummary>> getInterviews() async {
+    listCalls++;
+    return summaries;
+  }
 }
 
-Widget _wrap(FakeApi api) {
+Widget _wrap(FakeApi api, {Widget newInterview = const Text('NEW_INTERVIEW')}) {
   final router = GoRouter(
     initialLocation: '/interviews',
     routes: [
@@ -28,10 +33,7 @@ Widget _wrap(FakeApi api) {
         path: '/interviews',
         builder: (context, state) => const InterviewHistoryScreen(),
         routes: [
-          GoRoute(
-            path: 'new',
-            builder: (context, state) => const Text('NEW_INTERVIEW'),
-          ),
+          GoRoute(path: 'new', builder: (context, state) => newInterview),
           GoRoute(
             path: ':id',
             builder: (context, state) =>
@@ -121,7 +123,9 @@ void main() {
     'IE-09: 5 entrevistas en distintos estados, agrupadas por mes, cada una '
     'navega a su pantalla',
     (tester) async {
-      await tester.pumpWidget(_wrap(_FixedListApi([..._october, ..._september])));
+      await tester.pumpWidget(
+        _wrap(_FixedListApi([..._october, ..._september])),
+      );
       await tester.pumpAndSettle();
 
       final l10n = await AppLocalizations.delegate.load(const Locale('es'));
@@ -205,4 +209,206 @@ void main() {
     final l10n = await AppLocalizations.delegate.load(const Locale('es'));
     expect(find.text(l10n.interviewHistoryEmpty), findsOneWidget);
   });
+
+  InterviewSummary summary(
+    String id,
+    String status, {
+    bool resumable = false,
+    String createdAt = '2026-10-15T10:00:00.000Z',
+  }) => InterviewSummary(
+    id: id,
+    type: 'technical',
+    status: status,
+    createdAt: createdAt,
+    resumable: resumable,
+  );
+
+  final l10nFuture = AppLocalizations.delegate.load(const Locale('es'));
+
+  for (final (status, resumable, label, target) in [
+    (
+      'prep_failed',
+      false,
+      (AppLocalizations l) => l.interviewHistoryStatusPrepFailed,
+      'PREP_x',
+    ),
+    (
+      'feedback_pending',
+      false,
+      (AppLocalizations l) => l.interviewHistoryStatusFeedbackPending,
+      'FEEDBACK_x',
+    ),
+    (
+      'feedback_failed',
+      false,
+      (AppLocalizations l) => l.interviewHistoryStatusFeedbackFailed,
+      'FEEDBACK_x',
+    ),
+    (
+      'too_short',
+      true,
+      (AppLocalizations l) => l.interviewHistoryStatusUnfinished,
+      'PREP_x',
+    ),
+    (
+      'too_short',
+      false,
+      (AppLocalizations l) => l.interviewHistoryStatusFinishedNoFeedback,
+      'PREP_x',
+    ),
+    (
+      'in_progress',
+      false,
+      (AppLocalizations l) => l.interviewHistoryStatusUnfinished,
+      'PREP_x',
+    ),
+  ]) {
+    testWidgets('$status (resumable: $resumable) → su etiqueta y $target', (
+      tester,
+    ) async {
+      final l10n = await l10nFuture;
+      await tester.pumpWidget(
+        _wrap(_FixedListApi([summary('x', status, resumable: resumable)])),
+      );
+      await tester.pumpAndSettle();
+      expect(find.text(label(l10n)), findsOneWidget);
+      await tester.tap(find.byKey(const Key('interview_history_row_x')));
+      await tester.pumpAndSettle();
+      expect(find.text(target), findsOneWidget);
+    });
+  }
+
+  testWidgets('un ciclo sin terminar manda sobre "Re-entrevista hecha"', (
+    tester,
+  ) async {
+    final l10n = await l10nFuture;
+    await tester.pumpWidget(
+      _wrap(
+        _FixedListApi(const [
+          InterviewSummary(
+            id: 'r',
+            type: 'technical',
+            status: 'feedback_ready',
+            createdAt: '2026-10-15T10:00:00.000Z',
+            isReinterview: true,
+            cycleCompletedSessions: 1,
+          ),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text(l10n.interviewHistoryStatusCycle(2)), findsOneWidget);
+    expect(find.text(l10n.interviewHistoryStatusReinterviewDone), findsNothing);
+    await tester.tap(find.byKey(const Key('interview_history_row_r')));
+    await tester.pumpAndSettle();
+    expect(find.text('CYCLE_r'), findsOneWidget);
+  });
+
+  testWidgets('createdAt ilegible → "Fecha desconocida" al final, sin fecha', (
+    tester,
+  ) async {
+    final l10n = await l10nFuture;
+    await tester.pumpWidget(
+      _wrap(
+        _FixedListApi([
+          summary('bad', 'in_progress', createdAt: 'no-es-fecha'),
+          summary('ok', 'in_progress'),
+        ]),
+      ),
+    );
+    await tester.pumpAndSettle();
+    final unknown = find.text(l10n.interviewHistoryUnknownDate);
+    expect(unknown, findsOneWidget);
+    final locale = Localizations.localeOf(
+      tester.element(find.byType(InterviewHistoryScreen)),
+    ).toLanguageTag();
+    final october = find.text(
+      DateFormat.yMMMM(locale).format(DateTime(2026, 10)),
+    );
+    expect(
+      tester.getTopLeft(october).dy < tester.getTopLeft(unknown).dy,
+      isTrue,
+    );
+    expect(
+      tester.getTopLeft(unknown).dy <
+          tester
+              .getTopLeft(find.byKey(const Key('interview_history_row_bad')))
+              .dy,
+      isTrue,
+    );
+    final subtitle = tester.widget<ListTile>(
+      find.byKey(const Key('interview_history_row_bad')),
+    );
+    expect((subtitle.subtitle! as Text).data, l10n.interviewTypeTechnical);
+  });
+
+  testWidgets('al volver de una fila se vuelve a pedir la lista', (
+    tester,
+  ) async {
+    final l10n = await l10nFuture;
+    final api = _FixedListApi([summary('x', 'preparing')]);
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+    expect(api.listCalls, 1);
+
+    await tester.tap(find.byKey(const Key('interview_history_row_x')));
+    await tester.pumpAndSettle();
+    api.summaries = [summary('x', 'feedback_pending')];
+    final nav = tester.state<NavigatorState>(find.byType(Navigator).last);
+    nav.pop();
+    await tester.pumpAndSettle();
+
+    expect(api.listCalls, 2);
+    expect(
+      find.text(l10n.interviewHistoryStatusFeedbackPending),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('tirar hacia abajo vuelve a pedir la lista', (tester) async {
+    final l10n = await l10nFuture;
+    final api = _FixedListApi([summary('x', 'preparing')]);
+    await tester.pumpWidget(_wrap(api));
+    await tester.pumpAndSettle();
+
+    api.summaries = [summary('x', 'feedback_failed')];
+    await tester.fling(
+      find.byKey(const Key('interview_history_row_x')),
+      const Offset(0, 400),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(api.listCalls, 2);
+    expect(
+      find.text(l10n.interviewHistoryStatusFeedbackFailed),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets(
+    'historial → nueva → botón de historial vuelve atrás sin apilar otro',
+    (tester) async {
+      await tester.pumpWidget(
+        _wrap(
+          _FixedListApi([summary('x', 'preparing')]),
+          newInterview: const NewInterviewScreen(),
+        ),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.byKey(const Key('interview_history_new_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(NewInterviewScreen), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('interview_entry_history_button')));
+      await tester.pumpAndSettle();
+      expect(find.byType(NewInterviewScreen), findsNothing);
+      expect(find.byType(InterviewHistoryScreen), findsOneWidget);
+      expect(
+        GoRouter.of(tester.element(find.byType(InterviewHistoryScreen)))
+            .canPop(),
+        isFalse,
+      );
+    },
+  );
 }

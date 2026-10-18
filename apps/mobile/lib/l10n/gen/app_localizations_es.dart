@@ -1425,4 +1425,20 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get interviewCyclePlaceholderTitle => 'Ciclo de estudio';
+
+  @override
+  String get interviewHistoryStatusPrepFailed => 'No se pudo preparar';
+
+  @override
+  String get interviewHistoryStatusFeedbackPending => 'Armando tu parecer';
+
+  @override
+  String get interviewHistoryStatusFeedbackFailed => 'Parecer con error';
+
+  @override
+  String get interviewHistoryStatusFinishedNoFeedback =>
+      'Terminada sin parecer';
+
+  @override
+  String get interviewHistoryUnknownDate => 'Fecha desconocida';
 }

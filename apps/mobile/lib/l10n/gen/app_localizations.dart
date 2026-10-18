@@ -2581,6 +2581,36 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ciclo de estudio'**
   String get interviewCyclePlaceholderTitle;
+
+  /// No description provided for @interviewHistoryStatusPrepFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo preparar'**
+  String get interviewHistoryStatusPrepFailed;
+
+  /// No description provided for @interviewHistoryStatusFeedbackPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Armando tu parecer'**
+  String get interviewHistoryStatusFeedbackPending;
+
+  /// No description provided for @interviewHistoryStatusFeedbackFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer con error'**
+  String get interviewHistoryStatusFeedbackFailed;
+
+  /// No description provided for @interviewHistoryStatusFinishedNoFeedback.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminada sin parecer'**
+  String get interviewHistoryStatusFinishedNoFeedback;
+
+  /// No description provided for @interviewHistoryUnknownDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha desconocida'**
+  String get interviewHistoryUnknownDate;
 }
 
 class _AppLocalizationsDelegate

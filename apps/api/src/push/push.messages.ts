@@ -1,6 +1,6 @@
 import type { Locale } from '../db/schema.js';
 
-export type PushKind = 'challenge' | 'weekly_summary';
+export type PushKind = 'challenge' | 'weekly_summary' | 'group_session' | 'group_message';
 
 export interface PushMessage {
   readonly title: string;
@@ -34,5 +34,22 @@ export function weeklySummaryMessage(locale: Locale): PushMessage {
       ? 'O resumo da semana saiu. Veja como foi para todos.'
       : 'Ya salió el resumen de la semana. Mirá cómo les fue a todos.',
     data: { type: 'weekly_summary', route: '/group' },
+  };
+}
+
+export interface GroupSessionPushParams {
+  readonly sessionId: string;
+  readonly initiatorName: string;
+  readonly topic: string;
+}
+
+export function groupSessionMessage(locale: Locale, p: GroupSessionPushParams): PushMessage {
+  const pt = locale === 'pt-BR';
+  return {
+    title: pt ? 'Sessão em grupo' : 'Sesión grupal',
+    body: pt
+      ? `${p.initiatorName} abriu uma sessão em grupo sobre ${p.topic}`
+      : `${p.initiatorName} abrió una sesión grupal sobre ${p.topic}`,
+    data: { type: 'group_session', route: `/group-session/${p.sessionId}` },
   };
 }

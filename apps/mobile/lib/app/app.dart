@@ -8,6 +8,7 @@ import '../core/providers.dart';
 import '../core/push/push_platform.dart';
 import '../core/push/push_service.dart';
 import '../features/auth/domain/auth_state.dart';
+import '../features/interviews/presentation/entry/incoming_share.dart';
 import '../l10n/gen/app_localizations.dart';
 import 'router.dart';
 import 'theme.dart';
@@ -32,7 +33,13 @@ class _FluentAppState extends ConsumerState<FluentApp> {
   String? _pendingRoute;
   bool _initialRouteChecked = false;
 
+  /// Texto compartido desde otra app (F14.2.T1) que espera sesión,
+  /// onboarding y splash listos antes de abrir la entrada de entrevistas;
+  /// si no, el router lo mandaría a `/login` u `/onboarding` sin él.
+  String? _pendingShareText;
+
   PushService get _push => ref.read(pushServiceProvider);
+  IncomingShareService get _share => ref.read(incomingShareServiceProvider);
 
   @override
   void initState() {
@@ -46,11 +53,17 @@ class _FluentAppState extends ConsumerState<FluentApp> {
         unawaited(_onSignedIn());
       }
       _flushPendingRoute();
+      _flushPendingShare();
     });
-    ref.listenManual<bool>(splashDoneProvider, (_, _) => _flushPendingRoute());
+    ref.listenManual<bool>(splashDoneProvider, (_, _) {
+      _flushPendingRoute();
+      _flushPendingShare();
+    });
     _subs
       ..add(_push.openedRoutes.listen(_openRoute))
-      ..add(_push.foregroundMessages.listen(_showForegroundPush));
+      ..add(_push.foregroundMessages.listen(_showForegroundPush))
+      ..add(_share.sharedText.listen(_queueShare));
+    unawaited(_share.initialText().then(_queueShare));
   }
 
   @override
@@ -82,6 +95,26 @@ class _FluentAppState extends ConsumerState<FluentApp> {
     if (!signedIn || !ref.read(splashDoneProvider)) return;
     _pendingRoute = null;
     ref.read(routerProvider).go(route);
+  }
+
+  /// Un `null` (texto vacío o sin compartir) no reemplaza lo que ya estaba
+  /// esperando: solo se guarda el último compartido real.
+  void _queueShare(String? text) {
+    if (text == null) return;
+    _pendingShareText = text;
+    _flushPendingShare();
+  }
+
+  /// FR de F14.2.T1: sin sesión (u onboarding sin terminar) lo compartido
+  /// se guarda y la entrada se abre recién después, sin perderlo.
+  void _flushPendingShare() {
+    final text = _pendingShareText;
+    if (text == null || !mounted) return;
+    final auth = ref.read(authControllerProvider);
+    if (!auth.isAuthenticated || !auth.onboarded) return;
+    if (!ref.read(splashDoneProvider)) return;
+    _pendingShareText = null;
+    ref.read(routerProvider).go('/interviews/new', extra: text);
   }
 
   /// Con la app abierta el sistema no muestra el push: se avisa con un

@@ -21,7 +21,11 @@ import 'starter_templates.dart';
 /// IE-01 (y sus estados 01a vacío, 01b carga, 01c servicio caído, 01d tope
 /// alcanzado) e IE-02 (URL no legible), FR-1, FR-2, FR-21, FR-22, FR-33.
 class NewInterviewScreen extends ConsumerStatefulWidget {
-  const NewInterviewScreen({super.key});
+  const NewInterviewScreen({super.key, this.initialOfferText});
+
+  /// Texto recibido por "Compartir" desde otra app (F14.2.T1): tiene
+  /// prioridad sobre el borrador guardado y lo reemplaza como tal.
+  final String? initialOfferText;
 
   @override
   ConsumerState<NewInterviewScreen> createState() => _NewInterviewScreenState();
@@ -50,7 +54,15 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
   void initState() {
     super.initState();
     _userId = ref.read(authControllerProvider).me?.profile.userId;
-    _loadDraft();
+    final shared = widget.initialOfferText?.trim();
+    if (shared != null && shared.isNotEmpty) {
+      _offerController.text = shared;
+      // Pisa el borrador guardado: lo compartido es lo que la persona
+      // quiere preparar ahora, no lo que haya quedado de una visita previa.
+      _saveDraft();
+    } else {
+      _loadDraft();
+    }
     // FR-22: cada cambio queda guardado, así un error o salir de la
     // pantalla no pierde lo que el usuario ya escribió o pegó.
     _offerController.addListener(_onOfferChanged);

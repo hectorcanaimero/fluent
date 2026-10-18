@@ -34,7 +34,9 @@ if (!hasReleaseKeystore) {
 
 android {
     namespace = "com.guria.openfluent"
-    compileSdk = flutter.compileSdkVersion
+    // F14.2.T1: receive_sharing_intent 1.9.0 exige compileSdk 37+; el
+    // default de Flutter (flutter.compileSdkVersion) todavía es 36.
+    compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
     compileOptions {

@@ -5,7 +5,16 @@ import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { CALLBACK_PROBABILITY } from '../config/product.js';
 import { getRoleplay } from '../content/index.js';
-import type { Fact, Locale, NewsItem, Profile, Session, SessionKind } from '../db/schema.js';
+import type {
+  Fact,
+  Locale,
+  NewsItem,
+  OpenableSessionKind,
+  Profile,
+  Session,
+  SessionKind,
+  StudyCycleSession,
+} from '../db/schema.js';
 import { BossService } from '../game/boss.service.js';
 import { isoDateString } from '../game/iso-week.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
@@ -21,6 +30,7 @@ import {
   freeTopicScenario,
   newsScenario,
   roleplayScenario,
+  studyScenario,
   type SessionScenario,
 } from './scenario.js';
 import { openingFor } from './session-openings.js';
@@ -87,6 +97,48 @@ export class SessionsService {
   ) {}
 
   async openSession(userId: string, dto: CreateSessionDto): Promise<CreateSessionResultDto> {
+    const profile = await this.requireCanOpen(userId);
+
+    // 3. Validación por `kind` (SPEC-04 §3.2).
+    const scenario = await this.resolveScenario(userId, dto, profile);
+
+    // 4.b El desafío se valida contra la lista real del usuario (SPEC-07 §7).
+    // Va **antes** del rechazo de boss: si esto falla con 422, la petición no
+    // debe haber quemado la oferta de boss del día.
+    await this.requireOfferedChallenge(userId, dto, scenario);
+
+    // 4.c El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
+    // otra cosa, se registra el rechazo de hoy (SPEC-04 §3.2, SPEC-07 §4).
+    await this.recordBossSkipIfDeclined(userId, dto.kind, profile);
+
+    return this.open(userId, profile, {
+      kind: dto.kind,
+      scenario,
+      challengeFromUserId: dto.challengeFromUserId ?? null,
+      withCallback: true,
+    });
+  }
+
+  /**
+   * Sesión `kind = 'study'` de una fila del ciclo de estudio (F13.1.T1): las
+   * mismas reglas y la misma apertura que `POST /sessions`, con el bloque de
+   * foco como escenario y sin callback (la sesión ya tiene tema fijo).
+   */
+  async openStudySession(
+    userId: string,
+    row: StudyCycleSession,
+  ): Promise<CreateSessionResultDto> {
+    const profile = await this.requireCanOpen(userId);
+    return this.open(userId, profile, {
+      kind: 'study',
+      scenario: studyScenario(row),
+      studyCycleSessionId: row.id,
+      withCallback: false,
+    });
+  }
+
+  /** Pasos 1, 1.b y 2: perfil onboarded, grupo y ninguna otra sesión activa. */
+  private async requireCanOpen(userId: string): Promise<Profile> {
     // 1. Perfil onboarded (SPEC-04 §3.1).
     const profile = await this.repository.findProfile(userId);
     if (profile === null || profile.onboarded_at === null) {
@@ -106,18 +158,16 @@ export class SessionsService {
         extra: { activeSessionId },
       });
     }
+    return profile;
+  }
 
-    // 3. Validación por `kind` (SPEC-04 §3.2).
-    const scenario = await this.resolveScenario(userId, dto, profile);
-
-    // 4.b El desafío se valida contra la lista real del usuario (SPEC-07 §7).
-    // Va **antes** del rechazo de boss: si esto falla con 422, la petición no
-    // debe haber quemado la oferta de boss del día.
-    await this.requireOfferedChallenge(userId, dto, scenario);
-
-    // 4.c El boss se ofrece, no se impone: si tocaba boss y el cliente pidió
-    // otra cosa, se registra el rechazo de hoy (SPEC-04 §3.2, SPEC-07 §4).
-    await this.recordBossSkipIfDeclined(userId, dto.kind, profile);
+  /** Pasos 4.d a 8, comunes a `POST /sessions` y a las sesiones del ciclo. */
+  private async open(
+    userId: string,
+    profile: Profile,
+    params: OpenParams,
+  ): Promise<CreateSessionResultDto> {
+    const { kind, scenario } = params;
 
     // 4.d Recuperación del brief fallido (MAL-20). Se hace al abrir la sesión
     // siguiente porque es el momento en que el brief vuelve a hacer falta, y
@@ -127,7 +177,7 @@ export class SessionsService {
     // 5. Callback (RF-4.4, SPEC-04 §3.3). Se elige **antes** de la llamada al
     // LLM porque el hecho va dentro del prompt (`opening_rule` de SPEC-03
     // §4.1); no hay forma de decidirlo después.
-    const callbackFact = await this.pickCallbackFact(userId);
+    const callbackFact = params.withCallback ? await this.pickCallbackFact(userId) : null;
 
     // 6. Prompt (SPEC-03 §4.1 con `opening_rule`).
     const [brief, facts] = await Promise.all([
@@ -138,10 +188,11 @@ export class SessionsService {
     const messages = buildTurnMessages({
       locale: profile.locale,
       level: profile.level,
-      kind: dto.kind,
+      kind,
       topic: scenario.promptTopic,
       roleplay: scenario.roleplay,
       news: scenario.news,
+      study: scenario.study,
       brief,
       facts: facts.map((fact) => fact.text),
       isFirstTurn: true,
@@ -155,10 +206,11 @@ export class SessionsService {
     // posterior. Ver docs/specs/pendientes/PR-04.md.
     const session: Session = await this.repository.createSession({
       userId,
-      kind: dto.kind,
+      kind,
       topic: scenario.topic,
       newsItemId: scenario.newsItemId,
-      challengeFromUserId: dto.challengeFromUserId ?? null,
+      challengeFromUserId: params.challengeFromUserId ?? null,
+      studyCycleSessionId: params.studyCycleSessionId,
     });
 
     const preference = await this.findPreference(userId);
@@ -206,7 +258,7 @@ export class SessionsService {
         `Apertura degradada de la sesión ${session.id}: se agotó la cadena de modelos.`,
       );
       opening = {
-        text: openingFor(dto.kind),
+        text: openingFor(kind),
         model: null,
         tokensIn: null,
         tokensOut: null,
@@ -442,6 +494,15 @@ export class SessionsService {
     }
     return bossScenario(topic, profile.locale);
   }
+}
+
+/** Lo que cambia entre `POST /sessions` y una sesión del ciclo de estudio. */
+interface OpenParams {
+  readonly kind: OpenableSessionKind | 'study';
+  readonly scenario: SessionScenario;
+  readonly challengeFromUserId?: string | null;
+  readonly studyCycleSessionId?: string | null;
+  readonly withCallback: boolean;
 }
 
 /** Lo que se persiste en `turns[0]`, venga del modelo o del saludo fijo. */

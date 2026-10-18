@@ -32,7 +32,10 @@ export interface GroupPromptMessage {
 }
 
 export interface GroupTurnPromptInput {
-  readonly scenario: Pick<RebuiltScenario, 'kind' | 'topic' | 'promptTopic' | 'roleplay' | 'news'>;
+  // Sin `study`: las sesiones del ciclo (F13) son siempre 1:1.
+  readonly scenario: Pick<RebuiltScenario, 'topic' | 'promptTopic' | 'roleplay' | 'news'> & {
+    readonly kind: Exclude<RebuiltScenario['kind'], 'study'>;
+  };
   readonly messages: readonly GroupPromptMessage[];
   /** `minLevel` de los presentes (FR-13). */
   readonly minLevel: Level;

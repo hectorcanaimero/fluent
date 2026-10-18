@@ -60,7 +60,7 @@ function buildController() {
     },
   } as unknown as InterviewsService;
 
-  return { controller: new InterviewsController(service, {} as never), calls };
+  return { controller: new InterviewsController(service, {} as never, {} as never), calls };
 }
 
 function fakeResponse(): Response & { statusCode: number | null } {

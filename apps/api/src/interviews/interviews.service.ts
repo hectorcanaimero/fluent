@@ -4,7 +4,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { ApiException, type ApiErrorCode, type ApiExceptionOptions } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import type { Interview, Locale } from '../db/schema.js';
+import type { Interview, Locale, StudyCycle } from '../db/schema.js';
 import { I18nService } from '../i18n/i18n.service.js';
 import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { effectivePlan } from '../profiles/plan.js';
@@ -73,6 +73,13 @@ export interface InterviewListItemDto extends InterviewDto {
   readonly company: { name: string } | null;
   readonly role: string | null;
   readonly historyStatus: string;
+  /** `too_short` que se puede retomar (D5). */
+  readonly resumable: boolean;
+  /** Viene de `POST /interviews/:id/reinterview` (FR-19). */
+  readonly isReinterview: boolean;
+  /** Sesiones del ciclo hechas; `null` sin ciclo (F13.1.T1). */
+  readonly cycleCompletedSessions: number | null;
+  readonly cycleStatus: StudyCycle['status'] | null;
 }
 
 export interface InterviewListResultDto {
@@ -190,7 +197,11 @@ export class InterviewsService {
 
   async list(userId: string): Promise<InterviewListResultDto> {
     const rows = await this.repository.listByUser(userId);
-    return { items: rows.map(toListItemDto) };
+    const cycles = await this.repository.listCycleProgress(
+      userId,
+      rows.map((row) => row.id),
+    );
+    return { items: rows.map((row) => toListItemDto(row, cycles.get(row.id) ?? null)) };
   }
 
   async detail(userId: string, id: string, acceptLanguage?: string): Promise<InterviewDetailDto> {
@@ -464,11 +475,18 @@ function toFeedbackDto(feedback: InterviewFeedback): InterviewFeedbackDto {
   return rest;
 }
 
-function toListItemDto(row: InterviewListRow): InterviewListItemDto {
+function toListItemDto(
+  row: InterviewListRow,
+  cycle: { status: StudyCycle['status']; doneCount: number } | null,
+): InterviewListItemDto {
   return {
     ...toInterviewDto(row),
     company: row.company ? { name: row.company.name } : null,
     role: row.role,
     historyStatus: HISTORY_STATUS[row.status],
+    resumable: row.resumable,
+    isReinterview: row.parent_interview_id !== null,
+    cycleCompletedSessions: cycle?.doneCount ?? null,
+    cycleStatus: cycle?.status ?? null,
   };
 }

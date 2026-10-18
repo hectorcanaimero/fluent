@@ -17,7 +17,7 @@ export interface BriefPromptInput {
   readonly previousBrief?: string | null;
   /** Hechos ya conocidos del usuario, para que el modelo no los repita. */
   readonly knownFacts?: readonly string[];
-  readonly kind: SessionKind;
+  readonly kind: SessionKind | 'study';
   readonly topic: string;
   /** Turnos de la sesión, en orden. */
   readonly turns: readonly HistoryTurn[];

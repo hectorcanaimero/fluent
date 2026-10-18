@@ -6,11 +6,11 @@
  * módulo LLM, así que viven aquí y se reexportarán desde allí sin duplicar valores.
  */
 
-import type { OpenableSessionKind } from '../db/schema.js';
+import type { LlmCallPurpose, OpenableSessionKind } from '../db/schema.js';
 
 export type Provider = '9router';
-/** `interview*`: F10, llamadas de turno/preparación/parecer del simulador de entrevistas. */
-export type Purpose = 'turn' | 'brief' | 'weekly' | 'interview' | 'interview_prepare' | 'interview_feedback';
+/** Mismo conjunto que `llm_calls.purpose`. */
+export type Purpose = LlmCallPurpose;
 export type Locale = 'es' | 'pt-BR';
 export type Level = 'A2' | 'B1' | 'B2';
 /** Los `kind` 1:1 que llegan a los prompts; la sala grupal tiene los suyos (F9.3). */

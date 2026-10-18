@@ -5,17 +5,23 @@
  * `fixtures/bench/turns.json` (cada uno con dos errores plantados y su categoría) y
  * mide, con `generateObject` sobre el `TurnOutput`:
  *   - tasa de JSON válido,
- *   - latencia p50 y p90,
+ *   - latencia p50 y p90 de TODAS las llamadas, también las fallidas o con timeout,
  *   - si detectó al menos 1 de los 2 errores plantados,
+ *   - fallos por estado (`auth_error`, `rate_limited`, `timeout`, `invalid_json`…),
  *   - `prompt_tokens` que reporta 9router frente a los tokens estimados del prompt
  *     (vigila el system prompt oculto que inyecta el router, arquitectura 001).
+ *
+ * Usa el mismo `reasoningEffortFor` y `repairText` que `LlmService`, sin reintentos
+ * del SDK. Por defecto prueba los modelos de `FALLBACK_MODELS` si está definida y,
+ * si no, `fluent-free` y `fluent-pro`.
  *
  * Criterio de SPEC-03 §9: un modelo entra en `FALLBACK_MODELS` si su tasa de JSON
  * válido es ≥ 95 % y su p90 < 8 s. El proceso termina con código 1 si algún modelo
  * probado no cumple ambos.
  *
  * Este script NO se ejecuta en CI ni en los tests: lo corre el operador con SUS
- * claves y pega la tabla resultante en la spec.
+ * claves y pega la tabla markdown del final (lleva el `PROMPT_VERSION`) en la spec.
+ * Todo sale por consola; `--out-dir` ya no existe. Argumentos inválidos → código 2.
  *
  *   cd apps/api
  *   export NINEROUTER_URL=...
@@ -23,6 +29,7 @@
  *   pnpm bench:models
  *   pnpm bench:models -- --models "fluent-free,fluent-pro,ds/deepseek-v4-flash"
  *   pnpm bench:models -- --repeats 2 --concurrency 2
+ *   pnpm bench:models -- --turns ruta/a/turns.json
  *   pnpm bench:models -- --dry-run
  *
  * La clave se lee solo de `NINEROUTER_API_KEY` y nunca se imprime.
@@ -33,24 +40,28 @@ import { fileURLToPath } from 'node:url';
 
 import { generateObject, type LanguageModel } from 'ai';
 
-import { FREE_COMBO, PRO_COMBO, PURPOSE_DEFAULTS, type SessionKind } from '../src/llm/config.js';
-import { extractFirstJsonObject } from '../src/llm/json.js';
-import { mapError } from '../src/llm/llm.service.js';
+import {
+  FREE_COMBO,
+  parseFallbackModels,
+  PRO_COMBO,
+  PURPOSE_DEFAULTS,
+  type SessionKind,
+} from '../src/llm/config.js';
+import { detects, latencyPercentiles, type PlantedError } from '../src/llm/bench.js';
+import { mapError, repairText } from '../src/llm/llm.service.js';
 import { reasoningEffortFor } from '../src/llm/ninerouter-models.js';
 import { createNineRouterProvider } from '../src/llm/ninerouter.provider.js';
-import { buildTurnMessages } from '../src/llm/prompts/index.js';
-import { CATEGORIES, TurnOutput, type Category } from '../src/llm/schemas.js';
+import { buildTurnMessages, PROMPT_VERSION } from '../src/llm/prompts/index.js';
+import { CATEGORIES, TurnOutput } from '../src/llm/schemas.js';
 import type { LlmCallStatus, LlmMessage } from '../src/llm/types.js';
 
 /** SPEC-03 §9. */
 const MIN_VALID_JSON_RATE = 0.95;
 const MAX_P90_MS = 8000;
-const DEFAULT_MODELS: readonly string[] = [FREE_COMBO, PRO_COMBO];
-
-interface PlantedError {
-  readonly category: Category;
-  readonly trigger: string;
-}
+/** Por defecto, la cadena que usa producción (`FALLBACK_MODELS`) o los dos combos. */
+const DEFAULT_MODELS: readonly string[] = process.env.FALLBACK_MODELS
+  ? parseFallbackModels(process.env.FALLBACK_MODELS).map((m) => m.model)
+  : [FREE_COMBO, PRO_COMBO];
 
 interface BenchTurn {
   readonly id: string;
@@ -104,13 +115,6 @@ function findUp(from: string, relative: string): string | null {
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 
-function percentile(values: readonly number[], p: number): number {
-  if (values.length === 0) return 0;
-  const sorted = [...values].sort((a, b) => a - b);
-  const index = Math.min(sorted.length - 1, Math.ceil((p / 100) * sorted.length) - 1);
-  return sorted[Math.max(0, index)] ?? 0;
-}
-
 function average(values: readonly number[]): number | null {
   if (values.length === 0) return null;
   return Math.round(values.reduce((sum, v) => sum + v, 0) / values.length);
@@ -122,27 +126,6 @@ function estimateTokens(messages: readonly LlmMessage[]): number {
   return Math.round(chars / 4);
 }
 
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^a-z0-9áéíóúüñ ]/gi, ' ')
-    .replace(/\s+/g, ' ')
-    .trim();
-}
-
-/**
- * Se considera detectado un error plantado si el modelo devolvió una corrección de
- * su misma categoría o cuyo `original` solapa con el fragmento plantado.
- */
-function detects(planted: PlantedError, corrections: TurnOutput['corrections']): boolean {
-  const trigger = normalize(planted.trigger);
-  return corrections.some((correction) => {
-    if (correction.category === planted.category) return true;
-    const original = normalize(correction.original);
-    return original.includes(trigger) || trigger.includes(original);
-  });
-}
-
 interface CliOptions {
   readonly models: readonly string[];
   readonly repeats: number;
@@ -151,7 +134,22 @@ interface CliOptions {
   readonly turnsPath: string;
 }
 
+/** Error de uso: se imprime sin stack y sale con código 2. */
+class UsageError extends Error {}
+
+function positiveInt(name: string, raw: string | undefined): number {
+  if (raw === undefined) return 1;
+  const value = Number(raw);
+  if (!Number.isInteger(value) || value < 1) {
+    throw new UsageError(`--${name} debe ser un entero positivo (recibido: "${raw}").`);
+  }
+  return value;
+}
+
 function parseArgs(argv: readonly string[]): CliOptions {
+  if (argv.includes('--out-dir')) {
+    throw new UsageError('--out-dir se eliminó: el informe se imprime por consola; redirige la salida.');
+  }
   const get = (name: string): string | undefined => {
     const index = argv.indexOf(`--${name}`);
     return index === -1 ? undefined : argv[index + 1];
@@ -175,8 +173,8 @@ function parseArgs(argv: readonly string[]): CliOptions {
 
   return {
     models,
-    repeats: Number(get('repeats') ?? 1),
-    concurrency: Math.max(1, Number(get('concurrency') ?? 1)),
+    repeats: positiveInt('repeats', get('repeats')),
+    concurrency: positiveInt('concurrency', get('concurrency')),
     dryRun: argv.includes('--dry-run'),
     turnsPath,
   };
@@ -203,12 +201,6 @@ function loadTurns(path: string): BenchTurn[] {
     }
   }
   return parsed;
-}
-
-/** Quita vallas ```json y prosa: algunos modelos las mandan incluso con `response_format`. */
-async function repairText({ text }: { text: string }): Promise<string | null> {
-  const json = extractFirstJsonObject(text);
-  return json === null ? null : JSON.stringify(json);
 }
 
 // ---------------------------------------------------------------------------
@@ -315,20 +307,19 @@ async function benchModel(
   const outcomes = await mapLimit(queue, options.concurrency, (turn) => runTurn(provider, model, turn));
 
   const valid = outcomes.filter((o) => o.validJson);
-  const latencies = valid.map((o) => o.latencyMs);
   const statuses: Record<string, number> = {};
   for (const outcome of outcomes) {
     statuses[outcome.status] = (statuses[outcome.status] ?? 0) + 1;
   }
 
   const validJsonRate = outcomes.length === 0 ? 0 : valid.length / outcomes.length;
-  const p90 = percentile(latencies, 90);
+  const { p50, p90 } = latencyPercentiles(outcomes);
 
   return {
     model,
     turns: outcomes.length,
     validJsonRate,
-    p50: percentile(latencies, 50),
+    p50,
     p90,
     detectionRate:
       valid.length === 0 ? 0 : valid.filter((o) => o.detectedAtLeastOne).length / valid.length,
@@ -365,6 +356,29 @@ function renderMetricsTable(reports: readonly ModelReport[]): void {
   );
 }
 
+/** Tabla en markdown para pegar en la spec. */
+function renderMarkdownTable(reports: readonly ModelReport[]): void {
+  console.log('| modelo | json válido | p50 | p90 | detección | entra |');
+  console.log('| --- | --- | --- | --- | --- | --- |');
+  for (const r of reports) {
+    console.log(
+      `| ${r.model} | ${pct(r.validJsonRate)} | ${r.p50} ms | ${r.p90} ms | ${pct(r.detectionRate)} | ${
+        r.passes ? 'sí' : 'no'
+      } |`,
+    );
+  }
+}
+
+/** Fallos por estado y modelo: sin esto un 20 % de timeouts pasa desapercibido. */
+function renderFailures(reports: readonly ModelReport[]): void {
+  for (const r of reports) {
+    const failures = Object.entries(r.statuses).filter(([status]) => status !== 'ok');
+    const summary =
+      failures.length === 0 ? 'ninguno' : failures.map(([status, n]) => `${status}: ${n}`).join(' · ');
+    console.log(`  ${r.model}: ${summary}`);
+  }
+}
+
 function renderPromptTokensTable(reports: readonly ModelReport[]): void {
   console.table(
     reports.map((r) => ({
@@ -387,7 +401,9 @@ async function main(): Promise<void> {
   const options = parseArgs(process.argv.slice(2));
   const turns = loadTurns(options.turnsPath);
 
-  console.log(`Turnos sintéticos: ${turns.length} · repeticiones: ${options.repeats}`);
+  console.log(
+    `PROMPT_VERSION ${PROMPT_VERSION} · turnos sintéticos: ${turns.length} · repeticiones: ${options.repeats}`,
+  );
   console.log(`Modelos a probar (9router): ${options.models.join(', ')}`);
 
   if (options.dryRun) {
@@ -426,6 +442,10 @@ async function main(): Promise<void> {
     `\nprompt_tokens: router vs. estimado (vigila el system prompt oculto que inyecta 9router):`,
   );
   renderPromptTokensTable(reports);
+  console.log('\nFallos por estado:');
+  renderFailures(reports);
+  console.log(`\nPara la spec (PROMPT_VERSION ${PROMPT_VERSION}):\n`);
+  renderMarkdownTable(reports);
 
   if (reports.some((r) => !r.passes)) {
     console.error(
@@ -440,5 +460,5 @@ async function main(): Promise<void> {
 main().catch((error: unknown) => {
   // El mensaje nunca lleva claves: aquí solo hay config y errores del SDK.
   console.error(`\nbench-models falló: ${(error as Error).message}`);
-  process.exitCode = 1;
+  process.exitCode = error instanceof UsageError ? 2 : 1;
 });

@@ -18,6 +18,7 @@ import { MAX_ATTEMPTS, PURPOSE_DEFAULTS, type Provider, type Purpose } from './c
 import { extractFirstJsonObject } from './json.js';
 import type { Plan } from '../db/schema.js';
 import type { Candidate, ModelPreference, ModelResolver } from './model-resolver.js';
+import { reasoningEffortFor } from './ninerouter-models.js';
 import {
   LlmCallError,
   type LlmCallStatus,
@@ -134,15 +135,8 @@ function recordQuietly(sink: LlmCallSink, call: LlmCallRecord): Promise<void> {
   return Promise.resolve(sink.record(call)).catch(() => undefined);
 }
 
-// ponytail: mapa local hasta que F1.4 traiga `reasoningEffortFor` en `ninerouter-models.ts`.
-function reasoningEffortFor(model: string): string | undefined {
-  if (model === 'fluent-free' || model === 'fluent-pro' || model.startsWith('ds/')) return 'none';
-  if (model.startsWith('gemini/gemini-3.8')) return 'low';
-  return undefined;
-}
-
 /** Quita vallas ```json y prosa: algunos modelos las mandan incluso con `response_format`. */
-const repairText: RepairTextFunction = async ({ text }) => {
+export const repairText: RepairTextFunction = async ({ text }) => {
   const json = extractFirstJsonObject(text);
   return json === null ? null : JSON.stringify(json);
 };

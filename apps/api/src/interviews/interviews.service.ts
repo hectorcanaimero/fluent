@@ -127,10 +127,10 @@ export class InterviewsService {
       throw ApiException.of('INTERVIEW_AGENT_UNAVAILABLE', AGENT_UNAVAILABLE_MESSAGE);
     }
 
-    this.assertExactlyOneOffer(dto);
+    const offer = this.normalizeOffer(dto);
 
     // D8: antes de consumir el tope, calcular el hash o tocar el agente.
-    if (dto.offerUrl !== undefined && isLinkedInHost(dto.offerUrl)) {
+    if (offer.offerUrl !== null && isLinkedInHost(offer.offerUrl)) {
       throw ApiException.of('OFFER_UNREADABLE', OFFER_UNREADABLE_MESSAGE, {
         extra: { reason: 'linkedin' },
       });
@@ -138,19 +138,19 @@ export class InterviewsService {
 
     const profile = await this.profiles.findByUserId(userId);
 
-    await this.consumeDailyCap(userId, profile?.timezone ?? null, now);
-
+    // El plan se comprueba antes del tope: un rechazo por plan no consume cupo.
     const requiresPro = this.configService.get('INTERVIEWS_REQUIRE_PRO', { infer: true });
     if (requiresPro && (profile === null || effectivePlan(profile, now) === 'free')) {
       throw ApiException.of('PLAN_REQUIRED', PLAN_REQUIRED_MESSAGE);
     }
 
+    await this.consumeDailyCap(userId, profile?.timezone ?? null, now);
+
     const created = await this.repository.create({
       userId,
       type: dto.type,
-      offerText: dto.offerText ?? null,
-      offerUrl: dto.offerUrl ?? null,
-      offerHash: computeOfferHash(dto),
+      ...offer,
+      offerHash: computeOfferHash(offer),
     });
 
     await this.jobs.enqueueInterviewPrepare(created.id);
@@ -195,11 +195,16 @@ export class InterviewsService {
     return Math.ceil(this.configService.get('INTERVIEW_MAX_SEC', { infer: true }) / 60);
   }
 
-  /** I2: exactamente uno de `offerText`/`offerUrl` (mismo criterio que `CreateSessionDto`). */
-  private assertExactlyOneOffer(dto: CreateInterviewDto): void {
-    const hasText = typeof dto.offerText === 'string' && dto.offerText.trim() !== '';
-    const hasUrl = typeof dto.offerUrl === 'string' && dto.offerUrl.trim() !== '';
-    if (hasText === hasUrl) {
+  /**
+   * I2: exactamente uno de `offerText`/`offerUrl` (mismo criterio que
+   * `CreateSessionDto`). Devuelve la oferta normalizada (texto en blanco =
+   * ausente), que cumple el CHECK `offer_text OR offer_url` y el
+   * `PrepareRequest` de I1.
+   */
+  private normalizeOffer(dto: CreateInterviewDto): Offer {
+    const offerText = dto.offerText?.trim() ? dto.offerText : null;
+    const offerUrl = dto.offerUrl?.trim() ? dto.offerUrl.trim() : null;
+    if ((offerText === null) === (offerUrl === null)) {
       throw ApiException.of('VALIDATION', VALIDATION_MESSAGE, {
         extra: {
           details: [
@@ -208,6 +213,7 @@ export class InterviewsService {
         },
       });
     }
+    return { offerText, offerUrl };
   }
 
   /**
@@ -270,10 +276,15 @@ function normalizeOfferText(text: string): string {
   return text.trim().replace(/\s+/g, ' ').toLowerCase();
 }
 
+/** Exactamente uno de los dos es no nulo (`normalizeOffer`). */
+interface Offer {
+  readonly offerText: string | null;
+  readonly offerUrl: string | null;
+}
+
 /** sha256 del texto normalizado o de la URL tal cual (migración F10.1.T1). */
-function computeOfferHash(dto: Pick<CreateInterviewDto, 'offerText' | 'offerUrl'>): string {
-  const basis =
-    dto.offerText !== undefined ? normalizeOfferText(dto.offerText) : (dto.offerUrl ?? '').trim();
+function computeOfferHash(offer: Offer): string {
+  const basis = offer.offerText !== null ? normalizeOfferText(offer.offerText) : (offer.offerUrl ?? '');
   return createHash('sha256').update(basis).digest('hex');
 }
 

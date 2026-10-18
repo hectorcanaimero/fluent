@@ -228,6 +228,59 @@ Una vez desplegada la API y el worker con 9router funcionando, desde `/v1/admin/
 
 ---
 
+## 9. App interna `fluent-interview-agent` (F10.2)
+
+Servicio Python (`apps/interview-agent/`, F10.2.T1) que prepara el plan y el
+parecer de una entrevista; sin estado, sin acceso público, llamado solo por
+`fluent-api`/`fluent-worker` dentro de la red de Coolify.
+
+1. Dentro del proyecto `fluent`, entorno `production`: **+ New Resource →
+   Application**, misma fuente Git que `fluent-api` (repo
+   `hectorcanaimero/fluent`, rama `main`).
+2. Nombre: `fluent-interview-agent`.
+3. **Build pack**: `Dockerfile`.
+4. **Contexto de build (Base Directory)**: `apps/interview-agent` (el
+   Dockerfile a usar es `apps/interview-agent/Dockerfile`, build context
+   `apps/interview-agent`, igual que `fluent-api` con su propio directorio).
+5. **Red**: la misma red Docker del proyecto Coolify que usan `fluent-api` y
+   `fluent-9router`, para que ambos la alcancen por nombre de servicio
+   (`http://fluent-interview-agent:8000`).
+6. **Sin dominio ni puerto público**: no asignar dominio ni exponer el
+   puerto 8000 al exterior — solo tráfico interno de la red de Coolify.
+7. **Healthcheck**: confiar en el `HEALTHCHECK` de Docker de la imagen
+   (`apps/interview-agent/Dockerfile`, `GET /healthz` en el puerto `8000` vía
+   `python -c "import urllib.request ..."`). Deja **desactivado** el
+   healthcheck HTTP de Coolify (pestaña **Health Check**): Coolify lo ejecuta
+   con `curl`/`wget` dentro del contenedor y `python:3.12-slim` no trae
+   ninguno, así que marcaría la app como no saludable siempre.
+8. **Variables de entorno** (I4, `docs/arch/003-simulador-entrevistas.md`):
+   - `NINEROUTER_URL` y `NINEROUTER_API_KEY` — mismos valores que
+     `fluent-api`/`fluent-worker` (sección 0b). `NINEROUTER_API_KEY` es
+     secreta.
+   - `INTERVIEW_AGENT_TOKEN` — token compartido con `fluent-api` y
+     `fluent-worker` (ellos lo usan como `Authorization: Bearer` al llamar a
+     este servicio); generarlo una vez y copiarlo también en las variables de
+     `fluent-api`/`fluent-worker`. Es secreta.
+   - `INTERVIEW_MODEL` — opcional, por defecto `fluent-pro` si no se define.
+9. **Límite de memoria**: sin requisito especial documentado; usar el mismo
+   criterio que `fluent-worker` (768 MB) salvo que el monitoreo (sección 8)
+   muestre que necesita más.
+10. **Auto-deploy**: igual que las demás apps, webhook por push a `main`.
+11. Deploy inicial: botón **Deploy**, seguir el log hasta `Running` con el
+    healthcheck en verde.
+
+Verificación (desde una shell con acceso a la red interna, p. ej. un `exec`
+en `fluent-api`):
+
+```bash
+curl http://fluent-interview-agent:8000/healthz
+```
+
+Debe devolver `200` con `{"ok": true}`. `/v1/prepare` y `/v1/feedback`
+responden `501` hasta que F10.2.T2 implemente el workflow.
+
+---
+
 ## Notas
 
 - Esta tarea (T6, antes §1-6) **no se ejecutó** en esta sesión — no se creó ningún recurso real en Coolify. Este documento son los pasos exactos para que el operador los siga en la UI cuando quiera desplegar. La nueva sección §0b (9router) tampoco se ejecutó; es documentación operativa para que el operador lo haga antes de desplegar la API.

@@ -15,6 +15,7 @@ from app.contract import (
     Usage,
 )
 from app.models import build_model, model_id
+from app.prepare.language import looks_english
 from app.prepare.prompting import untrusted
 from app.prepare.researcher import ResearchResult
 
@@ -48,7 +49,8 @@ Return:
   methods named or implied by the offer; can be non-technical).
 - rubric: 4 to 6 competencies specific to this area and role, ids "c1".."c6",
   expectedLevel = seniority, weight 1 unless one is clearly central (max 2).
-- questions: exactly 8, idx 1..8, in English, one or two short sentences each,
+- questions: exactly 8, idx 1..8, ALWAYS in English — even when the offer or the
+  research is in Portuguese or Spanish — one or two short sentences each,
   about this area (no generic questions, no fixed bank). Every competency gets
   at least one question.
   Difficulty by seniority: junior/semi_senior → concepts and hands-on practice;
@@ -106,6 +108,12 @@ def validate_plan(
     repeated = [q.text for q in plan.questions if _normalize(q.text) in previous]
     if repeated:
         raise ValueError(f"questions repeat previousQuestions: {repeated}")
+    foreign = [q.text for q in plan.questions if not looks_english(q.text)]
+    if foreign:
+        raise ValueError(
+            "questions are not in English (the offer's language does not matter: every "
+            f"question must be in English): {foreign}"
+        )
     return plan
 
 

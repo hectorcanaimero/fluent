@@ -24,12 +24,14 @@ jobs:
               - 'package.json'
               - 'pnpm-lock.yaml'
               - 'pnpm-workspace.yaml'
+              - 'testdata/**'
               - '.github/workflows/ci.yml'
             mobile:
               - 'apps/mobile/**'
               - '.github/workflows/ci.yml'
             interview_agent:
               - 'apps/interview-agent/**'
+              - 'testdata/**'
               - '.github/workflows/ci.yml'
 
   api:

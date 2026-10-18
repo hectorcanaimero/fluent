@@ -1,0 +1,25 @@
+{
+  "_comment": "Shared vectors for the English-only guard: apps/api/src/llm/english.ts and apps/interview-agent/app/prepare/language.py are both tested against this file, so the two implementations cannot drift. The Portuguese opening is the reply a learner got on 2026-10-18 (screenshot in the PR).",
+  "english": [
+    "Hi, I'll be your interviewer today. Please keep each answer to about one minute. Tell me about a project you led at your last job.",
+    "Thank you.",
+    "Great, thanks.",
+    "How would you design a caching layer for a service that serves product prices in São Paulo and Bogotá?",
+    "Can you walk me through how you handled a conflict with a stakeholder at Itaú?",
+    "What is your experience with React, TypeScript and Node.js in production?",
+    "Describe a time you had to deliver bad news to a client. What did you do?",
+    "Sorry, I lost my train of thought. Could you say that again?",
+    "That's all the time we have. Thank you for your answers, we'll get back to you soon.",
+    "Okay.",
+    "Why do you want to work at Mercado Libre as a senior data engineer?"
+  ],
+  "not_english": [
+    "Olá, sou o entrevistador. Esta conversa será em português, conforme o seu idioma. Vamos começar.",
+    "Pode me contar sobre um projeto que você liderou na sua última empresa?",
+    "Qual é a sua experiência com React e TypeScript em produção?",
+    "Hola, soy tu entrevistador. ¿Puedes contarme sobre tu experiencia en ventas?",
+    "¿Cómo manejaste un conflicto con un cliente difícil?",
+    "Cuéntame sobre un proyecto en el que trabajaste con datos.",
+    "Obrigado pelas suas respostas, a entrevista terminou."
+  ]
+}

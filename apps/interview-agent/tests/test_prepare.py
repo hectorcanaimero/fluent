@@ -286,6 +286,40 @@ def test_repetir_previous_questions_reintenta(
     assert "previousQuestions" in prompts[1]
 
 
+def _in_portuguese(plan: PlanDraft) -> PlanDraft:
+    questions = [
+        q.model_copy(update={"text": f"Pode me contar sobre a sua experiência com o tema {q.idx}?"})
+        for q in plan.questions
+    ]
+    return plan.model_copy(update={"questions": questions})
+
+
+def test_preguntas_en_portugues_reintenta_pidiendo_ingles(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, fake_research: list[str]
+) -> None:
+    # Una oferta en portugués arrastró al modelo a escribir las preguntas en
+    # portugués; Fluent es para practicar inglés (2026-10-18).
+    offer = "A Nubank procura Product Manager pleno para onboarding. Discovery e métricas."
+    comps = OFFERS["product"][1]
+    english = _plan("product", comps, mixed=False)
+    prompts = _fake_designer(monkeypatch, [_in_portuguese(english), english])
+    response = client.post("/v1/prepare", json=_body(offer), headers=AUTH)
+    assert response.status_code == 200
+    assert len(prompts) == 2
+    assert "not in English" in prompts[1]
+    assert [q["text"] for q in response.json()["questions"]] == [q.text for q in english.questions]
+
+
+def test_preguntas_en_portugues_dos_veces_da_502(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, fake_research: list[str]
+) -> None:
+    offer, comps = OFFERS["product"]
+    prompts = _fake_designer(monkeypatch, [_in_portuguese(_plan("product", comps, mixed=False))])
+    response = client.post("/v1/prepare", json=_body(offer), headers=AUTH)
+    assert response.status_code == 502
+    assert len(prompts) == 2
+
+
 def test_oferta_y_research_van_como_datos_no_confiables(
     client: TestClient, monkeypatch: pytest.MonkeyPatch, fake_research: list[str]
 ) -> None:

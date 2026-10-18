@@ -188,6 +188,17 @@ describe('InterviewTurnOutput', () => {
     expect(InterviewTurnOutput.parse({ ...base, corrections: 'none' }).corrections).toEqual([]);
   });
 
+  // 2026-10-18: la apertura de una entrevista salió entera en portugués. Un
+  // reply que no está en inglés falla la validación, y LlmService prueba el
+  // siguiente candidato (o la sesión degrada a la frase fija en inglés).
+  it('un reply en portugués o español falla', () => {
+    const pt = 'Olá, sou o entrevistador. Esta conversa será em português, conforme o seu idioma.';
+    const es = 'Hola, soy tu entrevistador. ¿Puedes contarme sobre tu experiencia?';
+    expect(InterviewTurnOutput.safeParse({ ...base, reply: pt }).success).toBe(false);
+    expect(InterviewTurnOutput.safeParse({ ...base, reply: es }).success).toBe(false);
+    expect(InterviewTurnOutput.safeParse({ ...base, reply: 'Great. How did you scale it in São Paulo?' }).success).toBe(true);
+  });
+
   it('sin reply o sin questionIdx numérico sí falla', () => {
     expect(InterviewTurnOutput.safeParse({ ...base, reply: '' }).success).toBe(false);
     expect(InterviewTurnOutput.safeParse({ ...base, questionIdx: 'tres' }).success).toBe(false);

@@ -88,7 +88,6 @@ interface TutorOutcome {
 @Injectable()
 export class TurnsService {
   private readonly logger = new Logger(TurnsService.name);
-  private readonly dailyTurnsBudget: DailyTurnsBudget;
 
   constructor(
     private readonly sessions: SessionsRepository,
@@ -96,9 +95,8 @@ export class TurnsService {
     private readonly llm: LlmService,
     private readonly redis: RedisService,
     private readonly configService: ConfigService<Env, true>,
-  ) {
-    this.dailyTurnsBudget = new DailyTurnsBudget(redis, configService);
-  }
+    private readonly dailyTurnsBudget: DailyTurnsBudget,
+  ) {}
 
   async addTurn(
     userId: string,
@@ -204,8 +202,10 @@ export class TurnsService {
 
     // 2.b Tope diario de turnos (MAL-23). Va **antes** de insertar el turno
     // del usuario y de llamar al modelo: pasado el tope no se escribe nada ni
-    // se gasta un céntimo de la key del aprendiz.
-    await this.dailyTurnsBudget.consume(userId, effectivePlan(profile), profile.timezone);
+    // se gasta un céntimo de la key del aprendiz. Un solo `now` para el plan
+    // y el día: así no discrepan si la petición cruza la medianoche.
+    const now = new Date();
+    await this.dailyTurnsBudget.consume(userId, effectivePlan(profile, now), profile.timezone, now);
 
     // La apertura del tutor es `idx = 0`; cada turno toma el último + 1. Con
     // la sesión sin ningún turno (imposible hoy: la apertura siempre inserta

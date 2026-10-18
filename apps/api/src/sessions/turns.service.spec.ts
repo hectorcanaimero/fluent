@@ -2,13 +2,13 @@ import type { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import { ROLEPLAYS } from '../content/index.js';
-import type { Fact, NewsItem, Profile, Session } from '../db/schema.js';
+import type { Fact, NewsItem, Plan, Profile, Session } from '../db/schema.js';
 import { DEGRADED_REPLY, HISTORY_TURNS } from '../llm/config.js';
 import type { LlmMessage } from '../llm/types.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { RedisService } from '../redis/redis.service.js';
 import { TURN_MAX_ATTEMPTS } from '../llm/config.js';
-import { turnsDayKey, userDay } from './user-day.js';
+import type { DailyTurnsBudget } from './daily-turns-budget.js';
 import { turnLockKey, turnPaceKey } from './sessions.constants.js';
 import type { SessionsRepository } from './sessions.repository.js';
 import {
@@ -287,30 +287,17 @@ type FakeRedis = RedisService & {
   readonly keys: Set<string>;
   readonly setIfAbsentCalls: string[];
   readonly deleted: string[];
-  readonly counters: Map<string, number>;
 };
 
-function fakeRedis(
-  preset: readonly string[] = [],
-  options: { counters?: Map<string, number>; incrementFails?: boolean } = {},
-): FakeRedis {
+function fakeRedis(preset: readonly string[] = []): FakeRedis {
   const keys = new Set<string>(preset);
   const setIfAbsentCalls: string[] = [];
   const deleted: string[] = [];
-  const counters = options.counters ?? new Map<string, number>();
 
   return {
     keys,
     setIfAbsentCalls,
     deleted,
-    counters,
-    increment: async (key: string) => {
-      // `null` simula Redis caído: el tope diario es fail-open (MAL-23).
-      if (options.incrementFails) return null;
-      const next = (counters.get(key) ?? 0) + 1;
-      counters.set(key, next);
-      return next;
-    },
     setIfAbsent: async (key: string) => {
       setIfAbsentCalls.push(key);
       if (keys.has(key)) return false;
@@ -328,26 +315,37 @@ function fakeRedis(
   } as unknown as FakeRedis;
 }
 
-/**
- * `PROMPT_VERSION` es 3 (como antes) y el tope diario queda desactivado por
- * defecto, para que los tests que no van de MAL-23 no lo toquen.
- */
-function fakeConfig(capFree = 0, capPro = 0): ConfigService<never, true> {
-  const values: Record<string, number> = { TURNS_DAILY_CAP_FREE: capFree, TURNS_DAILY_CAP_PRO: capPro };
+/** `PROMPT_VERSION` es 3, como antes. */
+function fakeConfig(): ConfigService<never, true> {
   return {
-    get: (key: string) => values[key] ?? 3,
+    get: () => 3,
   } as unknown as ConfigService<never, true>;
 }
 
+/**
+ * Tope diario de turnos (MAL-23). Su lógica se prueba en
+ * `daily-turns-budget.spec.ts`; aquí solo se registra con qué se llama y,
+ * con `rejectWith`, se simula que el aprendiz ya se pasó del tope.
+ */
+type FakeBudget = DailyTurnsBudget & {
+  readonly calls: { userId: string; plan: Plan; tz: string; now: Date | undefined }[];
+};
 
+function fakeBudget(rejectWith?: unknown): FakeBudget {
+  const calls: FakeBudget['calls'] = [];
+  return {
+    calls,
+    consume: async (userId: string, plan: Plan, tz: string, now?: Date) => {
+      calls.push({ userId, plan, tz, now });
+      if (rejectWith !== undefined) throw rejectWith;
+    },
+  } as unknown as FakeBudget;
+}
 
 interface BuildOptions extends FakeSessionsRepoOptions, FakeTurnsRepoOptions, FakeLlmOptions {
   readonly llm?: FakeLlm;
   readonly redis?: FakeRedis;
-  /** Tope diario de turnos del plan Free (MAL-23). 0 lo desactiva. */
-  readonly turnsDailyCap?: number;
-  /** Tope diario de turnos del plan Pro. 0 lo desactiva. */
-  readonly turnsDailyCapPro?: number;
+  readonly budget?: FakeBudget;
 }
 
 function buildService(options: BuildOptions = {}) {
@@ -355,14 +353,9 @@ function buildService(options: BuildOptions = {}) {
   const turns = fakeTurnsRepository(options);
   const llm = options.llm ?? fakeLlm(options);
   const redis = options.redis ?? fakeRedis();
-  const service = new TurnsService(
-    sessions,
-    turns,
-    llm,
-    redis,
-    fakeConfig(options.turnsDailyCap ?? 0, options.turnsDailyCapPro ?? 0) as never,
-  );
-  return { service, sessions, turns, llm, redis };
+  const budget = options.budget ?? fakeBudget();
+  const service = new TurnsService(sessions, turns, llm, redis, fakeConfig() as never, budget);
+  return { service, sessions, turns, llm, redis, budget };
 }
 
 // ---------------------------------------------------------------------------
@@ -807,131 +800,42 @@ describe('TurnsService.addTurn · `onToken` (endpoint SSE)', () => {
 });
 
 describe('TurnsService.addTurn · tope diario de turnos (MAL-23)', () => {
-  /**
-   * La ventana de ritmo de 2 s por sesión (SPEC-02 §7) rechazaría el segundo
-   * turno de cualquiera de estos tests antes de llegar al tope diario, que es
-   * lo que se quiere probar aquí. En producción esos 2 s pasan solos.
-   */
-  function skipPaceWindow(redis: FakeRedis): void {
-    redis.keys.delete(turnPaceKey(SESSION_ID));
-  }
-
-  it('deja pasar mientras no se llegue al tope', async () => {
-    const redis = fakeRedis();
-    const { service } = buildService({ redis, turnsDailyCap: 3 });
+  it('consume el tope con el plan efectivo y la zona del perfil', async () => {
+    const { service, budget } = buildService({
+      profile: profileFixture({ plan: 'pro', plan_expires_at: null, timezone: 'Asia/Tokyo' }),
+    });
 
     await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
 
-    const key = [...redis.counters.keys()][0]!;
-    expect(key).toMatch(/^turns:day:/);
-    expect(redis.counters.get(key)).toBe(1);
+    expect(budget.calls).toHaveLength(1);
+    expect(budget.calls[0]).toMatchObject({ userId: USER_ID, plan: 'pro', tz: 'Asia/Tokyo' });
+    expect(budget.calls[0]!.now).toBeInstanceOf(Date);
   });
 
-  it('al pasarse responde 429 TURNS_DAILY_CAP con retryAfter', async () => {
-    const redis = fakeRedis();
-    const { service, llm } = buildService({ redis, turnsDailyCap: 1 });
+  it('un Pro caducado consume como Free', async () => {
+    const { service, budget } = buildService({
+      profile: profileFixture({ plan: 'pro', plan_expires_at: '2000-01-01T00:00:00Z' }),
+    });
 
     await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-    skipPaceWindow(redis);
+
+    expect(budget.calls[0]!.plan).toBe('free');
+  });
+
+  it('pasado el tope responde 429 TURNS_DAILY_CAP sin insertar ni llamar al modelo', async () => {
+    const capError = ApiException.of('TURNS_DAILY_CAP', 'Por hoy alcanzaste el máximo de turnos.', {
+      extra: { retryAfter: 60 },
+    });
+    const { service, llm, turns } = buildService({ budget: fakeBudget(capError) });
 
     const error = await service
-      .addTurn(USER_ID, SESSION_ID, { text: 'dos' })
+      .addTurn(USER_ID, SESSION_ID, { text: 'uno' })
       .catch((caught: unknown) => caught);
 
-    expect(error).toBeInstanceOf(ApiException);
-    expect((error as ApiException).code).toBe('TURNS_DAILY_CAP');
+    expect(error).toBe(capError);
     expect((error as ApiException).getStatus()).toBe(429);
-    const body = (error as ApiException).getApiBody();
-    expect(typeof body.retryAfter).toBe('number');
-    expect(body.retryAfter as number).toBeGreaterThan(0);
-    // Solo se llamó al modelo una vez: el turno rechazado no gasta la key.
-    expect(llm.calls).toHaveLength(1);
-  });
-
-  it('no inserta el turno del usuario cuando rechaza', async () => {
-    const redis = fakeRedis();
-    const { service, turns } = buildService({ redis, turnsDailyCap: 1 });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-    skipPaceWindow(redis);
-    const insertedBefore = turns.inserted.length;
-
-    await expect(
-      service.addTurn(USER_ID, SESSION_ID, { text: 'dos' }),
-    ).rejects.toMatchObject({ code: 'TURNS_DAILY_CAP' });
-
-    expect(turns.inserted).toHaveLength(insertedBefore);
-  });
-
-  it('con el tope a 0 no cuenta nada', async () => {
-    const redis = fakeRedis();
-    const { service } = buildService({ redis, turnsDailyCap: 0 });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-
-    expect(redis.counters.size).toBe(0);
-  });
-
-  it('el mensaje de Free menciona que Pro amplía el tope', async () => {
-    const redis = fakeRedis();
-    const { service } = buildService({ redis, turnsDailyCap: 1, turnsDailyCapPro: 5 });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-    skipPaceWindow(redis);
-
-    await expect(service.addTurn(USER_ID, SESSION_ID, { text: 'dos' })).rejects.toMatchObject({
-      code: 'TURNS_DAILY_CAP',
-      message: expect.stringContaining('Pro'),
-    });
-  });
-
-  it('un perfil Pro usa TURNS_DAILY_CAP_PRO en vez del de Free', async () => {
-    const redis = fakeRedis();
-    const { service, llm } = buildService({
-      redis,
-      turnsDailyCap: 1,
-      turnsDailyCapPro: 2,
-      profile: profileFixture({ plan: 'pro', plan_expires_at: null }),
-    });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-    skipPaceWindow(redis);
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'dos' });
-    skipPaceWindow(redis);
-
-    const error = await service
-      .addTurn(USER_ID, SESSION_ID, { text: 'tres' })
-      .catch((caught: unknown) => caught);
-    expect((error as ApiException).code).toBe('TURNS_DAILY_CAP');
-    expect((error as ApiException).message).not.toContain('Pro');
-    expect(llm.calls).toHaveLength(2);
-  });
-
-  it('con Redis caído deja pasar (fail-open, como el lock de turno)', async () => {
-    const redis = fakeRedis([], { incrementFails: true });
-    const { service, llm } = buildService({ redis, turnsDailyCap: 1 });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-    skipPaceWindow(redis);
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'dos' });
-
-    // Bloquear a todo el mundo durante una caída de Redis es peor que perder
-    // temporalmente el tope.
-    expect(llm.calls).toHaveLength(2);
-  });
-
-  it('la clave del contador lleva el día de la zona del perfil', async () => {
-    const redis = fakeRedis();
-    const { service } = buildService({
-      redis,
-      turnsDailyCap: 5,
-      profile: profileFixture({ timezone: 'Asia/Tokyo' }),
-    });
-
-    await service.addTurn(USER_ID, SESSION_ID, { text: 'uno' });
-
-    const key = [...redis.counters.keys()][0]!;
-    expect(key).toBe(turnsDayKey(USER_ID, userDay('Asia/Tokyo')));
+    expect(llm.calls).toHaveLength(0);
+    expect(turns.inserted).toHaveLength(0);
   });
 
   it('el turno usa dos intentos y no tres (MAL-23)', async () => {
@@ -1007,15 +911,14 @@ describe('TurnsService.addTurn · contexto en paralelo (MEJ-24)', () => {
   });
 
   it('un perfil sin onboarding sigue ganando al resto de validaciones', async () => {
-    const redis = fakeRedis();
-    const { service } = buildService({ profile: null, redis, turnsDailyCap: 5 });
+    const { service, budget } = buildService({ profile: null });
 
     await expect(
       service.addTurn(USER_ID, SESSION_ID, { text: 'hola' }),
     ).rejects.toMatchObject({ code: 'NOT_ONBOARDED' });
 
     // Y no consume cupo diario: el orden de validación no cambió.
-    expect(redis.counters.size).toBe(0);
+    expect(budget.calls).toHaveLength(0);
   });
 });
 

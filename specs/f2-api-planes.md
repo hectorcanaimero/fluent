@@ -73,9 +73,10 @@ fecha inválida; `build` pasa.
 - `apps/api/src/config/env.ts`: `TURNS_DAILY_CAP` se reemplaza por
   `TURNS_DAILY_CAP_FREE` (default 30) y `TURNS_DAILY_CAP_PRO` (default 120),
   enteros ≥ 0, 0 desactiva. `.env.example` acorde.
-- `apps/api/src/sessions/turns.service.ts` `requireDailyTurnsBudget`: elige el
-  tope según `isPro(profile)`. El mensaje para Free menciona que Pro amplía el
-  tope.
+- `apps/api/src/sessions/daily-turns-budget.ts` `DailyTurnsBudget.consume`:
+  elige el tope según el plan que recibe; `TurnsService` le pasa
+  `effectivePlan(profile, now)`. El mensaje para Free menciona que Pro amplía
+  el tope.
 
 Done when: `model-resolver.spec.ts` cubre las cuatro combinaciones (free con
 y sin preferencia, pro con y sin preferencia); `models.service.spec.ts` cubre

@@ -979,6 +979,17 @@ class AppLocalizationsEs extends AppLocalizations {
       'Unite a un grupo con tu código de invitación para practicar.';
 
   @override
+  String get errorOfferUnreadable => 'No pudimos leer esa oferta.';
+
+  @override
+  String get errorInterviewsDailyCap =>
+      'Hoy ya usaste tus entrevistas. Mañana tienes más.';
+
+  @override
+  String get errorInterviewTooShort =>
+      'Faltan respuestas para armar tu parecer.';
+
+  @override
   String get authContinueWithGoogle => 'Continuar con Google';
 
   @override

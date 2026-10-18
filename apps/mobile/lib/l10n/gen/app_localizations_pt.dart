@@ -983,6 +983,17 @@ class AppLocalizationsPt extends AppLocalizations {
       'Entre em um grupo com seu código de convite pra praticar.';
 
   @override
+  String get errorOfferUnreadable => 'Não conseguimos ler essa vaga.';
+
+  @override
+  String get errorInterviewsDailyCap =>
+      'Hoje você já usou suas entrevistas. Amanhã tem mais.';
+
+  @override
+  String get errorInterviewTooShort =>
+      'Faltam respostas para montar seu parecer.';
+
+  @override
   String get authContinueWithGoogle => 'Continuar com Google';
 
   @override

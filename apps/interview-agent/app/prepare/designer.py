@@ -54,6 +54,7 @@ Return:
   Difficulty by seniority: junior/semi_senior → concepts and hands-on practice;
   senior/staff_lead → design, trade-offs, leadership and impact.
 - {type_rule}
+- {rubric_rule}
 - Do not repeat or paraphrase any question in <untrusted_previous_questions>.
 - The candidate's English level is {learner_level}: keep wording clear and direct."""
 
@@ -62,17 +63,24 @@ MIXED_RULE = (
     'the other 6 "technical".'
 )
 TECHNICAL_RULE = 'Interview type "technical": all 8 questions have kind "technical".'
+FIXED_RUBRIC_RULE = (
+    "This is a re-interview: the rubric is fixed. Return exactly the competencies in "
+    "<untrusted_fixed_rubric> (same ids, names, expectedLevel and weight) and only write "
+    "new questions for them."
+)
 
 
 def build_prompt(req: PrepareRequest, offer_text: str, research: Research) -> str:
     previous = "\n".join(f"- {q}" for q in req.previousQuestions) or "(none)"
-    return "\n\n".join(
-        [
-            untrusted("offer", offer_text),
-            untrusted("research", research.notes if research.found else "(no research found)"),
-            untrusted("previous_questions", previous),
-        ]
-    )
+    parts = [
+        untrusted("offer", offer_text),
+        untrusted("research", research.notes if research.found else "(no research found)"),
+        untrusted("previous_questions", previous),
+    ]
+    if req.fixedRubric:
+        rubric = "\n".join(r.model_dump_json() for r in req.fixedRubric)
+        parts.append(untrusted("fixed_rubric", rubric))
+    return "\n\n".join(parts)
 
 
 def _normalize(text: str) -> str:
@@ -82,10 +90,13 @@ def _normalize(text: str) -> str:
 def validate_plan(
     draft: PlanDraft, req: PrepareRequest, research: Research, usage: Usage
 ) -> PrepareOkResponse:
-    """Aplica los invariantes de I1 y que no se repitan previousQuestions."""
+    """Aplica los invariantes de I1 y que no se repitan previousQuestions. Con fixedRubric,
+    la rúbrica es esa tal cual (el modelo solo escribe preguntas)."""
+    rubric = req.fixedRubric if req.fixedRubric else draft.rubric
     plan = PrepareOkResponse.model_validate(
         {
             **draft.model_dump(),
+            "rubric": [r.model_dump() for r in rubric],
             "type": req.type,
             "research": research.model_dump(),
             "usage": usage.model_dump(),
@@ -107,6 +118,9 @@ async def run_designer_agent(req: PrepareRequest, prompt: str) -> tuple[PlanDraf
         instructions=DESIGNER_INSTRUCTIONS.format(
             type_rule=MIXED_RULE if req.type == "mixed" else TECHNICAL_RULE,
             learner_level=req.learnerLevel,
+            rubric_rule=FIXED_RUBRIC_RULE
+            if req.fixedRubric
+            else "Design the rubric for this offer as described above.",
         ),
         telemetry=False,
     )

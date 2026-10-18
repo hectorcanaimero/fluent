@@ -202,7 +202,8 @@ create table study_cycle_sessions (
 // request
 { "interviewId": "uuid", "type": "technical|mixed",
   "offerText": "string|null", "offerUrl": "string|null",
-  "learnerLevel": "A2|B1|B2", "previousQuestions": ["string"] }
+  "learnerLevel": "A2|B1|B2", "previousQuestions": ["string"],
+  "fixedRubric": [ /* rubric de la entrevista padre */ ] /* opcional: re-entrevista */ }
 // response 200
 { "status": "ok", "type": "technical|mixed" /* eco del request */,
   "research": { "found": true, "notes": "string" },
@@ -218,7 +219,9 @@ create table study_cycle_sessions (
 
 Invariantes: 4–6 competencias; exactamente 8 preguntas; toda competencia con ≥1
 pregunta; toda `competencyId` existe en la rúbrica; `idx` únicos y exactamente
-1..8; `type: mixed` ⇒ exactamente 2 `behavioral`.
+1..8; `type: mixed` ⇒ exactamente 2 `behavioral`. Con `fixedRubric`, la rúbrica de la respuesta
+es esa tal cual (mismos `id`, `name`, `expectedLevel`, `weight`) y solo se generan
+preguntas nuevas: así la re-entrevista compara las mismas competencias.
 
 `POST /v1/feedback`:
 
@@ -231,7 +234,7 @@ pregunta; toda `competencyId` existe en la rúbrica; `idx` únicos y exactamente
   "previousFeedback": { /* InterviewFeedback anterior */ } | null }
 // response 200
 { "summary": "string (2–3 frases, al usuario por su nombre)",
-  "competencies": [ { "competencyId": "c1", "observedLevel": "…", "expectedLevel": "…",
+  "competencies": [ { "competencyId": "c1", "name": "string", "observedLevel": "…", "expectedLevel": "…",
       "evidence": "cita literal del candidato", "missing": "string", "study": "string",
       "verified": false } ],
   "english": { "clarity": { "rating": "very_good|good|fair|needs_work", "note": "string" },
@@ -243,11 +246,17 @@ pregunta; toda `competencyId` existe en la rúbrica; `idx` únicos y exactamente
   "usage": { /* igual que prepare */ } }
 ```
 
-Invariantes: cada `evidence` es una subcadena de algún texto `candidate` del
-transcript (C3 lo verifica y descarta la competencia si no); `studyPlan` tiene
-exactamente 5 items; textos en `locale`, sin expresiones de contratación o
-rechazo (FR-13); errores probables de STT no se reportan (FR-35). Errores: 401
-token inválido, 422 request inválido, 502 si 9router falla tras reintentos.
+Invariantes: una entrada de `competencies` por competencia de la rúbrica; cada
+`evidence` es una subcadena (sin distinguir mayúsculas ni espacios, ≥ 20 caracteres y
+≥ 4 palabras, o la línea entera si es más corta) de algún texto `candidate` del
+transcript (C3 lo verifica y descarta la competencia si no); `comparison` solo cruza
+competencias con el mismo `competencyId` y, si el anterior trae `name`, el mismo
+nombre; `studyPlan` tiene exactamente 5 items; textos en `locale`, sin frases de
+veredicto de contratación o rechazo (FR-13; si persisten tras el reintento, se
+quita la frase); errores probables de STT no se reportan (FR-35); `verified` solo
+si hubo búsqueda en el intento final (máx. 3 búsquedas por request). Errores: 401
+token inválido, 422 request inválido, 502 genérico si 9router falla tras
+reintentos, 500 si falta configuración.
 
 ### I2 — App → API (C2)
 

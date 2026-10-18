@@ -10,6 +10,7 @@
 import { Module } from '@nestjs/common';
 
 import { CoachingBriefModule } from './coaching-brief/coaching-brief.module.js';
+import { InterviewsJobsModule } from './interviews/interviews-jobs.module.js';
 import { MaintenanceModule } from './maintenance/maintenance.module.js';
 import { RssIngestModule } from './rss-ingest/rss-ingest.module.js';
 import { WeeklySummaryModule } from './weekly-summary/weekly-summary.module.js';
@@ -20,6 +21,7 @@ import { WeeklySummaryModule } from './weekly-summary/weekly-summary.module.js';
     RssIngestModule,
     WeeklySummaryModule,
     MaintenanceModule,
+    InterviewsJobsModule,
   ],
 })
 export class JobsModule {}

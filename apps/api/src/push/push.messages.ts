@@ -63,6 +63,7 @@ export function groupSessionMessage(locale: Locale, p: GroupSessionPushParams): 
 }
 
 export interface InterviewReadyPushParams {
+  readonly interviewId: string;
   readonly role: string;
   readonly company: string;
 }
@@ -74,11 +75,12 @@ export function interviewReadyMessage(locale: Locale, p: InterviewReadyPushParam
     body: pt
       ? `Sua entrevista para ${p.role} na ${p.company} está pronta. Vamos começar?`
       : `Tu entrevista para ${p.role} en ${p.company} está lista. ¿Empezamos?`,
-    data: { type: 'interview_ready', route: '/interviews/:id' },
+    data: { type: 'interview_ready', route: `/interviews/${p.interviewId}` },
   };
 }
 
 export interface InterviewPrepFailedPushParams {
+  readonly interviewId: string;
   readonly company: string;
 }
 
@@ -87,13 +89,14 @@ export function interviewPrepFailedMessage(locale: Locale, p: InterviewPrepFaile
   return {
     title: pt ? 'Erro na preparação' : 'No pudimos preparar tu entrevista',
     body: pt
-      ? `Não conseguimos preparar sua entrevista para ${p.company}. Toca para tentar novamente.`
+      ? `Não conseguimos preparar sua entrevista para ${p.company}. Toque para tentar novamente.`
       : `No pudimos preparar tu entrevista para ${p.company}. Toca para intentarlo de nuevo.`,
-    data: { type: 'interview_prep_failed', route: '/interviews/:id' },
+    data: { type: 'interview_prep_failed', route: `/interviews/${p.interviewId}` },
   };
 }
 
 export interface InterviewFeedbackReadyPushParams {
+  readonly interviewId: string;
   readonly company: string;
 }
 
@@ -104,12 +107,14 @@ export function interviewFeedbackReadyMessage(locale: Locale, p: InterviewFeedba
     body: pt
       ? `Seu parecer de ${p.company} está pronto.`
       : `Tu parecer de ${p.company} está listo.`,
-    data: { type: 'interview_feedback_ready', route: '/interviews/:id/feedback' },
+    data: { type: 'interview_feedback_ready', route: `/interviews/${p.interviewId}/feedback` },
   };
 }
 
 export interface StudyReminderPushParams {
+  readonly interviewId: string;
   readonly n: number;
+  readonly total: number;
   readonly title: string;
 }
 
@@ -118,8 +123,8 @@ export function studyReminderMessage(locale: Locale, p: StudyReminderPushParams)
   return {
     title: pt ? 'Sessão de estudo' : 'Toca continuar',
     body: pt
-      ? `Te toca a sessão ${p.n} de 5: ${p.title}.`
-      : `Te toca la sesión ${p.n} de 5: ${p.title}.`,
-    data: { type: 'study_reminder', route: '/interviews/:id/cycle' },
+      ? `Chegou a hora da sessão ${p.n} de ${p.total}: ${p.title}.`
+      : `Te toca la sesión ${p.n} de ${p.total}: ${p.title}.`,
+    data: { type: 'study_reminder', route: `/interviews/${p.interviewId}/cycle` },
   };
 }

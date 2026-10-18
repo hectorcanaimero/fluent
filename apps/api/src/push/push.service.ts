@@ -97,7 +97,7 @@ export class PushService {
   async notifyInterviewReady(userId: string, interviewId: string, role: string, company: string): Promise<void> {
     await this.safely('interview_ready', async () => {
       if (!this.sender.enabled) return;
-      await this.sendTo([userId], (locale) => interviewReadyMessage(locale, { role, company }));
+      await this.sendTo([userId], (locale) => interviewReadyMessage(locale, { interviewId, role, company }));
     });
   }
 
@@ -105,7 +105,7 @@ export class PushService {
   async notifyInterviewPrepFailed(userId: string, interviewId: string, company: string): Promise<void> {
     await this.safely('interview_prep_failed', async () => {
       if (!this.sender.enabled) return;
-      await this.sendTo([userId], (locale) => interviewPrepFailedMessage(locale, { company }));
+      await this.sendTo([userId], (locale) => interviewPrepFailedMessage(locale, { interviewId, company }));
     });
   }
 
@@ -113,15 +113,15 @@ export class PushService {
   async notifyInterviewFeedbackReady(userId: string, interviewId: string, company: string): Promise<void> {
     await this.safely('interview_feedback_ready', async () => {
       if (!this.sender.enabled) return;
-      await this.sendTo([userId], (locale) => interviewFeedbackReadyMessage(locale, { company }));
+      await this.sendTo([userId], (locale) => interviewFeedbackReadyMessage(locale, { interviewId, company }));
     });
   }
 
   /** Recordatorio para continuar el ciclo de estudio. */
-  async notifyStudyReminder(userId: string, interviewId: string, n: number, title: string): Promise<void> {
+  async notifyStudyReminder(userId: string, interviewId: string, n: number, total: number, title: string): Promise<void> {
     await this.safely('study_reminder', async () => {
       if (!this.sender.enabled) return;
-      await this.sendTo([userId], (locale) => studyReminderMessage(locale, { n, title }));
+      await this.sendTo([userId], (locale) => studyReminderMessage(locale, { interviewId, n, total, title }));
     });
   }
 

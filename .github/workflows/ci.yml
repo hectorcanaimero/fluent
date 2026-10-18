@@ -2,8 +2,35 @@ name: CI
 
 on: pull_request
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
+  changes:
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    outputs:
+      api: ${{ steps.filter.outputs.api }}
+      mobile: ${{ steps.filter.outputs.mobile }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            api:
+              - 'apps/api/**'
+              - 'package.json'
+              - 'pnpm-lock.yaml'
+              - 'pnpm-workspace.yaml'
+              - '.github/workflows/ci.yml'
+            mobile:
+              - 'apps/mobile/**'
+              - '.github/workflows/ci.yml'
+
   api:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.api == 'true'
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout repository
@@ -34,6 +61,8 @@ jobs:
         run: pnpm audit --audit-level high
 
   mobile:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.mobile == 'true'
     runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
     steps:
       - name: Checkout repository

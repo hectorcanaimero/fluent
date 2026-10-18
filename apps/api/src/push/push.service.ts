@@ -1,6 +1,12 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service.js';
-import { challengeMessage, weeklySummaryMessage, type PushMessage } from './push.messages.js';
+import { GroupsRepository } from '../groups/groups.repository.js';
+import {
+  challengeMessage,
+  groupSessionMessage,
+  weeklySummaryMessage,
+  type PushMessage,
+} from './push.messages.js';
 import { PushRepository, type PushPlatform } from './push.repository.js';
 import { PushSender } from './push.sender.js';
 import type { Locale } from '../db/schema.js';
@@ -16,6 +22,7 @@ export class PushService {
     private readonly repository: PushRepository,
     private readonly sender: PushSender,
     private readonly redis: RedisService,
+    private readonly groupsRepository: GroupsRepository,
   ) {}
 
   registerToken(userId: string, token: string, platform: PushPlatform): Promise<void> {
@@ -52,6 +59,33 @@ export class PushService {
       if (!this.sender.enabled) return;
       const members = await this.repository.listGroupMembers(groupId);
       await this.sendTo(members, weeklySummaryMessage);
+    });
+  }
+
+  /**
+   * Alguien abrió una sala grupal: se avisa al resto del grupo, menos a quien
+   * la abrió. Sin throttle (FR-4 ya limita a una sala activa por grupo).
+   */
+  async notifyGroupSessionStarted(params: {
+    sessionId: string;
+    groupId: string;
+    initiatorId: string;
+    initiatorName: string;
+    topic: string;
+  }): Promise<void> {
+    await this.safely('group_session', async () => {
+      if (!this.sender.enabled) return;
+      const members = await this.groupsRepository.listMembers(params.groupId);
+      const recipients = members
+        .map((m) => m.user_id)
+        .filter((userId) => userId !== params.initiatorId);
+      await this.sendTo(recipients, (locale) =>
+        groupSessionMessage(locale, {
+          sessionId: params.sessionId,
+          initiatorName: params.initiatorName,
+          topic: params.topic,
+        }),
+      );
     });
   }
 

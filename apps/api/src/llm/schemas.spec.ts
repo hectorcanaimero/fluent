@@ -4,6 +4,7 @@ import {
   TurnOutput,
   BriefOutput,
   WeeklyOutput,
+  InterviewTurnOutput,
 } from './schemas.js';
 
 describe('CATEGORIES', () => {
@@ -167,5 +168,28 @@ describe('WeeklyOutput', () => {
       text: 'A'.repeat(60),
     });
     expect(result.success).toBe(true);
+  });
+});
+
+describe('InterviewTurnOutput', () => {
+  const correction = { original: 'I have work there 3 years', corrected: 'I have worked there for 3 years', category: 'present_perfect', note: 'x' };
+  const base = { reply: 'Thanks. Tell me about a hard bug you fixed.', questionIdx: 2, isFollowUp: false, done: false };
+
+  it('conserva el reply con 8 correcciones y corta a 6', () => {
+    const parsed = InterviewTurnOutput.parse({ ...base, corrections: Array<typeof correction>(8).fill(correction) });
+    expect(parsed.reply).toBe(base.reply);
+    expect(parsed.corrections).toHaveLength(6);
+  });
+
+  it('una corrección inválida se descarta sola y no tira el reply', () => {
+    const parsed = InterviewTurnOutput.parse({ ...base, corrections: [{ original: '' }, correction] });
+    expect(parsed.reply).toBe(base.reply);
+    expect(parsed.corrections).toEqual([correction]);
+    expect(InterviewTurnOutput.parse({ ...base, corrections: 'none' }).corrections).toEqual([]);
+  });
+
+  it('sin reply o con questionIdx fuera de 1–8 sí falla', () => {
+    expect(InterviewTurnOutput.safeParse({ ...base, reply: '' }).success).toBe(false);
+    expect(InterviewTurnOutput.safeParse({ ...base, questionIdx: 9 }).success).toBe(false);
   });
 });

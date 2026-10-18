@@ -82,6 +82,21 @@ export const GroupTurnOutput = z.object({
 
 export type GroupTurnOutput = z.infer<typeof GroupTurnOutput>;
 
+/**
+ * Turno de entrevista (arch 003, I3). Las correcciones no se dicen en voz
+ * alta: van ocultas para la app y alimentan el parecer. Como en el grupo, una
+ * corrección rota o una séptima no tiran el `reply`.
+ */
+export const InterviewTurnOutput = z.object({
+  reply: z.string().min(1).max(600),
+  questionIdx: z.number().int().min(1).max(8),
+  isFollowUp: z.boolean().catch(false).default(false),
+  done: z.boolean().catch(false).default(false),
+  corrections: keepValid(Correction, 6),
+});
+
+export type InterviewTurnOutput = z.infer<typeof InterviewTurnOutput>;
+
 const BriefFact = z.object({
   text: z.string().transform((text) => text.slice(0, 200)),
   happens_on: z

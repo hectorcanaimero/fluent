@@ -34,6 +34,14 @@ String l10nForApiError(ApiErrorCode code, AppLocalizations l10n) {
     ApiErrorCode.streamTimeout => l10n.errorStreamTimeout,
     ApiErrorCode.invitationLimitReached => l10n.errorInvitationLimitReached,
     ApiErrorCode.groupRequired => l10n.errorGroupRequired,
+    // I2 (docs/arch/003-simulador-entrevistas.md): las pantallas de
+    // entrevistas muestran su propio panel para estos tres códigos (IE-02,
+    // IE-01d), pero igual tienen texto propio para cualquier otro lugar que
+    // solo pueda mostrar un banner genérico (por ejemplo, un error de red
+    // genérico al reintentar).
+    ApiErrorCode.offerUnreadable => l10n.errorOfferUnreadable,
+    ApiErrorCode.interviewsDailyCap => l10n.errorInterviewsDailyCap,
+    ApiErrorCode.interviewTooShort => l10n.errorInterviewTooShort,
     ApiErrorCode.unknown => l10n.errorGeneric,
   };
 }

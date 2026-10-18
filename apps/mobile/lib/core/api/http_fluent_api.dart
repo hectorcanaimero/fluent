@@ -450,4 +450,117 @@ class HttpFluentApi implements FluentApi {
       rethrow;
     }
   }
+
+  // ---- 4.6 Entrevistas (I2) -----------------------------------------------
+
+  @override
+  Future<InterviewQuota> getInterviewQuota() => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/quota');
+    return InterviewQuota.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> createInterview({
+    required String type,
+    String? offerText,
+    String? offerUrl,
+  }) => _client.guard(() async {
+    final res = await _client.dio.post(
+      '/interviews',
+      data: {'type': type, 'offerText': ?offerText, 'offerUrl': ?offerUrl},
+    );
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<List<InterviewSummary>> getInterviews() => _client.guard(() async {
+    final res = await _client.dio.get('/interviews');
+    // I2 define una lista; se acepta también `{items: [...]}` por si la API
+    // la envuelve.
+    final data = res.data;
+    final items = data is Map<String, dynamic> ? data['items'] : data;
+    return (items as List)
+        .map((e) => InterviewSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  });
+
+  @override
+  Future<InterviewDetail> getInterview(String id) => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/$id');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> retryInterview(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/retry');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewSessionStart> startInterviewSession(String id) =>
+      _client.guard(() async {
+        final res = await _client.dio.post('/interviews/$id/session');
+        return InterviewSessionStart.fromJson(res.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<InterviewFeedback> getInterviewFeedback(String id) =>
+      _client.guard(() async {
+        final Response<dynamic> res;
+        try {
+          res = await _client.dio.get('/interviews/$id/feedback');
+        } on DioException catch (e) {
+          // `TOO_SHORT` solo significa "entrevista corta" en esta ruta; por
+          // eso se traduce aquí y no en `ApiErrorCode.fromWire`.
+          final data = e.response?.data;
+          if (e.response?.statusCode == 409 &&
+              data is Map<String, dynamic> &&
+              data['error'] == 'TOO_SHORT') {
+            throw ApiException(
+              code: ApiErrorCode.interviewTooShort,
+              message: (data['message'] as String?) ?? 'too short',
+              statusCode: 409,
+            );
+          }
+          rethrow;
+        }
+        // `202` mientras el parecer está en `feedback_pending`.
+        if (res.statusCode == 202) {
+          throw const ApiException(
+            code: ApiErrorCode.notReady,
+            message: 'feedback pending',
+            statusCode: 202,
+          );
+        }
+        return InterviewFeedback.fromJson(res.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/cycle');
+    return StudyCycle.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<StudyCycle> getStudyCycle(String id) => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/$id/cycle');
+    return StudyCycle.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewSessionStart> startStudyCycleSession({
+    required String interviewId,
+    required int idx,
+  }) => _client.guard(() async {
+    final res = await _client.dio.post(
+      '/interviews/$interviewId/cycle/sessions/$idx/start',
+    );
+    return InterviewSessionStart.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> reinterview(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/reinterview');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
 }

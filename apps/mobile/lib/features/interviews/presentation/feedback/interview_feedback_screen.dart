@@ -1,0 +1,555 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/theme.dart';
+import '../../../../core/api/models.dart';
+import '../../../../core/errors/api_error_snack_bar.dart';
+import '../../../../core/errors/api_exception.dart';
+import '../../../../core/providers.dart';
+import '../../../../core/widgets/button_spinner.dart';
+import '../../../../l10n/gen/app_localizations.dart';
+import '../../data/interviews_repository.dart';
+
+/// Lo que junta la pantalla para no repetir llamadas en cada rebuild: el
+/// parecer (`GET /interviews/:id/feedback`), el nombre de las competencias
+/// (solo vive en `GET /interviews/:id`, el parecer solo trae `competencyId`)
+/// y el nombre de quien lo recibe, para el encabezado "Así te vi, {name}".
+class _FeedbackViewData {
+  const _FeedbackViewData({
+    required this.feedback,
+    required this.competencyNames,
+    required this.learnerName,
+  });
+
+  final InterviewFeedback feedback;
+  final Map<String, String> competencyNames;
+  final String learnerName;
+}
+
+/// `409 TOO_SHORT` (IE-06d): se guarda el `resumable` de
+/// `GET /interviews/:id` para decidir qué botones mostrar.
+class _TooShortFeedback implements Exception {
+  const _TooShortFeedback(this.resumable);
+
+  final bool resumable;
+}
+
+/// `GET /interviews/:id/feedback` (IE-06a a IE-06e): repite cada 3 s
+/// mientras responde `202` (`NOT_READY`, parecer en `feedback_pending`);
+/// `TOO_SHORT` se traduce a [_TooShortFeedback] con el `resumable` de la
+/// ficha; cualquier otro código u error de red queda como la excepción
+/// original (IE-06e).
+final _feedbackViewProvider = FutureProvider.autoDispose
+    .family<_FeedbackViewData, String>((ref, id) async {
+      final repo = ref.watch(interviewsRepositoryProvider);
+      final api = ref.watch(fluentApiProvider);
+      InterviewFeedback feedback;
+      while (true) {
+        try {
+          feedback = await repo.feedback(id);
+          break;
+        } on ApiException catch (e) {
+          if (e.code == ApiErrorCode.notReady) {
+            await Future.delayed(const Duration(seconds: 3));
+            continue;
+          }
+          if (e.code == ApiErrorCode.interviewTooShort) {
+            final detail = await repo.detail(id);
+            throw _TooShortFeedback(detail.resumable);
+          }
+          rethrow;
+        }
+      }
+      final results = await Future.wait([repo.detail(id), api.getMe()]);
+      final detail = results[0] as InterviewDetail;
+      final me = results[1] as MeResponse;
+      return _FeedbackViewData(
+        feedback: feedback,
+        competencyNames: {for (final c in detail.competencies) c.id: c.name},
+        learnerName: me.profile.displayName,
+      );
+    });
+
+/// `/interviews/:id/feedback`: IE-06a (resumen y competencias), IE-06b
+/// (inglés), IE-06c (carga), IE-06d (`too_short`) e IE-06e (`feedback_failed`
+/// o red). FR-12 a FR-15, FR-26, FR-27. Sin botón de compartir.
+class InterviewFeedbackScreen extends ConsumerStatefulWidget {
+  const InterviewFeedbackScreen({super.key, required this.interviewId});
+
+  final String interviewId;
+
+  @override
+  ConsumerState<InterviewFeedbackScreen> createState() =>
+      _InterviewFeedbackScreenState();
+}
+
+class _InterviewFeedbackScreenState
+    extends ConsumerState<InterviewFeedbackScreen> {
+  bool _retrying = false;
+
+  String get interviewId => widget.interviewId;
+
+  /// IE-06e "Reintentar": re-encola el parecer (`POST /interviews/:id/retry`
+  /// también acepta `feedback_failed`, F12.3.T1) y vuelve a pedirlo.
+  Future<void> _retry() async {
+    if (_retrying) return;
+    final l10n = AppLocalizations.of(context);
+    setState(() => _retrying = true);
+    try {
+      await ref.read(interviewsRepositoryProvider).retry(interviewId);
+      ref.invalidate(_feedbackViewProvider(interviewId));
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(apiErrorSnackBar(context, e.code));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+    } finally {
+      if (mounted) setState(() => _retrying = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final asyncView = ref.watch(_feedbackViewProvider(interviewId));
+    return Scaffold(
+      appBar: AppBar(title: Text(l10n.interviewFeedbackPlaceholderTitle)),
+      body: SafeArea(
+        child: asyncView.when(
+          data: (data) => _FeedbackBody(data: data, interviewId: interviewId),
+          loading: () => const _LoadingView(),
+          error: (error, _) => error is _TooShortFeedback
+              ? _TooShortView(
+                  resumable: error.resumable,
+                  interviewId: interviewId,
+                )
+              : _FailedView(retrying: _retrying, onRetry: _retry),
+        ),
+      ),
+    );
+  }
+}
+
+/// IE-06c: "Armando tu parecer", con el mismo aviso de IE-03 de que se puede
+/// salir y se avisa por notificación cuando esté listo.
+class _LoadingView extends StatelessWidget {
+  const _LoadingView();
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const CircularProgressIndicator(),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.interviewHistoryStatusFeedbackPending,
+              key: const Key('interview_feedback_loading_title'),
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.interviewPrepEtaHint,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              l10n.interviewPrepExitHint,
+              style: Theme.of(context).textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// IE-06d: `too_short`. "Retomar entrevista" solo si `resumable` (la sesión
+/// sigue pausada y `POST /interviews/:id/session` la retoma); "Empezar de
+/// nuevo" siempre está.
+class _TooShortView extends StatelessWidget {
+  const _TooShortView({required this.resumable, required this.interviewId});
+
+  final bool resumable;
+  final String interviewId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.hourglass_bottom,
+              size: 48,
+              color: AppColors.textMuted,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.interviewFeedbackTooShortTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.interviewFeedbackTooShortBody,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            if (resumable) ...[
+              ElevatedButton(
+                key: const Key('interview_feedback_resume_button'),
+                onPressed: () =>
+                    context.push('/interviews/$interviewId/session'),
+                child: Text(l10n.interviewFeedbackResumeCta),
+              ),
+              const SizedBox(height: AppSpacing.md),
+            ],
+            OutlinedButton(
+              key: const Key('interview_feedback_restart_button'),
+              // ponytail: `GET /interviews/:id` no devuelve el texto de la
+              // oferta original (y `reinterview` exige el ciclo completo,
+              // F13), así que "empezar de nuevo" manda a pegarla otra vez en
+              // vez de reenviarla sola. Ampliar si la API llega a exponerla.
+              onPressed: () => context.push('/interviews/new'),
+              child: Text(l10n.interviewFeedbackRestartCta),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// IE-06e: `feedback_failed` o cualquier error de red al pedir el parecer.
+class _FailedView extends StatelessWidget {
+  const _FailedView({required this.retrying, required this.onRetry});
+
+  final bool retrying;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.error_outline, size: 48, color: AppColors.error),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.interviewFeedbackFailedTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Text(
+              l10n.interviewFeedbackFailedBody,
+              style: Theme.of(context).textTheme.bodyMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            ElevatedButton(
+              key: const Key('interview_feedback_retry_button'),
+              onPressed: retrying ? null : onRetry,
+              child: retrying ? const ButtonSpinner() : Text(l10n.commonRetry),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            OutlinedButton(
+              key: const Key('interview_feedback_notify_later_button'),
+              // El push de "tu parecer está listo" ya se manda solo cuando
+              // el job termina (F12.3.T1): este botón solo saca a la
+              // persona de la pantalla de error, no dispara nada más.
+              onPressed: () =>
+                  context.canPop() ? context.pop() : context.go('/interviews'),
+              child: Text(l10n.interviewFeedbackNotifyLaterCta),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+/// IE-06a + IE-06b + FR-14 + CTA: el cuerpo normal con el parecer ya listo.
+class _FeedbackBody extends StatelessWidget {
+  const _FeedbackBody({required this.data, required this.interviewId});
+
+  final _FeedbackViewData data;
+  final String interviewId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final feedback = data.feedback;
+    final theme = Theme.of(context).textTheme;
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.screenPad),
+      children: [
+        Text(
+          l10n.interviewFeedbackSummaryTitle(data.learnerName),
+          key: const Key('interview_feedback_summary_title'),
+          style: theme.headlineSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Text(feedback.summary, style: theme.bodyMedium),
+        const SizedBox(height: AppSpacing.xl),
+        for (final competency in feedback.competencies)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.lg),
+            child: _CompetencyCard(
+              competency: competency,
+              name:
+                  data.competencyNames[competency.competencyId] ??
+                  competency.competencyId,
+            ),
+          ),
+        Text(l10n.interviewFeedbackEnglishTitle, style: theme.titleMedium),
+        const SizedBox(height: AppSpacing.sm),
+        _EnglishAspectRow(
+          label: l10n.interviewFeedbackClarityLabel,
+          aspect: feedback.english.clarity,
+        ),
+        _EnglishAspectRow(
+          label: l10n.interviewFeedbackVocabularyLabel,
+          aspect: feedback.english.vocabulary,
+        ),
+        for (final error in feedback.english.errors)
+          _EnglishErrorTile(error: error),
+        const SizedBox(height: AppSpacing.xl),
+        _DisclaimerBanner(text: l10n.interviewFeedbackDisclaimer),
+        const SizedBox(height: AppSpacing.lg),
+        ElevatedButton(
+          key: const Key('interview_feedback_start_cycle_button'),
+          onPressed: () => context.push('/interviews/$interviewId/cycle'),
+          child: Text(l10n.interviewFeedbackStartCycleCta),
+        ),
+      ],
+    );
+  }
+}
+
+/// Una tarjeta por competencia (IE-06a): observado vs. esperado, la cita
+/// literal del candidato, "Qué faltó" (vacío si la respuesta ya estuvo
+/// completa) y "Qué estudiar", con el badge "Verificado" cuando el agente
+/// confirmó la afirmación técnica con una búsqueda (FR-15).
+class _CompetencyCard extends StatelessWidget {
+  const _CompetencyCard({required this.competency, required this.name});
+
+  final CompetencyFeedback competency;
+  final String name;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context).textTheme;
+    return Container(
+      key: Key('interview_feedback_competency_${competency.competencyId}'),
+      padding: const EdgeInsets.all(AppSpacing.lg),
+      decoration: BoxDecoration(
+        color: AppColors.surface,
+        border: Border.all(color: AppColors.border),
+        borderRadius: BorderRadius.circular(AppRadius.lg),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(child: Text(name, style: theme.titleSmall)),
+              if (competency.verified)
+                Chip(
+                  key: const Key('interview_feedback_verified_badge'),
+                  label: Text(l10n.interviewFeedbackVerifiedBadge),
+                  backgroundColor: AppColors.primarySoft,
+                ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Row(
+            children: [
+              Expanded(
+                child: _LabeledText(
+                  label: l10n.interviewFeedbackObservedLabel,
+                  text: _seniorityLabel(competency.observedLevel, l10n),
+                ),
+              ),
+              Expanded(
+                child: _LabeledText(
+                  label: l10n.interviewFeedbackExpectedLabel,
+                  text: _seniorityLabel(competency.expectedLevel, l10n),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            '“${competency.evidence}”',
+            style: theme.bodyMedium?.copyWith(
+              fontStyle: FontStyle.italic,
+              color: AppColors.textSecondary,
+            ),
+          ),
+          if (competency.missing.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _LabeledText(
+              label: l10n.interviewFeedbackMissingLabel,
+              text: competency.missing,
+            ),
+          ],
+          const SizedBox(height: AppSpacing.sm),
+          _LabeledText(
+            label: l10n.interviewFeedbackStudyLabel,
+            text: competency.study,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _LabeledText extends StatelessWidget {
+  const _LabeledText({required this.label, required this.text});
+
+  final String label;
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(label, style: theme.labelSmall),
+        Text(text, style: theme.bodyMedium),
+      ],
+    );
+  }
+}
+
+/// IE-06b: una fila por aspecto (claridad, vocabulario) con su nivel y nota.
+class _EnglishAspectRow extends StatelessWidget {
+  const _EnglishAspectRow({required this.label, required this.aspect});
+
+  final String label;
+  final EnglishAspect aspect;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    final theme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          SizedBox(width: 96, child: Text(label, style: theme.labelSmall)),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  _englishRatingLabel(aspect.rating, l10n),
+                  style: theme.bodyMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(aspect.note, style: theme.bodySmall),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// IE-06b: un error de inglés con su corrección y por qué (`englishErrors`
+/// del turno, filtrados por el agente para no marcar errores de
+/// transcripción, FR-35).
+class _EnglishErrorTile extends StatelessWidget {
+  const _EnglishErrorTile({required this.error});
+
+  final EnglishErrorItem error;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context).textTheme;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            '${error.original} → ${error.corrected}',
+            style: theme.bodyMedium,
+          ),
+          Text(
+            error.explanation,
+            style: theme.bodySmall?.copyWith(color: AppColors.textSecondary),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// FR-14: aviso fijo de que el parecer es orientativo, no una evaluación
+/// oficial.
+class _DisclaimerBanner extends StatelessWidget {
+  const _DisclaimerBanner({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      key: const Key('interview_feedback_disclaimer'),
+      padding: const EdgeInsets.all(AppSpacing.md),
+      decoration: BoxDecoration(
+        color: AppColors.goldSoft,
+        borderRadius: BorderRadius.circular(AppRadius.md),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.bodySmall
+            ?.copyWith(color: AppColors.goldText),
+        textAlign: TextAlign.center,
+      ),
+    );
+  }
+}
+
+String _seniorityLabel(String code, AppLocalizations l10n) => switch (code) {
+  'junior' => l10n.interviewSeniorityJunior,
+  'semi_senior' => l10n.interviewSenioritySemiSenior,
+  'senior' => l10n.interviewSenioritySenior,
+  'staff_lead' => l10n.interviewSeniorityStaffLead,
+  _ => code,
+};
+
+String _englishRatingLabel(String rating, AppLocalizations l10n) =>
+    switch (rating) {
+      'very_good' => l10n.interviewEnglishRatingVeryGood,
+      'good' => l10n.interviewEnglishRatingGood,
+      'fair' => l10n.interviewEnglishRatingFair,
+      'needs_work' => l10n.interviewEnglishRatingNeedsWork,
+      _ => rating,
+    };

@@ -1498,4 +1498,78 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get conversationInterviewContinue => 'Continuar falando';
+
+  @override
+  String interviewFeedbackSummaryTitle(String name) {
+    return 'Foi assim que te vi, $name';
+  }
+
+  @override
+  String get interviewFeedbackObservedLabel => 'Observado';
+
+  @override
+  String get interviewFeedbackExpectedLabel => 'Esperado';
+
+  @override
+  String get interviewFeedbackMissingLabel => 'O que faltou';
+
+  @override
+  String get interviewFeedbackStudyLabel => 'O que estudar';
+
+  @override
+  String get interviewFeedbackVerifiedBadge => 'Verificado';
+
+  @override
+  String get interviewFeedbackEnglishTitle => 'Seu inglês';
+
+  @override
+  String get interviewFeedbackClarityLabel => 'Clareza';
+
+  @override
+  String get interviewFeedbackVocabularyLabel => 'Vocabulário';
+
+  @override
+  String get interviewFeedbackDisclaimer =>
+      'Parecer orientativo gerado por IA. É um guia para estudar, não uma avaliação oficial.';
+
+  @override
+  String get interviewFeedbackStartCycleCta => 'Começar ciclo de estudos';
+
+  @override
+  String get interviewEnglishRatingVeryGood => 'Muito bom';
+
+  @override
+  String get interviewEnglishRatingGood => 'Bom';
+
+  @override
+  String get interviewEnglishRatingFair => 'Regular';
+
+  @override
+  String get interviewEnglishRatingNeedsWork => 'A melhorar';
+
+  @override
+  String get interviewFeedbackTooShortTitle =>
+      'Entrevista muito curta para um parecer';
+
+  @override
+  String get interviewFeedbackTooShortBody =>
+      'Você respondeu menos de 4 perguntas, então não dá para montar um parecer.';
+
+  @override
+  String get interviewFeedbackResumeCta => 'Retomar entrevista';
+
+  @override
+  String get interviewFeedbackRestartCta => 'Começar de novo';
+
+  @override
+  String get interviewFeedbackFailedTitle =>
+      'Não conseguimos montar seu parecer';
+
+  @override
+  String get interviewFeedbackFailedBody =>
+      'Você pode tentar de novo agora ou te avisamos quando estiver pronto.';
+
+  @override
+  String get interviewFeedbackNotifyLaterCta =>
+      'Me avise quando estiver pronto';
 }

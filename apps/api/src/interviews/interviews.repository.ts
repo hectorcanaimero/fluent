@@ -3,6 +3,7 @@ import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { TABLES, type Interview } from '../db/schema.js';
+import { markInterviewFeedbackFailed } from '../jobs/interviews/interview-jobs.shared.js';
 import type { InterviewType } from './interviews.types.js';
 
 /** Fila a insertar al crear una entrevista (I2, `POST /interviews`). */
@@ -155,13 +156,6 @@ export class InterviewsRepository {
    * Solo desde `feedback_pending`, igual que `markPrepFailed`.
    */
   async markFeedbackFailed(userId: string, id: string, errorCode: string): Promise<void> {
-    const result = await this.admin.database
-      .from(TABLES.interviews)
-      .update({ status: 'feedback_failed', error_code: errorCode })
-      .eq('id', id)
-      .eq('user_id', userId)
-      .eq('status', 'feedback_pending');
-
-    unwrapInsforge(result);
+    await markInterviewFeedbackFailed(this.admin.database, id, errorCode, userId);
   }
 }

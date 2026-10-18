@@ -8,7 +8,8 @@
  * `feedback_failed`. Pasos:
  *   1. Candado `interview:feedback:{id}`; si lo tiene otro job, salir.
  *   2. Cargar la entrevista; si no está `feedback_pending`, salir (ya se
- *      procesó, o un reintento concurrente ya la movió).
+ *      procesó, o un reintento concurrente ya la movió). `feedback_pending`
+ *      sin `plan` no tiene arreglo: `feedback_failed` con `invalid_state`.
  *   3. Armar el `FeedbackRequest` de I1: `plan`, transcript con
  *      `questionIdx`, `englishErrors` (de `corrections`), `locale` y nombre
  *      del perfil, `previousFeedback` si hay `parent_interview_id`.
@@ -16,8 +17,11 @@
  *      cita literal (normalizada, ≥20 caracteres y 4 palabras) de alguna respuesta del candidato (defensa en
  *      profundidad: el agente ya reintenta y descarta por su cuenta, F12.2.T1,
  *      pero Nest es quien tiene el transcript real).
- *   5. Uso en `llm_calls`, memoria (D6), `feedback_ready` (última escritura)
- *      y push `notifyInterviewFeedbackReady`.
+ *   5. Uso en `llm_calls` y la respuesta en caché (Redis, 1 h): si después
+ *      falla la memoria o `feedback_ready`, el reintento reusa la respuesta
+ *      sin volver a llamar al agente ni registrar el uso otra vez.
+ *   6. Memoria (D6), `feedback_ready` (última escritura) y push
+ *      `notifyInterviewFeedbackReady`.
  *
  * Si algo lanza, se propaga para que BullMQ reintente (mismo criterio que
  * `interview-prepare`); al agotar los reintentos, el `Processor` llama a
@@ -28,7 +32,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { Env } from '../../config/env.js';
-import type { RecurringError } from '../../db/schema.js';
+import type { Locale, RecurringError } from '../../db/schema.js';
 import {
   AgentInvalidResponseError,
   AgentUnavailableError,
@@ -45,14 +49,25 @@ import {
   type TranscriptLineRow,
 } from './interview-feedback.repository.js';
 
-/** El agente no resolvió todavía una empresa cuando falla: no hay nombre que mostrar. */
-const UNKNOWN_COMPANY_LABEL = 'esta oferta';
+/** Sin empresa resuelta por el agente no hay nombre que mostrar (por `locale` del perfil). */
+const UNKNOWN_COMPANY_LABEL: Readonly<Record<Locale, string>> = {
+  es: 'esta oferta',
+  'pt-BR': 'esta vaga',
+};
+
+/** Hecho `pending` de D6 (≤160 caracteres, lo recorta `addPendingFactIfNew`). */
+function interviewFactText(locale: Locale, role: string, company: string): string {
+  return locale === 'pt-BR'
+    ? `Está se preparando para uma entrevista de ${role} na ${company}`
+    : `Se prepara para una entrevista de ${role} en ${company}`;
+}
 
 /** `error_code` de `feedback_failed` cuando el job falla del todo. */
 export type FeedbackErrorCode =
   | 'agent_unavailable'
   | 'agent_invalid_response'
   | 'profile_missing'
+  | 'invalid_state'
   | 'internal';
 
 /** Mismo criterio que `classifyPrepareError` (`interview-prepare.service.ts`). */
@@ -74,7 +89,7 @@ export type InterviewFeedbackStatus = 'ready' | 'skipped';
 
 export interface InterviewFeedbackJobResult {
   readonly status: InterviewFeedbackStatus;
-  readonly reason?: 'interview_not_found' | 'not_pending' | 'locked';
+  readonly reason?: 'interview_not_found' | 'not_pending' | 'locked' | 'invalid_state';
 }
 
 @Injectable()
@@ -111,8 +126,15 @@ export class InterviewFeedbackService {
       this.logger.warn(`Entrevista ${interviewId} inexistente; nada que hacer`);
       return { status: 'skipped', reason: 'interview_not_found' };
     }
-    if (interview.status !== 'feedback_pending' || interview.plan === null) {
+    if (interview.status !== 'feedback_pending') {
       return { status: 'skipped', reason: 'not_pending' };
+    }
+    if (interview.plan === null) {
+      // Sin plan no hay parecer posible: reintentar no lo arregla, y
+      // saltarla en silencio la dejaría `feedback_pending` para siempre.
+      this.logger.error(`Entrevista ${interviewId} feedback_pending sin plan; feedback_failed`);
+      await this.repository.markFeedbackFailed(interviewId, 'invalid_state' satisfies FeedbackErrorCode);
+      return { status: 'skipped', reason: 'invalid_state' };
     }
 
     const profile = await this.repository.loadProfile(interview.user_id);
@@ -142,34 +164,13 @@ export class InterviewFeedbackService {
       previousFeedback: parentFeedback,
     };
 
-    const startedAt = Date.now();
-    // Si falla, se propaga para que BullMQ reintente (ver cabecera del
-    // fichero); el `Processor` decide cuándo ya no quedan reintentos.
-    const response = await this.agent.feedback(request);
-    const latencyMs = Date.now() - startedAt;
-
-    const candidateAnswers = session.transcript
-      .filter((line) => line.role === 'user')
-      .map((line) => line.text);
-    const competencies = response.competencies.filter((competency) =>
-      quotedIn(competency.evidence, candidateAnswers),
-    );
-    const feedback: InterviewFeedback = { ...response, competencies };
-
-    await this.repository.recordFeedbackUsage({
-      userId: interview.user_id,
-      purpose: 'interview_feedback',
-      model: response.usage.model,
-      tokensIn: response.usage.inputTokens,
-      tokensOut: response.usage.outputTokens,
-      latencyMs,
-      attempt,
-      promptVersion: this.promptVersion,
-    });
+    const feedback =
+      (await this.repository.loadCachedAgentFeedback(interviewId)) ??
+      (await this.callAgent(interview.user_id, request, session.transcript, attempt));
 
     // Memoria antes del cambio de estado: si falla, el reintento la repite
     // (deduplica) en vez de perderla tras un `feedback_ready` ya escrito.
-    await this.writeMemory(interview, feedback, englishErrorRows);
+    await this.writeMemory(interview, profile.locale, feedback, englishErrorRows);
 
     // Última escritura: tras ella, un reintento ve `feedback_ready` y no
     // vuelve a llamar al agente.
@@ -178,10 +179,49 @@ export class InterviewFeedbackService {
     await this.push.notifyInterviewFeedbackReady(
       interview.user_id,
       interviewId,
-      interview.company?.name ?? UNKNOWN_COMPANY_LABEL,
+      interview.company?.name ?? UNKNOWN_COMPANY_LABEL[profile.locale],
     );
 
     return { status: 'ready' };
+  }
+
+  /**
+   * Llama al agente, filtra la evidencia, registra el uso y guarda la
+   * respuesta en caché, en ese orden: así cada llamada real al agente queda
+   * registrada exactamente una vez y un reintento no la repite.
+   */
+  private async callAgent(
+    userId: string,
+    request: FeedbackRequest,
+    transcript: readonly TranscriptLineRow[],
+    attempt: number,
+  ): Promise<InterviewFeedback> {
+    const startedAt = Date.now();
+    // Si falla, se propaga para que BullMQ reintente (ver cabecera del
+    // fichero); el `Processor` decide cuándo ya no quedan reintentos.
+    const response = await this.agent.feedback(request);
+    const latencyMs = Date.now() - startedAt;
+
+    const candidateAnswers = transcript
+      .filter((line) => line.role === 'user')
+      .map((line) => normalize(line.text));
+    const competencies = response.competencies.filter((competency) =>
+      quotedInNormalized(competency.evidence, candidateAnswers),
+    );
+    const feedback: InterviewFeedback = { ...response, competencies };
+
+    await this.repository.recordFeedbackUsage({
+      userId,
+      purpose: 'interview_feedback',
+      model: response.usage.model,
+      tokensIn: response.usage.inputTokens,
+      tokensOut: response.usage.outputTokens,
+      latencyMs,
+      attempt,
+      promptVersion: this.promptVersion,
+    });
+    await this.repository.cacheAgentFeedback(request.interviewId, feedback);
+    return feedback;
   }
 
   /**
@@ -193,6 +233,7 @@ export class InterviewFeedbackService {
    */
   private async writeMemory(
     interview: InterviewFeedbackRow,
+    locale: Locale,
     feedback: InterviewFeedback,
     englishErrorRows: readonly EnglishErrorRow[],
   ): Promise<void> {
@@ -200,7 +241,7 @@ export class InterviewFeedbackService {
       // `addPendingFactIfNew` recorta a 160 caracteres y deduplica.
       await this.memory.addPendingFactIfNew(
         interview.user_id,
-        `Se prepara para una entrevista de ${interview.role} en ${interview.company.name}`,
+        interviewFactText(locale, interview.role, interview.company.name),
         null,
       );
     }
@@ -219,8 +260,7 @@ export class InterviewFeedbackService {
    * `POST /interviews/:id/retry`.
    */
   async markFailedFinal(interviewId: string, errorCode: FeedbackErrorCode): Promise<void> {
-    const interview = await this.repository.loadInterview(interviewId);
-    if (!interview || interview.status !== 'feedback_pending') return;
+    // Solo transiciona desde `feedback_pending` (filtro en el UPDATE).
     await this.repository.markFeedbackFailed(interviewId, errorCode);
   }
 }
@@ -258,11 +298,16 @@ function normalize(text: string): string {
  * candidato: de al menos 20 caracteres y 4 palabras, o la respuesta entera.
  */
 export function quotedIn(evidence: string, answers: readonly string[]): boolean {
+  return quotedInNormalized(evidence, answers.map(normalize));
+}
+
+/** `quotedIn` con las respuestas ya normalizadas (una vez por parecer, no por competencia). */
+function quotedInNormalized(evidence: string, normalizedAnswers: readonly string[]): boolean {
   const quote = normalize(evidence.replace(QUOTE_CHARS, ''));
   if (quote === '') return false;
   const longEnough =
     quote.length >= MIN_EVIDENCE_CHARS && quote.split(' ').length >= MIN_EVIDENCE_WORDS;
-  return answers.map(normalize).some((line) => quote === line || (longEnough && line.includes(quote)));
+  return normalizedAnswers.some((line) => quote === line || (longEnough && line.includes(quote)));
 }
 
 /**

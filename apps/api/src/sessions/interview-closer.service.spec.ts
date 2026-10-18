@@ -26,7 +26,12 @@ function sessionRow(overrides: Partial<Session> = {}): Session {
 }
 
 function build(
-  options: { status?: InterviewStatus; answered?: number; enqueueFails?: boolean } = {},
+  options: {
+    status?: InterviewStatus;
+    answered?: number;
+    enqueueFails?: boolean;
+    markFails?: boolean;
+  } = {},
 ) {
   const enqueued: string[] = [];
   const failedEnqueue: string[] = [];
@@ -52,6 +57,7 @@ function build(
       resumable = nextResumable;
     },
     markFeedbackEnqueueFailed: async (id: string) => {
+      if (options.markFails) throw new Error('InsForge caído');
       failedEnqueue.push(id);
       status = 'feedback_failed';
     },
@@ -179,5 +185,14 @@ describe('InterviewCloserService.closeSession (tope, 8 respuestas, sweeper)', ()
     expect(closed).toHaveLength(1);
     expect(failedEnqueue).toEqual([INTERVIEW_ID]);
     expect(state().status).toBe('feedback_failed');
+  });
+
+  it('si fallan el encolado y el marcado → el cierre sigue sin lanzar', async () => {
+    const { service, closed, state } = build({ answered: 4, enqueueFails: true, markFails: true });
+
+    await expect(service.closeSession(USER_ID, sessionRow(), true)).resolves.toBeDefined();
+
+    expect(closed).toHaveLength(1);
+    expect(state().status).toBe('feedback_pending');
   });
 });

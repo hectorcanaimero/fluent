@@ -66,15 +66,17 @@ function makeRepository(
     readonly englishErrors?: EnglishErrorRow[];
     readonly parentFeedback?: InterviewFeedback | null;
     readonly profile?: { display_name: string; locale: 'es' | 'pt-BR' } | null;
+    readonly plan?: InterviewPlan | null;
+    readonly company?: { name: string } | null;
   } = {},
 ) {
   const interview = {
     id: INTERVIEW_ID,
     user_id: USER_ID,
     parent_interview_id: options.parentInterviewId ?? null,
-    plan: planFixture(),
+    plan: options.plan === undefined ? planFixture() : options.plan,
     role: 'Backend engineer',
-    company: { name: 'Acme' },
+    company: options.company === undefined ? { name: 'Acme' } : options.company,
     answered_count: 5,
     get status() {
       return state.status;
@@ -93,6 +95,7 @@ function makeRepository(
   const failed: string[] = [];
   const usage: RecordFeedbackUsageInput[] = [];
   const locks = new Map<string, string>();
+  const agentCache = new Map<string, InterviewFeedback>();
 
   const repository = {
     acquireFeedbackLock: vi.fn(async (id: string, owner: string) => {
@@ -116,11 +119,16 @@ function makeRepository(
       state.status = 'feedback_ready';
     }),
     markFeedbackFailed: vi.fn(async (_id: string, errorCode: string) => {
+      if (state.status !== 'feedback_pending') return;
       failed.push(errorCode);
       state.status = 'feedback_failed';
     }),
     recordFeedbackUsage: vi.fn(async (input: RecordFeedbackUsageInput) => {
       usage.push(input);
+    }),
+    loadCachedAgentFeedback: vi.fn(async (id: string) => agentCache.get(id) ?? null),
+    cacheAgentFeedback: vi.fn(async (id: string, feedback: InterviewFeedback) => {
+      agentCache.set(id, feedback);
     }),
   };
 
@@ -353,6 +361,63 @@ describe('InterviewFeedbackService.run', () => {
     expect(agent.feedback).not.toHaveBeenCalled();
   });
 
+  it('feedback_pending sin plan: feedback_failed con invalid_state, sin llamar al agente', async () => {
+    const state: RepoState = { status: 'feedback_pending' };
+    const { repository, failed } = makeRepository(state, { plan: null });
+    const agent = makeAgent(async () => feedbackResponse());
+    const service = new InterviewFeedbackService(
+      repository as unknown as InterviewFeedbackRepository,
+      agent,
+      makeMemory().memory as unknown as MemoryRepository,
+      makePush().push as unknown as PushService,
+      makeConfig(),
+    );
+
+    const result = await service.run(INTERVIEW_ID, 1, 'job-1');
+
+    expect(result).toEqual({ status: 'skipped', reason: 'invalid_state' });
+    expect(failed).toEqual(['invalid_state']);
+    expect(state.status).toBe('feedback_failed');
+    expect(agent.feedback).not.toHaveBeenCalled();
+  });
+
+  it('pt-BR: hecho de memoria y empresa por defecto en portugués', async () => {
+    const { repository } = makeRepository(
+      { status: 'feedback_pending' },
+      { profile: { display_name: 'Ana', locale: 'pt-BR' } },
+    );
+    const { memory, facts } = makeMemory();
+    const { push, ready } = makePush();
+    const service = new InterviewFeedbackService(
+      repository as unknown as InterviewFeedbackRepository,
+      makeAgent(async () => feedbackResponse()),
+      memory as unknown as MemoryRepository,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await service.run(INTERVIEW_ID, 1, 'job-1');
+
+    expect(facts.map((fact) => fact.text)).toEqual([
+      'Está se preparando para uma entrevista de Backend engineer na Acme',
+    ]);
+    expect(ready).toEqual([[USER_ID, INTERVIEW_ID, 'Acme']]);
+
+    const noCompany = makeRepository(
+      { status: 'feedback_pending' },
+      { profile: { display_name: 'Ana', locale: 'pt-BR' }, company: null },
+    );
+    const pushNoCompany = makePush();
+    await new InterviewFeedbackService(
+      noCompany.repository as unknown as InterviewFeedbackRepository,
+      makeAgent(async () => feedbackResponse()),
+      makeMemory().memory as unknown as MemoryRepository,
+      pushNoCompany.push as unknown as PushService,
+      makeConfig(),
+    ).run(INTERVIEW_ID, 1, 'job-1');
+    expect(pushNoCompany.ready).toEqual([[USER_ID, INTERVIEW_ID, 'esta vaga']]);
+  });
+
   it('entrevista inexistente: se omite', async () => {
     const { repository } = makeRepository({ status: 'feedback_pending' });
     repository.loadInterview = vi.fn(async () => null) as never;
@@ -453,6 +518,34 @@ describe('InterviewFeedbackService.run (orden de escrituras)', () => {
     await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toThrow('InsForge caído');
     expect(saved).toEqual([]);
     expect(ready).toEqual([]);
+  });
+
+  it('si la memoria falla tras el agente, el reintento reusa su respuesta: sin otra llamada ni otro llm_calls', async () => {
+    const { repository, saved, usage } = makeRepository({ status: 'feedback_pending' });
+    const { memory } = makeMemory();
+    let memoryFails = true;
+    memory.addRecurringErrors = vi.fn(async () => {
+      if (memoryFails) throw new Error('InsForge caído');
+    });
+    const { push, ready } = makePush();
+    const agent = makeAgent(async () => feedbackResponse());
+    const service = new InterviewFeedbackService(
+      repository as unknown as InterviewFeedbackRepository,
+      agent,
+      memory as unknown as MemoryRepository,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toThrow('InsForge caído');
+    memoryFails = false;
+    expect(await service.run(INTERVIEW_ID, 2, 'job-1')).toEqual({ status: 'ready' });
+
+    expect(agent.feedback).toHaveBeenCalledTimes(1);
+    expect(usage).toHaveLength(1);
+    expect(saved).toHaveLength(1);
+    expect(saved[0]?.competencies.map((c) => c.competencyId)).toEqual(['c1']);
+    expect(ready).toHaveLength(1);
   });
 
   it('lee las correcciones de la sesión de la entrevista', async () => {

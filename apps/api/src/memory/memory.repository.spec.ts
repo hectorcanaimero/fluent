@@ -1,5 +1,5 @@
 import type { InsForgeClient } from '@insforge/sdk';
-import { MemoryRepository } from './memory.repository.js';
+import { MemoryRepository, normalizeFactText } from './memory.repository.js';
 
 /**
  * Mock mínimo y encadenable del query builder de `@insforge/sdk`
@@ -186,6 +186,32 @@ describe('MemoryRepository.addPendingFactIfNew (D6, F12.3.T1)', () => {
 
     expect(calls.some((c) => c.method === 'insert' && c.table === 'facts')).toBe(false);
   });
+
+  it('no recrea un hecho que el usuario descartó (compara contra todos, también dismissed)', async () => {
+    const { admin, calls } = createAdminMock({
+      data: [{ text: 'Se prepara para una entrevista de Backend engineer en Acme' }],
+      error: null,
+    });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addPendingFactIfNew(
+      'user-1',
+      'Se prepara para una entrevista de Backend engineer en Acme',
+      null,
+    );
+
+    expect(calls.some((c) => c.method === 'neq')).toBe(false);
+    expect(calls.some((c) => c.method === 'insert' && c.table === 'facts')).toBe(false);
+  });
+});
+
+describe('normalizeFactText (igual que `normalize_fact_text` en SQL)', () => {
+  it('conserva acentos y ñ; colapsa puntuación; NFC', () => {
+    expect(normalizeFactText('¡Entrevista de Diseñador en Ação, São Paulo!')).toBe(
+      'entrevista de diseñador en ação são paulo',
+    );
+    expect(normalizeFactText('Cañón')).toBe(normalizeFactText('Can\u0303o\u0301n'));
+  });
 });
 
 describe('MemoryRepository.addRecurringErrors (D6, F12.3.T1)', () => {
@@ -217,7 +243,43 @@ describe('MemoryRepository.addRecurringErrors (D6, F12.3.T1)', () => {
     });
   });
 
-  it('se queda con los primeros 5 cuando el total supera el máximo', async () => {
+  it('con 5 existentes y 3 nuevos: nuevos primero, desplazan a los 3 más viejos', async () => {
+    const existing = Array.from({ length: 5 }, (_unused, i) => ({
+      category: 'other',
+      example: `existing ${i}`,
+    }));
+    const { admin, calls } = createAdminMock({
+      data: {
+        user_id: 'user-1',
+        text: 'Brief existente.',
+        level_hint: null,
+        recurring_errors: existing,
+        source_session_id: null,
+        updated_at: '2026-10-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addRecurringErrors('user-1', [
+      { category: 'articles', example: 'new 1' },
+      { category: 'other', example: 'existing 0' },
+      { category: 'word_order', example: 'new 2' },
+    ]);
+
+    const updateCall = calls.find((c) => c.method === 'update' && c.table === 'coaching_briefs');
+    expect(updateCall?.args[0]).toEqual({
+      recurring_errors: [
+        { category: 'articles', example: 'new 1' },
+        { category: 'other', example: 'existing 0' },
+        { category: 'word_order', example: 'new 2' },
+        { category: 'other', example: 'existing 1' },
+        { category: 'other', example: 'existing 2' },
+      ],
+    });
+  });
+
+  it('se queda con los 5 más recientes cuando el total supera el máximo', async () => {
     const existing = Array.from({ length: 4 }, (_unused, i) => ({
       category: 'other',
       example: `existing ${i}`,
@@ -244,7 +306,8 @@ describe('MemoryRepository.addRecurringErrors (D6, F12.3.T1)', () => {
     const updateCall = calls.find((c) => c.method === 'update' && c.table === 'coaching_briefs');
     const saved = updateCall?.args[0] as { recurring_errors: unknown[] };
     expect(saved.recurring_errors).toHaveLength(5);
-    expect(saved.recurring_errors[4]).toEqual({ category: 'articles', example: 'new 1' });
+    expect(saved.recurring_errors[0]).toEqual({ category: 'articles', example: 'new 1' });
+    expect(saved.recurring_errors[4]).toEqual({ category: 'other', example: 'existing 1' });
   });
 
   it('sin brief todavía no escribe nada (no hay texto de brief que ofrecer)', async () => {

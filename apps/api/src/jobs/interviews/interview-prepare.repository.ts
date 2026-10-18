@@ -14,8 +14,13 @@ import { unwrapInsforge, type InsforgeResult } from '../../insforge/insforge-res
 import { REDIS_CACHE_CLIENT } from '../../redis/redis.constants.js';
 import { TABLES } from '../../db/schema.js';
 import type { Level } from '../../db/schema.js';
-import type { Purpose } from '../../llm/config.js';
 import { userDay } from '../../sessions/user-day.js';
+import {
+  acquireJobLock,
+  insertAgentLlmCall,
+  releaseJobLock,
+  type RecordAgentUsageInput,
+} from './interview-jobs.shared.js';
 import type {
   InterviewPlan,
   InterviewStatus,
@@ -30,17 +35,6 @@ export const PREVIOUS_QUESTIONS_LIMIT = 50;
 /** DECR atómico que nunca baja de 0 ni crea la clave. */
 const REFUND_SCRIPT =
   "local v = tonumber(redis.call('GET', KEYS[1]) or '0') if v > 0 then return redis.call('DECR', KEYS[1]) end return 0";
-
-/**
- * Toma el candado si está libre o si ya es de este mismo job (BullMQ vuelve a
- * correr un job atascado con el mismo id: no debe bloquearse a sí mismo).
- */
-const ACQUIRE_LOCK_SCRIPT =
-  "local v = redis.call('GET', KEYS[1]) if v == false or v == ARGV[1] then redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]) return 1 end return 0";
-
-/** Borra el candado solo si sigue siendo de este job. */
-const RELEASE_LOCK_SCRIPT =
-  "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0";
 
 /**
  * Vida del candado de preparación: el timeout del agente (120 s) más margen
@@ -98,16 +92,7 @@ export interface MarkReadyInput {
   readonly plan: InterviewPlan;
 }
 
-export interface RecordPrepareUsageInput {
-  readonly userId: string;
-  readonly purpose: Purpose;
-  readonly model: string;
-  readonly tokensIn: number;
-  readonly tokensOut: number;
-  readonly latencyMs: number;
-  readonly attempt: number;
-  readonly promptVersion: number;
-}
+export type RecordPrepareUsageInput = RecordAgentUsageInput;
 
 @Injectable()
 export abstract class InterviewPrepareRepository {
@@ -221,22 +206,11 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
   }
 
   async acquirePrepareLock(interviewId: string, owner: string): Promise<boolean> {
-    const acquired = await this.redis.eval(
-      ACQUIRE_LOCK_SCRIPT,
-      1,
-      prepareLockKey(interviewId),
-      owner,
-      PREPARE_LOCK_TTL_MS,
-    );
-    return acquired === 1;
+    return acquireJobLock(this.redis, prepareLockKey(interviewId), owner, PREPARE_LOCK_TTL_MS);
   }
 
   async releasePrepareLock(interviewId: string, owner: string): Promise<void> {
-    try {
-      await this.redis.eval(RELEASE_LOCK_SCRIPT, 1, prepareLockKey(interviewId), owner);
-    } catch {
-      // Si no se puede soltar, caduca solo (PREPARE_LOCK_TTL_MS).
-    }
+    await releaseJobLock(this.redis, prepareLockKey(interviewId), owner);
   }
 
   async setPrepStep(interviewId: string, step: PrepStep): Promise<void> {
@@ -307,20 +281,7 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
   }
 
   async recordPrepareUsage(input: RecordPrepareUsageInput): Promise<void> {
-    const result = await this.db.from(TABLES.llmCalls).insert({
-      user_id: input.userId,
-      session_id: null,
-      purpose: input.purpose,
-      provider: '9router',
-      model: input.model,
-      tokens_in: input.tokensIn,
-      tokens_out: input.tokensOut,
-      latency_ms: input.latencyMs,
-      status: 'ok',
-      attempt: input.attempt,
-      prompt_version: input.promptVersion,
-    });
-    unwrapInsforge(result as InsforgeResult<unknown>);
+    await insertAgentLlmCall(this.db, input);
   }
 
   async refundDailyCap(userId: string, createdAt: string): Promise<void> {

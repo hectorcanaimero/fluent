@@ -19,7 +19,7 @@
   "TURNS_DAILY_CAP": "Por hoy alcanzaste el máximo de turnos. Mañana seguimos.",
   "INTERVIEWS_DAILY_CAP": "Hoy ya usaste tus entrevistas. Mañana tienes más.",
   "OFFER_UNREADABLE": "No pudimos leer esa oferta de LinkedIn. Copia el texto y pégalo en vez del enlace.",
-  "INTERVIEW_NOT_RETRYABLE": "Solo se puede reintentar una entrevista cuya preparación falló.",
+  "INTERVIEW_NOT_RETRYABLE": "Esta entrevista no se puede reintentar ahora.",
   "INTERVIEW_NOT_OPENABLE": "Esta entrevista no se puede empezar ahora.",
   "TOO_SHORT": "La entrevista fue muy corta para armar un parecer.",
   "INTERVIEW_NOT_RESUMABLE": "Esta entrevista ya terminó y no se puede retomar.",

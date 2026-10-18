@@ -17,8 +17,14 @@ import { INSFORGE_ADMIN_CLIENT } from '../../insforge/insforge.constants.js';
 import { unwrapInsforge, type InsforgeResult } from '../../insforge/insforge-result.js';
 import { REDIS_CACHE_CLIENT } from '../../redis/redis.constants.js';
 import { TABLES } from '../../db/schema.js';
-import type { Purpose } from '../../llm/config.js';
 import type { InterviewFeedback, InterviewPlan, InterviewStatus } from '../../interviews/interviews.types.js';
+import {
+  acquireJobLock,
+  insertAgentLlmCall,
+  markInterviewFeedbackFailed,
+  releaseJobLock,
+  type RecordAgentUsageInput,
+} from './interview-jobs.shared.js';
 
 /** Mismo literal que `Interview.company` (`db/schema.ts`): no hay un tipo exportado propio para esta forma. */
 interface InterviewCompany {
@@ -32,16 +38,15 @@ const INTERVIEWS_TABLE = 'interviews';
 const SESSIONS_TABLE = 'sessions';
 const TURNS_TABLE = 'turns';
 
-/** Toma el candado si está libre o si ya es de este mismo job (mismo script que `interview-prepare`). */
-const ACQUIRE_LOCK_SCRIPT =
-  "local v = redis.call('GET', KEYS[1]) if v == false or v == ARGV[1] then redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]) return 1 end return 0";
-
-/** Borra el candado solo si sigue siendo de este job. */
-const RELEASE_LOCK_SCRIPT =
-  "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0";
-
 /** Vida del candado del parecer: el timeout del agente (120 s) más margen. */
 export const FEEDBACK_LOCK_TTL_MS = 180_000;
+
+/**
+ * Cuánto se guarda la respuesta del agente para que un reintento (memoria o
+ * `feedback_ready` fallidos) no vuelva a llamarlo: más que todos los
+ * reintentos de BullMQ y un `POST /interviews/:id/retry` cercano.
+ */
+export const FEEDBACK_AGENT_CACHE_TTL_SEC = 3600;
 
 export interface InterviewFeedbackRow {
   readonly id: string;
@@ -76,16 +81,7 @@ export interface EnglishErrorRow {
   readonly category: CorrectionCategory;
 }
 
-export interface RecordFeedbackUsageInput {
-  readonly userId: string;
-  readonly purpose: Purpose;
-  readonly model: string;
-  readonly tokensIn: number;
-  readonly tokensOut: number;
-  readonly latencyMs: number;
-  readonly attempt: number;
-  readonly promptVersion: number;
-}
+export type RecordFeedbackUsageInput = RecordAgentUsageInput;
 
 @Injectable()
 export abstract class InterviewFeedbackRepository {
@@ -105,6 +101,13 @@ export abstract class InterviewFeedbackRepository {
   /** Candado `interview:feedback:{id}` mientras dura el job (mismo motivo que `interview-prepare`). */
   abstract acquireFeedbackLock(interviewId: string, owner: string): Promise<boolean>;
   abstract releaseFeedbackLock(interviewId: string, owner: string): Promise<void>;
+  /**
+   * Respuesta del agente ya obtenida (y su uso ya registrado) por un intento
+   * anterior de esta entrevista, o `null`. Fail-open: con Redis caído, `null`.
+   */
+  abstract loadCachedAgentFeedback(interviewId: string): Promise<InterviewFeedback | null>;
+  /** Guarda la respuesta del agente `FEEDBACK_AGENT_CACHE_TTL_SEC`. Fail-open. */
+  abstract cacheAgentFeedback(interviewId: string, feedback: InterviewFeedback): Promise<void>;
 }
 
 @Injectable()
@@ -190,49 +193,46 @@ export class InsforgeInterviewFeedbackRepository extends InterviewFeedbackReposi
   }
 
   async markFeedbackFailed(interviewId: string, errorCode: string): Promise<void> {
-    const result = await this.db
-      .from(INTERVIEWS_TABLE)
-      .update({ status: 'feedback_failed' satisfies InterviewStatus, error_code: errorCode })
-      .eq('id', interviewId)
-      .eq('status', 'feedback_pending' satisfies InterviewStatus);
-    unwrapInsforge(result as InsforgeResult<unknown>);
+    await markInterviewFeedbackFailed(this.db, interviewId, errorCode);
   }
 
   async recordFeedbackUsage(input: RecordFeedbackUsageInput): Promise<void> {
-    const result = await this.db.from(TABLES.llmCalls).insert({
-      user_id: input.userId,
-      session_id: null,
-      purpose: input.purpose,
-      provider: '9router',
-      model: input.model,
-      tokens_in: input.tokensIn,
-      tokens_out: input.tokensOut,
-      latency_ms: input.latencyMs,
-      status: 'ok',
-      attempt: input.attempt,
-      prompt_version: input.promptVersion,
-    });
-    unwrapInsforge(result as InsforgeResult<unknown>);
+    await insertAgentLlmCall(this.db, input);
   }
 
   async acquireFeedbackLock(interviewId: string, owner: string): Promise<boolean> {
-    const acquired = await this.redis.eval(
-      ACQUIRE_LOCK_SCRIPT,
-      1,
-      feedbackLockKey(interviewId),
-      owner,
-      FEEDBACK_LOCK_TTL_MS,
-    );
-    return acquired === 1;
+    return acquireJobLock(this.redis, feedbackLockKey(interviewId), owner, FEEDBACK_LOCK_TTL_MS);
   }
 
   async releaseFeedbackLock(interviewId: string, owner: string): Promise<void> {
+    await releaseJobLock(this.redis, feedbackLockKey(interviewId), owner);
+  }
+
+  async loadCachedAgentFeedback(interviewId: string): Promise<InterviewFeedback | null> {
     try {
-      await this.redis.eval(RELEASE_LOCK_SCRIPT, 1, feedbackLockKey(interviewId), owner);
+      const raw = await this.redis.get(feedbackAgentCacheKey(interviewId));
+      return raw === null ? null : (JSON.parse(raw) as InterviewFeedback);
     } catch {
-      // Si no se puede soltar, caduca solo (FEEDBACK_LOCK_TTL_MS).
+      return null;
     }
   }
+
+  async cacheAgentFeedback(interviewId: string, feedback: InterviewFeedback): Promise<void> {
+    try {
+      await this.redis.set(
+        feedbackAgentCacheKey(interviewId),
+        JSON.stringify(feedback),
+        'EX',
+        FEEDBACK_AGENT_CACHE_TTL_SEC,
+      );
+    } catch {
+      // Sin caché, un reintento vuelve a llamar al agente (y registra esa nueva llamada).
+    }
+  }
+}
+
+function feedbackAgentCacheKey(interviewId: string): string {
+  return `interview:feedback:agent:${interviewId}`;
 }
 
 function feedbackLockKey(interviewId: string): string {

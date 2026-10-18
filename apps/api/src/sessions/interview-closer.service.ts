@@ -110,7 +110,14 @@ export class InterviewCloserService {
       this.logger.error(
         `No se pudo encolar el parecer de ${interviewId}: ${(error as Error).message}`,
       );
-      await this.repository.markFeedbackEnqueueFailed(interviewId);
+      try {
+        await this.repository.markFeedbackEnqueueFailed(interviewId);
+      } catch (markError) {
+        // Tampoco esto tumba el cierre: queda `feedback_pending` sin job.
+        this.logger.error(
+          `No se pudo marcar feedback_failed la entrevista ${interviewId}: ${(markError as Error).message}`,
+        );
+      }
     }
   }
 

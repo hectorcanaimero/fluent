@@ -15,6 +15,7 @@ import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
+import '../features/interviews/presentation/prep/interview_prep_screen.dart';
 import '../features/memory/presentation/memory_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow.dart';
 import '../features/progress/presentation/progress_screen.dart';
@@ -162,8 +163,7 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // F11.2.T3 reemplaza esto por el historial (IE-09); F11.2.T2 por la
-      // pantalla de preparación/resumen del plan (IE-03, IE-04).
+      // F11.2.T3 reemplaza esto por el historial (IE-09).
       GoRoute(
         path: '/interviews',
         builder: (context, state) => PlaceholderScreen(
@@ -176,9 +176,22 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/interviews/:id',
+        builder: (context, state) => InterviewPrepScreen(
+          interviewId: state.pathParameters['id']!,
+        ),
+      ),
+      // F12.4.T1 reemplaza esto por la sesión de entrevista (IE-05).
+      GoRoute(
+        path: '/interviews/:id/session',
         builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context)
-              .interviewDetailPlaceholderTitle(state.pathParameters['id']!),
+          title: AppLocalizations.of(context).interviewSessionPlaceholderTitle,
+        ),
+      ),
+      // F12 reemplaza esto por el parecer (IE-06).
+      GoRoute(
+        path: '/interviews/:id/feedback',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewFeedbackPlaceholderTitle,
         ),
       ),
       GoRoute(

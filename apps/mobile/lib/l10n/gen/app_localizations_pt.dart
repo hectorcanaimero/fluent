@@ -1306,7 +1306,90 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interviewOpenLinkError => 'Não conseguimos abrir o link.';
 
   @override
-  String interviewDetailPlaceholderTitle(String id) {
-    return 'Entrevista $id';
+  String get interviewDetailAppBarTitle => 'Sua entrevista';
+
+  @override
+  String get interviewPrepStepReading => 'Lendo a vaga';
+
+  @override
+  String get interviewPrepStepResearching => 'Pesquisando a empresa';
+
+  @override
+  String get interviewPrepStepDesigning => 'Montando as perguntas';
+
+  @override
+  String get interviewPrepEtaHint => 'Costuma levar menos de um minuto';
+
+  @override
+  String get interviewPrepExitHint => 'Pode sair: vamos te avisar.';
+
+  @override
+  String get interviewPrepFailedTitle =>
+      'Não conseguimos preparar sua entrevista';
+
+  @override
+  String get interviewPrepFailedBody =>
+      'Você pode tentar de novo quando quiser.';
+
+  @override
+  String get interviewLowInfoBadge => 'Pouca info';
+
+  @override
+  String get interviewPlanRoleLabel => 'Cargo';
+
+  @override
+  String get interviewPlanAreaLabel => 'Área';
+
+  @override
+  String get interviewPlanSeniorityLabel => 'Senioridade';
+
+  @override
+  String get interviewPlanTypeLabel => 'Tipo';
+
+  @override
+  String interviewPlanQuestionsSummary(int count, int minutes) {
+    return '$count perguntas · ~$minutes min';
   }
+
+  @override
+  String get interviewPlanStartCta => 'Começar';
+
+  @override
+  String get interviewSeniorityJunior => 'Júnior';
+
+  @override
+  String get interviewSenioritySemiSenior => 'Pleno';
+
+  @override
+  String get interviewSenioritySenior => 'Sênior';
+
+  @override
+  String get interviewSeniorityStaffLead => 'Staff/Lead';
+
+  @override
+  String get interviewSessionPlaceholderTitle => 'Entrevista';
+
+  @override
+  String get interviewFeedbackPlaceholderTitle => 'Parecer';
+
+  @override
+  String get interviewInProgressTitle => 'Você tem uma entrevista em andamento';
+
+  @override
+  String get interviewContinueCta => 'Continuar';
+
+  @override
+  String get interviewFinishedTitle => 'Sua entrevista terminou';
+
+  @override
+  String get interviewViewFeedbackCta => 'Ver parecer';
+
+  @override
+  String get interviewWorkModeRemote => 'Remoto';
+
+  @override
+  String get interviewWorkModeHybrid => 'Híbrido';
+
+  @override
+  String get interviewWorkModeOnsite => 'Presencial';
 }

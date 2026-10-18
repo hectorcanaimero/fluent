@@ -8,6 +8,8 @@ dependencies = [
   "uvicorn[standard]>=0.38,<1",
   "agno>=3.1,<4",
   "openai>=2,<3",
+  "httpx>=0.28,<1",
+  "ddgs>=9.16,<10",
 ]
 
 [dependency-groups]
@@ -27,6 +29,8 @@ select = ["E", "F", "I", "UP", "B"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+addopts = "-m 'not live'"
+markers = ["live: llama a 9router y DuckDuckGo de verdad (no corre en CI; `pytest -m live`)"]
 
 [build-system]
 requires = ["hatchling"]

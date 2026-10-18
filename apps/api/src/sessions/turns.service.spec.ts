@@ -403,6 +403,21 @@ describe('TurnsService.addTurn · validación (SPEC-04 §4 paso 1)', () => {
     expect((error as ApiException).getApiBody().statusCode).toBe(409);
   });
 
+  it.each(['interview', 'study', 'group'] as const)(
+    "kind='%s' → 409 WRONG_SESSION_KIND sin insertar el turno",
+    async (kind) => {
+      const { service, turns } = buildService({ session: sessionFixture({ kind }) });
+
+      const error = await service
+        .addTurn(USER_ID, SESSION_ID, { text: 'Hi' })
+        .catch((e: unknown) => e);
+
+      expect((error as ApiException).code).toBe('WRONG_SESSION_KIND');
+      expect((error as ApiException).getApiBody().statusCode).toBe(409);
+      expect(turns.inserted).toHaveLength(0);
+    },
+  );
+
   it('texto en blanco → 400 VALIDATION con `details[]`', async () => {
     const { service } = buildService();
 

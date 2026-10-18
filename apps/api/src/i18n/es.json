@@ -9,6 +9,7 @@
   "ALREADY_IN_GROUP": "Ya pertenecés a un grupo.",
   "MODEL_NOT_AVAILABLE": "Ese modelo no está disponible para tu cuenta.",
   "SESSION_NOT_ACTIVE": "Esta sesión ya está cerrada.",
+  "WRONG_SESSION_KIND": "Esta sesión no admite turnos de conversación.",
   "SESSION_ALREADY_ACTIVE": "Ya tenés una sesión activa.",
   "CHALLENGE_NOT_AVAILABLE": "Ese desafío ya no está disponible.",
   "GROUP_REQUIRED": "Unite a un grupo con tu código de invitación para practicar.",

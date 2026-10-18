@@ -994,6 +994,69 @@ class AppLocalizationsPt extends AppLocalizations {
       'Faltam respostas para montar seu parecer.';
 
   @override
+  String get interviewEntryTitle => 'Prepare sua entrevista';
+
+  @override
+  String get interviewEntryHistoryTooltip => 'Histórico de entrevistas';
+
+  @override
+  String interviewQuotaRemaining(int remaining, int limit) {
+    return 'Faltam $remaining de $limit entrevistas hoje';
+  }
+
+  @override
+  String interviewQuotaExhausted(int limit) {
+    return 'Você usou suas $limit entrevistas de hoje';
+  }
+
+  @override
+  String get interviewFreeNotice =>
+      'Gratuito por enquanto. No futuro essa função pode ser parte do plano Pro.';
+
+  @override
+  String get interviewOfferFieldLabel => 'Vaga de emprego';
+
+  @override
+  String get interviewOfferFieldHint => 'Cole o texto da vaga ou o link';
+
+  @override
+  String interviewOfferCharCount(int count) {
+    return '$count caracteres';
+  }
+
+  @override
+  String get interviewPasteButton => 'Colar';
+
+  @override
+  String get interviewTypeTechnical => 'Técnica';
+
+  @override
+  String get interviewTypeMixed => 'Mista';
+
+  @override
+  String get interviewPrepareCta => 'Preparar entrevista';
+
+  @override
+  String get interviewOfferUnreadableTitle => 'Não conseguimos ler esse link';
+
+  @override
+  String get interviewOfferUnreadableBody =>
+      'Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga para continuar.';
+
+  @override
+  String get interviewOfferUnreadablePasteButton => 'Colar o texto da vaga';
+
+  @override
+  String get interviewOfferUnreadableLinkedinButton => 'Abrir no LinkedIn';
+
+  @override
+  String get interviewPracticeCardTitle => 'Simule sua entrevista';
+
+  @override
+  String get interviewPracticeCardBody =>
+      'Cole uma vaga e pratique uma entrevista técnica em inglês.';
+
+  @override
   String get authContinueWithGoogle => 'Continuar com Google';
 
   @override
@@ -1234,4 +1297,16 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get planPurchaseError =>
       'Não conseguimos concluir a compra. Tente de novo.';
+
+  @override
+  String get interviewOfferCopyTextHint =>
+      'Esse é o mesmo link. Copie o texto da vaga e cole aqui.';
+
+  @override
+  String get interviewOpenLinkError => 'Não conseguimos abrir o link.';
+
+  @override
+  String interviewDetailPlaceholderTitle(String id) {
+    return 'Entrevista $id';
+  }
 }

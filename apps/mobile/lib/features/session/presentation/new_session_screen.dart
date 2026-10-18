@@ -139,6 +139,20 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
                   )
                 : null,
           ),
+          // C6: entrada al simulador de entrevistas (IE-01), visible en
+          // cualquier pestaña — no es un tipo de sesión más, así que no
+          // compite por un lugar en el `TabBar`.
+          Padding(
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.screenPad,
+              AppSpacing.md,
+              AppSpacing.screenPad,
+              0,
+            ),
+            child: _InterviewCard(
+              onTap: _starting ? null : () => context.push('/interviews/new'),
+            ),
+          ),
           Expanded(child: _buildBody(context)),
         ],
       ),
@@ -428,6 +442,55 @@ class _Card extends StatelessWidget {
               style: Theme.of(context).textTheme.titleSmall,
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Entrada al simulador de entrevistas (IE-01) desde la pestaña Practicar
+/// (C6, `docs/arch/003-simulador-entrevistas.md`).
+class _InterviewCard extends StatelessWidget {
+  const _InterviewCard({required this.onTap});
+
+  /// `null` mientras se arranca una sesión: no se puede abrir la entrevista
+  /// en paralelo.
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return InkWell(
+      key: const Key('session_new_interview_card'),
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(AppRadius.lg),
+      child: Ink(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        decoration: BoxDecoration(
+          color: AppColors.primarySoft,
+          borderRadius: BorderRadius.circular(AppRadius.lg),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.badge_outlined, color: AppColors.primaryDark),
+            const SizedBox(width: AppSpacing.md),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    l10n.interviewPracticeCardTitle,
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  Text(
+                    l10n.interviewPracticeCardBody,
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ],
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: AppColors.primaryDark),
+          ],
         ),
       ),
     );

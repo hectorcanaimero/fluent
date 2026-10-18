@@ -1,7 +1,10 @@
+import 'dart:async';
+
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 
+import '../features/interviews/presentation/entry/offer_draft_prefs.dart';
 import '../features/auth/data/auth_controller.dart';
 import '../features/auth/data/insforge_auth_client.dart';
 import '../features/auth/data/social_sign_in.dart';
@@ -147,8 +150,13 @@ final authControllerProvider = StateNotifierProvider<AuthController, AuthState>(
       // `ApiClient`; sin este aviso el estado seguía en `authenticated` y
       // la app quedaba "zombi" hasta reiniciarla (MAL-02).
       sessionExpired: ref.watch(apiClientProvider).onSessionExpired,
-      // Este teléfono deja de recibir push de la cuenta que se va.
-      beforeLogout: () => ref.read(pushServiceProvider).unregister(),
+      // Este teléfono deja de recibir push de la cuenta que se va, y no le
+      // deja a la próxima cuenta el borrador de oferta (FR-22); ese borrado
+      // es local y no se espera, así no demora el logout ni la baja del push.
+      beforeLogout: () {
+        unawaited(clearOfferDrafts().catchError((_) {}));
+        return ref.read(pushServiceProvider).unregister();
+      },
     );
   },
 );

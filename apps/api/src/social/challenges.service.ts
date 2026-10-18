@@ -4,7 +4,9 @@ import {
   type ChallengeCandidateSession,
   type ChallengesRepository,
 } from '../game/challenges.service.js';
+import type { SessionKind } from '../db/schema.js';
 import { GroupsRepository } from '../groups/groups.repository.js';
+import { SESSION_KINDS } from '../sessions/dto/create-session.dto.js';
 import { SessionsQueryRepository } from '../sessions-query/sessions-query.repository.js';
 import { GroupAccessService } from './group-access.service.js';
 import type { ChallengesResultDto } from './social.types.js';
@@ -104,9 +106,15 @@ export class ChallengesService {
         );
 
         return rows
-          // `kind='group'`: fila de la sala grupal (F9.1); no se reabre por
-          // `POST /sessions`, así que no sirve como desafío.
-          .filter((row) => row.xp_earned > 0 && row.ended_at !== null && row.kind !== 'group')
+          // Solo los `kind` que se reabren por `POST /sessions`: la sala
+          // grupal (F9.1), la entrevista y el estudio (F10) no sirven como
+          // desafío.
+          .filter(
+            (row) =>
+              row.xp_earned > 0 &&
+              row.ended_at !== null &&
+              (SESSION_KINDS as readonly SessionKind[]).includes(row.kind),
+          )
           .map((row) => ({
             sessionId: row.id,
             userId: row.user_id,

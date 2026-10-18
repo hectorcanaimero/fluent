@@ -3,6 +3,7 @@ import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { TABLES, type SessionKind } from '../db/schema.js';
+import { SESSION_KINDS } from '../sessions/dto/create-session.dto.js';
 
 /**
  * Repositorio de lectura de `sessions` (SPEC-01 §2.6) compartido por
@@ -83,8 +84,8 @@ export class SessionsQueryRepository {
       .select('id, user_id, topic, kind, ended_at, xp_earned')
       .in('user_id', [...userIds])
       .eq('status', 'ended')
-      // Las filas de sala grupal no son candidatas y no deben gastar el límite.
-      .neq('kind', 'group')
+      // Grupo, entrevista y estudio no son candidatas y no deben gastar el límite.
+      .in('kind', [...SESSION_KINDS])
       .gte('ended_at', sinceIso)
       .order('ended_at', { ascending: false })
       .limit(CANDIDATE_SESSIONS_ROW_LIMIT);

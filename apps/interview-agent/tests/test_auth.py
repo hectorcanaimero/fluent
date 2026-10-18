@@ -16,12 +16,12 @@ def test_token_incorrecto_da_401(client: TestClient) -> None:
 
 def test_token_correcto_pasa_auth(client: TestClient) -> None:
     response = client.post("/v1/prepare", headers={"Authorization": f"Bearer {TEST_TOKEN}"})
-    assert response.status_code == 501
+    assert response.status_code == 422  # pasa auth, falla validación del body
 
 
 def test_bearer_en_minusculas_pasa_auth(client: TestClient) -> None:
     response = client.post("/v1/prepare", headers={"Authorization": f"bearer {TEST_TOKEN}"})
-    assert response.status_code == 501
+    assert response.status_code == 422  # pasa auth, falla validación del body
 
 
 def test_bearer_no_ascii_da_401(client: TestClient) -> None:

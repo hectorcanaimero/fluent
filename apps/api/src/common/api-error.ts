@@ -32,6 +32,11 @@ export const API_ERROR_STATUS = {
   MODEL_NOT_AVAILABLE: 400,
   /** Turno sobre una sesión ya cerrada. */
   SESSION_NOT_ACTIVE: 409,
+  /**
+   * Turno 1:1 (`POST /sessions/:id/turns`) sobre una sesión que no es de ese
+   * tipo: sala grupal, entrevista o estudio (F10) tienen sus propias rutas.
+   */
+  WRONG_SESSION_KIND: 409,
   /** Ya hay una sesión activa; la respuesta incluye `activeSessionId`. */
   SESSION_ALREADY_ACTIVE: 409,
   /**

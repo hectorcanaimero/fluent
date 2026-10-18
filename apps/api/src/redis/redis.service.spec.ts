@@ -13,6 +13,7 @@ function createRedisDouble() {
     get: vi.fn(async (_key: string) => null as string | null),
     set: vi.fn(async () => 'OK'),
     del: vi.fn(async (_key: string) => 1),
+    eval: vi.fn(async () => 0 as unknown),
   };
 }
 
@@ -137,6 +138,21 @@ describe('RedisService', () => {
       double.del.mockRejectedValueOnce(new Error('Connection is closed.'));
 
       await expect(createService(double).del('auth:abc')).resolves.toBe(false);
+    });
+  });
+
+  describe('decrementIfPositive', () => {
+    it('decrements atomically with a Lua script and returns the new value', async () => {
+      const double = createRedisDouble();
+      double.eval.mockResolvedValueOnce(1);
+      await expect(createService(double).decrementIfPositive('k')).resolves.toBe(1);
+      expect(double.eval).toHaveBeenCalledWith(expect.stringContaining("redis.call('DECR'"), 1, 'k');
+    });
+
+    it('returns null instead of throwing when Redis fails', async () => {
+      const double = createRedisDouble();
+      double.eval.mockRejectedValueOnce(new Error('Connection is closed.'));
+      await expect(createService(double).decrementIfPositive('k')).resolves.toBeNull();
     });
   });
 });

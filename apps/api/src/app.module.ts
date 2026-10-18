@@ -23,6 +23,7 @@ import { SessionsModule } from './sessions/sessions.module.js';
 import { QueuesModule } from './jobs/queues.module.js';
 import { AdminModule } from './admin/admin.module.js';
 import { BillingModule } from './billing/billing.module.js';
+import { InterviewsModule } from './interviews/interviews.module.js';
 
 @Module({
   imports: [
@@ -89,6 +90,10 @@ import { BillingModule } from './billing/billing.module.js';
     AdminModule,
     // Webhook de RevenueCat que escribe el plan Pro (F4.1).
     BillingModule,
+    // Simulador de entrevistas (F10.3.T2, docs/arch/003-simulador-entrevistas.md
+    // I2): cuota, creación, consulta y reintento de la preparación. Va
+    // después de `QueuesModule` porque encola `interview-prepare`.
+    InterviewsModule,
   ],
   controllers: [],
   providers: [],

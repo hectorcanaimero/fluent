@@ -5,7 +5,8 @@ from contextlib import asynccontextmanager
 from fastapi import Depends, FastAPI, HTTPException
 
 from app.auth import require_token
-from app.contract import PrepareRequest, PrepareResponse
+from app.contract import FeedbackRequest, FeedbackResponse, PrepareRequest, PrepareResponse
+from app.feedback.evaluator import FeedbackFailed, generate_feedback
 from app.prepare.designer import DesignFailed
 from app.prepare.workflow import run_prepare
 
@@ -39,5 +40,8 @@ async def prepare(req: PrepareRequest) -> PrepareResponse:
 
 
 @app.post("/v1/feedback", dependencies=[Depends(require_token)])
-def feedback() -> None:
-    raise HTTPException(status_code=501, detail="not implemented")
+async def feedback(req: FeedbackRequest) -> FeedbackResponse:
+    try:
+        return await generate_feedback(req)
+    except FeedbackFailed as exc:
+        raise HTTPException(status_code=502, detail=f"feedback generation failed: {exc}") from exc

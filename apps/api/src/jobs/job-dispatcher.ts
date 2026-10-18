@@ -11,6 +11,7 @@ import { Injectable, Logger } from '@nestjs/common';
 import { InjectQueue } from '@nestjs/bullmq';
 import type { Queue } from 'bullmq';
 
+import type { InterviewPlan } from '../interviews/interviews.types.js';
 import {
   JOB_COACHING_BRIEF,
   JOB_INTERVIEW_FEEDBACK,
@@ -27,6 +28,8 @@ export interface CoachingBriefJobData {
 /** Carga de un job `interview-prepare` (F10.3, arch 003 §Components C3). */
 export interface InterviewPrepareJobData {
   readonly interviewId: string;
+  /** Re-entrevista (F13.1.T2): rúbrica de la entrevista padre, que el agente reusa tal cual (I1). */
+  readonly fixedRubric?: InterviewPlan['rubric'];
 }
 
 /** Carga de un job `interview-feedback` (F12.1.T2 hook, F12.3.T1). */
@@ -48,7 +51,10 @@ export interface JobDispatcher {
    * `jobId = interviewId` (un doble POST no duplica el job); el reintento
    * usa un `jobId` por intento para que BullMQ no lo descarte.
    */
-  enqueueInterviewPrepare(interviewId: string, options?: { retry?: boolean }): Promise<void>;
+  enqueueInterviewPrepare(
+    interviewId: string,
+    options?: { retry?: boolean; fixedRubric?: InterviewPlan['rubric'] },
+  ): Promise<void>;
 
   /**
    * Encola el parecer de una entrevista cerrada (`onInterviewSessionClosed`,
@@ -89,7 +95,7 @@ export class BullJobDispatcher implements JobDispatcher {
 
   async enqueueInterviewPrepare(
     interviewId: string,
-    options: { retry?: boolean } = {},
+    options: { retry?: boolean; fixedRubric?: InterviewPlan['rubric'] } = {},
   ): Promise<void> {
     // Creación: `jobId = interviewId`, igual que `enqueueCoachingBrief`.
     // Reintento: el job fallido sigue guardado con ese mismo id (failed no
@@ -100,7 +106,10 @@ export class BullJobDispatcher implements JobDispatcher {
     const jobId = options.retry ? `${interviewId}-retry-${Date.now()}` : interviewId;
     await this.interviewsQueue.add(
       JOB_INTERVIEW_PREPARE,
-      { interviewId } satisfies InterviewPrepareJobData,
+      {
+        interviewId,
+        ...(options.fixedRubric ? { fixedRubric: options.fixedRubric } : {}),
+      } satisfies InterviewPrepareJobData,
       { jobId },
     );
     this.logger.debug(`interview-prepare encolado para la entrevista ${interviewId}`);

@@ -26,6 +26,7 @@
   "STUDY_CYCLE_NOT_AVAILABLE": "Seu ciclo de estudo ainda não está disponível.",
   "CYCLE_NOT_ACTIVE": "Este ciclo de estudo já terminou; você não pode começar mais sessões.",
   "STUDY_SESSION_LOCKED": "Primeiro conclua a sessão anterior do ciclo.",
+  "REINTERVIEW_NOT_AVAILABLE": "Primeiro conclua seu ciclo de estudo para poder se reentrevistar.",
   "INTERVIEW_AGENT_UNAVAILABLE": "O simulador de entrevistas não está disponível neste momento.",
   "NOT_READY": "Ainda não está pronto.",
   "NOT_FOUND": "O recurso solicitado não existe.",

@@ -27,6 +27,8 @@ export interface CreateInterviewRow {
   readonly offerText: string | null;
   readonly offerUrl: string | null;
   readonly offerHash: string;
+  /** Re-entrevista (`POST /interviews/:id/reinterview`, F13.1.T2): id de la entrevista padre. */
+  readonly parentInterviewId?: string;
 }
 
 /** Columnas que necesita `GET /interviews` (sin oferta, plan ni feedback). */
@@ -73,6 +75,7 @@ export class InterviewsRepository {
         offer_text: row.offerText,
         offer_url: row.offerUrl,
         offer_hash: row.offerHash,
+        parent_interview_id: row.parentInterviewId ?? null,
         status: 'preparing',
         prep_step: 'reading',
       })

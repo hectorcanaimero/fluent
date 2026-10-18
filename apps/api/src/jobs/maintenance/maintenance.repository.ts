@@ -49,6 +49,24 @@ export abstract class MaintenanceRepository {
    * `.in('session_id', ids)` es suficiente.
    */
   abstract deleteTurnsForSessionsStartedBefore(cutoffIso: string): Promise<number>;
+  /** Ciclos de estudio `active` con sus sesiones, para `study-reminder` (F13.1.T2). */
+  abstract listActiveStudyCycles(): Promise<ActiveStudyCycleRow[]>;
+  /** Zona horaria de cada perfil (`null` si no tiene), para `study-reminder` (F13.1.T2). */
+  abstract loadTimezones(userIds: readonly string[]): Promise<Map<string, string | null>>;
+}
+
+/** Una sesión del ciclo, lo justo para decidir el recordatorio (F13.1.T2). */
+export interface ActiveStudyCycleSessionRow {
+  readonly idx: number;
+  readonly title: string;
+  readonly doneAt: string | null;
+}
+
+/** Ciclo `active` con sus sesiones ordenadas por `idx` (F13.1.T2). */
+export interface ActiveStudyCycleRow {
+  readonly interviewId: string;
+  readonly userId: string;
+  readonly sessions: readonly ActiveStudyCycleSessionRow[];
 }
 
 /* ============================================================================
@@ -134,5 +152,44 @@ export class InsforgeMaintenanceRepository extends MaintenanceRepository {
       .in('session_id', sessionIds);
     unwrap(result as PostgrestLike<unknown>, 'borrar turnos antiguos');
     return (result as PostgrestLike<unknown>).count ?? 0;
+  }
+
+  async listActiveStudyCycles(): Promise<ActiveStudyCycleRow[]> {
+    const result = await this.db
+      .from(TABLES.studyCycles)
+      .select(`interview_id, user_id, ${TABLES.studyCycleSessions}(idx, title, done_at)`)
+      .eq('status', 'active');
+    const rows =
+      unwrap(
+        result as PostgrestLike<
+          Array<{
+            interview_id: string;
+            user_id: string;
+            study_cycle_sessions: Array<{ idx: number; title: string; done_at: string | null }> | null;
+          }>
+        >,
+        'leer los ciclos de estudio activos',
+      ) ?? [];
+    return rows.map((row) => ({
+      interviewId: row.interview_id,
+      userId: row.user_id,
+      sessions: (row.study_cycle_sessions ?? [])
+        .map((session) => ({ idx: session.idx, title: session.title, doneAt: session.done_at }))
+        .sort((a, b) => a.idx - b.idx),
+    }));
+  }
+
+  async loadTimezones(userIds: readonly string[]): Promise<Map<string, string | null>> {
+    if (userIds.length === 0) return new Map();
+    const result = await this.db
+      .from(TABLES.profiles)
+      .select('user_id, timezone')
+      .in('user_id', [...userIds]);
+    const rows =
+      unwrap(
+        result as PostgrestLike<Array<{ user_id: string; timezone: string | null }>>,
+        'leer las zonas horarias de los perfiles',
+      ) ?? [];
+    return new Map(rows.map((row) => [row.user_id, row.timezone]));
   }
 }

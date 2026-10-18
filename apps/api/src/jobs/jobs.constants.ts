@@ -64,7 +64,7 @@ export const JOB_MODEL_CATALOG = 'model-catalog';
 export const JOB_INTERVIEW_PREPARE = 'interview-prepare';
 /** Cola `interviews` · disparado por el fin de la entrevista (F11, pendiente). */
 export const JOB_INTERVIEW_FEEDBACK = 'interview-feedback';
-/** Cola `interviews` · recordatorio del ciclo de estudio (F12, pendiente). */
+/** Cola `maintenance` · cron horario; filtra las 18:00 locales del usuario (F13.1.T2). */
 export const JOB_STUDY_REMINDER = 'study-reminder';
 
 /* ============================================================================

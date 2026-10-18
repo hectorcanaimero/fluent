@@ -110,6 +110,11 @@ export const API_ERROR_STATUS = {
   /** Empezar una sesión de un ciclo que ya no está `active` (F13.1.T1). */
   CYCLE_NOT_ACTIVE: 409,
   /**
+   * `POST /interviews/:id/reinterview` sin un ciclo de estudio `completed`
+   * (F13.1.T2, FR-19).
+   */
+  REINTERVIEW_NOT_AVAILABLE: 409,
+  /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.
    */

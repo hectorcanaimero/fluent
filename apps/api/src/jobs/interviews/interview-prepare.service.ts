@@ -92,20 +92,34 @@ export class InterviewPrepareService {
     this.promptVersion = configService.get('PROMPT_VERSION', { infer: true });
   }
 
-  /** `owner` identifica al job (su id de BullMQ) como dueño del candado. */
-  async run(interviewId: string, attempt: number, owner: string): Promise<InterviewPrepareJobResult> {
+  /**
+   * `owner` identifica al job (su id de BullMQ) como dueño del candado.
+   * `fixedRubric` (F13.1.T2, re-entrevista): la rúbrica de la entrevista
+   * padre, para que el agente la reuse tal cual y la comparación sea entre
+   * las mismas competencias (FR-19/FR-20).
+   */
+  async run(
+    interviewId: string,
+    attempt: number,
+    owner: string,
+    fixedRubric?: InterviewPlan['rubric'],
+  ): Promise<InterviewPrepareJobResult> {
     if (!(await this.repository.acquirePrepareLock(interviewId, owner))) {
       this.logger.warn(`Entrevista ${interviewId} ya la prepara otro job; se omite`);
       return { status: 'skipped', reason: 'locked' };
     }
     try {
-      return await this.prepare(interviewId, attempt);
+      return await this.prepare(interviewId, attempt, fixedRubric);
     } finally {
       await this.repository.releasePrepareLock(interviewId, owner);
     }
   }
 
-  private async prepare(interviewId: string, attempt: number): Promise<InterviewPrepareJobResult> {
+  private async prepare(
+    interviewId: string,
+    attempt: number,
+    fixedRubric?: InterviewPlan['rubric'],
+  ): Promise<InterviewPrepareJobResult> {
     const interview = await this.repository.loadInterview(interviewId);
     if (!interview) {
       this.logger.warn(`Entrevista ${interviewId} inexistente; nada que hacer`);
@@ -129,6 +143,7 @@ export class InterviewPrepareService {
       offerUrl: interview.offer_url,
       learnerLevel,
       previousQuestions,
+      ...(fixedRubric ? { fixedRubric } : {}),
     };
 
     const startedAt = Date.now();

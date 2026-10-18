@@ -142,4 +142,14 @@ export class InterviewsController {
   ): Promise<CreateSessionResultDto> {
     return this.studyCycles.start(userId, id, idx, acceptLanguage);
   }
+
+  /** Re-entrevista (F13.1.T2): `409 REINTERVIEW_NOT_AVAILABLE` sin ciclo `completed` (FR-19/FR-20). */
+  @Post('interviews/:id/reinterview')
+  reinterview(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<InterviewDto> {
+    return this.interviewsService.reinterview(userId, id, acceptLanguage);
+  }
 }

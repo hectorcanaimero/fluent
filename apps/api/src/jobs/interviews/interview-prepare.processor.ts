@@ -8,6 +8,7 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 
+import type { InterviewPlan } from '../../interviews/interviews.types.js';
 import {
   JOB_INTERVIEW_FEEDBACK,
   JOB_INTERVIEW_PREPARE,
@@ -32,6 +33,8 @@ import {
  */
 export interface InterviewPrepareJobData {
   readonly interviewId: string;
+  /** Re-entrevista (F13.1.T2): rúbrica de la padre, que el agente reusa tal cual (I1). */
+  readonly fixedRubric?: InterviewPlan['rubric'];
 }
 
 @Processor(QUEUE_INTERVIEWS, { concurrency: QUEUE_CONCURRENCY[QUEUE_INTERVIEWS] })
@@ -148,7 +151,9 @@ export class InterviewPrepareProcessor extends WorkerHost {
   ): Promise<InterviewPrepareJobResult | InterviewFeedbackJobResult> {
     switch (job.name) {
       case JOB_INTERVIEW_PREPARE:
-        return this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
+        return job.data.fixedRubric
+          ? this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id), job.data.fixedRubric)
+          : this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
       case JOB_INTERVIEW_FEEDBACK:
         return this.feedbackService.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
       default:

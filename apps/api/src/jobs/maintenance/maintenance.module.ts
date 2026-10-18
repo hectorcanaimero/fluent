@@ -23,6 +23,7 @@ import { Module } from '@nestjs/common';
 
 import { SessionSweeperModule } from '../../sessions/session-sweeper.module.js';
 import { ModelCatalogService } from '../../llm/catalog.service.js';
+import { PushCoreModule } from '../../push/push.module.js';
 import { DailyStreaksService } from './daily-streaks.service.js';
 import { MaintenanceCronRegistrar } from './maintenance.cron.js';
 import { MaintenanceProcessor } from './maintenance.processor.js';
@@ -32,9 +33,10 @@ import {
 } from './maintenance.repository.js';
 import { RedisCacheStore } from './redis-cache-store.js';
 import { RetentionService } from './retention.service.js';
+import { StudyReminderService } from './study-reminder.service.js';
 
 @Module({
-  imports: [SessionSweeperModule],
+  imports: [SessionSweeperModule, PushCoreModule],
   providers: [
     {
       provide: MaintenanceRepository,
@@ -53,6 +55,7 @@ import { RetentionService } from './retention.service.js';
         new RetentionService({ repository }),
     },
     DailyStreaksService,
+    StudyReminderService,
     MaintenanceProcessor,
     MaintenanceCronRegistrar,
   ],

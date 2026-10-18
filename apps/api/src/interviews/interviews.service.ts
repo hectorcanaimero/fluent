@@ -195,6 +195,72 @@ export class InterviewsService {
     return toInterviewDto(created);
   }
 
+  /**
+   * `POST /interviews/:id/reinterview` (F13.1.T2, FR-19/FR-20): solo con el
+   * ciclo de estudio de la padre `completed` (si no, `409
+   * REINTERVIEW_NOT_AVAILABLE`). Crea una entrevista hija
+   * (`parent_interview_id`) con la misma oferta y tipo que la padre, consume
+   * el tope diario como `create`, y encola `interview-prepare` con la
+   * rúbrica de la padre como `fixedRubric` para que la comparación del
+   * parecer sea entre las mismas competencias. Las preguntas ya hechas no se
+   * repiten: `loadPreviousQuestions` ya las cubre por `parent_interview_id`
+   * (F10.1.T1/F10.3.T3), y el job `interview-feedback` ya manda
+   * `previousFeedback` por el mismo campo (F12.3.T1).
+   */
+  async reinterview(
+    userId: string,
+    id: string,
+    acceptLanguage?: string,
+    now: Date = new Date(),
+  ): Promise<InterviewDto> {
+    if (!SESSION_ID_RE.test(id)) {
+      throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
+    }
+
+    const profile = await this.profiles.findByUserId(userId);
+    const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
+
+    if (!this.configService.get('INTERVIEW_AGENT_URL', { infer: true })) {
+      throw this.error('INTERVIEW_AGENT_UNAVAILABLE', locale);
+    }
+
+    const parent = await this.repository.findById(userId, id);
+    if (parent === null) {
+      throw this.error('NOT_FOUND', locale);
+    }
+
+    const cycle = await this.repository.findCycle(userId, id);
+    if (cycle === null || cycle.cycle.status !== 'completed') {
+      throw this.error('REINTERVIEW_NOT_AVAILABLE', locale, {
+        extra: { status: cycle?.cycle.status ?? null },
+      });
+    }
+
+    const capKey = await this.consumeDailyCap(userId, profile?.timezone ?? null, now, locale);
+
+    let created: Interview | null = null;
+    try {
+      created = await this.repository.create({
+        userId,
+        type: parent.type,
+        offerText: parent.offer_text,
+        offerUrl: parent.offer_url,
+        offerHash: parent.offer_hash,
+        parentInterviewId: parent.id,
+      });
+      await this.jobs.enqueueInterviewPrepare(
+        created.id,
+        parent.plan ? { fixedRubric: parent.plan.rubric } : {},
+      );
+    } catch (error) {
+      if (capKey !== null) await this.redis.decrementIfPositive(capKey);
+      if (created !== null) await this.markEnqueueFailed(userId, created.id);
+      throw error;
+    }
+
+    return toInterviewDto(created);
+  }
+
   async list(userId: string): Promise<InterviewListResultDto> {
     const rows = await this.repository.listByUser(userId);
     const cycles = await this.repository.listCycleProgress(

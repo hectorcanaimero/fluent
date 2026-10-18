@@ -24,6 +24,7 @@ import {
   JOB_MODEL_CATALOG,
   JOB_RETENTION,
   JOB_SESSION_SWEEPER,
+  JOB_STUDY_REMINDER,
   QUEUE_MAINTENANCE,
 } from '../jobs.constants.js';
 
@@ -46,6 +47,15 @@ export const RETENTION_ATTEMPTS = 2;
 export const MODEL_CATALOG_CRON_PATTERN = '0 */6 * * *';
 export const MODEL_CATALOG_SCHEDULER_ID = 'cron-model-catalog';
 export const MODEL_CATALOG_ATTEMPTS = 3;
+
+/**
+ * F13.1.T2: «hora 18:00 en la zona del usuario». BullMQ no sabe de zonas por
+ * usuario, así que corre cada hora en UTC y `StudyReminderService` filtra,
+ * en cada corrida, los ciclos cuyo dueño está ahora a las 18:00 local.
+ */
+export const STUDY_REMINDER_CRON_PATTERN = '0 * * * *';
+export const STUDY_REMINDER_SCHEDULER_ID = 'cron-study-reminder';
+export const STUDY_REMINDER_ATTEMPTS = 2;
 
 @Injectable()
 export class MaintenanceCronRegistrar implements OnModuleInit {
@@ -92,11 +102,20 @@ export class MaintenanceCronRegistrar implements OnModuleInit {
         opts: { attempts: MODEL_CATALOG_ATTEMPTS },
       },
     );
+    await this.queue.upsertJobScheduler(
+      STUDY_REMINDER_SCHEDULER_ID,
+      { pattern: STUDY_REMINDER_CRON_PATTERN, tz: 'UTC' },
+      {
+        name: JOB_STUDY_REMINDER,
+        data: {},
+        opts: { attempts: STUDY_REMINDER_ATTEMPTS },
+      },
+    );
 
     this.logger.log(
       `crons de maintenance registrados: session-sweeper (${SESSION_SWEEPER_CRON_PATTERN}), ` +
         `daily-streaks (${DAILY_STREAKS_CRON_PATTERN}), retention (${RETENTION_CRON_PATTERN}), ` +
-        `model-catalog (${MODEL_CATALOG_CRON_PATTERN}) — UTC`,
+        `model-catalog (${MODEL_CATALOG_CRON_PATTERN}), study-reminder (${STUDY_REMINDER_CRON_PATTERN}) — UTC`,
     );
   }
 }

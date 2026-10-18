@@ -1,10 +1,11 @@
 import { createHash } from 'node:crypto';
+import { setTimeout as sleep } from 'node:timers/promises';
 import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import { ApiException, type ApiErrorCode, type ApiExceptionOptions } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import type { Interview, Locale, StudyCycle } from '../db/schema.js';
+import type { Interview, Locale, Profile, StudyCycle } from '../db/schema.js';
 import { I18nService } from '../i18n/i18n.service.js';
 import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { effectivePlan } from '../profiles/plan.js';
@@ -21,6 +22,14 @@ import type {
   PrepStep,
   SeniorityLevel,
 } from './interviews.types.js';
+
+/** Lock de `POST /interviews/:id/reinterview`: cubre leer la hija activa, el tope y la inserción. */
+const REINTERVIEW_LOCK_TTL_SEC = 30;
+const REINTERVIEW_LOCK_POLL_MS = 250;
+
+function reinterviewLockKey(parentId: string): string {
+  return `interview:reinterview:${parentId}`;
+}
 
 /** Hosts de LinkedIn que `interview-agent` tampoco puede leer (D8). */
 const LINKEDIN_HOSTS = ['linkedin.com', 'lnkd.in'];
@@ -100,6 +109,12 @@ export interface InterviewFeedbackResult {
   readonly body: InterviewFeedbackDto | InterviewFeedbackPendingDto;
 }
 
+/** `POST /interviews/:id/reinterview`: `201` hija nueva, `200` la que ya estaba sin terminar. */
+export interface ReinterviewResult {
+  readonly statusCode: 200 | 201;
+  readonly body: InterviewDto;
+}
+
 /**
  * `GET /interviews/quota`, `POST /interviews`, `GET /interviews`,
  * `GET /interviews/:id`, `POST /interviews/:id/retry` (I2, F10.3.T2).
@@ -162,18 +177,8 @@ export class InterviewsService {
       throw this.error('OFFER_UNREADABLE', locale, { extra: { reason: 'linkedin' } });
     }
 
-    // Perfil onboarded, igual que `POST /sessions` (SPEC-04 §3.1).
-    if (profile === null || profile.onboarded_at === null) {
-      throw this.error('NOT_ONBOARDED', locale);
-    }
-
-    // El plan se comprueba antes del tope: un rechazo por plan no consume cupo.
-    const requiresPro = this.configService.get('INTERVIEWS_REQUIRE_PRO', { infer: true });
-    if (requiresPro && effectivePlan(profile, now) === 'free') {
-      throw this.error('PLAN_REQUIRED', locale);
-    }
-
-    const capKey = await this.consumeDailyCap(userId, profile.timezone, now, locale);
+    const ready = this.assertCanStart(profile, now, locale);
+    const capKey = await this.consumeDailyCap(userId, ready.timezone, now, locale);
 
     let created: Interview | null = null;
     try {
@@ -193,6 +198,90 @@ export class InterviewsService {
     }
 
     return toInterviewDto(created);
+  }
+
+  /**
+   * `POST /interviews/:id/reinterview` (F13.1.T2, FR-19/FR-20): solo con el
+   * ciclo de estudio de la padre `completed` (si no, `409
+   * REINTERVIEW_NOT_AVAILABLE`). Mismas reglas de onboarding/plan que
+   * `create`. Crea una entrevista hija (`parent_interview_id`) con la misma
+   * oferta y tipo que la padre, consume el tope diario como `create`, y
+   * encola `interview-prepare` (que reusa la rúbrica de la padre como
+   * `fixedRubric`, para que la comparación del parecer sea entre las mismas
+   * competencias). Idempotente: si ya hay una hija sin terminar, `200` con
+   * ella en vez de crear otra. Las preguntas ya hechas no se
+   * repiten: `loadPreviousQuestions` ya las cubre por `parent_interview_id`
+   * (F10.1.T1/F10.3.T3), y el job `interview-feedback` ya manda
+   * `previousFeedback` por el mismo campo (F12.3.T1).
+   */
+  async reinterview(
+    userId: string,
+    id: string,
+    acceptLanguage?: string,
+    now: Date = new Date(),
+  ): Promise<ReinterviewResult> {
+    if (!SESSION_ID_RE.test(id)) {
+      throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
+    }
+
+    const profile = await this.profiles.findByUserId(userId);
+    const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
+
+    if (!this.configService.get('INTERVIEW_AGENT_URL', { infer: true })) {
+      throw this.error('INTERVIEW_AGENT_UNAVAILABLE', locale);
+    }
+
+    const parent = await this.repository.findById(userId, id);
+    if (parent === null) {
+      throw this.error('NOT_FOUND', locale);
+    }
+
+    const cycle = await this.repository.findCycle(userId, id);
+    if (cycle === null || cycle.cycle.status !== 'completed') {
+      throw this.error('REINTERVIEW_NOT_AVAILABLE', locale, {
+        extra: { status: cycle?.cycle.status ?? null },
+      });
+    }
+
+    const ready = this.assertCanStart(profile, now, locale);
+
+    // Un doble POST no crea dos hijas ni consume dos cupos: serializado por
+    // padre, y dentro del lock se devuelve la hija sin terminar si ya existe.
+    const key = reinterviewLockKey(parent.id);
+    const deadline = Date.now() + REINTERVIEW_LOCK_TTL_SEC * 1000;
+    while (!(await this.redis.setIfAbsent(key, '1', REINTERVIEW_LOCK_TTL_SEC))) {
+      if (Date.now() >= deadline) throw this.error('REINTERVIEW_NOT_AVAILABLE', locale);
+      await sleep(REINTERVIEW_LOCK_POLL_MS);
+    }
+    try {
+      const existing = await this.repository.findActiveChild(userId, parent.id);
+      if (existing !== null) return { statusCode: 200, body: toInterviewDto(existing) };
+
+      const capKey = await this.consumeDailyCap(userId, ready.timezone, now, locale);
+
+      let created: Interview | null = null;
+      try {
+        created = await this.repository.create({
+          userId,
+          type: parent.type,
+          offerText: parent.offer_text,
+          offerUrl: parent.offer_url,
+          offerHash: parent.offer_hash,
+          parentInterviewId: parent.id,
+        });
+        // La rúbrica de la padre la busca el propio job (`fixedRubric`), así
+        // `/retry` de una hija fallida también la conserva.
+        await this.jobs.enqueueInterviewPrepare(created.id);
+      } catch (error) {
+        if (capKey !== null) await this.redis.decrementIfPositive(capKey);
+        if (created !== null) await this.markEnqueueFailed(userId, created.id);
+        throw error;
+      }
+
+      return { statusCode: 201, body: toInterviewDto(created) };
+    } finally {
+      await this.redis.del(key);
+    }
   }
 
   async list(userId: string): Promise<InterviewListResultDto> {
@@ -286,6 +375,21 @@ export class InterviewsService {
         // todavía no terminó, así que tampoco hay parecer que consultar.
         throw this.error('NOT_READY', await this.localeFor(userId, acceptLanguage));
     }
+  }
+
+  /**
+   * Perfil onboarded, igual que `POST /sessions` (SPEC-04 §3.1), y plan
+   * (`INTERVIEWS_REQUIRE_PRO`). Antes del tope: un rechazo no consume cupo.
+   */
+  private assertCanStart(profile: Profile | null, now: Date, locale: Locale): Profile {
+    if (profile === null || profile.onboarded_at === null) {
+      throw this.error('NOT_ONBOARDED', locale);
+    }
+    const requiresPro = this.configService.get('INTERVIEWS_REQUIRE_PRO', { infer: true });
+    if (requiresPro && effectivePlan(profile, now) === 'free') {
+      throw this.error('PLAN_REQUIRED', locale);
+    }
+    return profile;
   }
 
   /** `ApiException` con el mensaje del catálogo i18n (es/pt-BR). */

@@ -98,6 +98,8 @@ export type RecordPrepareUsageInput = RecordAgentUsageInput;
 export abstract class InterviewPrepareRepository {
   abstract loadInterview(interviewId: string): Promise<InterviewPrepareRow | null>;
   abstract loadLearnerLevel(userId: string): Promise<Level>;
+  /** Re-entrevista (F13.1.T2): rúbrica del plan de la padre, `null` si no tiene plan. */
+  abstract loadParentRubric(parentInterviewId: string): Promise<InterviewPlan['rubric'] | null>;
   /** `previousQuestions` de I1: últimas N preguntas de la misma oferta o, en una re-entrevista, del área del padre. */
   abstract loadPreviousQuestions(
     interview: InterviewPrepareRow,
@@ -172,6 +174,15 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       throw new ProfileMissingError(`El usuario ${userId} no tiene perfil`);
     }
     return row.level;
+  }
+
+  async loadParentRubric(parentInterviewId: string): Promise<InterviewPlan['rubric'] | null> {
+    const result = await this.db
+      .from(INTERVIEWS_TABLE)
+      .select('plan')
+      .eq('id', parentInterviewId)
+      .maybeSingle();
+    return unwrapInsforge(result as InsforgeResult<{ plan: InterviewPlan | null }>)?.plan?.rubric ?? null;
   }
 
   async loadPreviousQuestions(

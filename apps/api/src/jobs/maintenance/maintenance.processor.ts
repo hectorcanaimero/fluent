@@ -19,12 +19,14 @@ import {
   JOB_MODEL_CATALOG,
   JOB_RETENTION,
   JOB_SESSION_SWEEPER,
+  JOB_STUDY_REMINDER,
   QUEUE_CONCURRENCY,
   QUEUE_MAINTENANCE,
 } from '../jobs.constants.js';
 import { SESSION_SWEEPER, type SessionSweeper, type SessionSweeperResult } from '../session-sweeper.js';
 import { DailyStreaksService, type DailyStreaksJobResult } from './daily-streaks.service.js';
 import { RetentionService, type RetentionJobResult } from './retention.service.js';
+import { StudyReminderService, type StudyReminderJobResult } from './study-reminder.service.js';
 
 export interface ModelCatalogJobResult {
   readonly status: 'refreshed';
@@ -34,7 +36,8 @@ type MaintenanceJobResult =
   | SessionSweeperResult
   | DailyStreaksJobResult
   | RetentionJobResult
-  | ModelCatalogJobResult;
+  | ModelCatalogJobResult
+  | StudyReminderJobResult;
 
 @Processor(QUEUE_MAINTENANCE, { concurrency: QUEUE_CONCURRENCY[QUEUE_MAINTENANCE] })
 export class MaintenanceProcessor extends WorkerHost {
@@ -45,6 +48,7 @@ export class MaintenanceProcessor extends WorkerHost {
     private readonly dailyStreaksService: DailyStreaksService,
     private readonly retentionService: RetentionService,
     private readonly modelCatalogService: ModelCatalogService,
+    private readonly studyReminderService: StudyReminderService,
   ) {
     super();
   }
@@ -99,6 +103,8 @@ export class MaintenanceProcessor extends WorkerHost {
       case JOB_MODEL_CATALOG:
         await this.modelCatalogService.refresh();
         return { status: 'refreshed' };
+      case JOB_STUDY_REMINDER:
+        return this.studyReminderService.run();
       default:
         throw new Error(`maintenance: job desconocido "${job.name}"`);
     }

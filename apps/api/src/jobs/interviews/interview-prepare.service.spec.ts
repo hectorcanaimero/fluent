@@ -19,6 +19,8 @@ import type {
 const INTERVIEW_ID = '11111111-1111-4111-8111-111111111111';
 const USER_ID = '22222222-2222-4222-8222-222222222222';
 
+const PARENT_RUBRIC = [{ id: 'p1', name: 'APIs', expectedLevel: 'senior' as const, weight: 1 }];
+
 function makeConfig(promptVersion = 3): ConfigService<never, true> {
   return {
     get: (key: string) => (key === 'PROMPT_VERSION' ? promptVersion : undefined),
@@ -27,13 +29,14 @@ function makeConfig(promptVersion = 3): ConfigService<never, true> {
 
 interface RepoState {
   status: InterviewPrepareRow['status'];
+  parentInterviewId?: string;
 }
 
 function makeRepository(state: RepoState) {
   const interview = {
     id: INTERVIEW_ID,
     user_id: USER_ID,
-    parent_interview_id: null,
+    parent_interview_id: state.parentInterviewId ?? null,
     type: 'technical' as const,
     offer_text: 'We are hiring a backend engineer.',
     offer_url: null,
@@ -65,6 +68,7 @@ function makeRepository(state: RepoState) {
     loadInterview: vi.fn(async () => (interview as unknown as InterviewPrepareRow)),
     loadLearnerLevel: vi.fn(async () => 'B1' as const),
     loadPreviousQuestions: vi.fn(async () => ['Old question?']),
+    loadParentRubric: vi.fn(async () => PARENT_RUBRIC),
     setPrepStep: vi.fn(async (_id: string, step: string) => {
       prepSteps.push(step);
     }),
@@ -172,6 +176,41 @@ describe('InterviewPrepareService.run', () => {
     });
     expect(pushReady).toHaveLength(1);
     expect(refunded).toEqual([]);
+  });
+
+  it('re-entrevista: manda la rúbrica de la padre como fixedRubric aunque el job no la traiga (retry)', async () => {
+    const parentId = '33333333-3333-4333-8333-333333333333';
+    const { repository } = makeRepository({ status: 'preparing', parentInterviewId: parentId });
+    const { push } = makePush();
+    const agent = makeAgent(async () => okResponse());
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      agent,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await service.run(INTERVIEW_ID, 1, `${INTERVIEW_ID}-retry-1`);
+
+    expect(repository.loadParentRubric).toHaveBeenCalledWith(parentId);
+    expect(agent.prepare).toHaveBeenCalledWith(expect.objectContaining({ fixedRubric: PARENT_RUBRIC }));
+  });
+
+  it('sin padre no busca rúbrica ni manda fixedRubric', async () => {
+    const { repository } = makeRepository({ status: 'preparing' });
+    const { push } = makePush();
+    const agent = makeAgent(async () => okResponse());
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      agent,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await service.run(INTERVIEW_ID, 1, 'job-1');
+
+    expect(repository.loadParentRubric).not.toHaveBeenCalled();
+    expect(vi.mocked(agent.prepare).mock.calls[0]![0]).not.toHaveProperty('fixedRubric');
   });
 
   it('offer_unreadable: prep_failed con el motivo, devuelve el tope y avisa el fallo sin llamar al LLM de uso', async () => {

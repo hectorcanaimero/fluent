@@ -9,7 +9,12 @@ import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { RedisService } from '../redis/redis.service.js';
 import type { CreateInterviewDto } from './dto/create-interview.dto.js';
-import type { CreateInterviewRow, InterviewListRow, InterviewsRepository } from './interviews.repository.js';
+import type {
+  CreateInterviewRow,
+  InterviewListRow,
+  InterviewsRepository,
+  StudyCycleWithSessions,
+} from './interviews.repository.js';
 import { InterviewsService } from './interviews.service.js';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -126,8 +131,15 @@ function fakeConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
 
 function fakeRedis(): RedisService & { readonly counters: Map<string, number> } {
   const counters = new Map<string, number>();
+  const locks = new Set<string>();
   return {
     counters,
+    setIfAbsent: async (key: string) => {
+      if (locks.has(key)) return false;
+      locks.add(key);
+      return true;
+    },
+    del: async (key: string) => locks.delete(key),
     increment: async (key: string) => {
       const next = (counters.get(key) ?? 0) + 1;
       counters.set(key, next);
@@ -147,22 +159,33 @@ function fakeRedis(): RedisService & { readonly counters: Map<string, number> } 
 
 function fakeJobs(
   fail = false,
-): JobDispatcher & { readonly enqueued: string[]; readonly enqueuedFeedback: string[] } {
+): JobDispatcher & {
+  readonly enqueued: string[];
+  readonly enqueuedFeedback: string[];
+  readonly enqueuedOptions: Array<{ interviewId: string; options?: Record<string, unknown> }>;
+} {
   const enqueued: string[] = [];
   const enqueuedFeedback: string[] = [];
+  const enqueuedOptions: Array<{ interviewId: string; options?: Record<string, unknown> }> = [];
   return {
     enqueued,
     enqueuedFeedback,
+    enqueuedOptions,
     enqueueCoachingBrief: async () => {},
-    enqueueInterviewPrepare: async (interviewId: string) => {
+    enqueueInterviewPrepare: async (interviewId: string, options?: Record<string, unknown>) => {
       if (fail) throw new Error('Redis caído');
       enqueued.push(interviewId);
+      enqueuedOptions.push({ interviewId, options });
     },
     enqueueInterviewFeedback: async (interviewId: string) => {
       if (fail) throw new Error('Redis caído');
       enqueuedFeedback.push(interviewId);
     },
-  } as unknown as JobDispatcher & { readonly enqueued: string[]; readonly enqueuedFeedback: string[] };
+  } as unknown as JobDispatcher & {
+    readonly enqueued: string[];
+    readonly enqueuedFeedback: string[];
+    readonly enqueuedOptions: Array<{ interviewId: string; options?: Record<string, unknown> }>;
+  };
 }
 
 function fakeProfiles(profile: Profile | null): ProfilesRepository {
@@ -171,6 +194,7 @@ function fakeProfiles(profile: Profile | null): ProfilesRepository {
 
 interface FakeRepoOptions {
   readonly findByIdResult?: Interview | null;
+  readonly findCycleResult?: StudyCycleWithSessions | null;
   readonly createFails?: boolean;
   readonly listRows?: InterviewListRow[];
 }
@@ -182,21 +206,29 @@ function fakeRepository(options: FakeRepoOptions = {}) {
   const markFeedbackRetryingCalls: Array<{ userId: string; id: string }> = [];
   const markFeedbackFailedCalls: Array<{ id: string; errorCode: string }> = [];
   const findByIdCalls: string[] = [];
+  const rows: Interview[] = [];
   const repository = {
     create: async (row: CreateInterviewRow) => {
       if (options.createFails) throw new Error('InsForge caído');
       created.push(row);
-      return interviewFixture({
+      const interview = interviewFixture({
         type: row.type,
         offer_text: row.offerText,
         offer_url: row.offerUrl,
         offer_hash: row.offerHash,
+        parent_interview_id: row.parentInterviewId ?? null,
       });
+      rows.push(interview);
+      return interview;
     },
+    findActiveChild: async (_userId: string, parentId: string) =>
+      rows.findLast((row) => row.parent_interview_id === parentId && row.status === 'preparing') ?? null,
     findById: async (_userId: string, id: string) => {
       findByIdCalls.push(id);
       return options.findByIdResult === undefined ? null : options.findByIdResult;
     },
+    findCycle: async (_userId: string, _interviewId: string) =>
+      options.findCycleResult === undefined ? null : options.findCycleResult,
     listByUser: async () => options.listRows ?? [],
     listCycleProgress: async (_userId: string, ids: readonly string[]) =>
       new Map(ids.filter((id) => id === 'with-cycle').map((id) => [id, { status: 'active', doneCount: 2 }])),
@@ -629,5 +661,151 @@ describe('InterviewsService.getQuota', () => {
     const quota = await service.getQuota(USER_ID, NOW);
 
     expect(quota).toEqual({ remaining: 2, limit: 3, requiresPro: false, freeNotice: true });
+  });
+});
+
+function cycleFixture(status: 'active' | 'completed' | 'skipped'): StudyCycleWithSessions {
+  return {
+    cycle: { id: 'cycle-1', user_id: USER_ID, interview_id: INTERVIEW_ID, status, created_at: NOW.toISOString() },
+    sessions: [],
+  };
+}
+
+describe('InterviewsService.reinterview', () => {
+  it('sin ciclo de estudio responde 409 REINTERVIEW_NOT_AVAILABLE sin consumir el tope', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, jobs, redis } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: null },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiException);
+    expect((error as ApiException).code).toBe('REINTERVIEW_NOT_AVAILABLE');
+    expect((error as ApiException).getStatus()).toBe(409);
+    expect(jobs.enqueued).toEqual([]);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('con el ciclo todavía active (no completo) responde 409 REINTERVIEW_NOT_AVAILABLE', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, jobs } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('active') },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('REINTERVIEW_NOT_AVAILABLE');
+    expect(jobs.enqueued).toEqual([]);
+  });
+
+  it('con una entrevista que no existe (o es de otro usuario) responde 404 sin consultar el ciclo', async () => {
+    const { service } = buildService({ repoOptions: { findByIdResult: null } });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_FOUND');
+  });
+
+  it('con el ciclo completed crea la entrevista hija en preparing (201), con la misma oferta/tipo y parentInterviewId', async () => {
+    const parent = interviewFixture({
+      status: 'feedback_ready',
+      type: 'mixed',
+      offer_text: 'We are hiring a backend engineer',
+      offer_url: null,
+      offer_hash: 'hash',
+      plan: planFixture(),
+      feedback: feedbackFixture(),
+    });
+    const { service, jobs, created, redis } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const { statusCode, body } = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW);
+
+    expect(statusCode).toBe(201);
+    expect(body.status).toBe('preparing');
+    expect(body.prepStep).toBe('reading');
+    expect(created).toHaveLength(1);
+    expect(created[0]).toMatchObject({
+      userId: USER_ID,
+      type: 'mixed',
+      offerText: 'We are hiring a backend engineer',
+      offerUrl: null,
+      offerHash: 'hash',
+      parentInterviewId: INTERVIEW_ID,
+    });
+    // La rúbrica la busca el job desde la padre: no viaja en la carga.
+    expect(jobs.enqueuedOptions).toEqual([{ interviewId: body.id, options: undefined }]);
+    // Consume el tope diario como `create` (un contador incrementado).
+    expect([...redis.counters.values()]).toEqual([1]);
+  });
+
+  it('doble POST: devuelve la misma hija (200) y consume el tope una sola vez', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, jobs, created, redis } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const [first, second] = await Promise.all([
+      service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW),
+      service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW),
+    ]);
+
+    expect([first.statusCode, second.statusCode].sort()).toEqual([200, 201]);
+    expect(second.body).toEqual(first.body);
+    expect(created).toHaveLength(1);
+    expect(jobs.enqueued).toHaveLength(1);
+    expect([...redis.counters.values()]).toEqual([1]);
+  });
+
+  it('sin onboarding responde NOT_ONBOARDED sin consumir el tope', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, created, redis } = buildService({
+      profile: profileFixture({ onboarded_at: null }),
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_ONBOARDED');
+    expect(created).toEqual([]);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('con INTERVIEWS_REQUIRE_PRO y plan free responde PLAN_REQUIRED sin consumir el tope', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, created, redis } = buildService({
+      config: { INTERVIEWS_REQUIRE_PRO: true },
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('PLAN_REQUIRED');
+    expect(created).toEqual([]);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('con un :id que no es UUID responde 404 sin consultar la base', async () => {
+    const { service, findByIdCalls } = buildService({});
+
+    const error = await service.reinterview(USER_ID, 'no-es-uuid').catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_FOUND');
+    expect(findByIdCalls).toEqual([]);
+  });
+
+  it('si falla el encolado devuelve el cupo y deja la hija en prep_failed (enqueue_failed)', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, redis, markPrepFailedCalls } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+      enqueueFails: true,
+    });
+
+    await expect(service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW)).rejects.toThrow('Redis caído');
+
+    expect([...redis.counters.values()]).toEqual([0]);
+    expect(markPrepFailedCalls).toEqual([{ id: INTERVIEW_ID, errorCode: 'enqueue_failed' }]);
   });
 });

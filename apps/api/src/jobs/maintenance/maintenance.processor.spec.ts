@@ -7,11 +7,17 @@ import {
   JOB_MODEL_CATALOG,
   JOB_RETENTION,
   JOB_SESSION_SWEEPER,
+  JOB_STUDY_REMINDER,
 } from '../jobs.constants.js';
 import { NullSessionSweeper, type SessionSweeper } from '../session-sweeper.js';
 import type { DailyStreaksService } from './daily-streaks.service.js';
 import { MaintenanceProcessor } from './maintenance.processor.js';
 import type { RetentionService } from './retention.service.js';
+import type { StudyReminderService } from './study-reminder.service.js';
+
+function fakeStudyReminderService(): StudyReminderService {
+  return { run: vi.fn() } as unknown as StudyReminderService;
+}
 
 function makeJob(name: string): Job<Record<string, never>> {
   return {
@@ -37,6 +43,7 @@ describe('MaintenanceProcessor', () => {
       dailyStreaksService,
       retentionService,
       modelCatalogService,
+      fakeStudyReminderService(),
     );
 
     const result = await processor.process(makeJob(JOB_SESSION_SWEEPER));
@@ -65,6 +72,7 @@ describe('MaintenanceProcessor', () => {
       dailyStreaksService,
       { run: vi.fn() } as unknown as RetentionService,
       { refresh: vi.fn() } as unknown as ModelCatalogService,
+      fakeStudyReminderService(),
     );
 
     const result = await processor.process(makeJob(JOB_DAILY_STREAKS));
@@ -85,6 +93,7 @@ describe('MaintenanceProcessor', () => {
       { run: vi.fn() } as unknown as DailyStreaksService,
       retentionService,
       { refresh: vi.fn() } as unknown as ModelCatalogService,
+      fakeStudyReminderService(),
     );
 
     const result = await processor.process(makeJob(JOB_RETENTION));
@@ -104,12 +113,34 @@ describe('MaintenanceProcessor', () => {
       { run: vi.fn() } as unknown as DailyStreaksService,
       { run: vi.fn() } as unknown as RetentionService,
       modelCatalogService,
+      fakeStudyReminderService(),
     );
 
     const result = await processor.process(makeJob(JOB_MODEL_CATALOG));
 
     expect(result).toEqual({ status: 'refreshed' });
     expect(modelCatalogService.refresh).toHaveBeenCalledTimes(1);
+  });
+
+  it('despacha study-reminder a StudyReminderService.run', async () => {
+    vi.spyOn(Logger.prototype, 'log').mockImplementation(() => undefined);
+    const studyReminderResult = { status: 'done' as const, candidates: 2, sent: 1 };
+    const studyReminderService = {
+      run: vi.fn(async () => studyReminderResult),
+    } as unknown as StudyReminderService;
+
+    const processor = new MaintenanceProcessor(
+      new NullSessionSweeper(),
+      { run: vi.fn() } as unknown as DailyStreaksService,
+      { run: vi.fn() } as unknown as RetentionService,
+      { refresh: vi.fn() } as unknown as ModelCatalogService,
+      studyReminderService,
+    );
+
+    const result = await processor.process(makeJob(JOB_STUDY_REMINDER));
+
+    expect(result).toEqual(studyReminderResult);
+    expect(studyReminderService.run).toHaveBeenCalledTimes(1);
   });
 
   it('propaga el error de un job para que BullMQ reintente', async () => {
@@ -125,6 +156,7 @@ describe('MaintenanceProcessor', () => {
       { run: vi.fn() } as unknown as DailyStreaksService,
       retentionService,
       { refresh: vi.fn() } as unknown as ModelCatalogService,
+      fakeStudyReminderService(),
     );
 
     await expect(processor.process(makeJob(JOB_RETENTION))).rejects.toThrow('boom');
@@ -137,6 +169,7 @@ describe('MaintenanceProcessor', () => {
       { run: vi.fn() } as unknown as DailyStreaksService,
       { run: vi.fn() } as unknown as RetentionService,
       { refresh: vi.fn() } as unknown as ModelCatalogService,
+      fakeStudyReminderService(),
     );
 
     await expect(processor.process(makeJob('unknown-job'))).rejects.toThrow(

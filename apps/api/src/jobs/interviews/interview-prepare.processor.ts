@@ -14,6 +14,7 @@ import {
   QUEUE_CONCURRENCY,
   QUEUE_INTERVIEWS,
 } from '../jobs.constants.js';
+import type { InterviewPrepareJobData } from '../job-dispatcher.js';
 import {
   classifyFeedbackError,
   InterviewFeedbackService,
@@ -24,15 +25,6 @@ import {
   InterviewPrepareService,
   type InterviewPrepareJobResult,
 } from './interview-prepare.service.js';
-
-/**
- * Carga de un job de la cola `interviews` (la encolan `POST /interviews`,
- * `POST /interviews/:id/retry` y `InterviewCloserService.onInterviewSessionClosed`).
- * `interview-prepare` e `interview-feedback` (F12.3.T1) comparten esta forma.
- */
-export interface InterviewPrepareJobData {
-  readonly interviewId: string;
-}
 
 @Processor(QUEUE_INTERVIEWS, { concurrency: QUEUE_CONCURRENCY[QUEUE_INTERVIEWS] })
 export class InterviewPrepareProcessor extends WorkerHost {

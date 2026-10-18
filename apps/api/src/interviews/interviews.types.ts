@@ -52,7 +52,7 @@ const Competency = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   expectedLevel: SeniorityLevelSchema,
-  weight: z.number(),
+  weight: z.number().positive(),
 });
 
 const QuestionKindSchema = z.enum(['technical', 'behavioral']);
@@ -71,7 +71,7 @@ const Usage = z.object({
   searchCalls: z.number().int().min(0),
 });
 
-/** Sin invariantes todavía: la reutilizan `InterviewPlan` y la variante `ok` de `PrepareResponse`. */
+/** Sin invariantes todavía: la reutilizan `InterviewPlan` y la variante `ok` de `PrepareResponse` (que repite `type`). */
 const InterviewPlanShape = z.object({
   type: InterviewTypeSchema,
   company: Company,
@@ -83,10 +83,15 @@ const InterviewPlanShape = z.object({
   questions: z.array(Question),
 });
 
+/** `true` si `idxs` es exactamente `1..n` (sin huecos ni repetidos, en cualquier orden). */
+function isOneToN(idxs: readonly number[], n: number): boolean {
+  return idxs.length === n && new Set(idxs).size === n && idxs.every((idx) => idx >= 1 && idx <= n);
+}
+
 /**
- * Invariantes de I1: 4–6 competencias, exactamente 8 preguntas, cada
- * competencia con al menos una pregunta, y el número de preguntas
- * `behavioral` fijado por `type` (2 en `mixed`, 0 en `technical`).
+ * Invariantes de I1: 4–6 competencias con `id` único, exactamente 8 preguntas
+ * con `idx` 1..8, cada pregunta apunta a una competencia de la rúbrica, cada
+ * competencia con al menos una pregunta, y `mixed` ⇒ exactamente 2 `behavioral`.
  */
 function checkPlanInvariants(
   plan: z.infer<typeof InterviewPlanShape>,
@@ -100,13 +105,32 @@ function checkPlanInvariants(
     });
   }
 
-  if (plan.questions.length !== 8) {
+  const competencyIds = new Set(plan.rubric.map((competency) => competency.id));
+  if (competencyIds.size !== plan.rubric.length) {
     ctx.addIssue({
       code: 'custom',
-      message: 'questions debe tener exactamente 8 preguntas.',
+      message: 'rubric tiene ids de competencia repetidos.',
+      path: ['rubric'],
+    });
+  }
+
+  if (!isOneToN(plan.questions.map((question) => question.idx), 8)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'questions debe tener exactamente 8 preguntas con idx 1..8 sin repetir.',
       path: ['questions'],
     });
   }
+
+  plan.questions.forEach((question, i) => {
+    if (!competencyIds.has(question.competencyId)) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `la pregunta ${question.idx} apunta a una competencia inexistente: ${question.competencyId}.`,
+        path: ['questions', i, 'competencyId'],
+      });
+    }
+  });
 
   for (const competency of plan.rubric) {
     if (!plan.questions.some((question) => question.competencyId === competency.id)) {
@@ -118,14 +142,15 @@ function checkPlanInvariants(
     }
   }
 
-  const behavioralCount = plan.questions.filter((question) => question.kind === 'behavioral').length;
-  const expectedBehavioral = plan.type === 'mixed' ? 2 : 0;
-  if (behavioralCount !== expectedBehavioral) {
-    ctx.addIssue({
-      code: 'custom',
-      message: `type=${plan.type} debe tener ${expectedBehavioral} preguntas behavioral, no ${behavioralCount}.`,
-      path: ['questions'],
-    });
+  if (plan.type === 'mixed') {
+    const behavioralCount = plan.questions.filter((question) => question.kind === 'behavioral').length;
+    if (behavioralCount !== 2) {
+      ctx.addIssue({
+        code: 'custom',
+        message: `type=mixed debe tener 2 preguntas behavioral, no ${behavioralCount}.`,
+        path: ['questions'],
+      });
+    }
   }
 }
 
@@ -133,14 +158,19 @@ function checkPlanInvariants(
 export const InterviewPlan = InterviewPlanShape.superRefine(checkPlanInvariants);
 export type InterviewPlan = z.infer<typeof InterviewPlanShape>;
 
-export const PrepareRequest = z.object({
-  interviewId: z.uuid(),
-  type: InterviewTypeSchema,
-  offerText: z.string().max(20000).nullable(),
-  offerUrl: z.url().nullable(),
-  learnerLevel: LearnerLevelSchema,
-  previousQuestions: z.array(z.string()),
-});
+export const PrepareRequest = z
+  .object({
+    interviewId: z.uuid(),
+    type: InterviewTypeSchema,
+    offerText: z.string().max(20000).nullable(),
+    offerUrl: z.url().nullable(),
+    learnerLevel: LearnerLevelSchema,
+    previousQuestions: z.array(z.string()),
+  })
+  .refine((value) => value.offerText !== null || value.offerUrl !== null, {
+    message: 'offerText u offerUrl debe venir informado.',
+    path: ['offerText'],
+  });
 export type PrepareRequest = z.infer<typeof PrepareRequest>;
 
 const Research = z.object({
@@ -243,12 +273,12 @@ const InterviewFeedbackShape = z.object({
   usage: Usage,
 });
 
-/** Invariante de I1: `studyPlan` tiene exactamente 5 items. */
+/** Invariante de I1: `studyPlan` tiene exactamente 5 items con `idx` 1..5. */
 export const InterviewFeedback = InterviewFeedbackShape.superRefine((value, ctx) => {
-  if (value.studyPlan.length !== 5) {
+  if (!isOneToN(value.studyPlan.map((item) => item.idx), 5)) {
     ctx.addIssue({
       code: 'custom',
-      message: 'studyPlan debe tener exactamente 5 items.',
+      message: 'studyPlan debe tener exactamente 5 items con idx 1..5 sin repetir.',
       path: ['studyPlan'],
     });
   }

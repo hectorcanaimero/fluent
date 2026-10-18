@@ -26,6 +26,15 @@ export function isValidIanaTimezone(value: unknown): value is string {
   }
 }
 
+/**
+ * Nombre canónico de una zona válida (`US/Pacific` → `America/Los_Angeles`).
+ * ICU acepta los alias antiguos, pero el Postgres de InsForge no los trae y
+ * `AT TIME ZONE` falla con ellos: se guarda siempre el canónico.
+ */
+export function canonicalTimezone(value: string): string {
+  return new Intl.DateTimeFormat('en-US', { timeZone: value }).resolvedOptions().timeZone;
+}
+
 export function IsIanaTimezone(
   validationOptions?: ValidationOptions,
 ): PropertyDecorator {

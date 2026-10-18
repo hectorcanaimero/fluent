@@ -62,16 +62,39 @@ final interviewsProvider = FutureProvider.autoDispose<List<InterviewSummary>>((
 });
 
 /// `GET /interviews/:id` (IE-03, IE-04). Se repite cada 3 s mientras
-/// `status == 'preparing'`: un `StreamProvider.autoDispose` en vez de un
-/// `Timer` aparte en la pantalla, que así no tiene que cancelarlo a mano al
-/// salir — `autoDispose` lo corta solo.
+/// `status` es `preparing` o `feedback_pending`: un
+/// `StreamProvider.autoDispose` en vez de un `Timer` aparte en la pantalla,
+/// que así no tiene que cancelarlo a mano al salir — `autoDispose` lo corta
+/// solo.
+///
+/// Un GET fallido no corta el repolleo: se reintenta con espera creciente
+/// (6 s, 12 s, 24 s, 30 s) manteniendo el último valor bueno, y el error solo
+/// se muestra tras [interviewPollMaxFailures] fallos seguidos. Si falla la
+/// primera carga no hay valor que mantener y el error sale enseguida.
 final interviewProvider = StreamProvider.autoDispose
     .family<InterviewDetail, String>((ref, id) async* {
       final repo = ref.watch(interviewsRepositoryProvider);
+      var hasValue = false;
+      var failures = 0;
       while (true) {
-        final detail = await repo.detail(id);
-        yield detail;
-        if (detail.status != 'preparing') break;
-        await Future.delayed(const Duration(seconds: 3));
+        try {
+          final detail = await repo.detail(id);
+          hasValue = true;
+          failures = 0;
+          yield detail;
+          if (!_pollingStatuses.contains(detail.status)) break;
+        } catch (_) {
+          failures++;
+          if (!hasValue || failures >= interviewPollMaxFailures) rethrow;
+        }
+        await Future.delayed(_pollDelay(failures));
       }
     });
+
+const interviewPollMaxFailures = 5;
+const _pollingStatuses = {'preparing', 'feedback_pending'};
+
+Duration _pollDelay(int failures) {
+  final seconds = 3 * (1 << failures);
+  return Duration(seconds: seconds > 30 ? 30 : seconds);
+}

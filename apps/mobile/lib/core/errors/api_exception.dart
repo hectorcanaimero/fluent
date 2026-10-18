@@ -39,7 +39,8 @@ enum ApiErrorCode {
   interviewsDailyCap,
 
   /// I2: `409` al pedir el parecer de una entrevista con menos de 4
-  /// respuestas (FR-11).
+  /// respuestas (FR-11). `TOO_SHORT` es un código genérico, así que no se
+  /// mapea en [fromWire]: solo `getInterviewFeedback` lo traduce a este caso.
   interviewTooShort,
 
   /// P1 MAL-08: no llegó ningún evento del stream dentro de la ventana
@@ -105,8 +106,6 @@ enum ApiErrorCode {
         return ApiErrorCode.offerUnreadable;
       case 'INTERVIEWS_DAILY_CAP':
         return ApiErrorCode.interviewsDailyCap;
-      case 'TOO_SHORT':
-        return ApiErrorCode.interviewTooShort;
       default:
         return ApiErrorCode.unknown;
     }

@@ -475,8 +475,11 @@ class HttpFluentApi implements FluentApi {
   @override
   Future<List<InterviewSummary>> getInterviews() => _client.guard(() async {
     final res = await _client.dio.get('/interviews');
-    final data = res.data as Map<String, dynamic>;
-    return (data['items'] as List)
+    // I2 define una lista; se acepta también `{items: [...]}` por si la API
+    // la envuelve.
+    final data = res.data;
+    final items = data is Map<String, dynamic> ? data['items'] : data;
+    return (items as List)
         .map((e) => InterviewSummary.fromJson(e as Map<String, dynamic>))
         .toList();
   });
@@ -503,7 +506,32 @@ class HttpFluentApi implements FluentApi {
   @override
   Future<InterviewFeedback> getInterviewFeedback(String id) =>
       _client.guard(() async {
-        final res = await _client.dio.get('/interviews/$id/feedback');
+        final Response<dynamic> res;
+        try {
+          res = await _client.dio.get('/interviews/$id/feedback');
+        } on DioException catch (e) {
+          // `TOO_SHORT` solo significa "entrevista corta" en esta ruta; por
+          // eso se traduce aquí y no en `ApiErrorCode.fromWire`.
+          final data = e.response?.data;
+          if (e.response?.statusCode == 409 &&
+              data is Map<String, dynamic> &&
+              data['error'] == 'TOO_SHORT') {
+            throw ApiException(
+              code: ApiErrorCode.interviewTooShort,
+              message: (data['message'] as String?) ?? 'too short',
+              statusCode: 409,
+            );
+          }
+          rethrow;
+        }
+        // `202` mientras el parecer está en `feedback_pending`.
+        if (res.statusCode == 202) {
+          throw const ApiException(
+            code: ApiErrorCode.notReady,
+            message: 'feedback pending',
+            statusCode: 202,
+          );
+        }
         return InterviewFeedback.fromJson(res.data as Map<String, dynamic>);
       });
 

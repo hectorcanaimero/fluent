@@ -1,4 +1,5 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -71,7 +72,10 @@ void main() {
 
   test('menos de 4 respuestas lanza TOO_SHORT en el parecer', () async {
     final created = await api.createInterview(type: 'technical', offerText: 'oferta');
+    await _readyInterview(api, created.id);
+    await api.startInterviewSession(created.id);
     api.setInterviewAnsweredCount(created.id, 2);
+    api.finishInterview(created.id);
 
     await expectLater(
       () => api.getInterviewFeedback(created.id),
@@ -90,9 +94,125 @@ void main() {
       throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.validation)),
     );
 
+    // Abrir la sesión no la marca hecha; terminarla sí.
     await api.startStudyCycleSession(interviewId: created.id, idx: 1);
+    expect((await api.getStudyCycle(created.id)).sessions[0].status, 'available');
+
+    api.completeStudySession(created.id, 1);
     final updated = await api.getStudyCycle(created.id);
     expect(updated.sessions[0].status, 'done');
     expect(updated.sessions[1].status, 'available');
+    expect(updated.status, 'active');
   });
+
+  test('createInterview exige offerText u offerUrl sin consumir el tope', () async {
+    api.interviewsDailyLimit = 1;
+    await expectLater(
+      () => api.createInterview(type: 'technical'),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.code, 'code', ApiErrorCode.validation)
+            .having((e) => e.statusCode, 'statusCode', 422),
+      ),
+    );
+    expect((await api.getInterviewQuota()).remaining, 1);
+  });
+
+  test('la cuota no rompe con un tope <= 0 (desactivado)', () async {
+    api.interviewsDailyLimit = -1;
+    final quota = await api.getInterviewQuota();
+    expect(quota.limit, -1);
+    await api.createInterview(type: 'technical', offerText: 'oferta');
+  });
+
+  test('retryInterview: prep_failed y feedback_failed se reintentan; otros dan 409', () async {
+    final created = await api.createInterview(type: 'technical', offerText: 'oferta');
+    await expectLater(
+      () => api.retryInterview(created.id),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 409)),
+    );
+
+    api.forceInterviewFeedbackFailed(created.id);
+    final retried = await api.retryInterview(created.id);
+    expect(retried.status, 'feedback_pending');
+    expect(retried.errorCode, isNull);
+  });
+
+  test('startInterviewSession solo desde ready/in_progress/too_short y retoma el progreso', () async {
+    final created = await api.createInterview(type: 'technical', offerText: 'oferta');
+    await expectLater(
+      () => api.startInterviewSession(created.id),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 409)),
+    );
+
+    await _readyInterview(api, created.id);
+    final first = await api.startInterviewSession(created.id);
+    expect(first.answeredCount, 0);
+    expect((await api.getInterview(created.id)).status, 'in_progress');
+
+    api.setInterviewAnsweredCount(created.id, 3);
+    final resumed = await api.startInterviewSession(created.id);
+    expect(resumed.answeredCount, 3);
+  });
+
+  test('getInterviewFeedback respeta el estado de la entrevista', () async {
+    final created = await api.createInterview(type: 'technical', offerText: 'oferta');
+    Matcher code(ApiErrorCode c) =>
+        throwsA(isA<ApiException>().having((e) => e.code, 'code', c));
+
+    // Antes de terminar la entrevista: 409 notReady.
+    await expectLater(() => api.getInterviewFeedback(created.id), code(ApiErrorCode.notReady));
+
+    await _readyInterview(api, created.id);
+    await api.startInterviewSession(created.id);
+    api.setInterviewAnsweredCount(created.id, 6);
+    api.finishInterview(created.id);
+
+    // feedback_pending: 202 una vez y luego el parecer.
+    await expectLater(() => api.getInterviewFeedback(created.id), code(ApiErrorCode.notReady));
+    final feedback = await api.getInterviewFeedback(created.id);
+    expect(feedback.studyPlan, hasLength(5));
+    expect(feedback.comparison, isNull);
+
+    api.forceInterviewFeedbackFailed(created.id);
+    await expectLater(() => api.getInterviewFeedback(created.id), code(ApiErrorCode.llmUnavailable));
+  });
+
+  test('reinterview exige ciclo completo y la hija es re-entrevista con comparación', () async {
+    final parent = await api.createInterview(type: 'technical', offerText: 'oferta');
+    await api.createStudyCycle(parent.id);
+    await expectLater(
+      () => api.reinterview(parent.id),
+      throwsA(isA<ApiException>().having((e) => e.statusCode, 'statusCode', 409)),
+    );
+
+    for (var i = 1; i <= 5; i++) {
+      api.completeStudySession(parent.id, i);
+    }
+    expect((await api.getStudyCycle(parent.id)).status, 'completed');
+
+    final child = await api.reinterview(parent.id);
+    expect(child.isReinterview, isTrue);
+    final list = await api.getInterviews();
+    expect(list.firstWhere((i) => i.id == child.id).isReinterview, isTrue);
+    expect(list.firstWhere((i) => i.id == parent.id).isReinterview, isFalse);
+
+    final ready = await _readyInterview(api, child.id);
+    expect(ready.isReinterview, isTrue);
+    await api.startInterviewSession(child.id);
+    api.setInterviewAnsweredCount(child.id, 8);
+    api.finishInterview(child.id);
+    await api.getInterview(child.id); // feedback_pending → feedback_ready
+    final feedback = await api.getInterviewFeedback(child.id);
+    expect(feedback.comparison, isNotNull);
+  });
+}
+
+/// Repolla hasta que la preparación termina (el fake avanza un paso por GET).
+Future<InterviewDetail> _readyInterview(FakeApi api, String id) async {
+  var detail = await api.getInterview(id);
+  while (detail.status == 'preparing') {
+    detail = await api.getInterview(id);
+  }
+  return detail;
 }

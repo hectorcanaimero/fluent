@@ -159,6 +159,24 @@ void main() {
     expect(items.single.cycleCompletedSessions, 2);
   });
 
+  test('GET /interviews acepta también una lista plana', () async {
+    adapter.onGet(
+      '/interviews',
+      (server) => server.reply(200, [
+        {
+          'id': 'interview-1',
+          'type': 'technical',
+          'status': 'ready',
+          'createdAt': '2026-10-18T10:00:00.000Z',
+        },
+      ]),
+    );
+
+    final items = await api.getInterviews();
+
+    expect(items.single.id, 'interview-1');
+  });
+
   // I2: GET /interviews/:id una vez `ready` (IE-04): ficha completa, sin preguntas.
   test('GET /interviews/:id parsea la ficha completa en ready', () async {
     adapter.onGet(
@@ -299,6 +317,41 @@ void main() {
         isA<ApiException>()
             .having((e) => e.code, 'code', ApiErrorCode.interviewTooShort)
             .having((e) => e.statusCode, 'statusCode', 409),
+      ),
+    );
+  });
+
+  // `TOO_SHORT` solo se traduce en la ruta del parecer, no en toda la app.
+  test('TOO_SHORT fuera del parecer no se mapea a interviewTooShort', () async {
+    expect(ApiErrorCode.fromWire('TOO_SHORT'), ApiErrorCode.unknown);
+    adapter.onPost(
+      '/interviews/interview-1/session',
+      (server) => server.reply(409, {
+        'error': 'TOO_SHORT',
+        'message': 'otro uso del código',
+        'statusCode': 409,
+      }),
+    );
+
+    await expectLater(
+      () => api.startInterviewSession('interview-1'),
+      throwsA(isA<ApiException>().having((e) => e.code, 'code', ApiErrorCode.unknown)),
+    );
+  });
+
+  // F12: `202` mientras el parecer está en `feedback_pending`.
+  test('GET /interviews/:id/feedback con 202 lanza notReady', () async {
+    adapter.onGet(
+      '/interviews/interview-1/feedback',
+      (server) => server.reply(202, {'status': 'feedback_pending'}),
+    );
+
+    await expectLater(
+      () => api.getInterviewFeedback('interview-1'),
+      throwsA(
+        isA<ApiException>()
+            .having((e) => e.code, 'code', ApiErrorCode.notReady)
+            .having((e) => e.statusCode, 'statusCode', 202),
       ),
     );
   });

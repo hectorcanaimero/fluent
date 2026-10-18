@@ -139,7 +139,11 @@ abstract class FluentApi {
   /// Abre o retoma la sesión `interview`.
   Future<InterviewSessionStart> startInterviewSession(String id);
 
-  /// `409 TOO_SHORT` si hubo menos de 4 respuestas.
+  /// Según el estado de la entrevista: `too_short` → `409`
+  /// `ApiErrorCode.interviewTooShort`; `feedback_pending` → `202`
+  /// `ApiErrorCode.notReady` (repreguntar); `feedback_failed` →
+  /// `ApiErrorCode.llmUnavailable` (ofrecer reintentar); antes de terminar la
+  /// entrevista → `409` `ApiErrorCode.notReady`.
   Future<InterviewFeedback> getInterviewFeedback(String id);
   Future<StudyCycle> createStudyCycle(String id);
   Future<StudyCycle> getStudyCycle(String id);

@@ -12,6 +12,7 @@ jobs:
     outputs:
       api: ${{ steps.filter.outputs.api }}
       mobile: ${{ steps.filter.outputs.mobile }}
+      interview_agent: ${{ steps.filter.outputs.interview_agent }}
     steps:
       - uses: actions/checkout@v4
       - uses: dorny/paths-filter@v3
@@ -26,6 +27,9 @@ jobs:
               - '.github/workflows/ci.yml'
             mobile:
               - 'apps/mobile/**'
+              - '.github/workflows/ci.yml'
+            interview_agent:
+              - 'apps/interview-agent/**'
               - '.github/workflows/ci.yml'
 
   api:
@@ -85,3 +89,28 @@ jobs:
       - name: Run Flutter tests
         working-directory: apps/mobile
         run: flutter test
+
+  interview-agent:
+    needs: changes
+    if: github.event_name != 'pull_request' || needs.changes.outputs.interview_agent == 'true'
+    runs-on: ${{ vars.RUNNER || 'ubuntu-latest' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup uv
+        uses: astral-sh/setup-uv@v4
+        with:
+          working-directory: apps/interview-agent
+
+      - name: Install dependencies
+        working-directory: apps/interview-agent
+        run: uv sync --frozen
+
+      - name: Lint
+        working-directory: apps/interview-agent
+        run: uv run ruff check .
+
+      - name: Test
+        working-directory: apps/interview-agent
+        run: uv run pytest

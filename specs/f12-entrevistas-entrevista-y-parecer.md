@@ -216,6 +216,23 @@ IE-05), usado por la ruta `/interviews/:id/session`, que llama
   navegar a `/interviews/:id/feedback`.
 El modo normal de las sesiones no cambia (sigue con revisión).
 
+Contrato de sesión de entrevista ya implementado en la API (PR #94):
+- `POST /interviews/:id/session` abre o retoma **la misma** sesión; al retomar,
+  el primer turno es "Welcome back, … <pregunta pendiente>" y el progreso no
+  avanza. Responde `409 INTERVIEW_NOT_RESUMABLE` si la entrevista se cerró
+  por tiempo o por abandono, y `409 SESSION_ALREADY_ACTIVE` (con
+  `extra.activeSessionId`) si hay una sesión normal abierta: mostrar un aviso
+  para terminarla primero.
+- Terminar antes de 4 respuestas deja la entrevista en `too_short` con la
+  sesión pausada; los turnos mientras está pausada responden
+  `409 SESSION_NOT_ACTIVE`, así que la app debe llamar primero a
+  `POST /interviews/:id/session`.
+- Un turno con `interview.done` puede dejar la entrevista en `too_short` o
+  `feedback_pending`: tras `done`, leer `GET /interviews/:id` para decidir si
+  ir al parecer o a IE-06d.
+- Mapear `INTERVIEW_NOT_RESUMABLE` e `INTERVIEW_NOT_RETRYABLE` en
+  `ApiErrorCode` con textos es (tuteo) y pt.
+
 Done when: widget tests verifican que en modo entrevista una transcripción se
 envía sin revisión y no aparecen chips, que en modo normal sigue la revisión,
 y la navegación al parecer con `done`.
@@ -244,7 +261,10 @@ Pantalla `/interviews/:id/feedback` (IE-06a a IE-06e):
 - aviso fijo "Parecer orientativo generado por IA. Es una guía para estudiar,
   no una evaluación oficial." (FR-14) y CTA "Empezar ciclo de estudio" (navega
   a `/interviews/:id/cycle`, F13.2);
-- `409 TOO_SHORT` → IE-06d con "Retomar entrevista" y "Empezar de nuevo";
+- `409 TOO_SHORT` → IE-06d con "Retomar entrevista" (solo si
+  `GET /interviews/:id` trae `resumable: true`) y "Empezar de nuevo" (crea una
+  entrevista nueva con la misma oferta); con `resumable: false` solo se ofrece
+  "Empezar de nuevo";
 - `feedback_failed` o red → IE-06e con Reintentar y "Avísame cuando esté
   listo".
 Sin botón de compartir.

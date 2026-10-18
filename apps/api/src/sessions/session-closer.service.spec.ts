@@ -52,6 +52,7 @@ function fakeJobDispatcher(impl?: (sessionId: string) => Promise<void>) {
       if (impl) await impl(sessionId);
     },
     enqueueInterviewPrepare: async () => {},
+    enqueueInterviewFeedback: async () => {},
   };
   return { dispatcher, enqueued };
 }

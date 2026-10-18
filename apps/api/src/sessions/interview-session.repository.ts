@@ -10,6 +10,7 @@ import {
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import type { InterviewStatus } from '../interviews/interviews.types.js';
+import { markInterviewFeedbackFailed } from '../jobs/interviews/interview-jobs.shared.js';
 import { INTERVIEW_TOPIC } from './scenario.js';
 
 /** Turno de cualquier sesión de la entrevista, con su pregunta (F12.1.T2). */
@@ -100,6 +101,14 @@ export class InterviewSessionRepository {
       .eq('user_id', userId)
       .in('status', ['in_progress', 'too_short']);
     unwrapInsforge(result);
+  }
+
+  /**
+   * `feedback_pending` → `feedback_failed` cuando no se pudo encolar el
+   * parecer (F12.3.T1): así `POST /interviews/:id/retry` lo puede reencolar.
+   */
+  async markFeedbackEnqueueFailed(interviewId: string): Promise<void> {
+    await markInterviewFeedbackFailed(this.admin.database, interviewId, 'enqueue_failed');
   }
 
   async updateAnsweredCount(

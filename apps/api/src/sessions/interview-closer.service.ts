@@ -1,9 +1,10 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import type { Env } from '../config/env.js';
 import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { Session } from '../db/schema.js';
+import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { InterviewSessionRepository } from './interview-session.repository.js';
 import {
   SessionCloserService,
@@ -49,6 +50,7 @@ export class InterviewCloserService {
     private readonly closer: SessionCloserService,
     private readonly sessions: SessionsRepository,
     private readonly configService: ConfigService<Env, true>,
+    @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
   ) {}
 
   async end(
@@ -92,14 +94,31 @@ export class InterviewCloserService {
   }
 
   /**
-   * Encolado del parecer. Por ahora solo registra; F12.3.T1 lo conecta a
-   * `enqueueInterviewFeedback`. Solo se llama con la entrevista ya en
-   * `feedback_pending`.
+   * Encolado del parecer (F12.3.T1). Solo se llama con la entrevista ya en
+   * `feedback_pending`, desde los tres cierres (turnos, `POST /sessions/:id/end`
+   * y el sweeper). `jobId` por entrevista: una doble llamada no encola dos veces.
    */
   async onInterviewSessionClosed(interviewId: string): Promise<void> {
     this.logger.log(
       `Entrevista ${interviewId} lista para el parecer (feedback_pending)`,
     );
+    try {
+      await this.jobs.enqueueInterviewFeedback(interviewId);
+    } catch (error) {
+      // La sesión ya se cerró: no se tumba el cierre. `feedback_failed` deja
+      // que la app ofrezca reintentar en vez de quedar `feedback_pending` para siempre.
+      this.logger.error(
+        `No se pudo encolar el parecer de ${interviewId}: ${(error as Error).message}`,
+      );
+      try {
+        await this.repository.markFeedbackEnqueueFailed(interviewId);
+      } catch (markError) {
+        // Tampoco esto tumba el cierre: queda `feedback_pending` sin job.
+        this.logger.error(
+          `No se pudo marcar feedback_failed la entrevista ${interviewId}: ${(markError as Error).message}`,
+        );
+      }
+    }
   }
 
   /** `true` si dejó la entrevista en `too_short` retomable sin cerrar la sesión. */

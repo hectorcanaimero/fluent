@@ -1484,4 +1484,18 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interviewHistoryUnknownDate => 'Data desconhecida';
+
+  @override
+  String get errorInterviewNotOpenable =>
+      'Essa entrevista não pode ser aberta agora.';
+
+  @override
+  String get conversationInterviewPendingHint =>
+      'Sua resposta ainda não foi enviada.';
+
+  @override
+  String get conversationInterviewRetrySend => 'Tentar enviar de novo';
+
+  @override
+  String get conversationInterviewContinue => 'Continuar falando';
 }

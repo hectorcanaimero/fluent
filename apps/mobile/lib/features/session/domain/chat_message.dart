@@ -1,6 +1,17 @@
 import '../../../core/api/models.dart';
 
-enum ConvState { idle, listening, reviewing, sending, speaking }
+enum ConvState {
+  idle,
+  listening,
+  reviewing,
+  sending,
+  speaking,
+
+  /// Modo entrevista: una respuesta transcripta que todavía no se envió (la
+  /// app pasó a segundo plano, o el envío falló). No es editable: se sigue
+  /// hablando o se envía tal cual.
+  pending,
+}
 
 /// `normal`: conversación de siempre, con revisión de la transcripción antes
 /// de enviar y chips de corrección (SPEC-06 §4.3).
@@ -29,11 +40,14 @@ class ChatMessage {
   /// Usado por el streaming del turno (SPEC-04 §4): actualiza el texto de
   /// la burbuja del tutor token a token y, al llegar `done`, sus
   /// correcciones/`degraded` finales.
-  ChatMessage copyWith({String? text, List<Correction>? corrections, bool? degraded}) =>
-      ChatMessage(
-        role: role,
-        text: text ?? this.text,
-        corrections: corrections ?? this.corrections,
-        degraded: degraded ?? this.degraded,
-      );
+  ChatMessage copyWith({
+    String? text,
+    List<Correction>? corrections,
+    bool? degraded,
+  }) => ChatMessage(
+    role: role,
+    text: text ?? this.text,
+    corrections: corrections ?? this.corrections,
+    degraded: degraded ?? this.degraded,
+  );
 }

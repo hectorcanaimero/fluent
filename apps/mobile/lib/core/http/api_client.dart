@@ -76,7 +76,8 @@ class ApiClient {
             }
 
             final sentWith = error.requestOptions.headers['Authorization'];
-            if (current != null && sentWith != 'Bearer ${current.accessToken}') {
+            if (current != null &&
+                sentWith != 'Bearer ${current.accessToken}') {
               await _retryWith(current, error, handler);
               return;
             }
@@ -221,12 +222,10 @@ class ApiClient {
   static ApiException mapDioException(DioException e) {
     final data = e.response?.data;
     if (data is Map<String, dynamic>) {
-      return ApiException(
-        code: ApiErrorCode.fromWire(data['error'] as String?),
-        message: (data['message'] as String?) ?? e.message ?? 'error',
+      return ApiException.fromBody(
+        data,
         statusCode: e.response?.statusCode,
-        details: (data['details'] as List?)?.cast<Map<String, dynamic>>(),
-        activeSessionId: data['activeSessionId'] as String?,
+        fallbackMessage: e.message,
       );
     }
     return ApiException(
@@ -243,12 +242,8 @@ class ApiClient {
 /// la que decide si se cierra la sesión o solo falla esta petición.
 class _RefreshOutcome {
   const _RefreshOutcome.refreshed(this.tokens) : rejected = false;
-  const _RefreshOutcome.rejected()
-    : tokens = null,
-      rejected = true;
-  const _RefreshOutcome.unavailable()
-    : tokens = null,
-      rejected = false;
+  const _RefreshOutcome.rejected() : tokens = null, rejected = true;
+  const _RefreshOutcome.unavailable() : tokens = null, rejected = false;
 
   final AuthTokens? tokens;
 

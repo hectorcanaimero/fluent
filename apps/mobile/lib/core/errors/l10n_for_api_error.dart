@@ -46,6 +46,7 @@ String l10nForApiError(ApiErrorCode code, AppLocalizations l10n) {
     // abandono y ya no se puede retomar.
     ApiErrorCode.interviewNotResumable => l10n.errorInterviewNotResumable,
     ApiErrorCode.interviewNotRetryable => l10n.errorInterviewNotRetryable,
+    ApiErrorCode.interviewNotOpenable => l10n.errorInterviewNotOpenable,
     ApiErrorCode.unknown => l10n.errorGeneric,
   };
 }

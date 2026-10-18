@@ -32,6 +32,7 @@ class ConversationScreen extends ConsumerStatefulWidget {
     required this.sessionId,
     this.mode = ConversationMode.normal,
     this.interviewId,
+    this.initialInterview,
     this.sessionDuration = const Duration(minutes: 10),
     this.warningThreshold = const Duration(minutes: 2),
   }) : assert(
@@ -48,6 +49,10 @@ class ConversationScreen extends ConsumerStatefulWidget {
   /// Id de la entrevista (`/interviews/:id/...`), solo en
   /// [ConversationMode.interview]: a dónde navegar al terminar.
   final String? interviewId;
+
+  /// Progreso al abrir la entrevista (`POST /interviews/:id/session`), para
+  /// mostrar "Pregunta n de 8" y el tiempo desde la apertura.
+  final TurnInterviewInfo? initialInterview;
 
   final Duration sessionDuration;
   final Duration warningThreshold;
@@ -75,10 +80,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   bool _bootError = false;
   String? _sessionTopic;
 
+  late final ConversationModeBehavior _behavior = ConversationModeBehavior.of(
+    widget.mode,
+    interviewId: widget.interviewId,
+  );
+
   /// F12.4.T1: progreso de la entrevista (`TurnResult.interview`), para el
-  /// encabezado "Pregunta n de 8". `null` hasta el primer turno (al retomar,
-  /// el primer turno es el saludo y no trae progreso nuevo).
-  TurnInterviewInfo? _interviewProgress;
+  /// encabezado "Pregunta n de 8"; arranca con el de la apertura.
+  late TurnInterviewInfo? _interviewProgress = widget.initialInterview;
 
   String _partialText = '';
   double _ttsRate = 1.0;
@@ -92,8 +101,13 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   /// MEJ-17: el timer tiqueaba cada segundo con un `setState` de pantalla
   /// completa (AppBar, lista de mensajes y controles de abajo). Con esto
   /// solo repinta el `Text` del AppBar envuelto en `ValueListenableBuilder`.
+  ///
+  /// En modo entrevista cuenta el `remainingSec` del último turno: solo se
+  /// muestra, la API es la que cierra (ver `_startTimer`).
   late final ValueNotifier<int> _remainingSecondsNotifier = ValueNotifier(
-    widget.sessionDuration.inSeconds,
+    _behavior.timerEnabled
+        ? widget.sessionDuration.inSeconds
+        : (widget.initialInterview?.remainingSec ?? 0),
   );
   int get _remainingSeconds => _remainingSecondsNotifier.value;
   bool _warningShown = false;
@@ -181,11 +195,17 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         _listenCountdownTimer?.cancel();
         _speech.cancel();
         _tts.stop();
-        // Sin reinicios en segundo plano; lo dicho queda para revisar.
+        // Sin reinicios en segundo plano; lo dicho queda para revisar. En
+        // modo entrevista no hay revisión pero tampoco se envía a ciegas:
+        // queda pendiente para seguir hablando o enviarlo al volver.
         if (_turnActive) {
           _chunkId++;
           _chunkClosed = true;
-          _finishTurn();
+          if (_behavior.sendWithoutReview) {
+            _holdTurn();
+          } else {
+            _finishTurn();
+          }
         }
       case AppLifecycleState.resumed:
         if (!_loading && !_bootError && _remainingSeconds > 0) {
@@ -243,20 +263,20 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   /// F12.1.T2: el presupuesto de tiempo de una entrevista es
   /// `active_sec` del lado de la API (con pausas descontadas, FR-25) — nada
   /// que ver con los 10 minutos de reloj de pared de una sesión normal. En
-  /// modo entrevista este timer no corre: `TurnResult.interview.remainingSec`
-  /// es la única cuenta regresiva real, y el cierre lo decide la API.
+  /// modo entrevista el timer solo baja la cuenta del encabezado desde el
+  /// último `remainingSec`; el cierre lo decide la API.
   void _startTimer() {
-    if (widget.mode == ConversationMode.interview) return;
     _timer?.cancel();
     _timer = Timer.periodic(const Duration(seconds: 1), (_) => _onTick());
   }
 
   void _onTick() {
     if (!mounted) return;
-    _remainingSecondsNotifier.value = (_remainingSeconds - 1).clamp(
-      0,
-      widget.sessionDuration.inSeconds,
-    );
+    _remainingSecondsNotifier.value = math.max(0, _remainingSeconds - 1);
+    if (!_behavior.timerEnabled) {
+      if (_remainingSeconds <= 0) _timer?.cancel();
+      return;
+    }
 
     if (!_warningShown &&
         _remainingSeconds <= widget.warningThreshold.inSeconds) {
@@ -294,7 +314,8 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     // con `interview.done`) va siempre al parecer — con menos de 4
     // respuestas la API deja la entrevista en `too_short` y esa pantalla
     // (F12.4.T2) es la que ofrece retomar o empezar de nuevo.
-    if (widget.mode == ConversationMode.interview) {
+    final destination = _behavior.endDestination;
+    if (destination != null) {
       try {
         await ref
             .read(fluentApiProvider)
@@ -305,10 +326,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         // atrapado en una conversación ya terminada.
       }
       if (!mounted) return;
-      ref
-          .read(authControllerProvider.notifier)
-          .clearActiveSession(widget.sessionId);
-      _goToInterviewFeedback();
+      _leaveInterview(destination);
       return;
     }
 
@@ -338,13 +356,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     }
   }
 
-  /// F12.4.T1: a dónde va la entrevista al terminar (botón **Terminar**) o
-  /// con `interview.done` en un turno — siempre el parecer (IE-06); esa
-  /// pantalla decide entre resumen, `too_short` o "armando tu parecer".
-  void _goToInterviewFeedback() {
-    final interviewId = widget.interviewId;
-    if (interviewId == null) return;
-    context.pushReplacement('/interviews/$interviewId/feedback');
+  /// F12.4.T1: sale de la entrevista por cualquier estado terminal
+  /// (**Terminar**, `interview.done`, cierre del lado de la API). Primero
+  /// olvida la sesión activa: si no, el router la vuelve a abrir.
+  void _leaveInterview(String location) {
+    ref
+        .read(authControllerProvider.notifier)
+        .clearActiveSession(widget.sessionId);
+    context.pushReplacement(location);
   }
 
   Future<void> _confirmEndByUser() async {
@@ -411,7 +430,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
   String _joinTurn(String chunk) =>
       [_turnText, chunk.trim()].where((t) => t.isNotEmpty).join(' ');
 
-  Future<void> _startListening() async {
+  /// [keep]: lo ya transcripto de una respuesta pendiente (modo entrevista)
+  /// a la que se le sigue sumando lo que se diga ahora.
+  Future<void> _startListening({String keep = ''}) async {
     if (!_micAvailable) {
       if (_micPermissionDenied) {
         await _showMicPermissionDeniedDialog();
@@ -426,13 +447,14 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     }
     // Ducking: cortar cualquier audio del tutor antes de escuchar.
     await _tts.stop();
-    _turnText = '';
+    _turnText = keep;
     _turnActive = true;
     _turnEnding = false;
     _emptyRestarts = 0;
     setState(() {
       _state = ConvState.listening;
-      _partialText = '';
+      _partialText = keep;
+      _errorMessage = null;
     });
     _startListenCountdown();
     await _listenChunk();
@@ -510,7 +532,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     _restartTimer?.cancel();
     _listenCountdownTimer?.cancel();
     if (!mounted) return;
-    if (widget.mode == ConversationMode.interview) {
+    if (_behavior.sendWithoutReview) {
       if (_turnText.trim().isEmpty) {
         _failTurn('error_no_match');
         return;
@@ -548,9 +570,24 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       'error_speech_timeout' => l10n.conversationSttErrorTimeout,
       _ => l10n.conversationSttErrorGeneric,
     };
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
+  }
+
+  /// Modo entrevista: corta el turno sin enviarlo ni abrir la revisión (la
+  /// app pasó a segundo plano). Lo dicho queda pendiente, no editable, para
+  /// seguir hablando o enviarlo al volver.
+  void _holdTurn() {
+    final text = _partialText.trim().isNotEmpty ? _partialText : _turnText;
+    _turnActive = false;
+    _restartTimer?.cancel();
+    _listenCountdownTimer?.cancel();
+    if (!mounted) return;
+    setState(() {
+      _draftController.text = text.trim();
+      _partialText = text.trim();
+      _state = text.trim().isEmpty ? ConvState.idle : ConvState.pending;
+    });
   }
 
   /// Cierra el turno a pedido (el usuario o la ventana): si el motor está
@@ -766,7 +803,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         _liveIndex = null;
         _draftController.clear();
         _state = ConvState.speaking;
-        if (result.interview != null) _interviewProgress = result.interview;
+        final progress = result.interview;
+        if (progress != null) {
+          _interviewProgress = progress;
+          _remainingSecondsNotifier.value = progress.remainingSec;
+        }
       });
       _scrollToBottom();
       await _tts.setSpeechRate(_ttsRate);
@@ -775,9 +816,9 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       // F12.4.T1: el modelo marcó la pregunta 8 como respondida — la sesión
       // ya se cerró del lado de la API (SessionCloserService), así que acá
       // solo queda navegar al parecer, no llamar a `/end`.
-      if (widget.mode == ConversationMode.interview &&
-          (result.interview?.done ?? false)) {
-        _goToInterviewFeedback();
+      final destination = _behavior.endDestination;
+      if (destination != null && (result.interview?.done ?? false)) {
+        _leaveInterview(destination);
         return;
       }
       if (result.unavailable && _unavailableCount >= 3) {
@@ -791,12 +832,30 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       }
     } on ApiException catch (e) {
       if (!mounted) return;
+      // La API ya cerró la entrevista (por tiempo o abandono): el detalle
+      // decide si va al parecer o a too_short.
+      final interviewId = widget.interviewId;
+      if (_behavior.sendWithoutReview &&
+          interviewId != null &&
+          (e.code == ApiErrorCode.sessionNotActive ||
+              e.code == ApiErrorCode.interviewNotResumable)) {
+        _leaveInterview('/interviews/$interviewId');
+        return;
+      }
       setState(() {
         final aIdx = assistantIndex;
         if (aIdx != null) _messages.removeAt(aIdx);
         _messages.removeAt(userIndex);
         _liveIndex = null;
-        _state = ConvState.reviewing;
+        // Modo entrevista: nada de revisión editable; la misma respuesta
+        // queda pendiente para "Reintentar envío".
+        if (_behavior.sendWithoutReview) {
+          _draftController.text = text;
+          _partialText = text;
+          _state = ConvState.pending;
+        } else {
+          _state = ConvState.reviewing;
+        }
         _errorMessage = l10nForApiError(e.code, l10n);
       });
     }
@@ -877,7 +936,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
             onPressed: () {
               Navigator.of(ctx).pop();
               _unavailableCount = 0;
-              setState(() => _state = ConvState.reviewing);
+              setState(
+                () => _state = _behavior.sendWithoutReview
+                    ? ConvState.idle
+                    : ConvState.reviewing,
+              );
             },
             child: Text(l10n.conversationUnavailableStay),
           ),
@@ -997,13 +1060,15 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
       },
       child: Scaffold(
         appBar: AppBar(
-          title: widget.mode == ConversationMode.interview
-              ? _InterviewHeader(progress: _interviewProgress)
-              : Text(_sessionTopic ?? ''),
+          title: _behavior.buildTitle(
+            topic: _sessionTopic,
+            progress: _interviewProgress,
+          ),
           actions: [
             // F12.1.T2: en modo entrevista no hay reloj de pared de 10
-            // minutos que mostrar — ver el comentario de `_startTimer`.
-            if (widget.mode != ConversationMode.interview)
+            // minutos sino el `remainingSec` de la API, si ya llegó.
+            if (_behavior.timerEnabled ||
+                (_interviewProgress?.remainingSec ?? 0) > 0)
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Center(
@@ -1013,7 +1078,11 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
                     // color de aviso en los últimos 2 minutos.
                     builder: (context, seconds, _) => Text(
                       _formatTime(seconds),
-                      key: const Key('conversation_timer'),
+                      key: Key(
+                        _behavior.timerEnabled
+                            ? 'conversation_timer'
+                            : 'conversation_interview_remaining',
+                      ),
                       style: Theme.of(context).textTheme.titleSmall?.copyWith(
                         fontFeatures: const [FontFeature.tabularFigures()],
                         color: seconds <= _timeWarningSeconds
@@ -1039,8 +1108,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
         ),
         body: Column(
           children: [
-            if (widget.mode == ConversationMode.interview)
-              const _InterviewModeBanner(),
+            if (!_behavior.showCorrections) const _InterviewModeBanner(),
             Expanded(
               child: ListView.builder(
                 key: const Key('conversation_message_list'),
@@ -1063,8 +1131,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
                           // FR-34 (IE-05): en modo entrevista no hay chips de
                           // corrección — la API tampoco las manda en este
                           // modo, pero la UI no depende de eso para ocultarlos.
-                          showCorrections:
-                              widget.mode != ConversationMode.interview,
+                          showCorrections: _behavior.showCorrections,
                         );
                 },
               ),
@@ -1080,6 +1147,7 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
                   ? _stopListening
                   : _startListening,
               onSend: _send,
+              onContinue: () => _startListening(keep: _draftController.text),
               onRetry: _retry,
               onTextMode: _enterTextMode,
               onStopSpeaking: _stopSpeaking,
@@ -1386,6 +1454,53 @@ class _PulsingSparkAvatarState extends State<_PulsingSparkAvatar>
   }
 }
 
+/// Lo que cambia entre [ConversationMode]s, en un solo lugar (F12.4.T1).
+class ConversationModeBehavior {
+  const ConversationModeBehavior._({
+    required this.sendWithoutReview,
+    required this.showCorrections,
+    required this.timerEnabled,
+    required this.endDestination,
+  });
+
+  factory ConversationModeBehavior.of(
+    ConversationMode mode, {
+    String? interviewId,
+  }) => switch (mode) {
+    ConversationMode.normal => const ConversationModeBehavior._(
+      sendWithoutReview: false,
+      showCorrections: true,
+      timerEnabled: true,
+      endDestination: null,
+    ),
+    ConversationMode.interview => ConversationModeBehavior._(
+      sendWithoutReview: true,
+      showCorrections: false,
+      timerEnabled: false,
+      endDestination: '/interviews/$interviewId/feedback',
+    ),
+  };
+
+  /// FR-34: la voz se envía sin revisión editable; lo que no se pudo enviar
+  /// queda pendiente (`ConvState.pending`).
+  final bool sendWithoutReview;
+
+  /// Chips de corrección y aviso fijo de "sin correcciones" (FR-34).
+  final bool showCorrections;
+
+  /// Reloj de pared de [ConversationScreen.sessionDuration] que avisa y
+  /// cierra la sesión. Sin él, el timer solo baja la cuenta del encabezado.
+  final bool timerEnabled;
+
+  /// A dónde ir al terminar; `null` = resumen de la sesión normal.
+  final String? endDestination;
+
+  Widget buildTitle({String? topic, TurnInterviewInfo? progress}) =>
+      showCorrections
+      ? Text(topic ?? '')
+      : _InterviewHeader(progress: progress);
+}
+
 /// F12.4.T1 (IE-05): título del AppBar en modo entrevista. Sin progreso
 /// todavía (antes del primer turno nuevo, o al retomar) muestra el título
 /// genérico en vez de "Pregunta 0 de 8".
@@ -1412,11 +1527,12 @@ class _InterviewHeader extends StatelessWidget {
           ),
           key: const Key('conversation_interview_question_header'),
         ),
-        Text(
-          info.competency,
-          style: Theme.of(context).textTheme.bodySmall,
-          overflow: TextOverflow.ellipsis,
-        ),
+        if (info.competency.isNotEmpty)
+          Text(
+            info.competency,
+            style: Theme.of(context).textTheme.bodySmall,
+            overflow: TextOverflow.ellipsis,
+          ),
       ],
     );
   }
@@ -1637,6 +1753,7 @@ class _BottomControls extends StatelessWidget {
     required this.listenSecondsLeft,
     required this.onMicTap,
     required this.onSend,
+    required this.onContinue,
     required this.onRetry,
     required this.onTextMode,
     required this.onStopSpeaking,
@@ -1652,6 +1769,9 @@ class _BottomControls extends StatelessWidget {
   final ValueListenable<int> listenSecondsLeft;
   final VoidCallback onMicTap;
   final VoidCallback onSend;
+
+  /// `ConvState.pending`: sigue escuchando a continuación de lo pendiente.
+  final VoidCallback onContinue;
   final VoidCallback onRetry;
   final VoidCallback onTextMode;
   final VoidCallback onStopSpeaking;
@@ -1720,6 +1840,49 @@ class _BottomControls extends StatelessWidget {
                       key: const Key('conversation_send_button'),
                       onPressed: onSend,
                       child: Text(l10n.conversationSendButton),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          ConvState.pending => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Semantics(
+                liveRegion: true,
+                child: Text(
+                  errorMessage ?? l10n.conversationInterviewPendingHint,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: errorMessage != null ? AppColors.errorText : null,
+                  ),
+                ),
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                draftController.text,
+                key: const Key('conversation_pending_text'),
+              ),
+              const SizedBox(height: AppSpacing.md),
+              Row(
+                children: [
+                  Expanded(
+                    child: OutlinedButton(
+                      key: const Key('conversation_continue_button'),
+                      onPressed: onContinue,
+                      child: Text(l10n.conversationInterviewContinue),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.md),
+                  Expanded(
+                    child: ElevatedButton(
+                      key: const Key('conversation_pending_send_button'),
+                      onPressed: onSend,
+                      child: Text(
+                        errorMessage != null
+                            ? l10n.conversationInterviewRetrySend
+                            : l10n.conversationSendButton,
+                      ),
                     ),
                   ),
                 ],

@@ -2677,6 +2677,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fecha desconocida'**
   String get interviewHistoryUnknownDate;
+
+  /// No description provided for @errorInterviewNotOpenable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista no se puede abrir ahora.'**
+  String get errorInterviewNotOpenable;
+
+  /// No description provided for @conversationInterviewPendingHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu respuesta todavía no se envió.'**
+  String get conversationInterviewPendingHint;
+
+  /// No description provided for @conversationInterviewRetrySend.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar envío'**
+  String get conversationInterviewRetrySend;
+
+  /// No description provided for @conversationInterviewContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir hablando'**
+  String get conversationInterviewContinue;
 }
 
 class _AppLocalizationsDelegate

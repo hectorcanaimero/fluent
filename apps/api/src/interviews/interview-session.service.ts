@@ -117,10 +117,10 @@ export class InterviewSessionService {
     // Primera vez (o la apertura anterior falló y borró su sesión).
     if (latest === null && interview.status !== 'too_short') {
       // Una sola sesión activa por usuario (SPEC-04 §2), también aquí.
-      const activeSessionId = await this.sessions.findActiveSessionId(userId);
-      if (activeSessionId !== null) {
+      const activeSession = await this.sessions.findActiveSession(userId);
+      if (activeSession !== null) {
         throw this.error('SESSION_ALREADY_ACTIVE', locale, {
-          extra: { activeSessionId },
+          extra: { activeSessionId: activeSession.id, activeSession },
         });
       }
       if (
@@ -185,10 +185,10 @@ export class InterviewSessionService {
     // `too_short` retomable: misma sesión, "welcome back" y la pregunta
     // pendiente. En pausa no bloqueaba otras sesiones; al retomarla vuelve a
     // contar, así que con otra activa (normal) es 409 como al abrir.
-    const activeSessionId = await this.sessions.findActiveSessionId(userId);
-    if (activeSessionId !== null) {
+    const activeSession = await this.sessions.findActiveSession(userId);
+    if (activeSession !== null) {
       throw this.error('SESSION_ALREADY_ACTIVE', locale, {
-        extra: { activeSessionId },
+        extra: { activeSessionId: activeSession.id, activeSession },
       });
     }
     if (

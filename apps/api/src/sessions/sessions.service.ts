@@ -152,10 +152,12 @@ export class SessionsService {
     }
 
     // 2. Una sola sesión activa por usuario (SPEC-04 §2).
-    const activeSessionId = await this.repository.findActiveSessionId(userId);
-    if (activeSessionId !== null) {
+    const activeSession = await this.repository.findActiveSession(userId);
+    if (activeSession !== null) {
+      // `activeSession` (kind, interviewId) para que la app vuelva a la
+      // pantalla correcta; `activeSessionId` se conserva por compatibilidad.
       throw ApiException.of('SESSION_ALREADY_ACTIVE', SESSION_ALREADY_ACTIVE_MESSAGE, {
-        extra: { activeSessionId },
+        extra: { activeSessionId: activeSession.id, activeSession },
       });
     }
     return profile;

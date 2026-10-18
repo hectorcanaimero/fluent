@@ -71,9 +71,7 @@ class HttpFluentApi implements FluentApi {
   Future<GroupInvitationResult> createGroupInvitation() =>
       _client.guard(() async {
         final res = await _client.dio.post('/groups/invitations');
-        return GroupInvitationResult.fromJson(
-          res.data as Map<String, dynamic>,
-        );
+        return GroupInvitationResult.fromJson(res.data as Map<String, dynamic>);
       });
 
   @override
@@ -322,13 +320,10 @@ class HttpFluentApi implements FluentApi {
         final bytes = await data.stream.expand((chunk) => chunk).toList();
         final decoded = jsonDecode(utf8.decode(bytes));
         if (decoded is Map<String, dynamic>) {
-          return ApiException(
-            code: ApiErrorCode.fromWire(decoded['error'] as String?),
-            message: (decoded['message'] as String?) ?? e.message ?? 'error',
+          return ApiException.fromBody(
+            decoded,
             statusCode: e.response?.statusCode,
-            details: (decoded['details'] as List?)
-                ?.cast<Map<String, dynamic>>(),
-            activeSessionId: decoded['activeSessionId'] as String?,
+            fallbackMessage: e.message,
           );
         }
       } catch (_) {
@@ -413,7 +408,9 @@ class HttpFluentApi implements FluentApi {
   Future<List<BadgeItem>> getBadges() => _client.guard(() async {
     final res = await _client.dio.get('/me/badges');
     final list = (res.data as Map<String, dynamic>)['badges'] as List<dynamic>;
-    return [for (final b in list) BadgeItem.fromJson(b as Map<String, dynamic>)];
+    return [
+      for (final b in list) BadgeItem.fromJson(b as Map<String, dynamic>),
+    ];
   });
 
   @override

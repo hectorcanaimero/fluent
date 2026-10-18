@@ -77,6 +77,20 @@ abstract class ModelPreference with _$ModelPreference {
       _$ModelPreferenceFromJson(json);
 }
 
+/// `MeResponse.activeSession` (F12.4.T1): la sesión activa con su `kind`; una
+/// entrevista (`interviewId` no nulo) se retoma en `/interviews/:id/session`.
+@freezed
+abstract class ActiveSessionRef with _$ActiveSessionRef {
+  const factory ActiveSessionRef({
+    required String id,
+    required String kind,
+    String? interviewId,
+  }) = _ActiveSessionRef;
+
+  factory ActiveSessionRef.fromJson(Map<String, dynamic> json) =>
+      _$ActiveSessionRefFromJson(json);
+}
+
 @freezed
 abstract class MeResponse with _$MeResponse {
   const factory MeResponse({
@@ -85,6 +99,7 @@ abstract class MeResponse with _$MeResponse {
     ModelPreference? modelPreference,
     required bool onboarded,
     String? activeSessionId,
+    ActiveSessionRef? activeSession,
     @Default(<String>[]) List<String> interestsCatalog,
     @Default(<String>[]) List<String> pendingActions,
 
@@ -685,6 +700,10 @@ abstract class InterviewSessionStart with _$InterviewSessionStart {
     required String sessionId,
     int? answeredCount,
     int? totalQuestions,
+
+    /// Progreso al abrir (F12.4.T1): "Pregunta n de 8" y el tiempo que
+    /// queda desde la apertura, antes del primer turno.
+    TurnInterviewInfo? interview,
   }) = _InterviewSessionStart;
 
   factory InterviewSessionStart.fromJson(Map<String, dynamic> json) =>

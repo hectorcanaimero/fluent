@@ -494,5 +494,9 @@
   "interviewHistoryStatusFeedbackPending": "Montando seu parecer",
   "interviewHistoryStatusFeedbackFailed": "Parecer com erro",
   "interviewHistoryStatusFinishedNoFeedback": "Terminada sem parecer",
-  "interviewHistoryUnknownDate": "Data desconhecida"
+  "interviewHistoryUnknownDate": "Data desconhecida",
+  "errorInterviewNotOpenable": "Essa entrevista não pode ser aberta agora.",
+  "conversationInterviewPendingHint": "Sua resposta ainda não foi enviada.",
+  "conversationInterviewRetrySend": "Tentar enviar de novo",
+  "conversationInterviewContinue": "Continuar falando"
 }

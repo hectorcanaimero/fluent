@@ -81,9 +81,15 @@ String? computeRedirect(
     return location.startsWith('/onboarding') ? null : '/onboarding';
   }
 
+  // Una entrevista activa se retoma en modo entrevista (F12.4.T1), nunca en
+  // la conversación normal de `/session/:id`.
   final activeId = auth.activeSessionId;
-  if (activeId != null && !location.startsWith('/session/$activeId')) {
-    return '/session/$activeId';
+  if (activeId != null) {
+    final interviewId = auth.activeInterviewId;
+    final target = interviewId != null
+        ? '/interviews/$interviewId/session'
+        : '/session/$activeId';
+    if (!location.startsWith(target)) return target;
   }
 
   if (isAuthRoute ||

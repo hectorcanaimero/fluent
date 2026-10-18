@@ -35,3 +35,27 @@ describe('BullJobDispatcher.enqueueInterviewPrepare', () => {
     expect(added[1]).not.toContain(':');
   });
 });
+
+describe('BullJobDispatcher.enqueueInterviewFeedback', () => {
+  it('no choca con el jobId del interview-prepare de la misma entrevista', async () => {
+    const { queue, added } = fakeQueue();
+    const dispatcher = new BullJobDispatcher(fakeQueue().queue, queue);
+
+    await dispatcher.enqueueInterviewPrepare('i-1');
+    await dispatcher.enqueueInterviewFeedback('i-1');
+    expect(added).toEqual(['i-1', 'i-1-feedback']);
+  });
+
+  it('un doble hook no duplica el job, pero fallar→reintentar encola uno nuevo', async () => {
+    const { queue, added } = fakeQueue();
+    const dispatcher = new BullJobDispatcher(fakeQueue().queue, queue);
+
+    await dispatcher.enqueueInterviewFeedback('i-1');
+    await dispatcher.enqueueInterviewFeedback('i-1');
+    expect(added).toEqual(['i-1-feedback']);
+
+    await dispatcher.enqueueInterviewFeedback('i-1', { retry: true });
+    expect(added).toHaveLength(2);
+    expect(added[1]).toMatch(/^i-1-feedback-retry-\d+$/);
+  });
+});

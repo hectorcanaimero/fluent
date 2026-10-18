@@ -1,21 +1,35 @@
 /**
  * Procesador BullMQ de la cola `interviews` (F10.3.T3). Despacha por
- * `job.name`: hoy solo `interview-prepare`; F12 añade aquí
- * `interview-feedback`. Concurrencia y reintentos: ver `jobs.constants.ts`
+ * `job.name`: `interview-prepare` e `interview-feedback` (F12.3.T1).
+ * Concurrencia y reintentos: ver `jobs.constants.ts`
  * (`QUEUE_CONCURRENCY`/`QUEUE_DEFAULT_JOB_OPTIONS` de `QUEUE_INTERVIEWS`).
  */
 import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 
-import { JOB_INTERVIEW_PREPARE, QUEUE_CONCURRENCY, QUEUE_INTERVIEWS } from '../jobs.constants.js';
+import {
+  JOB_INTERVIEW_FEEDBACK,
+  JOB_INTERVIEW_PREPARE,
+  QUEUE_CONCURRENCY,
+  QUEUE_INTERVIEWS,
+} from '../jobs.constants.js';
+import {
+  classifyFeedbackError,
+  InterviewFeedbackService,
+  type InterviewFeedbackJobResult,
+} from './interview-feedback.service.js';
 import {
   classifyPrepareError,
   InterviewPrepareService,
   type InterviewPrepareJobResult,
 } from './interview-prepare.service.js';
 
-/** Carga del job (la encola `POST /interviews` y `POST /interviews/:id/retry`, F10.3.T2). */
+/**
+ * Carga de un job de la cola `interviews` (la encolan `POST /interviews`,
+ * `POST /interviews/:id/retry` y `InterviewSessionService.onInterviewSessionClosed`).
+ * `interview-prepare` e `interview-feedback` (F12.3.T1) comparten esta forma.
+ */
 export interface InterviewPrepareJobData {
   readonly interviewId: string;
 }
@@ -24,7 +38,10 @@ export interface InterviewPrepareJobData {
 export class InterviewPrepareProcessor extends WorkerHost {
   private readonly logger = new Logger(InterviewPrepareProcessor.name);
 
-  constructor(private readonly service: InterviewPrepareService) {
+  constructor(
+    private readonly service: InterviewPrepareService,
+    private readonly feedbackService: InterviewFeedbackService,
+  ) {
     super();
   }
 
@@ -36,36 +53,57 @@ export class InterviewPrepareProcessor extends WorkerHost {
 
   /**
    * Último fallo del job: cuando ya no quedan reintentos de BullMQ,
-   * `prep_failed` + push + reembolso del tope (arch 003 §Decisions: «error
-   * del agente → 1 reintento con backoff; al agotarse, prep_failed»).
+   * `prep_failed`/`feedback_failed` (arch 003 §Decisions: «error del agente →
+   * 1 reintento con backoff; al agotarse, prep_failed»; F12.3.T1 extiende el
+   * mismo criterio al parecer, sin push).
    *
    * BullMQ emite `failed` en **cada** intento, así que solo se actúa cuando
    * `attemptsMade` alcanza el total configurado para la cola o el error es
-   * `UnrecoverableError` (BullMQ ya no reintenta). Solo jobs de preparación.
+   * `UnrecoverableError` (BullMQ ya no reintenta).
    */
   @OnWorkerEvent('failed')
   async onFailed(job: Job<InterviewPrepareJobData> | undefined, error?: Error): Promise<void> {
-    if (job === undefined || job.name !== JOB_INTERVIEW_PREPARE) return;
+    if (job === undefined) return;
 
     const attempts = job.opts.attempts ?? 1;
     const unrecoverable = error?.name === 'UnrecoverableError';
     if (job.attemptsMade < attempts && !unrecoverable) return;
 
-    const { code } = classifyPrepareError(error);
-    try {
-      await this.service.markFailedFinal(job.data.interviewId, code);
-      this.logger.warn(
-        `[${QUEUE_INTERVIEWS}] entrevista ${job.data.interviewId} marcada 'prep_failed' (${code}) tras ${job.attemptsMade} intento(s)`,
-      );
-    } catch (error) {
-      this.logger.error(
-        `[${QUEUE_INTERVIEWS}] no se pudo marcar 'prep_failed' la entrevista ${job.data.interviewId}: ` +
-          (error as Error).message,
-      );
+    if (job.name === JOB_INTERVIEW_PREPARE) {
+      const { code } = classifyPrepareError(error);
+      try {
+        await this.service.markFailedFinal(job.data.interviewId, code);
+        this.logger.warn(
+          `[${QUEUE_INTERVIEWS}] entrevista ${job.data.interviewId} marcada 'prep_failed' (${code}) tras ${job.attemptsMade} intento(s)`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `[${QUEUE_INTERVIEWS}] no se pudo marcar 'prep_failed' la entrevista ${job.data.interviewId}: ` +
+            (error as Error).message,
+        );
+      }
+      return;
+    }
+
+    if (job.name === JOB_INTERVIEW_FEEDBACK) {
+      const { code } = classifyFeedbackError(error);
+      try {
+        await this.feedbackService.markFailedFinal(job.data.interviewId, code);
+        this.logger.warn(
+          `[${QUEUE_INTERVIEWS}] entrevista ${job.data.interviewId} marcada 'feedback_failed' (${code}) tras ${job.attemptsMade} intento(s)`,
+        );
+      } catch (error) {
+        this.logger.error(
+          `[${QUEUE_INTERVIEWS}] no se pudo marcar 'feedback_failed' la entrevista ${job.data.interviewId}: ` +
+            (error as Error).message,
+        );
+      }
     }
   }
 
-  async process(job: Job<InterviewPrepareJobData>): Promise<InterviewPrepareJobResult> {
+  async process(
+    job: Job<InterviewPrepareJobData>,
+  ): Promise<InterviewPrepareJobResult | InterviewFeedbackJobResult> {
     const startedAt = Date.now();
     try {
       const result = await this.runByName(job);
@@ -93,7 +131,10 @@ export class InterviewPrepareProcessor extends WorkerHost {
       );
       // Se propaga para que BullMQ reintente con el backoff de la cola, salvo
       // los fallos deterministas: reintentarlos solo gasta otra llamada.
-      if (!classifyPrepareError(error).retryable) {
+      // `retryable` coincide en los dos clasificadores para los mismos tipos
+      // de error, pero cada job usa el suyo para no acoplar sus `code`.
+      const classify = job.name === JOB_INTERVIEW_FEEDBACK ? classifyFeedbackError : classifyPrepareError;
+      if (!classify(error).retryable) {
         const unrecoverable = new UnrecoverableError((error as Error).message);
         unrecoverable.cause = error;
         throw unrecoverable;
@@ -102,10 +143,14 @@ export class InterviewPrepareProcessor extends WorkerHost {
     }
   }
 
-  private async runByName(job: Job<InterviewPrepareJobData>): Promise<InterviewPrepareJobResult> {
+  private async runByName(
+    job: Job<InterviewPrepareJobData>,
+  ): Promise<InterviewPrepareJobResult | InterviewFeedbackJobResult> {
     switch (job.name) {
       case JOB_INTERVIEW_PREPARE:
         return this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
+      case JOB_INTERVIEW_FEEDBACK:
+        return this.feedbackService.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
       default:
         throw new UnrecoverableError(`${QUEUE_INTERVIEWS}: job desconocido "${job.name}"`);
     }

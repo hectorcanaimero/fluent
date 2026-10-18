@@ -138,6 +138,125 @@ describe('MemoryRepository.purgeAll — DELETE /memory', () => {
   });
 });
 
+describe('MemoryRepository.addPendingFactIfNew (D6, F12.3.T1)', () => {
+  it('crea el hecho pending cuando no hay uno igual todavía', async () => {
+    const { admin, calls } = createAdminMock({ data: [], error: null });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addPendingFactIfNew(
+      'user-1',
+      'Se prepara para una entrevista de Backend engineer en Acme',
+      null,
+    );
+
+    const insertCall = calls.find((c) => c.method === 'insert' && c.table === 'facts');
+    expect(insertCall).toBeDefined();
+    expect(insertCall?.args[0]).toMatchObject({
+      user_id: 'user-1',
+      text: 'Se prepara para una entrevista de Backend engineer en Acme',
+      status: 'pending',
+    });
+  });
+
+  it('no duplica un hecho ya existente para la misma oferta, con otra puntuación o mayúsculas', async () => {
+    const { admin, calls } = createAdminMock({
+      data: [
+        {
+          id: 'f1',
+          user_id: 'user-1',
+          text: 'Se prepara para una entrevista de Backend Engineer en Acme!',
+          happens_on: null,
+          status: 'pending',
+          source_session_id: null,
+          last_used_at: null,
+          use_count: 0,
+          created_at: '2026-10-01T00:00:00.000Z',
+          updated_at: '2026-10-01T00:00:00.000Z',
+        },
+      ],
+      error: null,
+    });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addPendingFactIfNew(
+      'user-1',
+      'Se prepara para una entrevista de backend engineer en acme',
+      null,
+    );
+
+    expect(calls.some((c) => c.method === 'insert' && c.table === 'facts')).toBe(false);
+  });
+});
+
+describe('MemoryRepository.addRecurringErrors (D6, F12.3.T1)', () => {
+  it('suma errores nuevos sin duplicar los que ya están', async () => {
+    const { admin, calls } = createAdminMock({
+      data: {
+        user_id: 'user-1',
+        text: 'Brief existente.',
+        level_hint: null,
+        recurring_errors: [{ category: 'past_simple', example: 'I go yesterday' }],
+        source_session_id: null,
+        updated_at: '2026-10-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addRecurringErrors('user-1', [
+      { category: 'past_simple', example: 'I go yesterday' },
+      { category: 'articles', example: 'I have a car' },
+    ]);
+
+    const updateCall = calls.find((c) => c.method === 'update' && c.table === 'coaching_briefs');
+    expect(updateCall?.args[0]).toEqual({
+      recurring_errors: [
+        { category: 'past_simple', example: 'I go yesterday' },
+        { category: 'articles', example: 'I have a car' },
+      ],
+    });
+  });
+
+  it('se queda con los primeros 5 cuando el total supera el máximo', async () => {
+    const existing = Array.from({ length: 4 }, (_unused, i) => ({
+      category: 'other',
+      example: `existing ${i}`,
+    }));
+    const { admin, calls } = createAdminMock({
+      data: {
+        user_id: 'user-1',
+        text: 'Brief existente.',
+        level_hint: null,
+        recurring_errors: existing,
+        source_session_id: null,
+        updated_at: '2026-10-01T00:00:00.000Z',
+      },
+      error: null,
+    });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addRecurringErrors('user-1', [
+      { category: 'articles', example: 'new 1' },
+      { category: 'word_order', example: 'new 2' },
+      { category: 'vocabulary', example: 'new 3' },
+    ]);
+
+    const updateCall = calls.find((c) => c.method === 'update' && c.table === 'coaching_briefs');
+    const saved = updateCall?.args[0] as { recurring_errors: unknown[] };
+    expect(saved.recurring_errors).toHaveLength(5);
+    expect(saved.recurring_errors[4]).toEqual({ category: 'articles', example: 'new 1' });
+  });
+
+  it('sin brief todavía no escribe nada (no hay texto de brief que ofrecer)', async () => {
+    const { admin, calls } = createAdminMock({ data: null, error: null });
+    const repository = new MemoryRepository(admin);
+
+    await repository.addRecurringErrors('user-1', [{ category: 'articles', example: 'a car' }]);
+
+    expect(calls.some((c) => c.method === 'update' && c.table === 'coaching_briefs')).toBe(false);
+  });
+});
+
 describe('MemoryRepository.upsertBriefText', () => {
   it('updates the existing row (only text) when there is already a brief', async () => {
     const { admin, calls } = createAdminMock({

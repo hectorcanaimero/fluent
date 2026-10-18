@@ -1,11 +1,14 @@
-import { Body, Controller, Get, Headers, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post, Res } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
+import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { CreateInterviewDto } from './dto/create-interview.dto.js';
 import {
   InterviewsService,
   type InterviewDetailDto,
   type InterviewDto,
+  type InterviewFeedbackDto,
+  type InterviewFeedbackPendingDto,
   type InterviewListResultDto,
   type InterviewQuotaDto,
 } from './interviews.service.js';
@@ -77,5 +80,23 @@ export class InterviewsController {
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewSessionDto> {
     return this.interviewSessions.open(userId, id, acceptLanguage);
+  }
+
+  /**
+   * El parecer (F12.3.T1): `200` listo, `202` mientras sigue
+   * `feedback_pending`, `409 TOO_SHORT` si la entrevista quedó corta.
+   * `@Res({ passthrough: true })` porque el código de estado de éxito varía
+   * con el estado de la entrevista (mismo patrón que `HealthController.ready`).
+   */
+  @Get('interviews/:id/feedback')
+  async feedback(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<InterviewFeedbackDto | InterviewFeedbackPendingDto> {
+    const result = await this.interviewsService.feedback(userId, id, acceptLanguage);
+    res.status(result.statusCode);
+    return result.body;
   }
 }

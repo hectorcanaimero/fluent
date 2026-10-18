@@ -94,6 +94,11 @@ export const API_ERROR_STATUS = {
    */
   INTERVIEW_NOT_OPENABLE: 409,
   /**
+   * `GET /interviews/:id/feedback` sobre una entrevista `too_short` (F12.3):
+   * la respuesta lleva `answeredCount`.
+   */
+  TOO_SHORT: 409,
+  /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.
    */

@@ -1,6 +1,7 @@
 import { ApiException } from '../common/api-error.js';
 import type { Interview, Profile, Session } from '../db/schema.js';
 import type { I18nService } from '../i18n/i18n.service.js';
+import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { LlmService } from '../llm/llm.service.js';
 import type {
   InsertInterviewTurnRow,
@@ -75,6 +76,7 @@ function build(
     finished: [] as string[],
     closed: [] as SessionCloseParams[],
     llm: 0,
+    enqueuedFeedback: [] as string[],
   };
   const interview = (): Interview =>
     ({
@@ -165,6 +167,13 @@ function build(
     resolveLocale: () => 'es',
     translate: (code: string) => code,
   } as unknown as I18nService;
+  const jobs = {
+    enqueueCoachingBrief: async () => {},
+    enqueueInterviewPrepare: async () => {},
+    enqueueInterviewFeedback: async (interviewId: string) => {
+      calls.enqueuedFeedback.push(interviewId);
+    },
+  } as unknown as JobDispatcher;
 
   const service = new InterviewSessionService(
     repo,
@@ -173,6 +182,7 @@ function build(
     llm,
     config as never,
     i18n,
+    jobs,
   );
   return { service, calls, status: () => status };
 }
@@ -323,14 +333,15 @@ describe('InterviewSessionService.closeSession', () => {
     expect(hook).not.toHaveBeenCalled();
   });
 
-  it('con 4 respuestas → feedback_pending y llama al hook del parecer', async () => {
-    const { service, status } = build({ status: 'in_progress', answered: 4 });
+  it('con 4 respuestas → feedback_pending, llama al hook y encola el parecer (F12.3.T1)', async () => {
+    const { service, calls, status } = build({ status: 'in_progress', answered: 4 });
     const hook = vi.spyOn(service, 'onInterviewSessionClosed');
 
     await service.closeSession(USER_ID, sessionRow(), true);
 
     expect(status()).toBe('feedback_pending');
     expect(hook).toHaveBeenCalledWith(INTERVIEW_ID);
+    expect(calls.enqueuedFeedback).toEqual([INTERVIEW_ID]);
   });
 
   it('sesión ya cerrada (decide = false) → no toca la entrevista', async () => {

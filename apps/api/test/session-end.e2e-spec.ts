@@ -72,6 +72,7 @@ maybeDescribe('Cierre y sugerencias de sesión (e2e, InsForge)', () => {
       enqueuedBriefs.push(sessionId);
     },
     enqueueInterviewPrepare: async () => {},
+    enqueueInterviewFeedback: async () => {},
   };
 
   interface ReadyUserOptions {

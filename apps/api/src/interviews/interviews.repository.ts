@@ -129,4 +129,39 @@ export class InterviewsRepository {
 
     unwrapInsforge(result);
   }
+
+  /**
+   * `feedback_failed` → `feedback_pending` (`POST /interviews/:id/retry`,
+   * F12.3.T1): mismo criterio atómico que `markRetrying`, por eso es un
+   * método separado y no el mismo `markRetrying` con otro `from`: los dos
+   * estados de fallo (`prep_failed`/`feedback_failed`) reintentan a jobs
+   * distintos con payloads distintos.
+   */
+  async markFeedbackRetrying(userId: string, id: string): Promise<Interview | null> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .update({ status: 'feedback_pending', error_code: null })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .eq('status', 'feedback_failed')
+      .select('*')
+      .maybeSingle();
+
+    return unwrapInsforge<Interview>(result);
+  }
+
+  /**
+   * `feedback_pending` → `feedback_failed` (encolado del reintento fallido).
+   * Solo desde `feedback_pending`, igual que `markPrepFailed`.
+   */
+  async markFeedbackFailed(userId: string, id: string, errorCode: string): Promise<void> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .update({ status: 'feedback_failed', error_code: errorCode })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .eq('status', 'feedback_pending');
+
+    unwrapInsforge(result);
+  }
 }

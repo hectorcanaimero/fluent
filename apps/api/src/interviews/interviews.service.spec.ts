@@ -3,7 +3,8 @@ import type { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import { I18nService } from '../i18n/i18n.service.js';
-import type { Interview, InterviewPlan, Profile } from '../db/schema.js';
+import type { Interview, Profile } from '../db/schema.js';
+import type { InterviewFeedback, InterviewPlan } from './interviews.types.js';
 import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { RedisService } from '../redis/redis.service.js';
@@ -67,6 +68,25 @@ function planFixture(): InterviewPlan {
   };
 }
 
+function feedbackFixture(overrides: Partial<InterviewFeedback> = {}): InterviewFeedback {
+  return {
+    summary: 'Buen manejo de APIs, a reforzar testing.',
+    competencies: [],
+    english: { clarity: { rating: 'good', note: 'Clara' }, vocabulary: { rating: 'good', note: 'Variado' }, errors: [] },
+    comparison: null,
+    studyPlan: Array.from({ length: 5 }, (_unused, i) => ({
+      idx: i + 1,
+      focus: 'c1',
+      title: `Sesión ${i + 1}`,
+      format: 'guided' as const,
+      estMin: 20,
+      brief: 'Brief',
+    })),
+    usage: { model: 'fluent-pro', inputTokens: 10, outputTokens: 10, searchCalls: 0 },
+    ...overrides,
+  };
+}
+
 function interviewFixture(overrides: Partial<Interview> = {}): Interview {
   return {
     id: INTERVIEW_ID,
@@ -124,16 +144,24 @@ function fakeRedis(): RedisService & { readonly counters: Map<string, number> } 
   } as unknown as RedisService & { readonly counters: Map<string, number> };
 }
 
-function fakeJobs(fail = false): JobDispatcher & { readonly enqueued: string[] } {
+function fakeJobs(
+  fail = false,
+): JobDispatcher & { readonly enqueued: string[]; readonly enqueuedFeedback: string[] } {
   const enqueued: string[] = [];
+  const enqueuedFeedback: string[] = [];
   return {
     enqueued,
+    enqueuedFeedback,
     enqueueCoachingBrief: async () => {},
     enqueueInterviewPrepare: async (interviewId: string) => {
       if (fail) throw new Error('Redis caído');
       enqueued.push(interviewId);
     },
-  } as unknown as JobDispatcher & { readonly enqueued: string[] };
+    enqueueInterviewFeedback: async (interviewId: string) => {
+      if (fail) throw new Error('Redis caído');
+      enqueuedFeedback.push(interviewId);
+    },
+  } as unknown as JobDispatcher & { readonly enqueued: string[]; readonly enqueuedFeedback: string[] };
 }
 
 function fakeProfiles(profile: Profile | null): ProfilesRepository {
@@ -149,6 +177,8 @@ function fakeRepository(options: FakeRepoOptions = {}) {
   const created: CreateInterviewRow[] = [];
   const markRetryingCalls: Array<{ userId: string; id: string }> = [];
   const markPrepFailedCalls: Array<{ id: string; errorCode: string }> = [];
+  const markFeedbackRetryingCalls: Array<{ userId: string; id: string }> = [];
+  const markFeedbackFailedCalls: Array<{ id: string; errorCode: string }> = [];
   const findByIdCalls: string[] = [];
   const repository = {
     create: async (row: CreateInterviewRow) => {
@@ -174,12 +204,22 @@ function fakeRepository(options: FakeRepoOptions = {}) {
     markPrepFailed: async (_userId: string, id: string, errorCode: string) => {
       markPrepFailedCalls.push({ id, errorCode });
     },
+    markFeedbackRetrying: async (userId: string, id: string) => {
+      markFeedbackRetryingCalls.push({ userId, id });
+      if (options.findByIdResult?.status !== 'feedback_failed') return null;
+      return { ...options.findByIdResult, status: 'feedback_pending', error_code: null } as Interview;
+    },
+    markFeedbackFailed: async (_userId: string, id: string, errorCode: string) => {
+      markFeedbackFailedCalls.push({ id, errorCode });
+    },
   };
   return {
     repository: repository as unknown as InterviewsRepository,
     created,
     markRetryingCalls,
     markPrepFailedCalls,
+    markFeedbackRetryingCalls,
+    markFeedbackFailedCalls,
     findByIdCalls,
   };
 }
@@ -192,7 +232,8 @@ function buildService(options: {
 }) {
   const redis = fakeRedis();
   const jobs = fakeJobs(options.enqueueFails);
-  const { repository, created, markPrepFailedCalls, findByIdCalls } = fakeRepository(options.repoOptions);
+  const { repository, created, markPrepFailedCalls, markFeedbackRetryingCalls, markFeedbackFailedCalls, findByIdCalls } =
+    fakeRepository(options.repoOptions);
   const service = new InterviewsService(
     repository,
     fakeProfiles(options.profile === undefined ? profileFixture() : options.profile),
@@ -201,7 +242,16 @@ function buildService(options: {
     fakeConfig(options.config),
     new I18nService(),
   );
-  return { service, redis, jobs, created, markPrepFailedCalls, findByIdCalls };
+  return {
+    service,
+    redis,
+    jobs,
+    created,
+    markPrepFailedCalls,
+    markFeedbackRetryingCalls,
+    markFeedbackFailedCalls,
+    findByIdCalls,
+  };
 }
 
 const TEXT_DTO: CreateInterviewDto = { type: 'mixed', offerText: 'We are hiring a backend engineer' };
@@ -431,6 +481,91 @@ describe('InterviewsService.retry', () => {
     const { service } = buildService({ repoOptions: { findByIdResult: null } });
 
     const error = await service.retry(OTHER_USER_ID, INTERVIEW_ID).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_FOUND');
+  });
+
+  it('desde feedback_failed reencola el parecer (F12.3.T1), sin consumir tope', async () => {
+    const interview = interviewFixture({ status: 'feedback_failed', error_code: 'agent_unavailable' });
+    const { service, redis, jobs } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const result = await service.retry(USER_ID, INTERVIEW_ID);
+
+    expect(result.status).toBe('feedback_pending');
+    expect(jobs.enqueuedFeedback).toEqual([INTERVIEW_ID]);
+    expect(jobs.enqueued).toEqual([]);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('si falla el encolado del reintento del parecer, deja la fila en feedback_failed', async () => {
+    const interview = interviewFixture({ status: 'feedback_failed' });
+    const { service, markFeedbackFailedCalls } = buildService({
+      repoOptions: { findByIdResult: interview },
+      enqueueFails: true,
+    });
+
+    await expect(service.retry(USER_ID, INTERVIEW_ID)).rejects.toThrow('Redis caído');
+    expect(markFeedbackFailedCalls).toEqual([{ id: INTERVIEW_ID, errorCode: 'enqueue_failed' }]);
+  });
+});
+
+describe('InterviewsService.feedback', () => {
+  it('feedback_ready → 200 con el parecer, sin `usage` (telemetría interna del agente)', async () => {
+    const feedback = feedbackFixture();
+    const interview = interviewFixture({ status: 'feedback_ready', feedback });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const result = await service.feedback(USER_ID, INTERVIEW_ID);
+
+    expect(result.statusCode).toBe(200);
+    expect(result.body).not.toHaveProperty('usage');
+    expect(result.body).toMatchObject({ summary: feedback.summary });
+  });
+
+  it('feedback_pending → 202 con el estado', async () => {
+    const interview = interviewFixture({ status: 'feedback_pending' });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const result = await service.feedback(USER_ID, INTERVIEW_ID);
+
+    expect(result).toEqual({ statusCode: 202, body: { status: 'feedback_pending' } });
+  });
+
+  it('too_short → 409 TOO_SHORT con answeredCount', async () => {
+    const interview = interviewFixture({ status: 'too_short', answered_count: 2 });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const error = await service.feedback(USER_ID, INTERVIEW_ID).catch((caught: unknown) => caught);
+
+    expect(error).toBeInstanceOf(ApiException);
+    expect((error as ApiException).code).toBe('TOO_SHORT');
+    expect((error as ApiException).getStatus()).toBe(409);
+    expect((error as ApiException).getApiBody().answeredCount).toBe(2);
+  });
+
+  it('feedback_failed → 503 LLM_UNAVAILABLE (ofrecer reintentar)', async () => {
+    const interview = interviewFixture({ status: 'feedback_failed' });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const error = await service.feedback(USER_ID, INTERVIEW_ID).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('LLM_UNAVAILABLE');
+    expect((error as ApiException).getStatus()).toBe(503);
+  });
+
+  it('con un :id que no es UUID responde 404 sin consultar la base', async () => {
+    const { service, findByIdCalls } = buildService({});
+
+    const error = await service.feedback(USER_ID, 'no-es-uuid').catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_FOUND');
+    expect(findByIdCalls).toEqual([]);
+  });
+
+  it('con una entrevista de otro usuario responde 404', async () => {
+    const { service } = buildService({ repoOptions: { findByIdResult: null } });
+
+    const error = await service.feedback(OTHER_USER_ID, INTERVIEW_ID).catch((caught: unknown) => caught);
 
     expect((error as ApiException).code).toBe('NOT_FOUND');
   });

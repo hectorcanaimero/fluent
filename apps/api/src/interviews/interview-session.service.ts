@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import {
@@ -10,6 +10,7 @@ import type { Env } from '../config/env.js';
 import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { Interview, Locale, Profile, Session } from '../db/schema.js';
 import { I18nService } from '../i18n/i18n.service.js';
+import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import {
   TURN_MAX_ATTEMPTS,
   type Provider as LlmProvider,
@@ -71,6 +72,7 @@ export class InterviewSessionService {
     private readonly llm: LlmService,
     private readonly configService: ConfigService<Env, true>,
     private readonly i18n: I18nService,
+    @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
   ) {}
 
   async open(
@@ -192,14 +194,15 @@ export class InterviewSessionService {
   }
 
   /**
-   * Encolado del parecer. Por ahora solo registra; F12.3.T1 lo conecta a
-   * `enqueueInterviewFeedback`. Solo se llama con la entrevista ya en
-   * `feedback_pending`.
+   * Encolado del parecer (F12.3.T1). Solo se llama con la entrevista ya en
+   * `feedback_pending`; `JobDispatcher.enqueueInterviewFeedback` es
+   * idempotente por `jobId`, así que una doble llamada no encola dos veces.
    */
   async onInterviewSessionClosed(interviewId: string): Promise<void> {
     this.logger.log(
       `Entrevista ${interviewId} lista para el parecer (feedback_pending)`,
     );
+    await this.jobs.enqueueInterviewFeedback(interviewId);
   }
 
   private async finishInterview(

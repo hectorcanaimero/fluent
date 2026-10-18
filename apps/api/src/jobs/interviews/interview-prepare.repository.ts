@@ -10,6 +10,7 @@ import type { InsForgeClient } from '@insforge/sdk';
 import type { Redis } from 'ioredis';
 
 import { INSFORGE_ADMIN_CLIENT } from '../../insforge/insforge.constants.js';
+import { unwrapInsforge, type InsforgeResult } from '../../insforge/insforge-result.js';
 import { REDIS_CACHE_CLIENT } from '../../redis/redis.constants.js';
 import { TABLES } from '../../db/schema.js';
 import type { Level } from '../../db/schema.js';
@@ -31,6 +32,37 @@ const REFUND_SCRIPT =
   "local v = tonumber(redis.call('GET', KEYS[1]) or '0') if v > 0 then return redis.call('DECR', KEYS[1]) end return 0";
 
 /**
+ * Toma el candado si está libre o si ya es de este mismo job (BullMQ vuelve a
+ * correr un job atascado con el mismo id: no debe bloquearse a sí mismo).
+ */
+const ACQUIRE_LOCK_SCRIPT =
+  "local v = redis.call('GET', KEYS[1]) if v == false or v == ARGV[1] then redis.call('SET', KEYS[1], ARGV[1], 'PX', ARGV[2]) return 1 end return 0";
+
+/** Borra el candado solo si sigue siendo de este job. */
+const RELEASE_LOCK_SCRIPT =
+  "if redis.call('GET', KEYS[1]) == ARGV[1] then return redis.call('DEL', KEYS[1]) end return 0";
+
+/**
+ * Vida del candado de preparación: el timeout del agente (120 s) más margen
+ * para las lecturas/escrituras de alrededor. Si el worker muere, caduca solo.
+ */
+export const PREPARE_LOCK_TTL_MS = 180_000;
+
+/**
+ * Escapa un valor libre para un filtro `.or()` de PostgREST: entre comillas
+ * dobles, con `"` y `\` escapados. Sin esto, un área como `Backend, APIs` o
+ * `Data (ML)` rompe (o altera) el filtro, porque `,` y `()` son sintaxis.
+ */
+export function quotePostgrestValue(value: string): string {
+  return `"${value.replace(/["\\]/g, '\\$&')}"`;
+}
+
+/** El usuario no tiene fila en `profiles`: reintentar no lo arregla. */
+export class ProfileMissingError extends Error {
+  readonly name = 'ProfileMissingError';
+}
+
+/**
  * Nombres de las tablas de F10.1.T1. No viven en `db/schema.ts` porque esa
  * migración todavía no está reflejada ahí (fuera del alcance de F10.3.T3,
  * que no toca `db/schema.ts`): este job usa sus nombres literales en vez de
@@ -48,6 +80,7 @@ export interface InterviewPrepareRow {
   readonly offer_url: string | null;
   readonly offer_hash: string;
   readonly status: InterviewStatus;
+  readonly created_at: string;
 }
 
 export interface InterviewCompany {
@@ -85,9 +118,17 @@ export abstract class InterviewPrepareRepository {
     interview: InterviewPrepareRow,
     limit: number,
   ): Promise<string[]>;
+  /**
+   * Candado `interview:prepare:{id}` mientras dura el job: dos jobs de la
+   * misma entrevista (doble encolado, `retry` concurrente) no llaman los dos
+   * al agente. Devuelve `false` si lo tiene otro job.
+   */
+  abstract acquirePrepareLock(interviewId: string, owner: string): Promise<boolean>;
+  abstract releasePrepareLock(interviewId: string, owner: string): Promise<void>;
   abstract setPrepStep(interviewId: string, step: PrepStep): Promise<void>;
   abstract markReady(interviewId: string, input: MarkReadyInput): Promise<void>;
   abstract markPrepFailed(interviewId: string, errorCode: string): Promise<void>;
+  /** Idempotente: omite las preguntas ya guardadas para `(userId, offerHash)`. */
   abstract insertQuestionsAsked(
     userId: string,
     offerHash: string,
@@ -102,27 +143,16 @@ export abstract class InterviewPrepareRepository {
    * (fail-open, igual que el resto de usos de Redis de este proyecto): con
    * Redis caído es peor no poder preparar nada que perder temporalmente un
    * reembolso de tope.
+   *
+   * `createdAt` es el de la entrevista: el cupo se consumió el día en que se
+   * creó, no el día (quizá ya el siguiente) en que falló la preparación.
    */
-  abstract refundDailyCap(userId: string): Promise<void>;
+  abstract refundDailyCap(userId: string, createdAt: string): Promise<void>;
 }
 
 /* ============================================================================
    Implementación contra InsForge (PostgREST) con el cliente admin
    ========================================================================== */
-
-interface PostgrestLike<T> {
-  data: T | null;
-  error: { message?: string } | null;
-}
-
-function unwrap<T>(result: PostgrestLike<T>, what: string): T | null {
-  if (result.error) {
-    throw new Error(
-      `InsForge falló al ${what}: ${result.error.message ?? 'error desconocido'}`,
-    );
-  }
-  return result.data;
-}
 
 @Injectable()
 export class InsforgeInterviewPrepareRepository extends InterviewPrepareRepository {
@@ -140,10 +170,10 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
   async loadInterview(interviewId: string): Promise<InterviewPrepareRow | null> {
     const result = await this.db
       .from(INTERVIEWS_TABLE)
-      .select('id,user_id,parent_interview_id,type,offer_text,offer_url,offer_hash,status')
+      .select('id,user_id,parent_interview_id,type,offer_text,offer_url,offer_hash,status,created_at')
       .eq('id', interviewId)
       .maybeSingle();
-    return unwrap(result as PostgrestLike<InterviewPrepareRow>, 'leer la entrevista');
+    return unwrapInsforge(result as InsforgeResult<InterviewPrepareRow>);
   }
 
   async loadLearnerLevel(userId: string): Promise<Level> {
@@ -152,9 +182,9 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       .select('level')
       .eq('user_id', userId)
       .maybeSingle();
-    const row = unwrap(result as PostgrestLike<{ level: Level }>, 'leer el nivel del perfil');
+    const row = unwrapInsforge(result as InsforgeResult<{ level: Level }>);
     if (!row) {
-      throw new Error(`El usuario ${userId} no tiene perfil`);
+      throw new ProfileMissingError(`El usuario ${userId} no tiene perfil`);
     }
     return row.level;
   }
@@ -170,12 +200,13 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
         .select('area')
         .eq('id', interview.parent_interview_id)
         .maybeSingle();
-      area = unwrap(parent as PostgrestLike<{ area: string | null }>, 'leer el área de la entrevista previa')?.area ?? null;
+      area = unwrapInsforge(parent as InsforgeResult<{ area: string | null }>)?.area ?? null;
     }
 
+    const offerHash = quotePostgrestValue(interview.offer_hash);
     const filter = area
-      ? `offer_hash.eq.${interview.offer_hash},area.eq.${area}`
-      : `offer_hash.eq.${interview.offer_hash}`;
+      ? `offer_hash.eq.${offerHash},area.eq.${quotePostgrestValue(area)}`
+      : `offer_hash.eq.${offerHash}`;
 
     const result = await this.db
       .from(INTERVIEW_QUESTIONS_ASKED_TABLE)
@@ -185,8 +216,27 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       .order('created_at', { ascending: false })
       .limit(limit);
     const rows =
-      unwrap(result as PostgrestLike<{ question: string }[]>, 'leer las preguntas previas') ?? [];
+      unwrapInsforge(result as InsforgeResult<{ question: string }[]>) ?? [];
     return rows.map((row) => row.question);
+  }
+
+  async acquirePrepareLock(interviewId: string, owner: string): Promise<boolean> {
+    const acquired = await this.redis.eval(
+      ACQUIRE_LOCK_SCRIPT,
+      1,
+      prepareLockKey(interviewId),
+      owner,
+      PREPARE_LOCK_TTL_MS,
+    );
+    return acquired === 1;
+  }
+
+  async releasePrepareLock(interviewId: string, owner: string): Promise<void> {
+    try {
+      await this.redis.eval(RELEASE_LOCK_SCRIPT, 1, prepareLockKey(interviewId), owner);
+    } catch {
+      // Si no se puede soltar, caduca solo (PREPARE_LOCK_TTL_MS).
+    }
   }
 
   async setPrepStep(interviewId: string, step: PrepStep): Promise<void> {
@@ -194,7 +244,7 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       .from(INTERVIEWS_TABLE)
       .update({ prep_step: step })
       .eq('id', interviewId);
-    unwrap(result as PostgrestLike<unknown>, `poner prep_step '${step}'`);
+    unwrapInsforge(result as InsforgeResult<unknown>);
   }
 
   async markReady(interviewId: string, input: MarkReadyInput): Promise<void> {
@@ -209,8 +259,9 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
         seniority: input.seniority,
         plan: input.plan,
       })
-      .eq('id', interviewId);
-    unwrap(result as PostgrestLike<unknown>, 'marcar la entrevista como ready');
+      .eq('id', interviewId)
+      .eq('status', 'preparing' satisfies InterviewStatus);
+    unwrapInsforge(result as InsforgeResult<unknown>);
   }
 
   async markPrepFailed(interviewId: string, errorCode: string): Promise<void> {
@@ -220,8 +271,9 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
         status: 'prep_failed' satisfies InterviewStatus,
         error_code: errorCode,
       })
-      .eq('id', interviewId);
-    unwrap(result as PostgrestLike<unknown>, 'marcar la entrevista como prep_failed');
+      .eq('id', interviewId)
+      .eq('status', 'preparing' satisfies InterviewStatus);
+    unwrapInsforge(result as InsforgeResult<unknown>);
   }
 
   async insertQuestionsAsked(
@@ -230,14 +282,28 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
     area: string,
     questions: readonly string[],
   ): Promise<void> {
-    const rows = questions.map((question) => ({
-      user_id: userId,
-      offer_hash: offerHash,
-      area,
-      question,
-    }));
+    // La tabla no tiene `interview_id` (F10.1.T1): se deduplica por
+    // `(user_id, offer_hash, question)` para que un reintento no las duplique.
+    const existing = await this.db
+      .from(INTERVIEW_QUESTIONS_ASKED_TABLE)
+      .select('question')
+      .eq('user_id', userId)
+      .eq('offer_hash', offerHash)
+      .in('question', [...questions]);
+    const already = new Set(
+      (unwrapInsforge(existing as InsforgeResult<{ question: string }[]>) ?? []).map((row) => row.question),
+    );
+    const rows = questions
+      .filter((question) => !already.has(question))
+      .map((question) => ({
+        user_id: userId,
+        offer_hash: offerHash,
+        area,
+        question,
+      }));
+    if (rows.length === 0) return;
     const result = await this.db.from(INTERVIEW_QUESTIONS_ASKED_TABLE).insert(rows);
-    unwrap(result as PostgrestLike<unknown>, 'guardar las preguntas de la entrevista');
+    unwrapInsforge(result as InsforgeResult<unknown>);
   }
 
   async recordPrepareUsage(input: RecordPrepareUsageInput): Promise<void> {
@@ -254,21 +320,18 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       attempt: input.attempt,
       prompt_version: input.promptVersion,
     });
-    unwrap(result as PostgrestLike<unknown>, 'registrar el uso en llm_calls');
+    unwrapInsforge(result as InsforgeResult<unknown>);
   }
 
-  async refundDailyCap(userId: string): Promise<void> {
+  async refundDailyCap(userId: string, createdAt: string): Promise<void> {
     try {
       const profile = await this.db
         .from(TABLES.profiles)
         .select('timezone')
         .eq('user_id', userId)
         .maybeSingle();
-      const timezone = unwrap(
-        profile as PostgrestLike<{ timezone: string | null }>,
-        'leer la zona horaria del perfil',
-      )?.timezone;
-      const key = `interviews:day:${userId}:${userDay(timezone)}`;
+      const timezone = unwrapInsforge(profile as InsforgeResult<{ timezone: string | null }>)?.timezone;
+      const key = `interviews:day:${userId}:${userDay(timezone, new Date(createdAt))}`;
       // Solo si queda algo que devolver: un DECR sobre una clave expirada la
       // recrearía en -1 y sin TTL, regalando un cupo permanente.
       await this.redis.eval(REFUND_SCRIPT, 1, key);
@@ -278,4 +341,8 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
       // del perfil.
     }
   }
+}
+
+function prepareLockKey(interviewId: string): string {
+  return `interview:prepare:${interviewId}`;
 }

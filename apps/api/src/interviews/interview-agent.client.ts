@@ -61,9 +61,14 @@ export class InterviewAgentClient {
       );
     }
 
+    // `new URL` con base terminada en `/` y ruta relativa: respeta un prefijo
+    // en INTERVIEW_AGENT_URL (`http://host/agent/`) y evita la doble barra.
+    const base = this.baseUrl.endsWith('/') ? this.baseUrl : `${this.baseUrl}/`;
+    const url = new URL(path.replace(/^\/+/, ''), base).href;
+
     let response: Response;
     try {
-      response = await fetch(`${this.baseUrl}${path}`, {
+      response = await fetch(url, {
         method: 'POST',
         headers: {
           'content-type': 'application/json',
@@ -79,8 +84,11 @@ export class InterviewAgentClient {
     }
 
     if (!response.ok) {
+      // Se lee (y así se libera) el cuerpo: sin consumirlo, undici retiene la
+      // conexión. Un fragmento corto ayuda a diagnosticar sin volcar el cuerpo entero.
+      const snippet = (await response.text().catch(() => '')).slice(0, 200);
       throw new AgentUnavailableError(
-        `interview-agent respondió ${response.status} en ${path}`,
+        `interview-agent respondió ${response.status} en ${path}: ${snippet}`,
       );
     }
 

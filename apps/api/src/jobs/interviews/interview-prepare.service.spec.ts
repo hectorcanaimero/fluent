@@ -7,10 +7,8 @@ import {
 } from '../../interviews/interview-agent.client.js';
 import type { PrepareResponse } from '../../interviews/interviews.types.js';
 import type { PushService } from '../../push/push.service.js';
-import {
-  AGENT_UNAVAILABLE_ERROR_CODE,
-  InterviewPrepareService,
-} from './interview-prepare.service.js';
+import { classifyPrepareError, InterviewPrepareService } from './interview-prepare.service.js';
+import { ProfileMissingError } from './interview-prepare.repository.js';
 import type {
   InterviewPrepareRepository,
   InterviewPrepareRow,
@@ -40,6 +38,7 @@ function makeRepository(state: RepoState) {
     offer_text: 'We are hiring a backend engineer.',
     offer_url: null,
     offer_hash: 'hash-1',
+    created_at: '2026-10-17T23:59:00.000Z',
     get status() {
       return state.status;
     },
@@ -52,7 +51,17 @@ function makeRepository(state: RepoState) {
   const usage: RecordPrepareUsageInput[] = [];
   const insertedQuestions: { userId: string; offerHash: string; area: string; questions: readonly string[] }[] = [];
 
+  const locks = new Map<string, string>();
   const repository = {
+    acquirePrepareLock: vi.fn(async (id: string, owner: string) => {
+      const holder = locks.get(id);
+      if (holder !== undefined && holder !== owner) return false;
+      locks.set(id, owner);
+      return true;
+    }),
+    releasePrepareLock: vi.fn(async (id: string, owner: string) => {
+      if (locks.get(id) === owner) locks.delete(id);
+    }),
     loadInterview: vi.fn(async () => (interview as unknown as InterviewPrepareRow)),
     loadLearnerLevel: vi.fn(async () => 'B1' as const),
     loadPreviousQuestions: vi.fn(async () => ['Old question?']),
@@ -75,7 +84,7 @@ function makeRepository(state: RepoState) {
     recordPrepareUsage: vi.fn(async (input: RecordPrepareUsageInput) => {
       usage.push(input);
     }),
-    refundDailyCap: vi.fn(async (userId: string) => {
+    refundDailyCap: vi.fn(async (userId: string, _createdAt: string) => {
       refunded.push(userId);
     }),
   };
@@ -142,10 +151,10 @@ describe('InterviewPrepareService.run', () => {
       makeConfig(),
     );
 
-    const result = await service.run(INTERVIEW_ID, 1);
+    const result = await service.run(INTERVIEW_ID, 1, 'job-1');
 
     expect(result).toEqual({ status: 'ready' });
-    expect(prepSteps).toEqual(['researching', 'designing']);
+    expect(prepSteps).toEqual(['researching']);
     expect(ready).toHaveLength(1);
     expect(ready[0]).toMatchObject({ role: 'Backend engineer', area: 'engineering' });
     expect(insertedQuestions).toHaveLength(1);
@@ -176,11 +185,12 @@ describe('InterviewPrepareService.run', () => {
       makeConfig(),
     );
 
-    const result = await service.run(INTERVIEW_ID, 1);
+    const result = await service.run(INTERVIEW_ID, 1, 'job-1');
 
     expect(result).toEqual({ status: 'offer_unreadable', errorCode: 'empty' });
     expect(failed).toEqual(['empty']);
     expect(refunded).toEqual([USER_ID]);
+    expect(repository.refundDailyCap).toHaveBeenCalledWith(USER_ID, '2026-10-17T23:59:00.000Z');
     expect(pushFailed).toHaveLength(1);
     expect(usage).toEqual([]);
   });
@@ -196,7 +206,7 @@ describe('InterviewPrepareService.run', () => {
       makeConfig(),
     );
 
-    const result = await service.run(INTERVIEW_ID, 1);
+    const result = await service.run(INTERVIEW_ID, 1, 'job-1');
 
     expect(result).toEqual({ status: 'skipped', reason: 'not_preparing' });
     expect(agent.prepare).not.toHaveBeenCalled();
@@ -215,7 +225,7 @@ describe('InterviewPrepareService.run', () => {
       makeConfig(),
     );
 
-    await expect(service.run(INTERVIEW_ID, 1)).rejects.toBeInstanceOf(AgentInvalidResponseError);
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toBeInstanceOf(AgentInvalidResponseError);
     expect(failed).toEqual([]);
     expect(ready).toEqual([]);
     expect(push.notifyInterviewPrepFailed).not.toHaveBeenCalled();
@@ -234,9 +244,92 @@ describe('InterviewPrepareService.run', () => {
       makeConfig(),
     );
 
-    await expect(service.run(INTERVIEW_ID, 1)).rejects.toBeInstanceOf(AgentUnavailableError);
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toBeInstanceOf(AgentUnavailableError);
     expect(failed).toEqual([]);
     expect(push.notifyInterviewPrepFailed).not.toHaveBeenCalled();
+  });
+});
+
+describe('InterviewPrepareService.run · idempotencia', () => {
+  it('un reintento tras guardar el plan (markReady) no vuelve a llamar al agente', async () => {
+    const { repository, usage, insertedQuestions } = makeRepository({ status: 'preparing' });
+    const { push } = makePush();
+    // El primer intento muere justo después de `markReady` (p. ej. el worker cae).
+    push.notifyInterviewReady.mockRejectedValueOnce(new Error('worker caído'));
+    const agent = makeAgent(async () => okResponse());
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      agent,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toThrow('worker caído');
+    const retry = await service.run(INTERVIEW_ID, 2, 'job-1');
+
+    expect(retry).toEqual({ status: 'skipped', reason: 'not_preparing' });
+    expect(agent.prepare).toHaveBeenCalledTimes(1);
+    expect(usage).toHaveLength(1);
+    expect(insertedQuestions).toHaveLength(1);
+  });
+
+  it('dos jobs concurrentes de la misma entrevista: solo uno llama al agente', async () => {
+    const { repository } = makeRepository({ status: 'preparing' });
+    const { push } = makePush();
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => (release = resolve));
+    const agent = makeAgent(async () => {
+      await gate;
+      return okResponse();
+    });
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      agent,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    const first = service.run(INTERVIEW_ID, 1, 'job-1');
+    const second = await service.run(INTERVIEW_ID, 1, 'job-2');
+    release();
+
+    expect(second).toEqual({ status: 'skipped', reason: 'locked' });
+    expect(await first).toEqual({ status: 'ready' });
+    expect(agent.prepare).toHaveBeenCalledTimes(1);
+    expect(repository.releasePrepareLock).toHaveBeenCalledWith(INTERVIEW_ID, 'job-1');
+  });
+
+  it('suelta el candado aunque el agente falle', async () => {
+    const { repository } = makeRepository({ status: 'preparing' });
+    const { push } = makePush();
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      makeAgent(async () => {
+        throw new AgentUnavailableError('timeout');
+      }),
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toBeInstanceOf(AgentUnavailableError);
+    expect(repository.releasePrepareLock).toHaveBeenCalledWith(INTERVIEW_ID, 'job-1');
+  });
+});
+
+describe('classifyPrepareError', () => {
+  it.each([
+    [new AgentUnavailableError('x'), 'agent_unavailable', true],
+    [new AgentInvalidResponseError('x'), 'agent_invalid_response', false],
+    [new ProfileMissingError('x'), 'profile_missing', false],
+    [new Error('InsForge caído'), 'internal', true],
+    [undefined, 'internal', true],
+  ])('%s -> %s (reintentable: %s)', (error, code, retryable) => {
+    expect(classifyPrepareError(error)).toEqual({ code, retryable });
+  });
+
+  it('mira la causa (el Processor envuelve en UnrecoverableError)', () => {
+    const wrapped = new Error('envoltorio', { cause: new ProfileMissingError('sin perfil') });
+    expect(classifyPrepareError(wrapped).code).toBe('profile_missing');
   });
 });
 
@@ -251,11 +344,26 @@ describe('InterviewPrepareService.markFailedFinal', () => {
       makeConfig(),
     );
 
-    await service.markFailedFinal(INTERVIEW_ID);
+    await service.markFailedFinal(INTERVIEW_ID, 'agent_unavailable');
 
-    expect(failed).toEqual([AGENT_UNAVAILABLE_ERROR_CODE]);
+    expect(failed).toEqual(['agent_unavailable']);
     expect(refunded).toEqual([USER_ID]);
     expect(pushFailed).toHaveLength(1);
+  });
+
+  it('guarda el error_code real que le pasan', async () => {
+    const { repository, failed } = makeRepository({ status: 'preparing' });
+    const { push } = makePush();
+    const service = new InterviewPrepareService(
+      repository as unknown as InterviewPrepareRepository,
+      makeAgent(async () => okResponse()),
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await service.markFailedFinal(INTERVIEW_ID, 'profile_missing');
+
+    expect(failed).toEqual(['profile_missing']);
   });
 
   it('no hace nada si la entrevista ya no está preparing', async () => {
@@ -268,7 +376,7 @@ describe('InterviewPrepareService.markFailedFinal', () => {
       makeConfig(),
     );
 
-    await service.markFailedFinal(INTERVIEW_ID);
+    await service.markFailedFinal(INTERVIEW_ID, 'agent_unavailable');
 
     expect(failed).toEqual([]);
     expect(refunded).toEqual([]);

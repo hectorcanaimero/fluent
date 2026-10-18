@@ -105,6 +105,32 @@ describe('InterviewAgentClient', () => {
     await expect(client.prepare(prepareRequest())).rejects.toBeInstanceOf(AgentUnavailableError);
   });
 
+  it('status fuera de 2xx: el mensaje incluye un fragmento del cuerpo', async () => {
+    vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(`upstream exploded ${'x'.repeat(500)}`, { status: 500 }),
+    );
+
+    const client = makeClient();
+    const error = await client.prepare(prepareRequest()).catch((e: Error) => e);
+    expect(error).toBeInstanceOf(AgentUnavailableError);
+    expect((error as Error).message).toContain('500 en /v1/prepare: upstream exploded');
+    expect((error as Error).message.length).toBeLessThan(300);
+  });
+
+  it.each([
+    ['http://agent.internal/', 'http://agent.internal/v1/prepare'],
+    ['http://agent.internal/base', 'http://agent.internal/base/v1/prepare'],
+    ['http://agent.internal/base/', 'http://agent.internal/base/v1/prepare'],
+  ])('URL base %s -> %s (sin doble barra, respeta el prefijo)', async (url, expected) => {
+    const fetchSpy = vi
+      .spyOn(globalThis, 'fetch')
+      .mockResolvedValue(new Response(JSON.stringify(validPrepareOkBody()), { status: 200 }));
+
+    await makeClient({ url }).prepare(prepareRequest());
+
+    expect(fetchSpy.mock.calls[0]![0]).toBe(expected);
+  });
+
   it('error de red (timeout incluido) -> AgentUnavailableError', async () => {
     vi.spyOn(globalThis, 'fetch').mockRejectedValue(new Error('aborted'));
 

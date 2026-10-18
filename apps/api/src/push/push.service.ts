@@ -5,6 +5,10 @@ import {
   challengeMessage,
   groupSessionMessage,
   weeklySummaryMessage,
+  interviewReadyMessage,
+  interviewPrepFailedMessage,
+  interviewFeedbackReadyMessage,
+  studyReminderMessage,
   type PushMessage,
 } from './push.messages.js';
 import { PushRepository, type PushPlatform } from './push.repository.js';
@@ -86,6 +90,38 @@ export class PushService {
           topic: params.topic,
         }),
       );
+    });
+  }
+
+  /** La entrevista está lista para empezar. */
+  async notifyInterviewReady(userId: string, interviewId: string, role: string, company: string): Promise<void> {
+    await this.safely('interview_ready', async () => {
+      if (!this.sender.enabled) return;
+      await this.sendTo([userId], (locale) => interviewReadyMessage(locale, { interviewId, role, company }));
+    });
+  }
+
+  /** La preparación de la entrevista falló. */
+  async notifyInterviewPrepFailed(userId: string, interviewId: string, company: string): Promise<void> {
+    await this.safely('interview_prep_failed', async () => {
+      if (!this.sender.enabled) return;
+      await this.sendTo([userId], (locale) => interviewPrepFailedMessage(locale, { interviewId, company }));
+    });
+  }
+
+  /** El parecer de la entrevista está listo. */
+  async notifyInterviewFeedbackReady(userId: string, interviewId: string, company: string): Promise<void> {
+    await this.safely('interview_feedback_ready', async () => {
+      if (!this.sender.enabled) return;
+      await this.sendTo([userId], (locale) => interviewFeedbackReadyMessage(locale, { interviewId, company }));
+    });
+  }
+
+  /** Recordatorio para continuar el ciclo de estudio. */
+  async notifyStudyReminder(userId: string, interviewId: string, n: number, total: number, title: string): Promise<void> {
+    await this.safely('study_reminder', async () => {
+      if (!this.sender.enabled) return;
+      await this.sendTo([userId], (locale) => studyReminderMessage(locale, { interviewId, n, total, title }));
     });
   }
 

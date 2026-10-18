@@ -71,7 +71,9 @@ ids presentes en ambos. `fluent-free` va en tier `free`; `fluent-pro` en
 - `profiles.plan`, `profiles.plan_expires_at` en la base.
 - `isPro(profile, now)` en `profiles/plan.ts` (función pura).
 - `GET /me` expone `plan`, `planExpiresAt`; `PUT /admin/users/:id/plan` lo fija.
-- `requireDailyTurnsBudget` lee `TURNS_DAILY_CAP_FREE` o `_PRO` según `isPro`.
+- `DailyTurnsBudget.consume` (`sessions/daily-turns-budget.ts`) lee
+  `TURNS_DAILY_CAP_FREE` o `_PRO` según el plan que le pasa `TurnsService`
+  (`effectivePlan(profile, now)`).
 - `ModelsService.updatePreferences` lanza `PLAN_REQUIRED` si Free elige un modelo
   con tier ≠ `free`.
 
@@ -208,7 +210,7 @@ Medidos contra `NINEROUTER_URL` con la key del operador. Son contrato para F1.
 | RF-3 | Data model (F2), Plans |
 | RF-4 | ModelResolver |
 | RF-5 | ModelResolver, Plans (`PLAN_REQUIRED`) |
-| RF-6 | Plans (`requireDailyTurnsBudget`) |
+| RF-6 | Plans (`DailyTurnsBudget.consume`) |
 | RF-7 | Plans (admin) |
 | RF-8 | Plans (`GET /me`) |
 | RF-9 | Catalog |

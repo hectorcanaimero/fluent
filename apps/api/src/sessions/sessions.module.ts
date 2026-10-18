@@ -5,6 +5,7 @@ import { LlmModule } from '../llm/llm.module.js';
 import { SocialModule } from '../social/social.module.js';
 import { InsforgeBossRepository } from './boss.repository.js';
 import { RedisBossSkipStore } from './boss-skip.store.js';
+import { DailyTurnsBudget } from './daily-turns-budget.js';
 import { EndSessionRepository } from './end-session.repository.js';
 import { EndSessionService } from './end-session.service.js';
 import { SessionCloserService } from './session-closer.service.js';
@@ -64,6 +65,7 @@ import { TurnsService } from './turns.service.js';
     },
     SessionsService,
     TurnsRepository,
+    DailyTurnsBudget,
     TurnsService,
     EndSessionRepository,
     SessionCloserService,
@@ -73,6 +75,13 @@ import { TurnsService } from './turns.service.js';
     SessionsHistoryRepository,
     SessionsHistoryService,
   ],
-  exports: [SessionsService, TurnsService, EndSessionService, SuggestionsService, SessionsHistoryService],
+  exports: [
+    SessionsService,
+    TurnsService,
+    DailyTurnsBudget,
+    EndSessionService,
+    SuggestionsService,
+    SessionsHistoryService,
+  ],
 })
 export class SessionsModule {}

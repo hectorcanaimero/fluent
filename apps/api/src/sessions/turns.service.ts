@@ -13,11 +13,12 @@ import {
 import type { Provider as LlmProvider } from '../llm/config.js';
 import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import type { ModelPreference } from '../llm/model-resolver.js';
-import { effectivePlan, isPro } from '../profiles/plan.js';
+import { effectivePlan } from '../profiles/plan.js';
 import type { HistoryTurn } from '../llm/prompts/truncate.js';
 import { buildTurnMessages } from '../llm/prompts/turn.js';
 import { TurnOutput, type Correction as CorrectionOutput } from '../llm/schemas.js';
 import { RedisService } from '../redis/redis.service.js';
+import { DailyTurnsBudget } from './daily-turns-budget.js';
 import type { CreateTurnDto } from './dto/create-turn.dto.js';
 import { rebuildScenario } from './scenario.js';
 import { findOwnedSessionOrThrow } from './session-ownership.js';
@@ -29,17 +30,12 @@ import {
   turnPaceKey,
 } from './sessions.constants.js';
 import { roundLatency, toCorrectionDto } from './sessions.mapper.js';
-import { secondsUntilUserMidnight, turnsDayKey, userDay } from './user-day.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { CorrectionDto, TurnResultDto } from './sessions.types.js';
 import { TurnsRepository, type InsertCorrectionRow } from './turns.repository.js';
 
 const SESSION_NOT_ACTIVE_MESSAGE = 'Esta sesión ya no está activa.';
 const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar otro turno.';
-const TURNS_DAILY_CAP_MESSAGE =
-  'Por hoy alcanzaste el máximo de turnos. Mañana seguimos.';
-const TURNS_DAILY_CAP_FREE_MESSAGE =
-  'Por hoy alcanzaste el máximo de turnos del plan Free. Mañana seguimos, o pásate a Pro para ampliar el tope.';
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de seguir la conversación.';
@@ -99,6 +95,7 @@ export class TurnsService {
     private readonly llm: LlmService,
     private readonly redis: RedisService,
     private readonly configService: ConfigService<Env, true>,
+    private readonly dailyTurnsBudget: DailyTurnsBudget,
   ) {}
 
   async addTurn(
@@ -159,44 +156,6 @@ export class TurnsService {
   }
 
   /**
-   * Cuenta el turno del día y rechaza con `429 TURNS_DAILY_CAP` al pasarse
-   * (MAL-23).
-   *
-   * El día es el **natural del aprendiz** (`profiles.timezone`), no UTC: a
-   * alguien en Buenos Aires no se le puede reiniciar el cupo a las 21:00 de
-   * su tarde. `Retry-After` lleva los segundos que faltan para su medianoche,
-   * que es cuando el contador caduca de verdad.
-   *
-   * El tope depende del plan: `TURNS_DAILY_CAP_PRO` o `TURNS_DAILY_CAP_FREE`.
-   * Con el tope a 0 queda desactivado. Con Redis caído
-   * `increment` devuelve `null` y se deja pasar (fail-open), igual que el
-   * lock de turno: bloquear a todo el mundo durante una caída de Redis es
-   * peor que perder temporalmente el tope.
-   */
-  private async requireDailyTurnsBudget(userId: string, profile: Profile): Promise<void> {
-    const pro = isPro(profile);
-    const cap = this.configService.get(pro ? 'TURNS_DAILY_CAP_PRO' : 'TURNS_DAILY_CAP_FREE', {
-      infer: true,
-    });
-    if (cap <= 0) {
-      return;
-    }
-
-    const now = new Date();
-    const retryAfter = secondsUntilUserMidnight(profile.timezone, now);
-    const key = turnsDayKey(userId, userDay(profile.timezone, now));
-
-    const used = await this.redis.increment(key, retryAfter);
-    if (used === null || used <= cap) {
-      return;
-    }
-
-    throw ApiException.of('TURNS_DAILY_CAP', pro ? TURNS_DAILY_CAP_MESSAGE : TURNS_DAILY_CAP_FREE_MESSAGE, {
-      extra: { retryAfter },
-    });
-  }
-
-  /**
    * `403 FORBIDDEN` si la sesión no existe o es de otro usuario, o si el
    * `:id` ni siquiera tiene forma de UUID (`findOwnedSessionOrThrow`,
    * compartida con T3 — PEND-42 de PR-02 y ver docs/specs/pendientes/PR-04.md).
@@ -243,8 +202,10 @@ export class TurnsService {
 
     // 2.b Tope diario de turnos (MAL-23). Va **antes** de insertar el turno
     // del usuario y de llamar al modelo: pasado el tope no se escribe nada ni
-    // se gasta un céntimo de la key del aprendiz.
-    await this.requireDailyTurnsBudget(userId, profile);
+    // se gasta un céntimo de la key del aprendiz. Un solo `now` para el plan
+    // y el día: así no discrepan si la petición cruza la medianoche.
+    const now = new Date();
+    await this.dailyTurnsBudget.consume(userId, effectivePlan(profile, now), profile.timezone, now);
 
     // La apertura del tutor es `idx = 0`; cada turno toma el último + 1. Con
     // la sesión sin ningún turno (imposible hoy: la apertura siempre inserta

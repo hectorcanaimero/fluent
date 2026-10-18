@@ -204,7 +204,7 @@ create table study_cycle_sessions (
   "offerText": "string|null", "offerUrl": "string|null",
   "learnerLevel": "A2|B1|B2", "previousQuestions": ["string"] }
 // response 200
-{ "status": "ok", "type": "technical|mixed",
+{ "status": "ok",
   "research": { "found": true, "notes": "string" },
   "company": { "name": "string", "industry": "string?", "city": "string?", "workMode": "string?" },
   "role": "string", "area": "string", "seniority": "junior|semi_senior|senior|staff_lead",

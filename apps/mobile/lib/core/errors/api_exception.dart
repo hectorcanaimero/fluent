@@ -30,6 +30,19 @@ enum ApiErrorCode {
   /// depender de otro despliegue del móvil.
   turnsDailyCap,
 
+  /// I2 (`docs/arch/003-simulador-entrevistas.md`): `422` al crear una
+  /// entrevista con una oferta de LinkedIn o ilegible.
+  offerUnreadable,
+
+  /// I2: `429` al crear una entrevista habiendo alcanzado
+  /// `INTERVIEWS_DAILY_CAP` (FR-21).
+  interviewsDailyCap,
+
+  /// I2: `409` al pedir el parecer de una entrevista con menos de 4
+  /// respuestas (FR-11). `TOO_SHORT` es un código genérico, así que no se
+  /// mapea en [fromWire]: solo `getInterviewFeedback` lo traduce a este caso.
+  interviewTooShort,
+
   /// P1 MAL-08: no llegó ningún evento del stream dentro de la ventana
   /// esperada (proxy/conexión colgada). No lo manda la API — lo genera el
   /// cliente al envolver el stream con `.timeout()` — así que no tiene caso
@@ -89,6 +102,10 @@ enum ApiErrorCode {
         return ApiErrorCode.invitationLimitReached;
       case 'GROUP_REQUIRED':
         return ApiErrorCode.groupRequired;
+      case 'OFFER_UNREADABLE':
+        return ApiErrorCode.offerUnreadable;
+      case 'INTERVIEWS_DAILY_CAP':
+        return ApiErrorCode.interviewsDailyCap;
       default:
         return ApiErrorCode.unknown;
     }

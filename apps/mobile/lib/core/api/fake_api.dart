@@ -839,4 +839,434 @@ class FakeApi implements FluentApi {
       weekStart: '2026-09-07',
     );
   }
+
+  // ---- 4.6 Entrevistas (I2) ------------------------------------------------
+
+  /// Tope diario de entrevistas simulado (FR-21); `<= 0` lo desactiva, igual
+  /// que `INTERVIEWS_DAILY_CAP` en la API.
+  int interviewsDailyLimit = 3;
+  int _interviewsToday = 0;
+
+  final Map<String, InterviewDetail> _interviews = {};
+  final List<String> _interviewOrder = [];
+  final Map<String, int> _interviewAnsweredCount = {};
+  final Map<String, StudyCycle> _studyCycles = {};
+  int _interviewCounter = 0;
+
+  @override
+  Future<InterviewQuota> getInterviewQuota() async {
+    await _delay();
+    final limit = interviewsDailyLimit;
+    return InterviewQuota(
+      remaining: limit <= 0 ? limit : max(0, limit - _interviewsToday),
+      limit: limit,
+    );
+  }
+
+  InterviewDetail _requireInterview(String id) {
+    final current = _interviews[id];
+    if (current == null) {
+      _fail(ApiErrorCode.notFound, 'unknown interview', statusCode: 404);
+    }
+    return current;
+  }
+
+  /// La API real responde `409` con un código que la app no mapea
+  /// (`INTERVIEW_NOT_RETRYABLE` y similares), así que llega como `unknown`.
+  Never _conflict(String message) =>
+      _fail(ApiErrorCode.unknown, message, statusCode: 409);
+
+  @override
+  Future<InterviewDetail> createInterview({
+    required String type,
+    String? offerText,
+    String? offerUrl,
+  }) async {
+    await _delay();
+    // Mismo orden que la API: validar la oferta antes de tocar el tope.
+    final hasText = offerText != null && offerText.trim().isNotEmpty;
+    final hasUrl = offerUrl != null && offerUrl.trim().isNotEmpty;
+    if (hasText == hasUrl) {
+      _fail(
+        ApiErrorCode.validation,
+        'exactly one of offerText or offerUrl is required',
+        statusCode: 422,
+      );
+    }
+    if (hasUrl && offerUrl.contains('linkedin.com')) {
+      _fail(
+        ApiErrorCode.offerUnreadable,
+        'offer url is a LinkedIn page',
+        statusCode: 422,
+      );
+    }
+    if (interviewsDailyLimit > 0 && _interviewsToday >= interviewsDailyLimit) {
+      _fail(
+        ApiErrorCode.interviewsDailyCap,
+        'daily interview cap reached',
+        statusCode: 429,
+      );
+    }
+    _interviewsToday++;
+    return _addInterview(type: type);
+  }
+
+  InterviewDetail _addInterview({
+    required String type,
+    bool isReinterview = false,
+  }) {
+    _interviewCounter++;
+    final id = 'interview-$_interviewCounter';
+    final detail = InterviewDetail(
+      id: id,
+      type: type,
+      status: 'preparing',
+      createdAt: DateTime.now().toIso8601String(),
+      prepStep: 'reading',
+      isReinterview: isReinterview,
+    );
+    _interviews[id] = detail;
+    _interviewOrder.add(id);
+    _interviewAnsweredCount[id] = 0;
+    return detail;
+  }
+
+  @override
+  Future<List<InterviewSummary>> getInterviews() async {
+    await _delay();
+    return [
+      for (final id in _interviewOrder.reversed)
+        InterviewSummary(
+          id: id,
+          type: _interviews[id]!.type,
+          status: _interviews[id]!.status,
+          createdAt: _interviews[id]!.createdAt,
+          role: _interviews[id]!.role,
+          area: _interviews[id]!.area,
+          company: _interviews[id]!.company,
+          isReinterview: _interviews[id]!.isReinterview,
+          cycleCompletedSessions: _studyCycles[id]?.sessions
+              .where((s) => s.status == 'done')
+              .length,
+        ),
+    ];
+  }
+
+  /// Cada llamada mientras `preparing` avanza un paso (`reading →
+  /// researching → designing → done`); el último avance pasa a `ready` y
+  /// completa la ficha del plan. Igual con `feedback_pending`, que pasa a
+  /// `feedback_ready`. Así `interviewProvider`, que repolla, ve el mismo
+  /// progreso que mostraría la API real sin necesitar un cron ni un `Timer`.
+  @override
+  Future<InterviewDetail> getInterview(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    if (current.status == 'feedback_pending') {
+      return _interviews[id] = current.copyWith(status: 'feedback_ready');
+    }
+    if (current.status != 'preparing') return current;
+
+    final nextStep = switch (current.prepStep) {
+      'reading' => 'researching',
+      'researching' => 'designing',
+      _ => 'done',
+    };
+    final updated = nextStep != 'done'
+        ? current.copyWith(prepStep: nextStep)
+        : current.copyWith(
+            status: 'ready',
+            prepStep: 'done',
+            company: const CompanyInfo(
+              name: 'Acme Corp',
+              industry: 'Software',
+              city: 'Remoto',
+              workMode: 'remote',
+            ),
+            role: 'Backend Engineer',
+            area: 'Engineering',
+            seniority: 'semi_senior',
+            questionCount: 8,
+            estimatedMin: 10,
+            competencies: const [
+              'APIs REST',
+              'Bases de datos',
+              'Diseño de sistemas',
+              'Comunicación',
+            ],
+          );
+    _interviews[id] = updated;
+    return updated;
+  }
+
+  /// Gancho de test para simular IE-03b sin depender de que el agente falle.
+  void forceInterviewPrepFailed(String id) {
+    final current = _requireInterview(id);
+    _interviews[id] = current.copyWith(
+      status: 'prep_failed',
+      errorCode: 'AGENT_UNAVAILABLE',
+    );
+  }
+
+  /// Gancho de test: el parecer falló tras el reintento (IE-06e).
+  void forceInterviewFeedbackFailed(String id) {
+    final current = _requireInterview(id);
+    _interviews[id] = current.copyWith(
+      status: 'feedback_failed',
+      errorCode: 'AGENT_UNAVAILABLE',
+    );
+  }
+
+  @override
+  Future<InterviewDetail> retryInterview(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    final retried = switch (current.status) {
+      'prep_failed' => current.copyWith(
+        status: 'preparing',
+        prepStep: 'reading',
+        errorCode: null,
+      ),
+      'feedback_failed' => current.copyWith(
+        status: 'feedback_pending',
+        errorCode: null,
+      ),
+      _ => _conflict('INTERVIEW_NOT_RETRYABLE'),
+    };
+    _interviews[id] = retried;
+    return retried;
+  }
+
+  /// Abre (`ready`) o retoma (`in_progress`, `too_short`) la entrevista.
+  @override
+  Future<InterviewSessionStart> startInterviewSession(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    if (!const {'ready', 'in_progress', 'too_short'}.contains(current.status)) {
+      _conflict('interview cannot start in status ${current.status}');
+    }
+    _interviews[id] = current.copyWith(status: 'in_progress');
+    return InterviewSessionStart(
+      sessionId: 'session-$id',
+      answeredCount: _interviewAnsweredCount[id] ?? 0,
+      totalQuestions: current.questionCount ?? 8,
+    );
+  }
+
+  /// Gancho de test: respuestas dadas hasta ahora en la entrevista.
+  void setInterviewAnsweredCount(String id, int count) {
+    _interviewAnsweredCount[id] = count;
+  }
+
+  /// Gancho de test: fin de la sesión `interview`, con la misma regla que la
+  /// API (F12): `feedback_pending` con 4+ respuestas, `too_short` si no.
+  void finishInterview(String id) {
+    final current = _requireInterview(id);
+    final enough = (_interviewAnsweredCount[id] ?? 0) >= 4;
+    _interviews[id] = current.copyWith(
+      status: enough ? 'feedback_pending' : 'too_short',
+    );
+  }
+
+  /// `feedback_pending` responde "todavía no" una vez y pasa a
+  /// `feedback_ready`, como el repolleo de la pantalla del parecer.
+  @override
+  Future<InterviewFeedback> getInterviewFeedback(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    switch (current.status) {
+      case 'too_short':
+        _fail(
+          ApiErrorCode.interviewTooShort,
+          'not enough answers for feedback',
+          statusCode: 409,
+        );
+      case 'feedback_pending':
+        _interviews[id] = current.copyWith(status: 'feedback_ready');
+        _fail(ApiErrorCode.notReady, 'feedback pending', statusCode: 202);
+      case 'feedback_failed':
+        _fail(ApiErrorCode.llmUnavailable, 'feedback failed', statusCode: 409);
+      case 'feedback_ready':
+        break;
+      default:
+        _fail(ApiErrorCode.notReady, 'interview not finished', statusCode: 409);
+    }
+    final feedback = const InterviewFeedback(
+      summary:
+          'Buen manejo general de las preguntas técnicas, con margen de '
+          'mejora en bases de datos.',
+      competencies: [
+        CompetencyFeedback(
+          competencyId: 'c1',
+          observedLevel: 'semi_senior',
+          expectedLevel: 'semi_senior',
+          evidence: 'I used an index to speed up that query.',
+          missing: '',
+          study: 'Repasar transacciones e índices compuestos.',
+          verified: true,
+        ),
+      ],
+      english: EnglishFeedback(
+        clarity: EnglishAspect(rating: 'good', note: 'Se entiende bien.'),
+        vocabulary: EnglishAspect(
+          rating: 'good',
+          note: 'Vocabulario técnico correcto.',
+        ),
+        errors: [],
+      ),
+      studyPlan: [
+        StudyPlanItemDto(
+          idx: 1,
+          focus: 'c1',
+          title: 'Transacciones e índices',
+          format: 'guided',
+          estMin: 12,
+          brief: 'Practicar transacciones ACID e índices compuestos.',
+        ),
+        StudyPlanItemDto(
+          idx: 2,
+          focus: 'c2',
+          title: 'Diseño de APIs',
+          format: 'roleplay',
+          estMin: 12,
+          brief: 'Simular el diseño de un endpoint nuevo con un entrevistador.',
+        ),
+        StudyPlanItemDto(
+          idx: 3,
+          focus: 'c3',
+          title: 'Diseño de sistemas',
+          format: 'guided',
+          estMin: 15,
+          brief: 'Repasar trade-offs de escalabilidad.',
+        ),
+        StudyPlanItemDto(
+          idx: 4,
+          focus: 'english',
+          title: 'Vocabulario técnico',
+          format: 'guided',
+          estMin: 10,
+          brief: 'Practicar vocabulario de bases de datos en inglés.',
+        ),
+        StudyPlanItemDto(
+          idx: 5,
+          focus: 'english',
+          title: 'Comunicación bajo presión',
+          format: 'roleplay',
+          estMin: 12,
+          brief: 'Simular una repregunta difícil con un entrevistador.',
+        ),
+      ],
+    );
+    return current.isReinterview
+        ? feedback.copyWith(
+            comparison: const [
+              CompetencyComparison(
+                competencyId: 'c1',
+                before: 'junior',
+                after: 'semi_senior',
+                trend: 'up',
+              ),
+            ],
+          )
+        : feedback;
+  }
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) async {
+    await _delay();
+    _requireInterview(id);
+    final cycle = StudyCycle(
+      id: 'cycle-$id',
+      status: 'active',
+      sessions: [
+        for (var i = 1; i <= 5; i++)
+          StudyCycleSession(
+            idx: i,
+            focus: i <= 3 ? 'c$i' : 'english',
+            title: 'Sesión de estudio $i',
+            format: i.isOdd ? 'guided' : 'roleplay',
+            estMin: 12,
+            status: i == 1 ? 'available' : 'locked',
+          ),
+      ],
+    );
+    _studyCycles[id] = cycle;
+    return cycle;
+  }
+
+  StudyCycle _requireCycle(String interviewId) {
+    final cycle = _studyCycles[interviewId];
+    if (cycle == null) {
+      _fail(ApiErrorCode.notFound, 'no cycle for interview', statusCode: 404);
+    }
+    return cycle;
+  }
+
+  StudyCycleSession _requireAvailableSession(StudyCycle cycle, int idx) {
+    final target = cycle.sessions.firstWhere(
+      (s) => s.idx == idx,
+      orElse: () => _fail(
+        ApiErrorCode.notFound,
+        'unknown cycle session',
+        statusCode: 404,
+      ),
+    );
+    if (target.status == 'locked') {
+      _fail(
+        ApiErrorCode.validation,
+        'previous cycle session not done yet',
+        statusCode: 409,
+      );
+    }
+    return target;
+  }
+
+  @override
+  Future<StudyCycle> getStudyCycle(String id) async {
+    await _delay();
+    return _requireCycle(id);
+  }
+
+  /// Solo abre la sesión; se marca hecha al terminarla
+  /// ([completeStudySession] en tests).
+  @override
+  Future<InterviewSessionStart> startStudyCycleSession({
+    required String interviewId,
+    required int idx,
+  }) async {
+    await _delay();
+    _requireAvailableSession(_requireCycle(interviewId), idx);
+    return InterviewSessionStart(sessionId: 'study-session-$interviewId-$idx');
+  }
+
+  /// Gancho de test: fin de la sesión `idx` del ciclo. La marca hecha,
+  /// desbloquea la siguiente y, con las 5 hechas, completa el ciclo.
+  void completeStudySession(String interviewId, int idx) {
+    final cycle = _requireCycle(interviewId);
+    _requireAvailableSession(cycle, idx);
+    final sessions = [
+      for (final s in cycle.sessions)
+        if (s.idx == idx)
+          s.copyWith(status: 'done', doneAt: DateTime.now().toIso8601String())
+        else if (s.idx == idx + 1 && s.status == 'locked')
+          s.copyWith(status: 'available')
+        else
+          s,
+    ];
+    _studyCycles[interviewId] = cycle.copyWith(
+      sessions: sessions,
+      status: sessions.every((s) => s.status == 'done')
+          ? 'completed'
+          : 'active',
+    );
+  }
+
+  @override
+  Future<InterviewDetail> reinterview(String id) async {
+    await _delay();
+    final parent = _requireInterview(id);
+    if (_studyCycles[id]?.status != 'completed') {
+      _conflict('study cycle not completed');
+    }
+    return _addInterview(type: parent.type, isReinterview: true);
+  }
 }

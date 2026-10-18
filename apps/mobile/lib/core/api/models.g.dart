@@ -656,3 +656,291 @@ Map<String, dynamic> _$BadgeItemToJson(_BadgeItem instance) =>
       'progressCurrent': instance.progressCurrent,
       'progressTarget': instance.progressTarget,
     };
+
+_CompanyInfo _$CompanyInfoFromJson(Map<String, dynamic> json) => _CompanyInfo(
+  name: json['name'] as String,
+  industry: json['industry'] as String?,
+  city: json['city'] as String?,
+  workMode: json['workMode'] as String?,
+);
+
+Map<String, dynamic> _$CompanyInfoToJson(_CompanyInfo instance) =>
+    <String, dynamic>{
+      'name': instance.name,
+      'industry': instance.industry,
+      'city': instance.city,
+      'workMode': instance.workMode,
+    };
+
+_InterviewQuota _$InterviewQuotaFromJson(Map<String, dynamic> json) =>
+    _InterviewQuota(
+      remaining: (json['remaining'] as num).toInt(),
+      limit: (json['limit'] as num).toInt(),
+      requiresPro: json['requiresPro'] as bool? ?? false,
+      freeNotice: json['freeNotice'] as bool? ?? true,
+    );
+
+Map<String, dynamic> _$InterviewQuotaToJson(_InterviewQuota instance) =>
+    <String, dynamic>{
+      'remaining': instance.remaining,
+      'limit': instance.limit,
+      'requiresPro': instance.requiresPro,
+      'freeNotice': instance.freeNotice,
+    };
+
+_InterviewSummary _$InterviewSummaryFromJson(Map<String, dynamic> json) =>
+    _InterviewSummary(
+      id: json['id'] as String,
+      type: json['type'] as String,
+      status: json['status'] as String,
+      createdAt: json['createdAt'] as String,
+      role: json['role'] as String?,
+      area: json['area'] as String?,
+      company: json['company'] == null
+          ? null
+          : CompanyInfo.fromJson(json['company'] as Map<String, dynamic>),
+      isReinterview: json['isReinterview'] as bool? ?? false,
+      cycleCompletedSessions: (json['cycleCompletedSessions'] as num?)?.toInt(),
+    );
+
+Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'status': instance.status,
+      'createdAt': instance.createdAt,
+      'role': instance.role,
+      'area': instance.area,
+      'company': instance.company,
+      'isReinterview': instance.isReinterview,
+      'cycleCompletedSessions': instance.cycleCompletedSessions,
+    };
+
+_InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>
+    _InterviewDetail(
+      id: json['id'] as String,
+      type: json['type'] as String,
+      status: json['status'] as String,
+      createdAt: json['createdAt'] as String,
+      prepStep: json['prepStep'] as String?,
+      company: json['company'] == null
+          ? null
+          : CompanyInfo.fromJson(json['company'] as Map<String, dynamic>),
+      role: json['role'] as String?,
+      area: json['area'] as String?,
+      seniority: json['seniority'] as String?,
+      questionCount: (json['questionCount'] as num?)?.toInt(),
+      estimatedMin: (json['estimatedMin'] as num?)?.toInt(),
+      competencies:
+          (json['competencies'] as List<dynamic>?)
+              ?.map((e) => e as String)
+              .toList() ??
+          const <String>[],
+      errorCode: json['errorCode'] as String?,
+      isReinterview: json['isReinterview'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$InterviewDetailToJson(_InterviewDetail instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'type': instance.type,
+      'status': instance.status,
+      'createdAt': instance.createdAt,
+      'prepStep': instance.prepStep,
+      'company': instance.company,
+      'role': instance.role,
+      'area': instance.area,
+      'seniority': instance.seniority,
+      'questionCount': instance.questionCount,
+      'estimatedMin': instance.estimatedMin,
+      'competencies': instance.competencies,
+      'errorCode': instance.errorCode,
+      'isReinterview': instance.isReinterview,
+    };
+
+_InterviewSessionStart _$InterviewSessionStartFromJson(
+  Map<String, dynamic> json,
+) => _InterviewSessionStart(
+  sessionId: json['sessionId'] as String,
+  answeredCount: (json['answeredCount'] as num?)?.toInt(),
+  totalQuestions: (json['totalQuestions'] as num?)?.toInt(),
+);
+
+Map<String, dynamic> _$InterviewSessionStartToJson(
+  _InterviewSessionStart instance,
+) => <String, dynamic>{
+  'sessionId': instance.sessionId,
+  'answeredCount': instance.answeredCount,
+  'totalQuestions': instance.totalQuestions,
+};
+
+_CompetencyFeedback _$CompetencyFeedbackFromJson(Map<String, dynamic> json) =>
+    _CompetencyFeedback(
+      competencyId: json['competencyId'] as String,
+      observedLevel: json['observedLevel'] as String,
+      expectedLevel: json['expectedLevel'] as String,
+      evidence: json['evidence'] as String,
+      missing: json['missing'] as String,
+      study: json['study'] as String,
+      verified: json['verified'] as bool,
+    );
+
+Map<String, dynamic> _$CompetencyFeedbackToJson(_CompetencyFeedback instance) =>
+    <String, dynamic>{
+      'competencyId': instance.competencyId,
+      'observedLevel': instance.observedLevel,
+      'expectedLevel': instance.expectedLevel,
+      'evidence': instance.evidence,
+      'missing': instance.missing,
+      'study': instance.study,
+      'verified': instance.verified,
+    };
+
+_EnglishAspect _$EnglishAspectFromJson(Map<String, dynamic> json) =>
+    _EnglishAspect(
+      rating: json['rating'] as String,
+      note: json['note'] as String,
+    );
+
+Map<String, dynamic> _$EnglishAspectToJson(_EnglishAspect instance) =>
+    <String, dynamic>{'rating': instance.rating, 'note': instance.note};
+
+_EnglishErrorItem _$EnglishErrorItemFromJson(Map<String, dynamic> json) =>
+    _EnglishErrorItem(
+      original: json['original'] as String,
+      corrected: json['corrected'] as String,
+      explanation: json['explanation'] as String,
+    );
+
+Map<String, dynamic> _$EnglishErrorItemToJson(_EnglishErrorItem instance) =>
+    <String, dynamic>{
+      'original': instance.original,
+      'corrected': instance.corrected,
+      'explanation': instance.explanation,
+    };
+
+_EnglishFeedback _$EnglishFeedbackFromJson(Map<String, dynamic> json) =>
+    _EnglishFeedback(
+      clarity: EnglishAspect.fromJson(json['clarity'] as Map<String, dynamic>),
+      vocabulary: EnglishAspect.fromJson(
+        json['vocabulary'] as Map<String, dynamic>,
+      ),
+      errors:
+          (json['errors'] as List<dynamic>?)
+              ?.map((e) => EnglishErrorItem.fromJson(e as Map<String, dynamic>))
+              .toList() ??
+          const <EnglishErrorItem>[],
+    );
+
+Map<String, dynamic> _$EnglishFeedbackToJson(_EnglishFeedback instance) =>
+    <String, dynamic>{
+      'clarity': instance.clarity,
+      'vocabulary': instance.vocabulary,
+      'errors': instance.errors,
+    };
+
+_CompetencyComparison _$CompetencyComparisonFromJson(
+  Map<String, dynamic> json,
+) => _CompetencyComparison(
+  competencyId: json['competencyId'] as String,
+  before: json['before'] as String,
+  after: json['after'] as String,
+  trend: json['trend'] as String,
+);
+
+Map<String, dynamic> _$CompetencyComparisonToJson(
+  _CompetencyComparison instance,
+) => <String, dynamic>{
+  'competencyId': instance.competencyId,
+  'before': instance.before,
+  'after': instance.after,
+  'trend': instance.trend,
+};
+
+_StudyPlanItemDto _$StudyPlanItemDtoFromJson(Map<String, dynamic> json) =>
+    _StudyPlanItemDto(
+      idx: (json['idx'] as num).toInt(),
+      focus: json['focus'] as String,
+      title: json['title'] as String,
+      format: json['format'] as String,
+      estMin: (json['estMin'] as num).toInt(),
+      brief: json['brief'] as String,
+    );
+
+Map<String, dynamic> _$StudyPlanItemDtoToJson(_StudyPlanItemDto instance) =>
+    <String, dynamic>{
+      'idx': instance.idx,
+      'focus': instance.focus,
+      'title': instance.title,
+      'format': instance.format,
+      'estMin': instance.estMin,
+      'brief': instance.brief,
+    };
+
+_InterviewFeedback _$InterviewFeedbackFromJson(
+  Map<String, dynamic> json,
+) => _InterviewFeedback(
+  summary: json['summary'] as String,
+  competencies:
+      (json['competencies'] as List<dynamic>?)
+          ?.map((e) => CompetencyFeedback.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <CompetencyFeedback>[],
+  english: EnglishFeedback.fromJson(json['english'] as Map<String, dynamic>),
+  comparison: (json['comparison'] as List<dynamic>?)
+      ?.map((e) => CompetencyComparison.fromJson(e as Map<String, dynamic>))
+      .toList(),
+  studyPlan:
+      (json['studyPlan'] as List<dynamic>?)
+          ?.map((e) => StudyPlanItemDto.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <StudyPlanItemDto>[],
+);
+
+Map<String, dynamic> _$InterviewFeedbackToJson(_InterviewFeedback instance) =>
+    <String, dynamic>{
+      'summary': instance.summary,
+      'competencies': instance.competencies,
+      'english': instance.english,
+      'comparison': instance.comparison,
+      'studyPlan': instance.studyPlan,
+    };
+
+_StudyCycleSession _$StudyCycleSessionFromJson(Map<String, dynamic> json) =>
+    _StudyCycleSession(
+      idx: (json['idx'] as num).toInt(),
+      focus: json['focus'] as String,
+      title: json['title'] as String,
+      format: json['format'] as String,
+      estMin: (json['estMin'] as num).toInt(),
+      status: json['status'] as String,
+      doneAt: json['doneAt'] as String?,
+    );
+
+Map<String, dynamic> _$StudyCycleSessionToJson(_StudyCycleSession instance) =>
+    <String, dynamic>{
+      'idx': instance.idx,
+      'focus': instance.focus,
+      'title': instance.title,
+      'format': instance.format,
+      'estMin': instance.estMin,
+      'status': instance.status,
+      'doneAt': instance.doneAt,
+    };
+
+_StudyCycle _$StudyCycleFromJson(Map<String, dynamic> json) => _StudyCycle(
+  id: json['id'] as String,
+  status: json['status'] as String,
+  sessions:
+      (json['sessions'] as List<dynamic>?)
+          ?.map((e) => StudyCycleSession.fromJson(e as Map<String, dynamic>))
+          .toList() ??
+      const <StudyCycleSession>[],
+);
+
+Map<String, dynamic> _$StudyCycleToJson(_StudyCycle instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'status': instance.status,
+      'sessions': instance.sessions,
+    };

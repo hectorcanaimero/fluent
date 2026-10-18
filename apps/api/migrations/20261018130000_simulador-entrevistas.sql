@@ -30,10 +30,20 @@ CREATE TABLE public.interviews (
   error_code          text,
   answered_count      int NOT NULL DEFAULT 0,
   created_at          timestamptz NOT NULL DEFAULT now(),
-  updated_at          timestamptz NOT NULL DEFAULT now()
+  updated_at          timestamptz NOT NULL DEFAULT now(),
+  CONSTRAINT interviews_offer_check CHECK (offer_text IS NOT NULL OR offer_url IS NOT NULL),
+  CONSTRAINT interviews_answered_count_check CHECK (answered_count >= 0),
+  -- Destino de la FK compuesta de study_cycles (ciclo y entrevista del mismo usuario).
+  CONSTRAINT interviews_id_user_key UNIQUE (id, user_id)
 );
 
 CREATE INDEX interviews_user_created_idx ON public.interviews (user_id, created_at DESC);
+CREATE INDEX interviews_parent_idx ON public.interviews (parent_interview_id);
+
+-- Reutiliza public.set_updated_at(), creada en la migración 1.
+CREATE TRIGGER interviews_set_updated_at
+  BEFORE UPDATE ON public.interviews
+  FOR EACH ROW EXECUTE FUNCTION public.set_updated_at();
 
 -- ---------------------------------------------------------------------------
 -- 2. interview_questions_asked · últimas preguntas por oferta/área, para no
@@ -56,10 +66,17 @@ CREATE INDEX interview_questions_user_idx ON public.interview_questions_asked (u
 CREATE TABLE public.study_cycles (
   id           uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   user_id      uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
-  interview_id uuid NOT NULL REFERENCES public.interviews(id) ON DELETE CASCADE,
+  interview_id uuid NOT NULL,
   status       text NOT NULL CHECK (status IN ('active', 'completed', 'skipped')),
-  created_at   timestamptz NOT NULL DEFAULT now()
+  created_at   timestamptz NOT NULL DEFAULT now(),
+  -- Un ciclo por entrevista; el índice del UNIQUE cubre también la FK.
+  CONSTRAINT study_cycles_interview_key UNIQUE (interview_id),
+  -- Compuesta: el ciclo no puede colgar de la entrevista de otro usuario.
+  CONSTRAINT study_cycles_interview_fkey FOREIGN KEY (interview_id, user_id)
+    REFERENCES public.interviews (id, user_id) ON DELETE CASCADE
 );
+
+CREATE INDEX study_cycles_user_idx ON public.study_cycles (user_id);
 
 -- ---------------------------------------------------------------------------
 -- 4. study_cycle_sessions · las 5 sesiones del ciclo, una por `idx`.
@@ -71,7 +88,7 @@ CREATE TABLE public.study_cycle_sessions (
   focus    text NOT NULL,          -- competencia o 'english'
   title    text NOT NULL,
   format   text NOT NULL CHECK (format IN ('guided', 'roleplay')),
-  est_min  smallint NOT NULL,
+  est_min  smallint NOT NULL CHECK (est_min > 0),
   brief    text NOT NULL,          -- qué practicar, para el prompt
   done_at  timestamptz,
   UNIQUE (cycle_id, idx)
@@ -101,6 +118,16 @@ ALTER TABLE public.sessions
 CREATE INDEX sessions_interview_idx ON public.sessions (interview_id);
 CREATE INDEX sessions_study_cycle_session_idx ON public.sessions (study_cycle_session_id);
 
+-- Coherencia con kind, como group_session_id/news_item_id. Las columnas son
+-- nuevas (null en todas las filas), así que ninguna fila existente las viola.
+ALTER TABLE public.sessions
+  ADD CONSTRAINT sessions_interview_kind_check
+  CHECK (kind = 'interview' OR interview_id IS NULL);
+
+ALTER TABLE public.sessions
+  ADD CONSTRAINT sessions_study_cycle_session_kind_check
+  CHECK (kind = 'study' OR study_cycle_session_id IS NULL);
+
 -- ---------------------------------------------------------------------------
 -- 6. llm_calls.purpose · preparación y parecer de entrevistas, además de los
 --    propósitos existentes (`turn`, `brief`, `weekly`).
@@ -113,27 +140,32 @@ ALTER TABLE public.llm_calls
   CHECK (purpose IN ('turn', 'brief', 'weekly', 'interview', 'interview_prepare', 'interview_feedback'));
 
 -- ---------------------------------------------------------------------------
--- 7. RLS: el dueño lee sus filas; escribe solo la API con el cliente admin,
---    igual que `sessions` (SPEC-01 §3). `study_cycle_sessions` no tiene
---    `user_id` propio: se autoriza por el `user_id` del ciclo al que pertenece.
+-- 7. RLS y permisos: SOLO la API accede (cliente admin), igual que `xp_events`
+--    y las tablas de la sala grupal. Sin GRANT a anon/authenticated.
+--    FR-7: `interviews.plan` lleva las preguntas e `interview_questions_asked`
+--    las preguntas ya hechas; un GRANT SELECT a `authenticated` dejaría que el
+--    usuario las leyera por la API de base de datos antes de la entrevista.
+--    La app móvil solo habla con la API Nest (InsForge solo para auth), así que
+--    no hace falta exponer ninguna de las 4 tablas. La RLS y las políticas de
+--    dueño quedan como defensa en profundidad por si algún día se concede un
+--    GRANT; en ese caso, por columnas y sin `plan`/`feedback`, y nunca sobre
+--    `interview_questions_asked`. `study_cycle_sessions` no tiene `user_id`
+--    propio: su política se autoriza por el `user_id` del ciclo.
 -- ---------------------------------------------------------------------------
 ALTER TABLE public.interviews ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.interviews FROM anon, authenticated;
-GRANT SELECT ON public.interviews TO authenticated;
 CREATE POLICY interviews_select_own ON public.interviews
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
 ALTER TABLE public.interview_questions_asked ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.interview_questions_asked FROM anon, authenticated;
-GRANT SELECT ON public.interview_questions_asked TO authenticated;
 CREATE POLICY interview_questions_asked_select_own ON public.interview_questions_asked
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
 
 ALTER TABLE public.study_cycles ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.study_cycles FROM anon, authenticated;
-GRANT SELECT ON public.study_cycles TO authenticated;
 CREATE POLICY study_cycles_select_own ON public.study_cycles
   FOR SELECT TO authenticated
   USING (user_id = (SELECT auth.uid()));
@@ -158,7 +190,6 @@ GRANT EXECUTE ON FUNCTION public.owns_study_cycle(uuid) TO authenticated;
 
 ALTER TABLE public.study_cycle_sessions ENABLE ROW LEVEL SECURITY;
 REVOKE ALL ON public.study_cycle_sessions FROM anon, authenticated;
-GRANT SELECT ON public.study_cycle_sessions TO authenticated;
 CREATE POLICY study_cycle_sessions_select_own ON public.study_cycle_sessions
   FOR SELECT TO authenticated
   USING (public.owns_study_cycle(cycle_id));

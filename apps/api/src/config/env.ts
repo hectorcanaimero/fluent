@@ -8,6 +8,14 @@ import { z } from 'zod';
  * `FALLBACK_MODELS` se valida aquí solo como string no vacío: es JSON
  * serializado y su parseo/forma detallada es responsabilidad de SPEC-03.
  */
+/** Una variable vacía (`FOO=`) cuenta como no definida: cae al default u opcional. */
+function unsetIfEmpty<T extends z.ZodType>(schema: T) {
+  return z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    schema,
+  );
+}
+
 export const envSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'test', 'production'])
@@ -42,20 +50,31 @@ export const envSchema = z.object({
     z.string().min(1).optional(),
   ),
   // I4 (docs/arch/003-simulador-entrevistas.md). Sin `INTERVIEW_AGENT_URL` la
-  // app arranca igual y el módulo `interviews` responde 503.
-  INTERVIEW_AGENT_URL: z.preprocess(
-    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-    z.url().optional(),
+  // app arranca igual y el módulo `interviews` responde 503. Vacío = sin definir.
+  INTERVIEW_AGENT_URL: unsetIfEmpty(
+    z.url({ error: 'INTERVIEW_AGENT_URL no es una URL válida.' }).optional(),
   ),
-  INTERVIEW_AGENT_TOKEN: z.preprocess(
-    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
-    z.string().min(1).optional(),
-  ),
-  INTERVIEWS_DAILY_CAP: z.coerce.number().int().min(0).default(3),
-  INTERVIEWS_REQUIRE_PRO: z.stringbool().default(false),
-  INTERVIEW_MAX_SEC: z.coerce.number().int().positive().default(600),
-  INTERVIEW_WARN_SEC: z.coerce.number().int().positive().default(540),
-  INTERVIEW_ABANDON_AFTER_SEC: z.coerce.number().int().positive().default(86400),
+  INTERVIEW_AGENT_TOKEN: unsetIfEmpty(z.string().min(1).optional()),
+  INTERVIEWS_DAILY_CAP: unsetIfEmpty(z.coerce.number().int().min(0).default(3)),
+  INTERVIEWS_REQUIRE_PRO: unsetIfEmpty(z.stringbool().default(false)),
+  INTERVIEW_MAX_SEC: unsetIfEmpty(z.coerce.number().int().positive().default(600)),
+  INTERVIEW_WARN_SEC: unsetIfEmpty(z.coerce.number().int().positive().default(540)),
+  INTERVIEW_ABANDON_AFTER_SEC: unsetIfEmpty(z.coerce.number().int().positive().default(86400)),
+}).superRefine((env, ctx) => {
+  if (env.INTERVIEW_WARN_SEC >= env.INTERVIEW_MAX_SEC) {
+    ctx.addIssue({
+      code: 'custom',
+      message: `INTERVIEW_WARN_SEC (${env.INTERVIEW_WARN_SEC}) debe ser menor que INTERVIEW_MAX_SEC (${env.INTERVIEW_MAX_SEC}).`,
+      path: ['INTERVIEW_WARN_SEC'],
+    });
+  }
+  if ((env.INTERVIEW_AGENT_URL === undefined) !== (env.INTERVIEW_AGENT_TOKEN === undefined)) {
+    ctx.addIssue({
+      code: 'custom',
+      message: 'INTERVIEW_AGENT_URL e INTERVIEW_AGENT_TOKEN van juntas: define las dos o ninguna.',
+      path: ['INTERVIEW_AGENT_TOKEN'],
+    });
+  }
 });
 
 export type Env = z.infer<typeof envSchema>;

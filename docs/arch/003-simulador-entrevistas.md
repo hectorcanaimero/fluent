@@ -204,7 +204,7 @@ create table study_cycle_sessions (
   "offerText": "string|null", "offerUrl": "string|null",
   "learnerLevel": "A2|B1|B2", "previousQuestions": ["string"] }
 // response 200
-{ "status": "ok",
+{ "status": "ok", "type": "technical|mixed" /* eco del request */,
   "research": { "found": true, "notes": "string" },
   "company": { "name": "string", "industry": "string?", "city": "string?", "workMode": "string?" },
   "role": "string", "area": "string", "seniority": "junior|semi_senior|senior|staff_lead",
@@ -217,7 +217,8 @@ create table study_cycle_sessions (
 ```
 
 Invariantes: 4–6 competencias; exactamente 8 preguntas; toda competencia con ≥1
-pregunta; `mixed` ⇒ exactamente 2 `behavioral`.
+pregunta; toda `competencyId` existe en la rúbrica; `idx` únicos y exactamente
+1..8; `type: mixed` ⇒ exactamente 2 `behavioral`.
 
 `POST /v1/feedback`:
 

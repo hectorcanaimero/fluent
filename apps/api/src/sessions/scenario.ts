@@ -79,7 +79,7 @@ export interface RebuiltScenario extends SessionScenario {
    * `kind` **efectivo** para el prompt. Normalmente el de la sesión; es
    * `'free_topic'` cuando el original no se pudo reconstruir (ver abajo).
    */
-  readonly kind: Exclude<SessionKind, 'group'>;
+  readonly kind: Exclude<SessionKind, 'group' | 'interview' | 'study'>;
   /** `true` si se cayó al bloque `free_topic` por no poder reconstruir. */
   readonly fallback: boolean;
 }
@@ -134,6 +134,12 @@ export function rebuildScenario(
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
     case 'group':
       throw new Error(`rebuildScenario: kind='group' no tiene escenario 1:1`);
+
+    // F10: las sesiones `interview`/`study` no reconstruyen un escenario de
+    // SessionScenario — el turno de entrevista usa su propio prompt (I3).
+    case 'interview':
+    case 'study':
+      throw new Error(`rebuildScenario: kind='${session.kind}' no tiene escenario 1:1`);
 
     default: {
       const unreachable: never = session.kind;

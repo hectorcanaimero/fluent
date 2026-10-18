@@ -15,12 +15,15 @@ export const QUEUE_BRIEF = 'brief';
 export const QUEUE_CONTENT = 'content';
 export const QUEUE_SOCIAL = 'social';
 export const QUEUE_MAINTENANCE = 'maintenance';
+/** F10: preparación y parecer del simulador de entrevistas (arch 003, I1/I2). */
+export const QUEUE_INTERVIEWS = 'interviews';
 
 export const QUEUE_NAMES = [
   QUEUE_BRIEF,
   QUEUE_CONTENT,
   QUEUE_SOCIAL,
   QUEUE_MAINTENANCE,
+  QUEUE_INTERVIEWS,
 ] as const;
 
 export type QueueName = (typeof QUEUE_NAMES)[number];
@@ -57,6 +60,12 @@ export const JOB_DAILY_STREAKS = 'daily-streaks';
 export const JOB_RETENTION = 'retention';
 /** Cola `maintenance` · cron cada 6 h (PR-05/T4). */
 export const JOB_MODEL_CATALOG = 'model-catalog';
+/** Cola `interviews` · disparado por `POST /interviews` y `POST /interviews/:id/retry` (F10.3). */
+export const JOB_INTERVIEW_PREPARE = 'interview-prepare';
+/** Cola `interviews` · disparado por el fin de la entrevista (F11, pendiente). */
+export const JOB_INTERVIEW_FEEDBACK = 'interview-feedback';
+/** Cola `interviews` · recordatorio del ciclo de estudio (F12, pendiente). */
+export const JOB_STUDY_REMINDER = 'study-reminder';
 
 /* ============================================================================
    Concurrencia por cola (SPEC-05 §1)
@@ -70,6 +79,7 @@ export const QUEUE_CONCURRENCY: Readonly<Record<QueueName, number>> =
     [QUEUE_CONTENT]: 1,
     [QUEUE_SOCIAL]: 1,
     [QUEUE_MAINTENANCE]: 1,
+    [QUEUE_INTERVIEWS]: 3,
   });
 
 /* ============================================================================
@@ -115,6 +125,14 @@ export const QUEUE_DEFAULT_JOB_OPTIONS: Readonly<
     attempts: 1,
     backoff: { type: 'exponential', delay: 30_000 },
     removeOnComplete: { age: 3600, count: 100 },
+    removeOnFail: { age: 7 * 24 * 3600 },
+  }),
+  // arch 003 §Decisions: «error del agente → 1 reintento de BullMQ con
+  // backoff», es decir 2 intentos en total.
+  [QUEUE_INTERVIEWS]: Object.freeze({
+    attempts: 2,
+    backoff: { type: 'exponential', delay: 30_000 },
+    removeOnComplete: { age: 24 * 3600, count: 500 },
     removeOnFail: { age: 7 * 24 * 3600 },
   }),
 });

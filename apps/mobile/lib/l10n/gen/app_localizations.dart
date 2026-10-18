@@ -2359,6 +2359,120 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Entrevista {id}'**
   String interviewDetailPlaceholderTitle(String id);
+
+  /// No description provided for @interviewDetailAppBarTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrevista'**
+  String get interviewDetailAppBarTitle;
+
+  /// No description provided for @interviewPrepStepReading.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo la oferta'**
+  String get interviewPrepStepReading;
+
+  /// No description provided for @interviewPrepStepResearching.
+  ///
+  /// In es, this message translates to:
+  /// **'Investigando la empresa'**
+  String get interviewPrepStepResearching;
+
+  /// No description provided for @interviewPrepStepDesigning.
+  ///
+  /// In es, this message translates to:
+  /// **'Armando preguntas'**
+  String get interviewPrepStepDesigning;
+
+  /// No description provided for @interviewPrepEtaHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Suele tardar menos de un minuto'**
+  String get interviewPrepEtaHint;
+
+  /// No description provided for @interviewPrepExitHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes salir: te mandamos una notificación'**
+  String get interviewPrepExitHint;
+
+  /// No description provided for @interviewPrepFailedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos preparar tu entrevista'**
+  String get interviewPrepFailedTitle;
+
+  /// No description provided for @interviewPrepFailedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes intentarlo de nuevo cuando quieras.'**
+  String get interviewPrepFailedBody;
+
+  /// No description provided for @interviewLowInfoBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Poca info'**
+  String get interviewLowInfoBadge;
+
+  /// No description provided for @interviewPlanRoleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Rol'**
+  String get interviewPlanRoleLabel;
+
+  /// No description provided for @interviewPlanAreaLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Área'**
+  String get interviewPlanAreaLabel;
+
+  /// No description provided for @interviewPlanSeniorityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Seniority'**
+  String get interviewPlanSeniorityLabel;
+
+  /// No description provided for @interviewPlanTypeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get interviewPlanTypeLabel;
+
+  /// No description provided for @interviewPlanQuestionsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} preguntas · ~{minutes} min'**
+  String interviewPlanQuestionsSummary(int count, int minutes);
+
+  /// No description provided for @interviewPlanStartCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get interviewPlanStartCta;
+
+  /// No description provided for @interviewSeniorityJunior.
+  ///
+  /// In es, this message translates to:
+  /// **'Junior'**
+  String get interviewSeniorityJunior;
+
+  /// No description provided for @interviewSenioritySemiSenior.
+  ///
+  /// In es, this message translates to:
+  /// **'Semi-senior'**
+  String get interviewSenioritySemiSenior;
+
+  /// No description provided for @interviewSenioritySenior.
+  ///
+  /// In es, this message translates to:
+  /// **'Senior'**
+  String get interviewSenioritySenior;
+
+  /// No description provided for @interviewSeniorityStaffLead.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff/Lead'**
+  String get interviewSeniorityStaffLead;
 }
 
 class _AppLocalizationsDelegate

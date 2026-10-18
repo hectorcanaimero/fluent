@@ -414,5 +414,34 @@
   },
   "interviewOfferCopyTextHint": "Esse é o mesmo link. Copie o texto da vaga e cole aqui.",
   "interviewOpenLinkError": "Não conseguimos abrir o link.",
-  "interviewDetailPlaceholderTitle": "Entrevista {id}"
+  "interviewDetailPlaceholderTitle": "Entrevista {id}",
+  "interviewDetailAppBarTitle": "Sua entrevista",
+  "interviewPrepStepReading": "Lendo a vaga",
+  "interviewPrepStepResearching": "Pesquisando a empresa",
+  "interviewPrepStepDesigning": "Montando as perguntas",
+  "interviewPrepEtaHint": "Costuma levar menos de um minuto",
+  "interviewPrepExitHint": "Pode sair: vamos te avisar.",
+  "interviewPrepFailedTitle": "Não conseguimos preparar sua entrevista",
+  "interviewPrepFailedBody": "Você pode tentar de novo quando quiser.",
+  "interviewLowInfoBadge": "Pouca info",
+  "interviewPlanRoleLabel": "Cargo",
+  "interviewPlanAreaLabel": "Área",
+  "interviewPlanSeniorityLabel": "Senioridade",
+  "interviewPlanTypeLabel": "Tipo",
+  "interviewPlanQuestionsSummary": "{count} perguntas · ~{minutes} min",
+  "@interviewPlanQuestionsSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewPlanStartCta": "Começar",
+  "interviewSeniorityJunior": "Júnior",
+  "interviewSenioritySemiSenior": "Pleno",
+  "interviewSenioritySenior": "Sênior",
+  "interviewSeniorityStaffLead": "Staff/Lead"
 }

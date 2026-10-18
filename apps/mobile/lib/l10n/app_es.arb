@@ -607,5 +607,34 @@
         "type": "String"
       }
     }
-  }
+  },
+  "interviewDetailAppBarTitle": "Tu entrevista",
+  "interviewPrepStepReading": "Leyendo la oferta",
+  "interviewPrepStepResearching": "Investigando la empresa",
+  "interviewPrepStepDesigning": "Armando preguntas",
+  "interviewPrepEtaHint": "Suele tardar menos de un minuto",
+  "interviewPrepExitHint": "Puedes salir: te mandamos una notificación",
+  "interviewPrepFailedTitle": "No pudimos preparar tu entrevista",
+  "interviewPrepFailedBody": "Puedes intentarlo de nuevo cuando quieras.",
+  "interviewLowInfoBadge": "Poca info",
+  "interviewPlanRoleLabel": "Rol",
+  "interviewPlanAreaLabel": "Área",
+  "interviewPlanSeniorityLabel": "Seniority",
+  "interviewPlanTypeLabel": "Tipo",
+  "interviewPlanQuestionsSummary": "{count} preguntas · ~{minutes} min",
+  "@interviewPlanQuestionsSummary": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewPlanStartCta": "Empezar",
+  "interviewSeniorityJunior": "Junior",
+  "interviewSenioritySemiSenior": "Semi-senior",
+  "interviewSenioritySenior": "Senior",
+  "interviewSeniorityStaffLead": "Staff/Lead"
 }

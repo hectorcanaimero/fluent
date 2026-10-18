@@ -1309,4 +1309,65 @@ class AppLocalizationsPt extends AppLocalizations {
   String interviewDetailPlaceholderTitle(String id) {
     return 'Entrevista $id';
   }
+
+  @override
+  String get interviewDetailAppBarTitle => 'Sua entrevista';
+
+  @override
+  String get interviewPrepStepReading => 'Lendo a vaga';
+
+  @override
+  String get interviewPrepStepResearching => 'Pesquisando a empresa';
+
+  @override
+  String get interviewPrepStepDesigning => 'Montando as perguntas';
+
+  @override
+  String get interviewPrepEtaHint => 'Costuma levar menos de um minuto';
+
+  @override
+  String get interviewPrepExitHint => 'Pode sair: vamos te avisar.';
+
+  @override
+  String get interviewPrepFailedTitle =>
+      'Não conseguimos preparar sua entrevista';
+
+  @override
+  String get interviewPrepFailedBody =>
+      'Você pode tentar de novo quando quiser.';
+
+  @override
+  String get interviewLowInfoBadge => 'Pouca info';
+
+  @override
+  String get interviewPlanRoleLabel => 'Cargo';
+
+  @override
+  String get interviewPlanAreaLabel => 'Área';
+
+  @override
+  String get interviewPlanSeniorityLabel => 'Senioridade';
+
+  @override
+  String get interviewPlanTypeLabel => 'Tipo';
+
+  @override
+  String interviewPlanQuestionsSummary(int count, int minutes) {
+    return '$count perguntas · ~$minutes min';
+  }
+
+  @override
+  String get interviewPlanStartCta => 'Começar';
+
+  @override
+  String get interviewSeniorityJunior => 'Júnior';
+
+  @override
+  String get interviewSenioritySemiSenior => 'Pleno';
+
+  @override
+  String get interviewSenioritySenior => 'Sênior';
+
+  @override
+  String get interviewSeniorityStaffLead => 'Staff/Lead';
 }

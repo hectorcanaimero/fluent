@@ -29,5 +29,5 @@ async def test_prepare_contra_9router() -> None:
     )
     plan = await run_prepare(req)
     assert isinstance(plan, PrepareOkResponse)
-    PrepareOkResponse.model_validate(plan.model_dump(), context={"type": "mixed"})
+    PrepareOkResponse.model_validate(plan.model_dump())
     assert plan.usage.inputTokens > 0 and plan.usage.outputTokens > 0

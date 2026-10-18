@@ -8,23 +8,30 @@ from app.contract import (
     PrepareRequest,
     PrepareResponse,
     PrepareUnreadableResponse,
-    Usage,
 )
-from app.models import build_model
 from app.prepare.designer import DesignFailed, design_plan
 from app.prepare.researcher import OfferUnreadable, ResearchResult, fetch_offer, research_offer
+
+MAX_OFFER_CHARS = 20_000
+TRUNCATED_NOTE = f"(offer text truncated to {MAX_OFFER_CHARS} characters)"
 
 
 async def _research_step(step_input: StepInput) -> StepOutput:
     req: PrepareRequest = step_input.additional_data["request"]
-    offer_text = req.offerText or ""
-    if req.offerUrl:
+    offer_text = (req.offerText or "").strip()
+    if not offer_text:  # el texto pegado manda; la URL solo se descarga si no hay texto
         try:
-            fetched = await fetch_offer(req.offerUrl)
+            offer_text = await fetch_offer(req.offerUrl or "")
         except OfferUnreadable as exc:
             return StepOutput(content=PrepareUnreadableResponse(reason=exc.reason), stop=True)
-        offer_text = f"{offer_text}\n\n{fetched}".strip()
+    truncated = len(offer_text) > MAX_OFFER_CHARS
+    offer_text = offer_text[:MAX_OFFER_CHARS]
+    if req.offerUrl and req.offerText:
+        offer_text += f"\n\nOffer URL: {req.offerUrl}"
     result = await research_offer(offer_text)
+    if truncated:
+        notes = f"{result.research.notes}\n{TRUNCATED_NOTE}".strip()
+        result.research = result.research.model_copy(update={"notes": notes})
     return StepOutput(content=(offer_text, result))
 
 
@@ -33,19 +40,11 @@ async def _design_step(step_input: StepInput) -> StepOutput:
     offer_text: str
     research: ResearchResult
     offer_text, research = step_input.previous_step_content
-    usage = Usage(model=build_model().id, inputTokens=0, outputTokens=0, searchCalls=0)
     try:
-        designed = await design_plan(req, offer_text, research.research, usage)
+        plan = await design_plan(req, offer_text, research)
     except DesignFailed as exc:
         return StepOutput(content=exc, success=False, error=str(exc), stop=True)
-    usage = usage.model_copy(
-        update={
-            "inputTokens": research.input_tokens + designed.input_tokens,
-            "outputTokens": research.output_tokens + designed.output_tokens,
-            "searchCalls": research.search_calls,
-        }
-    )
-    return StepOutput(content=designed.plan.model_copy(update={"usage": usage}))
+    return StepOutput(content=plan)
 
 
 async def run_prepare(req: PrepareRequest) -> PrepareResponse:

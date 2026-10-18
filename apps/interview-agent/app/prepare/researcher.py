@@ -2,6 +2,7 @@
 
 import asyncio
 import ipaddress
+import re
 import socket
 from dataclasses import dataclass
 from html.parser import HTMLParser
@@ -26,7 +27,10 @@ MIN_OFFER_CHARS = 80
 SEARCH_MAX_CALLS = 3
 SEARCH_TOTAL_TIMEOUT_S = 20
 LINKEDIN_HOSTS = ("linkedin.com", "lnkd.in")
-LOGIN_MARKERS = ("login", "signin", "sign-in", "sign_in", "auth", "sso")
+LOGIN_MARKERS = frozenset({"login", "logon", "signin", "sso", "auth", "oauth", "oauth2"})
+# Un campo de contraseña solo indica pared de login si casi no hay texto de oferta
+# (muchas ofertas públicas traen un modal de "sign in" oculto).
+LOGIN_WALL_MAX_CHARS = 500
 NOT_FOUND_NOTES = "NOT_FOUND"
 
 
@@ -78,7 +82,7 @@ async def _check_url(url: str) -> str:
 
 
 class _TextExtractor(HTMLParser):
-    SKIP = {"script", "style", "noscript", "template", "svg", "nav", "header", "footer", "head"}
+    SKIP = {"title", "script", "style", "noscript", "template", "svg", "nav", "header", "footer"}
 
     def __init__(self) -> None:
         super().__init__()
@@ -89,7 +93,11 @@ class _TextExtractor(HTMLParser):
     def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
         if tag == "input" and ("type", "password") in attrs:
             self.has_password = True
-        if tag in self.SKIP:
+        if tag == "body":
+            # HTML minificado suele omitir </head> o dejar sin cerrar algún bloque saltado:
+            # el <body> siempre empieza visible.
+            self.skip_depth = 0
+        elif tag in self.SKIP:
             self.skip_depth += 1
 
     def handle_endtag(self, tag: str) -> None:
@@ -106,6 +114,13 @@ def extract_text(html: str) -> tuple[str, bool]:
     parser = _TextExtractor()
     parser.feed(html)
     return "\n".join(parser.chunks), parser.has_password
+
+
+def is_login_path(path: str) -> bool:
+    """Compara segmentos enteros (/,-,_,.) para no confundir 'author' o 'associate-...'."""
+    tokens = [t for t in re.split(r"[/\-_.]+", path.lower()) if t]
+    joined = {a + b for a, b in zip(tokens, tokens[1:], strict=False)}  # sign-in, log_in
+    return bool(LOGIN_MARKERS & (set(tokens) | joined))
 
 
 async def fetch_offer(url: str, transport: httpx.AsyncBaseTransport | None = None) -> str:
@@ -138,8 +153,7 @@ async def fetch_offer(url: str, transport: httpx.AsyncBaseTransport | None = Non
             raise OfferUnreadable("not_found")
 
     text, has_password = extract_text(html)
-    path = urlsplit(url).path.lower()
-    if has_password or any(marker in path for marker in LOGIN_MARKERS):
+    if is_login_path(urlsplit(url).path) or (has_password and len(text) < LOGIN_WALL_MAX_CHARS):
         raise OfferUnreadable("login")
     if len(text) < MIN_OFFER_CHARS:
         raise OfferUnreadable("empty")

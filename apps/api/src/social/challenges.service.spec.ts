@@ -96,7 +96,7 @@ describe('ChallengesService.listChallenges', () => {
     });
   });
 
-  it('excludes kind=group sessions from the candidates', async () => {
+  it.each(['group', 'interview', 'study'])('excludes kind=%s sessions from the candidates', async (kind) => {
     const members = [
       { user_id: 'me', display_name: 'Me' },
       { user_id: 'friend-1', display_name: 'Beto' },
@@ -106,7 +106,7 @@ describe('ChallengesService.listChallenges', () => {
         id: 'session-group',
         user_id: 'friend-1',
         topic: 'travel',
-        kind: 'group',
+        kind,
         ended_at: NOW.toISOString(),
         xp_earned: 40,
       },

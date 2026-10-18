@@ -247,10 +247,12 @@ parecer de una entrevista; sin estado, sin acceso público, llamado solo por
    (`http://fluent-interview-agent:8000`).
 6. **Sin dominio ni puerto público**: no asignar dominio ni exponer el
    puerto 8000 al exterior — solo tráfico interno de la red de Coolify.
-7. **Healthcheck**: la imagen ya trae un `HEALTHCHECK` de Docker a
-   `/healthz` (`apps/interview-agent/Dockerfile`). Configura además el
-   healthcheck de Coolify (pestaña **Health Check**) a `GET /healthz`,
-   puerto `8000`.
+7. **Healthcheck**: confiar en el `HEALTHCHECK` de Docker de la imagen
+   (`apps/interview-agent/Dockerfile`, `GET /healthz` en el puerto `8000` vía
+   `python -c "import urllib.request ..."`). Deja **desactivado** el
+   healthcheck HTTP de Coolify (pestaña **Health Check**): Coolify lo ejecuta
+   con `curl`/`wget` dentro del contenedor y `python:3.12-slim` no trae
+   ninguno, así que marcaría la app como no saludable siempre.
 8. **Variables de entorno** (I4, `docs/arch/003-simulador-entrevistas.md`):
    - `NINEROUTER_URL` y `NINEROUTER_API_KEY` — mismos valores que
      `fluent-api`/`fluent-worker` (sección 0b). `NINEROUTER_API_KEY` es

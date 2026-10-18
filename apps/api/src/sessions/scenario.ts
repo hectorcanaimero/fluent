@@ -21,7 +21,7 @@ import {
   type BossTopic,
   type Roleplay,
 } from '../content/index.js';
-import type { Locale, NewsItem, Session, SessionKind } from '../db/schema.js';
+import type { Locale, NewsItem, OpenableSessionKind, Session } from '../db/schema.js';
 import type { NewsScenario, RoleplayScenario } from '../llm/prompts/turn.js';
 import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
@@ -79,7 +79,7 @@ export interface RebuiltScenario extends SessionScenario {
    * `kind` **efectivo** para el prompt. Normalmente el de la sesión; es
    * `'free_topic'` cuando el original no se pudo reconstruir (ver abajo).
    */
-  readonly kind: Exclude<SessionKind, 'group'>;
+  readonly kind: OpenableSessionKind;
   /** `true` si se cayó al bloque `free_topic` por no poder reconstruir. */
   readonly fallback: boolean;
 }
@@ -132,8 +132,12 @@ export function rebuildScenario(
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
+    // F10: `interview`/`study` tampoco: el turno de entrevista usa su propio
+    // prompt (I3).
     case 'group':
-      throw new Error(`rebuildScenario: kind='group' no tiene escenario 1:1`);
+    case 'interview':
+    case 'study':
+      throw new Error(`rebuildScenario: kind='${session.kind}' no tiene escenario 1:1`);
 
     default: {
       const unreachable: never = session.kind;

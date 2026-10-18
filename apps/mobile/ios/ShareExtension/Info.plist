@@ -5,7 +5,7 @@
 	<!-- El resto de las claves (versión, identificador, nombre) las genera
 	     Xcode desde los build settings (GENERATE_INFOPLIST_FILE). -->
 	<key>AppGroupId</key>
-	<string>group.com.guria.openfluent</string>
+	<string>group.com.guria.openfluent.ShareExtension</string>
 	<key>NSExtension</key>
 	<dict>
 		<key>NSExtensionAttributes</key>

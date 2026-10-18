@@ -711,6 +711,7 @@ _InterviewSummary _$InterviewSummaryFromJson(Map<String, dynamic> json) =>
           : CompanyInfo.fromJson(json['company'] as Map<String, dynamic>),
       isReinterview: json['isReinterview'] as bool? ?? false,
       cycleCompletedSessions: (json['cycleCompletedSessions'] as num?)?.toInt(),
+      resumable: json['resumable'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
@@ -724,6 +725,7 @@ Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
       'company': instance.company,
       'isReinterview': instance.isReinterview,
       'cycleCompletedSessions': instance.cycleCompletedSessions,
+      'resumable': instance.resumable,
     };
 
 _InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>

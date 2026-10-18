@@ -609,6 +609,9 @@ abstract class InterviewSummary with _$InterviewSummary {
     /// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
     /// se creó el ciclo (`POST /interviews/:id/cycle`).
     int? cycleCompletedSessions,
+
+    /// `too_short` que se puede retomar (D5); sin él, `false`.
+    @Default(false) bool resumable,
   }) = _InterviewSummary;
 
   factory InterviewSummary.fromJson(Map<String, dynamic> json) =>

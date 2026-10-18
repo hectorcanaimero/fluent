@@ -945,6 +945,7 @@ class FakeApi implements FluentApi {
           area: _interviews[id]!.area,
           company: _interviews[id]!.company,
           isReinterview: _interviews[id]!.isReinterview,
+          resumable: _interviews[id]!.resumable,
           cycleCompletedSessions: _studyCycles[id]?.sessions
               .where((s) => s.status == 'done')
               .length,

@@ -126,4 +126,34 @@ void main() {
     await sub.cancel();
     await sub2.cancel();
   });
+
+  // F11.2.T3: además de la lista blanca exacta, `/interviews/<id>` acepta
+  // `<id>`, `/feedback` y `/cycle` con un UUID (FR-32), pero sigue sin dejar
+  // pasar rutas arbitrarias ni `../` para salir de `/interviews`.
+  const uuid = '11111111-2222-3333-4444-555555555555';
+
+  for (final route in [
+    '/interviews/$uuid',
+    '/interviews/$uuid/feedback',
+    '/interviews/$uuid/cycle',
+  ]) {
+    test('la ruta de push $route se acepta', () async {
+      final platform = FakePushPlatform()..launchRoute = route;
+      final push = PushService(platform: platform, api: api);
+      expect(await push.initialRoute(), route);
+    });
+  }
+
+  for (final route in [
+    '/interviews/../settings',
+    '/admin',
+    '/interviews/$uuid/session',
+    '/interviews/not-a-uuid',
+  ]) {
+    test('la ruta de push $route se rechaza', () async {
+      final platform = FakePushPlatform()..launchRoute = route;
+      final push = PushService(platform: platform, api: api);
+      expect(await push.initialRoute(), isNull);
+    });
+  }
 }

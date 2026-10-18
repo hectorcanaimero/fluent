@@ -637,5 +637,27 @@
   "interviewViewFeedbackCta": "Ver parecer",
   "interviewWorkModeRemote": "Remoto",
   "interviewWorkModeHybrid": "Híbrido",
-  "interviewWorkModeOnsite": "Presencial"
+  "interviewWorkModeOnsite": "Presencial",
+  "interviewHistoryTitle": "Historial de entrevistas",
+  "interviewHistoryNewCta": "Nueva entrevista",
+  "interviewHistoryEmpty": "Todavía no tienes entrevistas. Empieza una desde aquí.",
+  "interviewHistoryCompanyFallback": "Empresa sin nombre",
+  "interviewHistoryStatusPreparing": "Preparando…",
+  "interviewHistoryStatusUnfinished": "Sin terminar",
+  "interviewHistoryStatusFeedbackReady": "Parecer listo",
+  "interviewHistoryStatusCycle": "Ciclo {n} de 5",
+  "@interviewHistoryStatusCycle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewHistoryStatusReinterviewDone": "Re-entrevista hecha",
+  "interviewCyclePlaceholderTitle": "Ciclo de estudio",
+  "interviewHistoryStatusPrepFailed": "No se pudo preparar",
+  "interviewHistoryStatusFeedbackPending": "Armando tu parecer",
+  "interviewHistoryStatusFeedbackFailed": "Parecer con error",
+  "interviewHistoryStatusFinishedNoFeedback": "Terminada sin parecer",
+  "interviewHistoryUnknownDate": "Fecha desconocida"
 }

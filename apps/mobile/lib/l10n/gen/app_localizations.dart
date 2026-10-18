@@ -2521,6 +2521,96 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Presencial'**
   String get interviewWorkModeOnsite;
+
+  /// No description provided for @interviewHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de entrevistas'**
+  String get interviewHistoryTitle;
+
+  /// No description provided for @interviewHistoryNewCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva entrevista'**
+  String get interviewHistoryNewCta;
+
+  /// No description provided for @interviewHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no tienes entrevistas. Empieza una desde aquí.'**
+  String get interviewHistoryEmpty;
+
+  /// No description provided for @interviewHistoryCompanyFallback.
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa sin nombre'**
+  String get interviewHistoryCompanyFallback;
+
+  /// No description provided for @interviewHistoryStatusPreparing.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando…'**
+  String get interviewHistoryStatusPreparing;
+
+  /// No description provided for @interviewHistoryStatusUnfinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin terminar'**
+  String get interviewHistoryStatusUnfinished;
+
+  /// No description provided for @interviewHistoryStatusFeedbackReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer listo'**
+  String get interviewHistoryStatusFeedbackReady;
+
+  /// No description provided for @interviewHistoryStatusCycle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciclo {n} de 5'**
+  String interviewHistoryStatusCycle(int n);
+
+  /// No description provided for @interviewHistoryStatusReinterviewDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Re-entrevista hecha'**
+  String get interviewHistoryStatusReinterviewDone;
+
+  /// No description provided for @interviewCyclePlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciclo de estudio'**
+  String get interviewCyclePlaceholderTitle;
+
+  /// No description provided for @interviewHistoryStatusPrepFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo preparar'**
+  String get interviewHistoryStatusPrepFailed;
+
+  /// No description provided for @interviewHistoryStatusFeedbackPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Armando tu parecer'**
+  String get interviewHistoryStatusFeedbackPending;
+
+  /// No description provided for @interviewHistoryStatusFeedbackFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer con error'**
+  String get interviewHistoryStatusFeedbackFailed;
+
+  /// No description provided for @interviewHistoryStatusFinishedNoFeedback.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminada sin parecer'**
+  String get interviewHistoryStatusFinishedNoFeedback;
+
+  /// No description provided for @interviewHistoryUnknownDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha desconocida'**
+  String get interviewHistoryUnknownDate;
 }
 
 class _AppLocalizationsDelegate

@@ -1392,4 +1392,53 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interviewWorkModeOnsite => 'Presencial';
+
+  @override
+  String get interviewHistoryTitle => 'Histórico de entrevistas';
+
+  @override
+  String get interviewHistoryNewCta => 'Nova entrevista';
+
+  @override
+  String get interviewHistoryEmpty =>
+      'Você ainda não tem entrevistas. Comece uma aqui.';
+
+  @override
+  String get interviewHistoryCompanyFallback => 'Empresa sem nome';
+
+  @override
+  String get interviewHistoryStatusPreparing => 'Preparando…';
+
+  @override
+  String get interviewHistoryStatusUnfinished => 'Sem terminar';
+
+  @override
+  String get interviewHistoryStatusFeedbackReady => 'Parecer pronto';
+
+  @override
+  String interviewHistoryStatusCycle(int n) {
+    return 'Ciclo $n de 5';
+  }
+
+  @override
+  String get interviewHistoryStatusReinterviewDone => 'Reentrevista feita';
+
+  @override
+  String get interviewCyclePlaceholderTitle => 'Ciclo de estudo';
+
+  @override
+  String get interviewHistoryStatusPrepFailed => 'Não foi possível preparar';
+
+  @override
+  String get interviewHistoryStatusFeedbackPending => 'Montando seu parecer';
+
+  @override
+  String get interviewHistoryStatusFeedbackFailed => 'Parecer com erro';
+
+  @override
+  String get interviewHistoryStatusFinishedNoFeedback =>
+      'Terminada sem parecer';
+
+  @override
+  String get interviewHistoryUnknownDate => 'Data desconhecida';
 }

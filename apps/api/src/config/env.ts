@@ -41,6 +41,21 @@ export const envSchema = z.object({
     (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
     z.string().min(1).optional(),
   ),
+  // I4 (docs/arch/003-simulador-entrevistas.md). Sin `INTERVIEW_AGENT_URL` la
+  // app arranca igual y el módulo `interviews` responde 503.
+  INTERVIEW_AGENT_URL: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.url().optional(),
+  ),
+  INTERVIEW_AGENT_TOKEN: z.preprocess(
+    (value) => (typeof value === 'string' && value.trim() === '' ? undefined : value),
+    z.string().min(1).optional(),
+  ),
+  INTERVIEWS_DAILY_CAP: z.coerce.number().int().min(0).default(3),
+  INTERVIEWS_REQUIRE_PRO: z.stringbool().default(false),
+  INTERVIEW_MAX_SEC: z.coerce.number().int().positive().default(600),
+  INTERVIEW_WARN_SEC: z.coerce.number().int().positive().default(540),
+  INTERVIEW_ABANDON_AFTER_SEC: z.coerce.number().int().positive().default(86400),
 });
 
 export type Env = z.infer<typeof envSchema>;

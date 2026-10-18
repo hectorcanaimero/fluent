@@ -6,10 +6,11 @@
  * módulo LLM, así que viven aquí y se reexportarán desde allí sin duplicar valores.
  */
 
-import type { OpenableSessionKind } from '../db/schema.js';
+import type { LlmCallPurpose, OpenableSessionKind } from '../db/schema.js';
 
 export type Provider = '9router';
-export type Purpose = 'turn' | 'brief' | 'weekly';
+/** Mismo conjunto que `llm_calls.purpose`. */
+export type Purpose = LlmCallPurpose;
 export type Locale = 'es' | 'pt-BR';
 export type Level = 'A2' | 'B1' | 'B2';
 /** Los `kind` 1:1 que llegan a los prompts; la sala grupal tiene los suyos (F9.3). */
@@ -57,6 +58,9 @@ export const PURPOSE_DEFAULTS: Readonly<Record<Purpose, PurposeDefaults>> = Obje
   turn: Object.freeze({ timeoutMs: 25_000, temperature: 0.7, maxTokens: 350 }),
   brief: Object.freeze({ timeoutMs: 60_000, temperature: 0.3, maxTokens: 800 }),
   weekly: Object.freeze({ timeoutMs: 60_000, temperature: 0.9, maxTokens: 600 }),
+  interview: Object.freeze({ timeoutMs: 25_000, temperature: 0.7, maxTokens: 400 }),
+  interview_prepare: Object.freeze({ timeoutMs: 60_000, temperature: 0.4, maxTokens: 1200 }),
+  interview_feedback: Object.freeze({ timeoutMs: 60_000, temperature: 0.3, maxTokens: 1200 }),
 });
 
 /** SPEC-03 §2: máximo de intentos por llamada. */

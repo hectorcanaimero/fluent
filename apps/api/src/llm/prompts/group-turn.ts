@@ -5,12 +5,12 @@
  * A diferencia del 1:1, **nunca** recibe brief, hechos ni errores recurrentes
  * (NFR-3): lo que el tutor sabe de cada uno no se expone ante el grupo.
  */
-import { CATEGORIES } from '../schemas.js';
-import type { Level, Locale } from '../config.js';
+import { CATEGORIES, type GroupTurnOutput } from '../schemas.js';
+import { HISTORY_TURN_CHARS, type Level, type Locale } from '../config.js';
 import type { LlmMessage } from '../types.js';
 import type { RebuiltScenario } from '../../sessions/scenario.js';
 import { languageForLocale } from './languages.js';
-import { truncateUserMessage } from './truncate.js';
+import { truncateText } from './truncate.js';
 import { untrustedBlock, untrustedInline } from './untrusted.js';
 
 /** Mensajes del grupo que ve el tutor (arch 002: los últimos 20). */
@@ -22,6 +22,8 @@ export type GroupTrigger = 'open' | 'mention' | 'every_n' | 'stall';
 
 export interface GroupPromptMessage {
   readonly id: number;
+  /** Id del participante autor; `null` en mensajes del tutor o del sistema. */
+  readonly authorId: string | null;
   readonly authorName: string;
   readonly role: 'user' | 'tutor' | 'system';
   readonly text: string;
@@ -43,24 +45,36 @@ const LEVEL_ORDER: readonly Level[] = ['A2', 'B1', 'B2'];
 /** Techo de vocabulario: un nivel por encima del más bajo (A2 → B1). */
 const CEILING: Readonly<Record<Level, string>> = { A2: 'B1', B1: 'B2', B2: 'C1' };
 
-/** El CEFR más bajo de los presentes (FR-13). Sin nadie, B1 como en el 1:1. */
-export function minLevel(levels: readonly Level[]): Level {
-  if (levels.length === 0) return 'B1';
-  return LEVEL_ORDER[Math.min(...levels.map((level) => LEVEL_ORDER.indexOf(level)))] ?? 'B1';
+/**
+ * El CEFR más bajo de los presentes (FR-13). Un nivel desconocido (C1, null)
+ * no cuenta: antes daba índice -1 y caía en B1. Sin nadie, B1 como en el 1:1.
+ */
+export function minLevel(levels: readonly (string | null | undefined)[]): Level {
+  const known = levels
+    .map((level) => LEVEL_ORDER.indexOf(level as Level))
+    .filter((index) => index >= 0);
+  if (known.length === 0) return 'B1';
+  return LEVEL_ORDER[Math.min(...known)] ?? 'B1';
 }
 
-/** Participantes activos sin mensaje entre los últimos 4 mensajes de usuario (FR-9). */
+export interface GroupParticipant {
+  readonly id: string;
+  readonly name: string;
+}
+
+/**
+ * Nombres de los participantes activos sin mensaje entre los últimos 4 mensajes
+ * de usuario (FR-9). Compara por id: dos «Ana» son dos personas. Con menos de 4
+ * mensajes de usuario todavía no hay ventana y nadie está callado.
+ */
 export function quietParticipants(
-  messages: readonly Pick<GroupPromptMessage, 'authorName' | 'role'>[],
-  participants: readonly string[],
+  messages: readonly Pick<GroupPromptMessage, 'authorId' | 'role'>[],
+  participants: readonly GroupParticipant[],
 ): string[] {
-  const recent = new Set(
-    messages
-      .filter((message) => message.role === 'user')
-      .slice(-QUIET_WINDOW)
-      .map((message) => message.authorName),
-  );
-  return participants.filter((name) => !recent.has(name));
+  const userMessages = messages.filter((message) => message.role === 'user');
+  if (userMessages.length < QUIET_WINDOW) return [];
+  const recent = new Set(userMessages.slice(-QUIET_WINDOW).map((message) => message.authorId));
+  return participants.filter((participant) => !recent.has(participant.id)).map((p) => p.name);
 }
 
 function scenarioBlock(scenario: GroupTurnPromptInput['scenario']): string {
@@ -95,7 +109,9 @@ function triggerRule(trigger: GroupTrigger): string {
   }
 }
 
-function quietRule(quiet: readonly string[]): string {
+function quietRule(quiet: readonly string[], trigger: GroupTrigger): string {
+  // Al abrir nadie ha tenido ocasión de hablar: no hay callados a quien invitar.
+  if (trigger === 'open') return 'Address the whole group; do not single anyone out.';
   if (quiet.length === 0) return 'Everyone is taking part; do not single anyone out.';
   // Los nombres los escribe el usuario: van delimitados (MEJ-35).
   return `Invite these quiet participants by name with a simple question: ${quiet
@@ -113,9 +129,9 @@ export function buildGroupTurnSystemPrompt(input: GroupTurnPromptInput): string 
     'Rules:',
     '1. Reply in English only, 1 to 3 sentences, addressed to the group. End with a question.',
     `2. ${triggerRule(input.trigger)}`,
-    `3. ${quietRule(input.quietParticipants)}`,
+    `3. ${quietRule(input.quietParticipants, input.trigger)}`,
     '4. Do not correct inside the reply. Put corrections in the "corrections" array.',
-    '5. Only correct messages marked "user" whose id appears in the transcript. Never invent or change an id. At most 6 corrections in total and at most 2 per message. Ignore casing, punctuation and minor typos.',
+    '5. Only correct messages marked "user" whose id appears in the transcript (the number after "id="). Never invent or change an id. At most 6 corrections in total and at most 2 per message. Ignore casing, punctuation and minor typos.',
     `6. Each correction: "messageId" (the id of the corrected message), "original" (the author's words), "corrected", "category" (one of: ${CATEGORIES.join(
       ', ',
     )}), "note" (max 140 characters, one idea, written in the note language shown on that message).`,
@@ -126,17 +142,27 @@ export function buildGroupTurnSystemPrompt(input: GroupTurnPromptInput): string 
   ].join('\n');
 }
 
+/**
+ * Texto del usuario en una línea y entre comillas JSON: un salto de línea o
+ * unas comillas dentro del mensaje no pueden fabricar la línea de otro
+ * participante ni del tutor. `\s` no incluye U+0085 (NEL): va aparte.
+ */
+function quoted(text: string): string {
+  return JSON.stringify(text.replace(/[\s\u0085]+/g, ' ').trim());
+}
+
 function transcriptLine(message: GroupPromptMessage): string {
-  const text = truncateUserMessage(message.text);
+  // Es historial, como en el 1:1: tope de HISTORY_TURN_CHARS por mensaje.
+  const text = quoted(truncateText(message.text, HISTORY_TURN_CHARS));
   switch (message.role) {
     case 'user':
-      return `#${message.id} user ${message.authorName} (note language: ${languageForLocale(
+      return `id=${message.id} user ${quoted(message.authorName)} (note language: ${languageForLocale(
         message.locale,
       )}): ${text}`;
     case 'tutor':
-      return `#${message.id} tutor (you): ${text}`;
+      return `id=${message.id} tutor (you): ${text}`;
     case 'system':
-      return `#${message.id} system: ${text}`;
+      return `id=${message.id} system: ${text}`;
   }
 }
 
@@ -148,4 +174,23 @@ export function buildGroupTurnMessages(input: GroupTurnPromptInput): LlmMessage[
     { role: 'system', content: buildGroupTurnSystemPrompt(input) },
     { role: 'user', content: `Group transcript:\n${untrustedBlock(transcript)}` },
   ];
+}
+
+/**
+ * Descarta las correcciones que apuntan a un id que no es un mensaje de
+ * usuario reciente y deja como mucho 2 por mensaje (regla 5 del prompt).
+ */
+export function filterValidCorrections(
+  output: GroupTurnOutput,
+  recentUserIds: Iterable<number>,
+): GroupTurnOutput {
+  const allowed = new Set(recentUserIds);
+  const perMessage = new Map<number, number>();
+  const corrections = output.corrections.filter((correction) => {
+    const count = perMessage.get(correction.messageId) ?? 0;
+    if (!allowed.has(correction.messageId) || count >= 2) return false;
+    perMessage.set(correction.messageId, count + 1);
+    return true;
+  });
+  return { ...output, corrections };
 }

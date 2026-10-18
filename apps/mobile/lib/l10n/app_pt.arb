@@ -489,7 +489,6 @@
     }
   },
   "interviewHistoryStatusReinterviewDone": "Reentrevista feita",
-  "interviewCyclePlaceholderTitle": "Ciclo de estudo",
   "interviewHistoryStatusPrepFailed": "Não foi possível preparar",
   "interviewHistoryStatusFeedbackPending": "Montando seu parecer",
   "interviewHistoryStatusFeedbackFailed": "Parecer com erro",
@@ -530,5 +529,47 @@
   "interviewFeedbackNotifyLaterCta": "Me avise quando estiver pronto",
   "interviewFeedbackNotifyLaterSnack": "Avisamos você quando estiver pronto",
   "interviewFeedbackNotFinishedTitle": "Sua entrevista ainda não terminou",
-  "interviewFeedbackNotFinishedCta": "Ver minha entrevista"
+  "interviewFeedbackNotFinishedCta": "Ver minha entrevista",
+  "interviewCycleTitle": "Seu ciclo de estudos",
+  "interviewCycleSubtitle": "Montado com seu parecer da {company}",
+  "@interviewCycleSubtitle": {
+    "placeholders": {
+      "company": {
+        "type": "String"
+      }
+    }
+  },
+  "interviewCycleProgress": "{n} de 5 sessões",
+  "@interviewCycleProgress": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewCycleTotalDuration": "{min} min no total",
+  "@interviewCycleTotalDuration": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewCycleSessionDuration": "{min} min",
+  "@interviewCycleSessionDuration": {
+    "placeholders": {
+      "min": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewCycleSessionDoneLabel": "Feita",
+  "interviewCycleSessionLockedLabel": "Bloqueada",
+  "interviewCycleSessionStartCta": "Começar",
+  "interviewCycleFormatGuided": "Conversa guiada",
+  "interviewCycleFormatRoleplay": "Situação de trabalho",
+  "interviewCycleFocusEnglish": "Inglês",
+  "interviewCycleReinterviewTitle": "Reentrevista",
+  "interviewCycleReinterviewLocked": "Desbloqueia ao completar as 5 sessões",
+  "interviewCycleReinterviewReady": "Compare seu avanço com uma nova entrevista sobre a mesma vaga"
 }

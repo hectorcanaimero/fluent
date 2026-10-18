@@ -2642,12 +2642,6 @@ abstract class AppLocalizations {
   /// **'Re-entrevista hecha'**
   String get interviewHistoryStatusReinterviewDone;
 
-  /// No description provided for @interviewCyclePlaceholderTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Ciclo de estudio'**
-  String get interviewCyclePlaceholderTitle;
-
   /// No description provided for @interviewHistoryStatusPrepFailed.
   ///
   /// In es, this message translates to:
@@ -2851,6 +2845,90 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver mi entrevista'**
   String get interviewFeedbackNotFinishedCta;
+
+  /// No description provided for @interviewCycleTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu ciclo de estudio'**
+  String get interviewCycleTitle;
+
+  /// No description provided for @interviewCycleSubtitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Armado con tu parecer de {company}'**
+  String interviewCycleSubtitle(String company);
+
+  /// No description provided for @interviewCycleProgress.
+  ///
+  /// In es, this message translates to:
+  /// **'{n} de 5 sesiones'**
+  String interviewCycleProgress(int n);
+
+  /// No description provided for @interviewCycleTotalDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'{min} min en total'**
+  String interviewCycleTotalDuration(int min);
+
+  /// No description provided for @interviewCycleSessionDuration.
+  ///
+  /// In es, this message translates to:
+  /// **'{min} min'**
+  String interviewCycleSessionDuration(int min);
+
+  /// No description provided for @interviewCycleSessionDoneLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Hecha'**
+  String get interviewCycleSessionDoneLabel;
+
+  /// No description provided for @interviewCycleSessionLockedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Bloqueada'**
+  String get interviewCycleSessionLockedLabel;
+
+  /// No description provided for @interviewCycleSessionStartCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get interviewCycleSessionStartCta;
+
+  /// No description provided for @interviewCycleFormatGuided.
+  ///
+  /// In es, this message translates to:
+  /// **'Conversación guiada'**
+  String get interviewCycleFormatGuided;
+
+  /// No description provided for @interviewCycleFormatRoleplay.
+  ///
+  /// In es, this message translates to:
+  /// **'Situación de trabajo'**
+  String get interviewCycleFormatRoleplay;
+
+  /// No description provided for @interviewCycleFocusEnglish.
+  ///
+  /// In es, this message translates to:
+  /// **'Inglés'**
+  String get interviewCycleFocusEnglish;
+
+  /// No description provided for @interviewCycleReinterviewTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Re-entrevista'**
+  String get interviewCycleReinterviewTitle;
+
+  /// No description provided for @interviewCycleReinterviewLocked.
+  ///
+  /// In es, this message translates to:
+  /// **'Se desbloquea al completar las 5 sesiones'**
+  String get interviewCycleReinterviewLocked;
+
+  /// No description provided for @interviewCycleReinterviewReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Compara tu avance con una nueva entrevista sobre la misma oferta'**
+  String get interviewCycleReinterviewReady;
 }
 
 class _AppLocalizationsDelegate

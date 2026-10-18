@@ -8,12 +8,12 @@ import '../l10n/gen/app_localizations.dart';
 
 import '../core/api/models.dart';
 import '../core/providers.dart';
-import '../core/widgets/placeholder_screen.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/badges/presentation/badges_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
+import '../features/interviews/presentation/cycle/interview_cycle_screen.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
 import '../features/interviews/presentation/feedback/interview_feedback_screen.dart';
 import '../features/interviews/presentation/history/interview_history_screen.dart';
@@ -200,13 +200,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               interviewId: state.pathParameters['id']!,
             ),
           ),
-          // F12 reemplaza esto por el ciclo de estudio (IE-07).
           GoRoute(
             path: ':id/cycle',
-            builder: (context, state) => PlaceholderScreen(
-              title: AppLocalizations.of(context)
-                  .interviewCyclePlaceholderTitle,
-            ),
+            builder: (context, state) =>
+                InterviewCycleScreen(interviewId: state.pathParameters['id']!),
           ),
         ],
       ),

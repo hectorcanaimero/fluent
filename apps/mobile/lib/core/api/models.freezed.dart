@@ -10766,4 +10766,4125 @@ as int?,
 
 }
 
+
+/// @nodoc
+mixin _$CompanyInfo {
+
+ String get name; String? get industry; String? get city; String? get workMode;
+/// Create a copy of CompanyInfo
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CompanyInfoCopyWith<CompanyInfo> get copyWith => _$CompanyInfoCopyWithImpl<CompanyInfo>(this as CompanyInfo, _$identity);
+
+  /// Serializes this CompanyInfo to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as CompanyInfo;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompanyInfo&&(identical(other.name, _this.name) || other.name == _this.name)&&(identical(other.industry, _this.industry) || other.industry == _this.industry)&&(identical(other.city, _this.city) || other.city == _this.city)&&(identical(other.workMode, _this.workMode) || other.workMode == _this.workMode));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as CompanyInfo;
+  return Object.hash(runtimeType,_this.name,_this.industry,_this.city,_this.workMode);
+}
+
+@override
+String toString() {
+  final _this = this as CompanyInfo;
+  return 'CompanyInfo(name: ${_this.name}, industry: ${_this.industry}, city: ${_this.city}, workMode: ${_this.workMode})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CompanyInfoCopyWith<$Res>  {
+  factory $CompanyInfoCopyWith(CompanyInfo value, $Res Function(CompanyInfo) _then) = _$CompanyInfoCopyWithImpl;
+@useResult
+$Res call({
+ String name, String? industry, String? city, String? workMode
+});
+
+
+
+
+}
+/// @nodoc
+class _$CompanyInfoCopyWithImpl<$Res>
+    implements $CompanyInfoCopyWith<$Res> {
+  _$CompanyInfoCopyWithImpl(this._self, this._then);
+
+  final CompanyInfo _self;
+  final $Res Function(CompanyInfo) _then;
+
+/// Create a copy of CompanyInfo
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? name = null,Object? industry = freezed,Object? city = freezed,Object? workMode = freezed,}) {
+  return _then(CompanyInfo(
+name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,industry: freezed == industry ? _self.industry : industry // ignore: cast_nullable_to_non_nullable
+as String?,city: freezed == city ? _self.city : city // ignore: cast_nullable_to_non_nullable
+as String?,workMode: freezed == workMode ? _self.workMode : workMode // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CompanyInfo].
+extension CompanyInfoPatterns on CompanyInfo {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CompanyInfo value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CompanyInfo() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CompanyInfo value)  $default,){
+final _that = this;
+switch (_that) {
+case _CompanyInfo():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CompanyInfo value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CompanyInfo() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String name,  String? industry,  String? city,  String? workMode)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CompanyInfo() when $default != null:
+return $default(_that.name,_that.industry,_that.city,_that.workMode);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String name,  String? industry,  String? city,  String? workMode)  $default,) {final _that = this;
+switch (_that) {
+case _CompanyInfo():
+return $default(_that.name,_that.industry,_that.city,_that.workMode);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String name,  String? industry,  String? city,  String? workMode)?  $default,) {final _that = this;
+switch (_that) {
+case _CompanyInfo() when $default != null:
+return $default(_that.name,_that.industry,_that.city,_that.workMode);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CompanyInfo implements CompanyInfo {
+  const _CompanyInfo({required this.name, this.industry, this.city, this.workMode});
+  factory _CompanyInfo.fromJson(Map<String, dynamic> json) => _$CompanyInfoFromJson(json);
+
+@override final  String name;
+@override final  String? industry;
+@override final  String? city;
+@override final  String? workMode;
+
+/// Create a copy of CompanyInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CompanyInfoCopyWith<_CompanyInfo> get copyWith => __$CompanyInfoCopyWithImpl<_CompanyInfo>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CompanyInfoToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompanyInfo&&(identical(other.name, name) || other.name == name)&&(identical(other.industry, industry) || other.industry == industry)&&(identical(other.city, city) || other.city == city)&&(identical(other.workMode, workMode) || other.workMode == workMode));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,name,industry,city,workMode);
+}
+
+@override
+String toString() {
+    return 'CompanyInfo(name: $name, industry: $industry, city: $city, workMode: $workMode)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CompanyInfoCopyWith<$Res> implements $CompanyInfoCopyWith<$Res> {
+  factory _$CompanyInfoCopyWith(_CompanyInfo value, $Res Function(_CompanyInfo) _then) = __$CompanyInfoCopyWithImpl;
+@override @useResult
+$Res call({
+ String name, String? industry, String? city, String? workMode
+});
+
+
+
+
+}
+/// @nodoc
+class __$CompanyInfoCopyWithImpl<$Res>
+    implements _$CompanyInfoCopyWith<$Res> {
+  __$CompanyInfoCopyWithImpl(this._self, this._then);
+
+  final _CompanyInfo _self;
+  final $Res Function(_CompanyInfo) _then;
+
+/// Create a copy of CompanyInfo
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? name = null,Object? industry = freezed,Object? city = freezed,Object? workMode = freezed,}) {
+  return _then(_CompanyInfo(
+name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,industry: freezed == industry ? _self.industry : industry // ignore: cast_nullable_to_non_nullable
+as String?,city: freezed == city ? _self.city : city // ignore: cast_nullable_to_non_nullable
+as String?,workMode: freezed == workMode ? _self.workMode : workMode // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$InterviewQuota {
+
+ int get remaining; int get limit; bool get requiresPro; bool get freeNotice;
+/// Create a copy of InterviewQuota
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewQuotaCopyWith<InterviewQuota> get copyWith => _$InterviewQuotaCopyWithImpl<InterviewQuota>(this as InterviewQuota, _$identity);
+
+  /// Serializes this InterviewQuota to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewQuota;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewQuota&&(identical(other.remaining, _this.remaining) || other.remaining == _this.remaining)&&(identical(other.limit, _this.limit) || other.limit == _this.limit)&&(identical(other.requiresPro, _this.requiresPro) || other.requiresPro == _this.requiresPro)&&(identical(other.freeNotice, _this.freeNotice) || other.freeNotice == _this.freeNotice));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewQuota;
+  return Object.hash(runtimeType,_this.remaining,_this.limit,_this.requiresPro,_this.freeNotice);
+}
+
+@override
+String toString() {
+  final _this = this as InterviewQuota;
+  return 'InterviewQuota(remaining: ${_this.remaining}, limit: ${_this.limit}, requiresPro: ${_this.requiresPro}, freeNotice: ${_this.freeNotice})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewQuotaCopyWith<$Res>  {
+  factory $InterviewQuotaCopyWith(InterviewQuota value, $Res Function(InterviewQuota) _then) = _$InterviewQuotaCopyWithImpl;
+@useResult
+$Res call({
+ int remaining, int limit, bool requiresPro, bool freeNotice
+});
+
+
+
+
+}
+/// @nodoc
+class _$InterviewQuotaCopyWithImpl<$Res>
+    implements $InterviewQuotaCopyWith<$Res> {
+  _$InterviewQuotaCopyWithImpl(this._self, this._then);
+
+  final InterviewQuota _self;
+  final $Res Function(InterviewQuota) _then;
+
+/// Create a copy of InterviewQuota
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? remaining = null,Object? limit = null,Object? requiresPro = null,Object? freeNotice = null,}) {
+  return _then(InterviewQuota(
+remaining: null == remaining ? _self.remaining : remaining // ignore: cast_nullable_to_non_nullable
+as int,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
+as int,requiresPro: null == requiresPro ? _self.requiresPro : requiresPro // ignore: cast_nullable_to_non_nullable
+as bool,freeNotice: null == freeNotice ? _self.freeNotice : freeNotice // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewQuota].
+extension InterviewQuotaPatterns on InterviewQuota {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewQuota value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewQuota() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewQuota value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewQuota():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewQuota value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewQuota() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int remaining,  int limit,  bool requiresPro,  bool freeNotice)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewQuota() when $default != null:
+return $default(_that.remaining,_that.limit,_that.requiresPro,_that.freeNotice);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int remaining,  int limit,  bool requiresPro,  bool freeNotice)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewQuota():
+return $default(_that.remaining,_that.limit,_that.requiresPro,_that.freeNotice);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int remaining,  int limit,  bool requiresPro,  bool freeNotice)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewQuota() when $default != null:
+return $default(_that.remaining,_that.limit,_that.requiresPro,_that.freeNotice);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewQuota implements InterviewQuota {
+  const _InterviewQuota({required this.remaining, required this.limit, this.requiresPro = false, this.freeNotice = true});
+  factory _InterviewQuota.fromJson(Map<String, dynamic> json) => _$InterviewQuotaFromJson(json);
+
+@override final  int remaining;
+@override final  int limit;
+@override@JsonKey() final  bool requiresPro;
+@override@JsonKey() final  bool freeNotice;
+
+/// Create a copy of InterviewQuota
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewQuotaCopyWith<_InterviewQuota> get copyWith => __$InterviewQuotaCopyWithImpl<_InterviewQuota>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewQuotaToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewQuota&&(identical(other.remaining, remaining) || other.remaining == remaining)&&(identical(other.limit, limit) || other.limit == limit)&&(identical(other.requiresPro, requiresPro) || other.requiresPro == requiresPro)&&(identical(other.freeNotice, freeNotice) || other.freeNotice == freeNotice));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,remaining,limit,requiresPro,freeNotice);
+}
+
+@override
+String toString() {
+    return 'InterviewQuota(remaining: $remaining, limit: $limit, requiresPro: $requiresPro, freeNotice: $freeNotice)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewQuotaCopyWith<$Res> implements $InterviewQuotaCopyWith<$Res> {
+  factory _$InterviewQuotaCopyWith(_InterviewQuota value, $Res Function(_InterviewQuota) _then) = __$InterviewQuotaCopyWithImpl;
+@override @useResult
+$Res call({
+ int remaining, int limit, bool requiresPro, bool freeNotice
+});
+
+
+
+
+}
+/// @nodoc
+class __$InterviewQuotaCopyWithImpl<$Res>
+    implements _$InterviewQuotaCopyWith<$Res> {
+  __$InterviewQuotaCopyWithImpl(this._self, this._then);
+
+  final _InterviewQuota _self;
+  final $Res Function(_InterviewQuota) _then;
+
+/// Create a copy of InterviewQuota
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? remaining = null,Object? limit = null,Object? requiresPro = null,Object? freeNotice = null,}) {
+  return _then(_InterviewQuota(
+remaining: null == remaining ? _self.remaining : remaining // ignore: cast_nullable_to_non_nullable
+as int,limit: null == limit ? _self.limit : limit // ignore: cast_nullable_to_non_nullable
+as int,requiresPro: null == requiresPro ? _self.requiresPro : requiresPro // ignore: cast_nullable_to_non_nullable
+as bool,freeNotice: null == freeNotice ? _self.freeNotice : freeNotice // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$InterviewSummary {
+
+ String get id; String get type; String get status; String get createdAt; String? get role; String? get area; CompanyInfo? get company;/// `true` si viene de `POST /interviews/:id/reinterview` (FR-19, IE-08).
+ bool get isReinterview;/// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
+/// se creó el ciclo (`POST /interviews/:id/cycle`).
+ int? get cycleCompletedSessions;
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewSummaryCopyWith<InterviewSummary> get copyWith => _$InterviewSummaryCopyWithImpl<InterviewSummary>(this as InterviewSummary, _$identity);
+
+  /// Serializes this InterviewSummary to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewSummary;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewSummary&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview)&&(identical(other.cycleCompletedSessions, _this.cycleCompletedSessions) || other.cycleCompletedSessions == _this.cycleCompletedSessions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewSummary;
+  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.role,_this.area,_this.company,_this.isReinterview,_this.cycleCompletedSessions);
+}
+
+@override
+String toString() {
+  final _this = this as InterviewSummary;
+  return 'InterviewSummary(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, role: ${_this.role}, area: ${_this.area}, company: ${_this.company}, isReinterview: ${_this.isReinterview}, cycleCompletedSessions: ${_this.cycleCompletedSessions})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewSummaryCopyWith<$Res>  {
+  factory $InterviewSummaryCopyWith(InterviewSummary value, $Res Function(InterviewSummary) _then) = _$InterviewSummaryCopyWithImpl;
+@useResult
+$Res call({
+ String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions
+});
+
+
+$CompanyInfoCopyWith<$Res>? get company;
+
+}
+/// @nodoc
+class _$InterviewSummaryCopyWithImpl<$Res>
+    implements $InterviewSummaryCopyWith<$Res> {
+  _$InterviewSummaryCopyWithImpl(this._self, this._then);
+
+  final InterviewSummary _self;
+  final $Res Function(InterviewSummary) _then;
+
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,}) {
+  return _then(InterviewSummary(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to_non_nullable
+as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as CompanyInfo?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as bool,cycleCompletedSessions: freezed == cycleCompletedSessions ? _self.cycleCompletedSessions : cycleCompletedSessions // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CompanyInfoCopyWith<$Res>? get company {
+    if (_self.company == null) {
+    return null;
+  }
+
+  return $CompanyInfoCopyWith<$Res>(_self.company!, (value) {
+    return _then(_self.copyWith(company: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewSummary].
+extension InterviewSummaryPatterns on InterviewSummary {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewSummary value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewSummary() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewSummary value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewSummary():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewSummary value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewSummary() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewSummary() when $default != null:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewSummary():
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewSummary() when $default != null:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewSummary implements InterviewSummary {
+  const _InterviewSummary({required this.id, required this.type, required this.status, required this.createdAt, this.role, this.area, this.company, this.isReinterview = false, this.cycleCompletedSessions});
+  factory _InterviewSummary.fromJson(Map<String, dynamic> json) => _$InterviewSummaryFromJson(json);
+
+@override final  String id;
+@override final  String type;
+@override final  String status;
+@override final  String createdAt;
+@override final  String? role;
+@override final  String? area;
+@override final  CompanyInfo? company;
+/// `true` si viene de `POST /interviews/:id/reinterview` (FR-19, IE-08).
+@override@JsonKey() final  bool isReinterview;
+/// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
+/// se creó el ciclo (`POST /interviews/:id/cycle`).
+@override final  int? cycleCompletedSessions;
+
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewSummaryCopyWith<_InterviewSummary> get copyWith => __$InterviewSummaryCopyWithImpl<_InterviewSummary>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewSummaryToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.company, company) || other.company == company)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview)&&(identical(other.cycleCompletedSessions, cycleCompletedSessions) || other.cycleCompletedSessions == cycleCompletedSessions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,type,status,createdAt,role,area,company,isReinterview,cycleCompletedSessions);
+}
+
+@override
+String toString() {
+    return 'InterviewSummary(id: $id, type: $type, status: $status, createdAt: $createdAt, role: $role, area: $area, company: $company, isReinterview: $isReinterview, cycleCompletedSessions: $cycleCompletedSessions)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewSummaryCopyWith<$Res> implements $InterviewSummaryCopyWith<$Res> {
+  factory _$InterviewSummaryCopyWith(_InterviewSummary value, $Res Function(_InterviewSummary) _then) = __$InterviewSummaryCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions
+});
+
+
+@override $CompanyInfoCopyWith<$Res>? get company;
+
+}
+/// @nodoc
+class __$InterviewSummaryCopyWithImpl<$Res>
+    implements _$InterviewSummaryCopyWith<$Res> {
+  __$InterviewSummaryCopyWithImpl(this._self, this._then);
+
+  final _InterviewSummary _self;
+  final $Res Function(_InterviewSummary) _then;
+
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,}) {
+  return _then(_InterviewSummary(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to_non_nullable
+as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as CompanyInfo?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as bool,cycleCompletedSessions: freezed == cycleCompletedSessions ? _self.cycleCompletedSessions : cycleCompletedSessions // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+/// Create a copy of InterviewSummary
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CompanyInfoCopyWith<$Res>? get company {
+    if (_self.company == null) {
+    return null;
+  }
+
+  return $CompanyInfoCopyWith<$Res>(_self.company!, (value) {
+    return _then(_self.copyWith(company: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$InterviewDetail {
+
+ String get id; String get type; String get status; String get createdAt;/// `reading | researching | designing | done`, solo mientras `preparing`.
+ String? get prepStep; CompanyInfo? get company; String? get role; String? get area; String? get seniority; int? get questionCount; int? get estimatedMin;/// Nombres de las competencias de la rúbrica (nunca las preguntas).
+ List<String> get competencies;/// Presente en `prep_failed` / `feedback_failed`.
+ String? get errorCode; bool get isReinterview;
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewDetailCopyWith<InterviewDetail> get copyWith => _$InterviewDetailCopyWithImpl<InterviewDetail>(this as InterviewDetail, _$identity);
+
+  /// Serializes this InterviewDetail to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewDetail;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.prepStep, _this.prepStep) || other.prepStep == _this.prepStep)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.seniority, _this.seniority) || other.seniority == _this.seniority)&&(identical(other.questionCount, _this.questionCount) || other.questionCount == _this.questionCount)&&(identical(other.estimatedMin, _this.estimatedMin) || other.estimatedMin == _this.estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _this.competencies)&&(identical(other.errorCode, _this.errorCode) || other.errorCode == _this.errorCode)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewDetail;
+  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.prepStep,_this.company,_this.role,_this.area,_this.seniority,_this.questionCount,_this.estimatedMin,const DeepCollectionEquality().hash(_this.competencies),_this.errorCode,_this.isReinterview);
+}
+
+@override
+String toString() {
+  final _this = this as InterviewDetail;
+  return 'InterviewDetail(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, prepStep: ${_this.prepStep}, company: ${_this.company}, role: ${_this.role}, area: ${_this.area}, seniority: ${_this.seniority}, questionCount: ${_this.questionCount}, estimatedMin: ${_this.estimatedMin}, competencies: ${_this.competencies}, errorCode: ${_this.errorCode}, isReinterview: ${_this.isReinterview})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewDetailCopyWith<$Res>  {
+  factory $InterviewDetailCopyWith(InterviewDetail value, $Res Function(InterviewDetail) _then) = _$InterviewDetailCopyWithImpl;
+@useResult
+$Res call({
+ String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<String> competencies, String? errorCode, bool isReinterview
+});
+
+
+$CompanyInfoCopyWith<$Res>? get company;
+
+}
+/// @nodoc
+class _$InterviewDetailCopyWithImpl<$Res>
+    implements $InterviewDetailCopyWith<$Res> {
+  _$InterviewDetailCopyWithImpl(this._self, this._then);
+
+  final InterviewDetail _self;
+  final $Res Function(InterviewDetail) _then;
+
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? isReinterview = null,}) {
+  return _then(InterviewDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,prepStep: freezed == prepStep ? _self.prepStep : prepStep // ignore: cast_nullable_to_non_nullable
+as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as CompanyInfo?,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to_non_nullable
+as String?,seniority: freezed == seniority ? _self.seniority : seniority // ignore: cast_nullable_to_non_nullable
+as String?,questionCount: freezed == questionCount ? _self.questionCount : questionCount // ignore: cast_nullable_to_non_nullable
+as int?,estimatedMin: freezed == estimatedMin ? _self.estimatedMin : estimatedMin // ignore: cast_nullable_to_non_nullable
+as int?,competencies: null == competencies ? _self.competencies : competencies // ignore: cast_nullable_to_non_nullable
+as List<String>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
+as String?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CompanyInfoCopyWith<$Res>? get company {
+    if (_self.company == null) {
+    return null;
+  }
+
+  return $CompanyInfoCopyWith<$Res>(_self.company!, (value) {
+    return _then(_self.copyWith(company: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewDetail].
+extension InterviewDetailPatterns on InterviewDetail {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewDetail value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewDetail() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewDetail value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewDetail():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewDetail value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewDetail() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewDetail() when $default != null:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewDetail():
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewDetail() when $default != null:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewDetail implements InterviewDetail {
+  const _InterviewDetail({required this.id, required this.type, required this.status, required this.createdAt, this.prepStep, this.company, this.role, this.area, this.seniority, this.questionCount, this.estimatedMin,  List<String> competencies = const <String>[], this.errorCode, this.isReinterview = false}): _competencies = competencies;
+  factory _InterviewDetail.fromJson(Map<String, dynamic> json) => _$InterviewDetailFromJson(json);
+
+@override final  String id;
+@override final  String type;
+@override final  String status;
+@override final  String createdAt;
+/// `reading | researching | designing | done`, solo mientras `preparing`.
+@override final  String? prepStep;
+@override final  CompanyInfo? company;
+@override final  String? role;
+@override final  String? area;
+@override final  String? seniority;
+@override final  int? questionCount;
+@override final  int? estimatedMin;
+/// Nombres de las competencias de la rúbrica (nunca las preguntas).
+ final  List<String> _competencies;
+/// Nombres de las competencias de la rúbrica (nunca las preguntas).
+@override@JsonKey() List<String> get competencies {
+  if (_competencies is EqualUnmodifiableListView) return _competencies;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_competencies);
+}
+
+/// Presente en `prep_failed` / `feedback_failed`.
+@override final  String? errorCode;
+@override@JsonKey() final  bool isReinterview;
+
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewDetailCopyWith<_InterviewDetail> get copyWith => __$InterviewDetailCopyWithImpl<_InterviewDetail>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewDetailToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.prepStep, prepStep) || other.prepStep == prepStep)&&(identical(other.company, company) || other.company == company)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.seniority, seniority) || other.seniority == seniority)&&(identical(other.questionCount, questionCount) || other.questionCount == questionCount)&&(identical(other.estimatedMin, estimatedMin) || other.estimatedMin == estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _competencies)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,type,status,createdAt,prepStep,company,role,area,seniority,questionCount,estimatedMin,const DeepCollectionEquality().hash(_competencies),errorCode,isReinterview);
+}
+
+@override
+String toString() {
+    return 'InterviewDetail(id: $id, type: $type, status: $status, createdAt: $createdAt, prepStep: $prepStep, company: $company, role: $role, area: $area, seniority: $seniority, questionCount: $questionCount, estimatedMin: $estimatedMin, competencies: $competencies, errorCode: $errorCode, isReinterview: $isReinterview)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewDetailCopyWith<$Res> implements $InterviewDetailCopyWith<$Res> {
+  factory _$InterviewDetailCopyWith(_InterviewDetail value, $Res Function(_InterviewDetail) _then) = __$InterviewDetailCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<String> competencies, String? errorCode, bool isReinterview
+});
+
+
+@override $CompanyInfoCopyWith<$Res>? get company;
+
+}
+/// @nodoc
+class __$InterviewDetailCopyWithImpl<$Res>
+    implements _$InterviewDetailCopyWith<$Res> {
+  __$InterviewDetailCopyWithImpl(this._self, this._then);
+
+  final _InterviewDetail _self;
+  final $Res Function(_InterviewDetail) _then;
+
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? isReinterview = null,}) {
+  return _then(_InterviewDetail(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,createdAt: null == createdAt ? _self.createdAt : createdAt // ignore: cast_nullable_to_non_nullable
+as String,prepStep: freezed == prepStep ? _self.prepStep : prepStep // ignore: cast_nullable_to_non_nullable
+as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
+as CompanyInfo?,role: freezed == role ? _self.role : role // ignore: cast_nullable_to_non_nullable
+as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to_non_nullable
+as String?,seniority: freezed == seniority ? _self.seniority : seniority // ignore: cast_nullable_to_non_nullable
+as String?,questionCount: freezed == questionCount ? _self.questionCount : questionCount // ignore: cast_nullable_to_non_nullable
+as int?,estimatedMin: freezed == estimatedMin ? _self.estimatedMin : estimatedMin // ignore: cast_nullable_to_non_nullable
+as int?,competencies: null == competencies ? _self._competencies : competencies // ignore: cast_nullable_to_non_nullable
+as List<String>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
+as String?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+/// Create a copy of InterviewDetail
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$CompanyInfoCopyWith<$Res>? get company {
+    if (_self.company == null) {
+    return null;
+  }
+
+  return $CompanyInfoCopyWith<$Res>(_self.company!, (value) {
+    return _then(_self.copyWith(company: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$InterviewSessionStart {
+
+ String get sessionId; int? get answeredCount; int? get totalQuestions;
+/// Create a copy of InterviewSessionStart
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewSessionStartCopyWith<InterviewSessionStart> get copyWith => _$InterviewSessionStartCopyWithImpl<InterviewSessionStart>(this as InterviewSessionStart, _$identity);
+
+  /// Serializes this InterviewSessionStart to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewSessionStart;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewSessionStart&&(identical(other.sessionId, _this.sessionId) || other.sessionId == _this.sessionId)&&(identical(other.answeredCount, _this.answeredCount) || other.answeredCount == _this.answeredCount)&&(identical(other.totalQuestions, _this.totalQuestions) || other.totalQuestions == _this.totalQuestions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewSessionStart;
+  return Object.hash(runtimeType,_this.sessionId,_this.answeredCount,_this.totalQuestions);
+}
+
+@override
+String toString() {
+  final _this = this as InterviewSessionStart;
+  return 'InterviewSessionStart(sessionId: ${_this.sessionId}, answeredCount: ${_this.answeredCount}, totalQuestions: ${_this.totalQuestions})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewSessionStartCopyWith<$Res>  {
+  factory $InterviewSessionStartCopyWith(InterviewSessionStart value, $Res Function(InterviewSessionStart) _then) = _$InterviewSessionStartCopyWithImpl;
+@useResult
+$Res call({
+ String sessionId, int? answeredCount, int? totalQuestions
+});
+
+
+
+
+}
+/// @nodoc
+class _$InterviewSessionStartCopyWithImpl<$Res>
+    implements $InterviewSessionStartCopyWith<$Res> {
+  _$InterviewSessionStartCopyWithImpl(this._self, this._then);
+
+  final InterviewSessionStart _self;
+  final $Res Function(InterviewSessionStart) _then;
+
+/// Create a copy of InterviewSessionStart
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? sessionId = null,Object? answeredCount = freezed,Object? totalQuestions = freezed,}) {
+  return _then(InterviewSessionStart(
+sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
+as String,answeredCount: freezed == answeredCount ? _self.answeredCount : answeredCount // ignore: cast_nullable_to_non_nullable
+as int?,totalQuestions: freezed == totalQuestions ? _self.totalQuestions : totalQuestions // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewSessionStart].
+extension InterviewSessionStartPatterns on InterviewSessionStart {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewSessionStart value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewSessionStart() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewSessionStart value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewSessionStart():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewSessionStart value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewSessionStart() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String sessionId,  int? answeredCount,  int? totalQuestions)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewSessionStart() when $default != null:
+return $default(_that.sessionId,_that.answeredCount,_that.totalQuestions);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String sessionId,  int? answeredCount,  int? totalQuestions)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewSessionStart():
+return $default(_that.sessionId,_that.answeredCount,_that.totalQuestions);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String sessionId,  int? answeredCount,  int? totalQuestions)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewSessionStart() when $default != null:
+return $default(_that.sessionId,_that.answeredCount,_that.totalQuestions);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewSessionStart implements InterviewSessionStart {
+  const _InterviewSessionStart({required this.sessionId, this.answeredCount, this.totalQuestions});
+  factory _InterviewSessionStart.fromJson(Map<String, dynamic> json) => _$InterviewSessionStartFromJson(json);
+
+@override final  String sessionId;
+@override final  int? answeredCount;
+@override final  int? totalQuestions;
+
+/// Create a copy of InterviewSessionStart
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewSessionStartCopyWith<_InterviewSessionStart> get copyWith => __$InterviewSessionStartCopyWithImpl<_InterviewSessionStart>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewSessionStartToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewSessionStart&&(identical(other.sessionId, sessionId) || other.sessionId == sessionId)&&(identical(other.answeredCount, answeredCount) || other.answeredCount == answeredCount)&&(identical(other.totalQuestions, totalQuestions) || other.totalQuestions == totalQuestions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,sessionId,answeredCount,totalQuestions);
+}
+
+@override
+String toString() {
+    return 'InterviewSessionStart(sessionId: $sessionId, answeredCount: $answeredCount, totalQuestions: $totalQuestions)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewSessionStartCopyWith<$Res> implements $InterviewSessionStartCopyWith<$Res> {
+  factory _$InterviewSessionStartCopyWith(_InterviewSessionStart value, $Res Function(_InterviewSessionStart) _then) = __$InterviewSessionStartCopyWithImpl;
+@override @useResult
+$Res call({
+ String sessionId, int? answeredCount, int? totalQuestions
+});
+
+
+
+
+}
+/// @nodoc
+class __$InterviewSessionStartCopyWithImpl<$Res>
+    implements _$InterviewSessionStartCopyWith<$Res> {
+  __$InterviewSessionStartCopyWithImpl(this._self, this._then);
+
+  final _InterviewSessionStart _self;
+  final $Res Function(_InterviewSessionStart) _then;
+
+/// Create a copy of InterviewSessionStart
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? sessionId = null,Object? answeredCount = freezed,Object? totalQuestions = freezed,}) {
+  return _then(_InterviewSessionStart(
+sessionId: null == sessionId ? _self.sessionId : sessionId // ignore: cast_nullable_to_non_nullable
+as String,answeredCount: freezed == answeredCount ? _self.answeredCount : answeredCount // ignore: cast_nullable_to_non_nullable
+as int?,totalQuestions: freezed == totalQuestions ? _self.totalQuestions : totalQuestions // ignore: cast_nullable_to_non_nullable
+as int?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$CompetencyFeedback {
+
+ String get competencyId; String get observedLevel; String get expectedLevel;/// Cita literal del candidato (I1: subcadena del transcript).
+ String get evidence; String get missing; String get study; bool get verified;
+/// Create a copy of CompetencyFeedback
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CompetencyFeedbackCopyWith<CompetencyFeedback> get copyWith => _$CompetencyFeedbackCopyWithImpl<CompetencyFeedback>(this as CompetencyFeedback, _$identity);
+
+  /// Serializes this CompetencyFeedback to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as CompetencyFeedback;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompetencyFeedback&&(identical(other.competencyId, _this.competencyId) || other.competencyId == _this.competencyId)&&(identical(other.observedLevel, _this.observedLevel) || other.observedLevel == _this.observedLevel)&&(identical(other.expectedLevel, _this.expectedLevel) || other.expectedLevel == _this.expectedLevel)&&(identical(other.evidence, _this.evidence) || other.evidence == _this.evidence)&&(identical(other.missing, _this.missing) || other.missing == _this.missing)&&(identical(other.study, _this.study) || other.study == _this.study)&&(identical(other.verified, _this.verified) || other.verified == _this.verified));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as CompetencyFeedback;
+  return Object.hash(runtimeType,_this.competencyId,_this.observedLevel,_this.expectedLevel,_this.evidence,_this.missing,_this.study,_this.verified);
+}
+
+@override
+String toString() {
+  final _this = this as CompetencyFeedback;
+  return 'CompetencyFeedback(competencyId: ${_this.competencyId}, observedLevel: ${_this.observedLevel}, expectedLevel: ${_this.expectedLevel}, evidence: ${_this.evidence}, missing: ${_this.missing}, study: ${_this.study}, verified: ${_this.verified})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CompetencyFeedbackCopyWith<$Res>  {
+  factory $CompetencyFeedbackCopyWith(CompetencyFeedback value, $Res Function(CompetencyFeedback) _then) = _$CompetencyFeedbackCopyWithImpl;
+@useResult
+$Res call({
+ String competencyId, String observedLevel, String expectedLevel, String evidence, String missing, String study, bool verified
+});
+
+
+
+
+}
+/// @nodoc
+class _$CompetencyFeedbackCopyWithImpl<$Res>
+    implements $CompetencyFeedbackCopyWith<$Res> {
+  _$CompetencyFeedbackCopyWithImpl(this._self, this._then);
+
+  final CompetencyFeedback _self;
+  final $Res Function(CompetencyFeedback) _then;
+
+/// Create a copy of CompetencyFeedback
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? competencyId = null,Object? observedLevel = null,Object? expectedLevel = null,Object? evidence = null,Object? missing = null,Object? study = null,Object? verified = null,}) {
+  return _then(CompetencyFeedback(
+competencyId: null == competencyId ? _self.competencyId : competencyId // ignore: cast_nullable_to_non_nullable
+as String,observedLevel: null == observedLevel ? _self.observedLevel : observedLevel // ignore: cast_nullable_to_non_nullable
+as String,expectedLevel: null == expectedLevel ? _self.expectedLevel : expectedLevel // ignore: cast_nullable_to_non_nullable
+as String,evidence: null == evidence ? _self.evidence : evidence // ignore: cast_nullable_to_non_nullable
+as String,missing: null == missing ? _self.missing : missing // ignore: cast_nullable_to_non_nullable
+as String,study: null == study ? _self.study : study // ignore: cast_nullable_to_non_nullable
+as String,verified: null == verified ? _self.verified : verified // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CompetencyFeedback].
+extension CompetencyFeedbackPatterns on CompetencyFeedback {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CompetencyFeedback value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CompetencyFeedback() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CompetencyFeedback value)  $default,){
+final _that = this;
+switch (_that) {
+case _CompetencyFeedback():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CompetencyFeedback value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CompetencyFeedback() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String competencyId,  String observedLevel,  String expectedLevel,  String evidence,  String missing,  String study,  bool verified)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CompetencyFeedback() when $default != null:
+return $default(_that.competencyId,_that.observedLevel,_that.expectedLevel,_that.evidence,_that.missing,_that.study,_that.verified);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String competencyId,  String observedLevel,  String expectedLevel,  String evidence,  String missing,  String study,  bool verified)  $default,) {final _that = this;
+switch (_that) {
+case _CompetencyFeedback():
+return $default(_that.competencyId,_that.observedLevel,_that.expectedLevel,_that.evidence,_that.missing,_that.study,_that.verified);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String competencyId,  String observedLevel,  String expectedLevel,  String evidence,  String missing,  String study,  bool verified)?  $default,) {final _that = this;
+switch (_that) {
+case _CompetencyFeedback() when $default != null:
+return $default(_that.competencyId,_that.observedLevel,_that.expectedLevel,_that.evidence,_that.missing,_that.study,_that.verified);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CompetencyFeedback implements CompetencyFeedback {
+  const _CompetencyFeedback({required this.competencyId, required this.observedLevel, required this.expectedLevel, required this.evidence, required this.missing, required this.study, required this.verified});
+  factory _CompetencyFeedback.fromJson(Map<String, dynamic> json) => _$CompetencyFeedbackFromJson(json);
+
+@override final  String competencyId;
+@override final  String observedLevel;
+@override final  String expectedLevel;
+/// Cita literal del candidato (I1: subcadena del transcript).
+@override final  String evidence;
+@override final  String missing;
+@override final  String study;
+@override final  bool verified;
+
+/// Create a copy of CompetencyFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CompetencyFeedbackCopyWith<_CompetencyFeedback> get copyWith => __$CompetencyFeedbackCopyWithImpl<_CompetencyFeedback>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CompetencyFeedbackToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompetencyFeedback&&(identical(other.competencyId, competencyId) || other.competencyId == competencyId)&&(identical(other.observedLevel, observedLevel) || other.observedLevel == observedLevel)&&(identical(other.expectedLevel, expectedLevel) || other.expectedLevel == expectedLevel)&&(identical(other.evidence, evidence) || other.evidence == evidence)&&(identical(other.missing, missing) || other.missing == missing)&&(identical(other.study, study) || other.study == study)&&(identical(other.verified, verified) || other.verified == verified));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,competencyId,observedLevel,expectedLevel,evidence,missing,study,verified);
+}
+
+@override
+String toString() {
+    return 'CompetencyFeedback(competencyId: $competencyId, observedLevel: $observedLevel, expectedLevel: $expectedLevel, evidence: $evidence, missing: $missing, study: $study, verified: $verified)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CompetencyFeedbackCopyWith<$Res> implements $CompetencyFeedbackCopyWith<$Res> {
+  factory _$CompetencyFeedbackCopyWith(_CompetencyFeedback value, $Res Function(_CompetencyFeedback) _then) = __$CompetencyFeedbackCopyWithImpl;
+@override @useResult
+$Res call({
+ String competencyId, String observedLevel, String expectedLevel, String evidence, String missing, String study, bool verified
+});
+
+
+
+
+}
+/// @nodoc
+class __$CompetencyFeedbackCopyWithImpl<$Res>
+    implements _$CompetencyFeedbackCopyWith<$Res> {
+  __$CompetencyFeedbackCopyWithImpl(this._self, this._then);
+
+  final _CompetencyFeedback _self;
+  final $Res Function(_CompetencyFeedback) _then;
+
+/// Create a copy of CompetencyFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? competencyId = null,Object? observedLevel = null,Object? expectedLevel = null,Object? evidence = null,Object? missing = null,Object? study = null,Object? verified = null,}) {
+  return _then(_CompetencyFeedback(
+competencyId: null == competencyId ? _self.competencyId : competencyId // ignore: cast_nullable_to_non_nullable
+as String,observedLevel: null == observedLevel ? _self.observedLevel : observedLevel // ignore: cast_nullable_to_non_nullable
+as String,expectedLevel: null == expectedLevel ? _self.expectedLevel : expectedLevel // ignore: cast_nullable_to_non_nullable
+as String,evidence: null == evidence ? _self.evidence : evidence // ignore: cast_nullable_to_non_nullable
+as String,missing: null == missing ? _self.missing : missing // ignore: cast_nullable_to_non_nullable
+as String,study: null == study ? _self.study : study // ignore: cast_nullable_to_non_nullable
+as String,verified: null == verified ? _self.verified : verified // ignore: cast_nullable_to_non_nullable
+as bool,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$EnglishAspect {
+
+ String get rating; String get note;
+/// Create a copy of EnglishAspect
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EnglishAspectCopyWith<EnglishAspect> get copyWith => _$EnglishAspectCopyWithImpl<EnglishAspect>(this as EnglishAspect, _$identity);
+
+  /// Serializes this EnglishAspect to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as EnglishAspect;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EnglishAspect&&(identical(other.rating, _this.rating) || other.rating == _this.rating)&&(identical(other.note, _this.note) || other.note == _this.note));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as EnglishAspect;
+  return Object.hash(runtimeType,_this.rating,_this.note);
+}
+
+@override
+String toString() {
+  final _this = this as EnglishAspect;
+  return 'EnglishAspect(rating: ${_this.rating}, note: ${_this.note})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EnglishAspectCopyWith<$Res>  {
+  factory $EnglishAspectCopyWith(EnglishAspect value, $Res Function(EnglishAspect) _then) = _$EnglishAspectCopyWithImpl;
+@useResult
+$Res call({
+ String rating, String note
+});
+
+
+
+
+}
+/// @nodoc
+class _$EnglishAspectCopyWithImpl<$Res>
+    implements $EnglishAspectCopyWith<$Res> {
+  _$EnglishAspectCopyWithImpl(this._self, this._then);
+
+  final EnglishAspect _self;
+  final $Res Function(EnglishAspect) _then;
+
+/// Create a copy of EnglishAspect
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? rating = null,Object? note = null,}) {
+  return _then(EnglishAspect(
+rating: null == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
+as String,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [EnglishAspect].
+extension EnglishAspectPatterns on EnglishAspect {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EnglishAspect value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EnglishAspect() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EnglishAspect value)  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishAspect():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EnglishAspect value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishAspect() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String rating,  String note)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EnglishAspect() when $default != null:
+return $default(_that.rating,_that.note);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String rating,  String note)  $default,) {final _that = this;
+switch (_that) {
+case _EnglishAspect():
+return $default(_that.rating,_that.note);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String rating,  String note)?  $default,) {final _that = this;
+switch (_that) {
+case _EnglishAspect() when $default != null:
+return $default(_that.rating,_that.note);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _EnglishAspect implements EnglishAspect {
+  const _EnglishAspect({required this.rating, required this.note});
+  factory _EnglishAspect.fromJson(Map<String, dynamic> json) => _$EnglishAspectFromJson(json);
+
+@override final  String rating;
+@override final  String note;
+
+/// Create a copy of EnglishAspect
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EnglishAspectCopyWith<_EnglishAspect> get copyWith => __$EnglishAspectCopyWithImpl<_EnglishAspect>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$EnglishAspectToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EnglishAspect&&(identical(other.rating, rating) || other.rating == rating)&&(identical(other.note, note) || other.note == note));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,rating,note);
+}
+
+@override
+String toString() {
+    return 'EnglishAspect(rating: $rating, note: $note)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EnglishAspectCopyWith<$Res> implements $EnglishAspectCopyWith<$Res> {
+  factory _$EnglishAspectCopyWith(_EnglishAspect value, $Res Function(_EnglishAspect) _then) = __$EnglishAspectCopyWithImpl;
+@override @useResult
+$Res call({
+ String rating, String note
+});
+
+
+
+
+}
+/// @nodoc
+class __$EnglishAspectCopyWithImpl<$Res>
+    implements _$EnglishAspectCopyWith<$Res> {
+  __$EnglishAspectCopyWithImpl(this._self, this._then);
+
+  final _EnglishAspect _self;
+  final $Res Function(_EnglishAspect) _then;
+
+/// Create a copy of EnglishAspect
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? rating = null,Object? note = null,}) {
+  return _then(_EnglishAspect(
+rating: null == rating ? _self.rating : rating // ignore: cast_nullable_to_non_nullable
+as String,note: null == note ? _self.note : note // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$EnglishErrorItem {
+
+ String get original; String get corrected; String get explanation;
+/// Create a copy of EnglishErrorItem
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EnglishErrorItemCopyWith<EnglishErrorItem> get copyWith => _$EnglishErrorItemCopyWithImpl<EnglishErrorItem>(this as EnglishErrorItem, _$identity);
+
+  /// Serializes this EnglishErrorItem to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as EnglishErrorItem;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EnglishErrorItem&&(identical(other.original, _this.original) || other.original == _this.original)&&(identical(other.corrected, _this.corrected) || other.corrected == _this.corrected)&&(identical(other.explanation, _this.explanation) || other.explanation == _this.explanation));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as EnglishErrorItem;
+  return Object.hash(runtimeType,_this.original,_this.corrected,_this.explanation);
+}
+
+@override
+String toString() {
+  final _this = this as EnglishErrorItem;
+  return 'EnglishErrorItem(original: ${_this.original}, corrected: ${_this.corrected}, explanation: ${_this.explanation})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EnglishErrorItemCopyWith<$Res>  {
+  factory $EnglishErrorItemCopyWith(EnglishErrorItem value, $Res Function(EnglishErrorItem) _then) = _$EnglishErrorItemCopyWithImpl;
+@useResult
+$Res call({
+ String original, String corrected, String explanation
+});
+
+
+
+
+}
+/// @nodoc
+class _$EnglishErrorItemCopyWithImpl<$Res>
+    implements $EnglishErrorItemCopyWith<$Res> {
+  _$EnglishErrorItemCopyWithImpl(this._self, this._then);
+
+  final EnglishErrorItem _self;
+  final $Res Function(EnglishErrorItem) _then;
+
+/// Create a copy of EnglishErrorItem
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? original = null,Object? corrected = null,Object? explanation = null,}) {
+  return _then(EnglishErrorItem(
+original: null == original ? _self.original : original // ignore: cast_nullable_to_non_nullable
+as String,corrected: null == corrected ? _self.corrected : corrected // ignore: cast_nullable_to_non_nullable
+as String,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [EnglishErrorItem].
+extension EnglishErrorItemPatterns on EnglishErrorItem {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EnglishErrorItem value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EnglishErrorItem() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EnglishErrorItem value)  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishErrorItem():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EnglishErrorItem value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishErrorItem() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String original,  String corrected,  String explanation)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EnglishErrorItem() when $default != null:
+return $default(_that.original,_that.corrected,_that.explanation);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String original,  String corrected,  String explanation)  $default,) {final _that = this;
+switch (_that) {
+case _EnglishErrorItem():
+return $default(_that.original,_that.corrected,_that.explanation);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String original,  String corrected,  String explanation)?  $default,) {final _that = this;
+switch (_that) {
+case _EnglishErrorItem() when $default != null:
+return $default(_that.original,_that.corrected,_that.explanation);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _EnglishErrorItem implements EnglishErrorItem {
+  const _EnglishErrorItem({required this.original, required this.corrected, required this.explanation});
+  factory _EnglishErrorItem.fromJson(Map<String, dynamic> json) => _$EnglishErrorItemFromJson(json);
+
+@override final  String original;
+@override final  String corrected;
+@override final  String explanation;
+
+/// Create a copy of EnglishErrorItem
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EnglishErrorItemCopyWith<_EnglishErrorItem> get copyWith => __$EnglishErrorItemCopyWithImpl<_EnglishErrorItem>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$EnglishErrorItemToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EnglishErrorItem&&(identical(other.original, original) || other.original == original)&&(identical(other.corrected, corrected) || other.corrected == corrected)&&(identical(other.explanation, explanation) || other.explanation == explanation));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,original,corrected,explanation);
+}
+
+@override
+String toString() {
+    return 'EnglishErrorItem(original: $original, corrected: $corrected, explanation: $explanation)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EnglishErrorItemCopyWith<$Res> implements $EnglishErrorItemCopyWith<$Res> {
+  factory _$EnglishErrorItemCopyWith(_EnglishErrorItem value, $Res Function(_EnglishErrorItem) _then) = __$EnglishErrorItemCopyWithImpl;
+@override @useResult
+$Res call({
+ String original, String corrected, String explanation
+});
+
+
+
+
+}
+/// @nodoc
+class __$EnglishErrorItemCopyWithImpl<$Res>
+    implements _$EnglishErrorItemCopyWith<$Res> {
+  __$EnglishErrorItemCopyWithImpl(this._self, this._then);
+
+  final _EnglishErrorItem _self;
+  final $Res Function(_EnglishErrorItem) _then;
+
+/// Create a copy of EnglishErrorItem
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? original = null,Object? corrected = null,Object? explanation = null,}) {
+  return _then(_EnglishErrorItem(
+original: null == original ? _self.original : original // ignore: cast_nullable_to_non_nullable
+as String,corrected: null == corrected ? _self.corrected : corrected // ignore: cast_nullable_to_non_nullable
+as String,explanation: null == explanation ? _self.explanation : explanation // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$EnglishFeedback {
+
+ EnglishAspect get clarity; EnglishAspect get vocabulary; List<EnglishErrorItem> get errors;
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$EnglishFeedbackCopyWith<EnglishFeedback> get copyWith => _$EnglishFeedbackCopyWithImpl<EnglishFeedback>(this as EnglishFeedback, _$identity);
+
+  /// Serializes this EnglishFeedback to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as EnglishFeedback;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is EnglishFeedback&&(identical(other.clarity, _this.clarity) || other.clarity == _this.clarity)&&(identical(other.vocabulary, _this.vocabulary) || other.vocabulary == _this.vocabulary)&&const DeepCollectionEquality().equals(other.errors, _this.errors));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as EnglishFeedback;
+  return Object.hash(runtimeType,_this.clarity,_this.vocabulary,const DeepCollectionEquality().hash(_this.errors));
+}
+
+@override
+String toString() {
+  final _this = this as EnglishFeedback;
+  return 'EnglishFeedback(clarity: ${_this.clarity}, vocabulary: ${_this.vocabulary}, errors: ${_this.errors})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $EnglishFeedbackCopyWith<$Res>  {
+  factory $EnglishFeedbackCopyWith(EnglishFeedback value, $Res Function(EnglishFeedback) _then) = _$EnglishFeedbackCopyWithImpl;
+@useResult
+$Res call({
+ EnglishAspect clarity, EnglishAspect vocabulary, List<EnglishErrorItem> errors
+});
+
+
+$EnglishAspectCopyWith<$Res> get clarity;$EnglishAspectCopyWith<$Res> get vocabulary;
+
+}
+/// @nodoc
+class _$EnglishFeedbackCopyWithImpl<$Res>
+    implements $EnglishFeedbackCopyWith<$Res> {
+  _$EnglishFeedbackCopyWithImpl(this._self, this._then);
+
+  final EnglishFeedback _self;
+  final $Res Function(EnglishFeedback) _then;
+
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? clarity = null,Object? vocabulary = null,Object? errors = null,}) {
+  return _then(EnglishFeedback(
+clarity: null == clarity ? _self.clarity : clarity // ignore: cast_nullable_to_non_nullable
+as EnglishAspect,vocabulary: null == vocabulary ? _self.vocabulary : vocabulary // ignore: cast_nullable_to_non_nullable
+as EnglishAspect,errors: null == errors ? _self.errors : errors // ignore: cast_nullable_to_non_nullable
+as List<EnglishErrorItem>,
+  ));
+}
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishAspectCopyWith<$Res> get clarity {
+  
+  return $EnglishAspectCopyWith<$Res>(_self.clarity, (value) {
+    return _then(_self.copyWith(clarity: value));
+  });
+}/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishAspectCopyWith<$Res> get vocabulary {
+  
+  return $EnglishAspectCopyWith<$Res>(_self.vocabulary, (value) {
+    return _then(_self.copyWith(vocabulary: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [EnglishFeedback].
+extension EnglishFeedbackPatterns on EnglishFeedback {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _EnglishFeedback value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _EnglishFeedback() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _EnglishFeedback value)  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishFeedback():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _EnglishFeedback value)?  $default,){
+final _that = this;
+switch (_that) {
+case _EnglishFeedback() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( EnglishAspect clarity,  EnglishAspect vocabulary,  List<EnglishErrorItem> errors)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _EnglishFeedback() when $default != null:
+return $default(_that.clarity,_that.vocabulary,_that.errors);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( EnglishAspect clarity,  EnglishAspect vocabulary,  List<EnglishErrorItem> errors)  $default,) {final _that = this;
+switch (_that) {
+case _EnglishFeedback():
+return $default(_that.clarity,_that.vocabulary,_that.errors);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( EnglishAspect clarity,  EnglishAspect vocabulary,  List<EnglishErrorItem> errors)?  $default,) {final _that = this;
+switch (_that) {
+case _EnglishFeedback() when $default != null:
+return $default(_that.clarity,_that.vocabulary,_that.errors);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _EnglishFeedback implements EnglishFeedback {
+  const _EnglishFeedback({required this.clarity, required this.vocabulary,  List<EnglishErrorItem> errors = const <EnglishErrorItem>[]}): _errors = errors;
+  factory _EnglishFeedback.fromJson(Map<String, dynamic> json) => _$EnglishFeedbackFromJson(json);
+
+@override final  EnglishAspect clarity;
+@override final  EnglishAspect vocabulary;
+ final  List<EnglishErrorItem> _errors;
+@override@JsonKey() List<EnglishErrorItem> get errors {
+  if (_errors is EqualUnmodifiableListView) return _errors;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_errors);
+}
+
+
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$EnglishFeedbackCopyWith<_EnglishFeedback> get copyWith => __$EnglishFeedbackCopyWithImpl<_EnglishFeedback>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$EnglishFeedbackToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _EnglishFeedback&&(identical(other.clarity, clarity) || other.clarity == clarity)&&(identical(other.vocabulary, vocabulary) || other.vocabulary == vocabulary)&&const DeepCollectionEquality().equals(other.errors, _errors));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,clarity,vocabulary,const DeepCollectionEquality().hash(_errors));
+}
+
+@override
+String toString() {
+    return 'EnglishFeedback(clarity: $clarity, vocabulary: $vocabulary, errors: $errors)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$EnglishFeedbackCopyWith<$Res> implements $EnglishFeedbackCopyWith<$Res> {
+  factory _$EnglishFeedbackCopyWith(_EnglishFeedback value, $Res Function(_EnglishFeedback) _then) = __$EnglishFeedbackCopyWithImpl;
+@override @useResult
+$Res call({
+ EnglishAspect clarity, EnglishAspect vocabulary, List<EnglishErrorItem> errors
+});
+
+
+@override $EnglishAspectCopyWith<$Res> get clarity;@override $EnglishAspectCopyWith<$Res> get vocabulary;
+
+}
+/// @nodoc
+class __$EnglishFeedbackCopyWithImpl<$Res>
+    implements _$EnglishFeedbackCopyWith<$Res> {
+  __$EnglishFeedbackCopyWithImpl(this._self, this._then);
+
+  final _EnglishFeedback _self;
+  final $Res Function(_EnglishFeedback) _then;
+
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? clarity = null,Object? vocabulary = null,Object? errors = null,}) {
+  return _then(_EnglishFeedback(
+clarity: null == clarity ? _self.clarity : clarity // ignore: cast_nullable_to_non_nullable
+as EnglishAspect,vocabulary: null == vocabulary ? _self.vocabulary : vocabulary // ignore: cast_nullable_to_non_nullable
+as EnglishAspect,errors: null == errors ? _self._errors : errors // ignore: cast_nullable_to_non_nullable
+as List<EnglishErrorItem>,
+  ));
+}
+
+/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishAspectCopyWith<$Res> get clarity {
+  
+  return $EnglishAspectCopyWith<$Res>(_self.clarity, (value) {
+    return _then(_self.copyWith(clarity: value));
+  });
+}/// Create a copy of EnglishFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishAspectCopyWith<$Res> get vocabulary {
+  
+  return $EnglishAspectCopyWith<$Res>(_self.vocabulary, (value) {
+    return _then(_self.copyWith(vocabulary: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$CompetencyComparison {
+
+ String get competencyId; String get before; String get after; String get trend;
+/// Create a copy of CompetencyComparison
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$CompetencyComparisonCopyWith<CompetencyComparison> get copyWith => _$CompetencyComparisonCopyWithImpl<CompetencyComparison>(this as CompetencyComparison, _$identity);
+
+  /// Serializes this CompetencyComparison to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as CompetencyComparison;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is CompetencyComparison&&(identical(other.competencyId, _this.competencyId) || other.competencyId == _this.competencyId)&&(identical(other.before, _this.before) || other.before == _this.before)&&(identical(other.after, _this.after) || other.after == _this.after)&&(identical(other.trend, _this.trend) || other.trend == _this.trend));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as CompetencyComparison;
+  return Object.hash(runtimeType,_this.competencyId,_this.before,_this.after,_this.trend);
+}
+
+@override
+String toString() {
+  final _this = this as CompetencyComparison;
+  return 'CompetencyComparison(competencyId: ${_this.competencyId}, before: ${_this.before}, after: ${_this.after}, trend: ${_this.trend})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $CompetencyComparisonCopyWith<$Res>  {
+  factory $CompetencyComparisonCopyWith(CompetencyComparison value, $Res Function(CompetencyComparison) _then) = _$CompetencyComparisonCopyWithImpl;
+@useResult
+$Res call({
+ String competencyId, String before, String after, String trend
+});
+
+
+
+
+}
+/// @nodoc
+class _$CompetencyComparisonCopyWithImpl<$Res>
+    implements $CompetencyComparisonCopyWith<$Res> {
+  _$CompetencyComparisonCopyWithImpl(this._self, this._then);
+
+  final CompetencyComparison _self;
+  final $Res Function(CompetencyComparison) _then;
+
+/// Create a copy of CompetencyComparison
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? competencyId = null,Object? before = null,Object? after = null,Object? trend = null,}) {
+  return _then(CompetencyComparison(
+competencyId: null == competencyId ? _self.competencyId : competencyId // ignore: cast_nullable_to_non_nullable
+as String,before: null == before ? _self.before : before // ignore: cast_nullable_to_non_nullable
+as String,after: null == after ? _self.after : after // ignore: cast_nullable_to_non_nullable
+as String,trend: null == trend ? _self.trend : trend // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [CompetencyComparison].
+extension CompetencyComparisonPatterns on CompetencyComparison {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _CompetencyComparison value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _CompetencyComparison() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _CompetencyComparison value)  $default,){
+final _that = this;
+switch (_that) {
+case _CompetencyComparison():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _CompetencyComparison value)?  $default,){
+final _that = this;
+switch (_that) {
+case _CompetencyComparison() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String competencyId,  String before,  String after,  String trend)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _CompetencyComparison() when $default != null:
+return $default(_that.competencyId,_that.before,_that.after,_that.trend);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String competencyId,  String before,  String after,  String trend)  $default,) {final _that = this;
+switch (_that) {
+case _CompetencyComparison():
+return $default(_that.competencyId,_that.before,_that.after,_that.trend);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String competencyId,  String before,  String after,  String trend)?  $default,) {final _that = this;
+switch (_that) {
+case _CompetencyComparison() when $default != null:
+return $default(_that.competencyId,_that.before,_that.after,_that.trend);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _CompetencyComparison implements CompetencyComparison {
+  const _CompetencyComparison({required this.competencyId, required this.before, required this.after, required this.trend});
+  factory _CompetencyComparison.fromJson(Map<String, dynamic> json) => _$CompetencyComparisonFromJson(json);
+
+@override final  String competencyId;
+@override final  String before;
+@override final  String after;
+@override final  String trend;
+
+/// Create a copy of CompetencyComparison
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$CompetencyComparisonCopyWith<_CompetencyComparison> get copyWith => __$CompetencyComparisonCopyWithImpl<_CompetencyComparison>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$CompetencyComparisonToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _CompetencyComparison&&(identical(other.competencyId, competencyId) || other.competencyId == competencyId)&&(identical(other.before, before) || other.before == before)&&(identical(other.after, after) || other.after == after)&&(identical(other.trend, trend) || other.trend == trend));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,competencyId,before,after,trend);
+}
+
+@override
+String toString() {
+    return 'CompetencyComparison(competencyId: $competencyId, before: $before, after: $after, trend: $trend)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$CompetencyComparisonCopyWith<$Res> implements $CompetencyComparisonCopyWith<$Res> {
+  factory _$CompetencyComparisonCopyWith(_CompetencyComparison value, $Res Function(_CompetencyComparison) _then) = __$CompetencyComparisonCopyWithImpl;
+@override @useResult
+$Res call({
+ String competencyId, String before, String after, String trend
+});
+
+
+
+
+}
+/// @nodoc
+class __$CompetencyComparisonCopyWithImpl<$Res>
+    implements _$CompetencyComparisonCopyWith<$Res> {
+  __$CompetencyComparisonCopyWithImpl(this._self, this._then);
+
+  final _CompetencyComparison _self;
+  final $Res Function(_CompetencyComparison) _then;
+
+/// Create a copy of CompetencyComparison
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? competencyId = null,Object? before = null,Object? after = null,Object? trend = null,}) {
+  return _then(_CompetencyComparison(
+competencyId: null == competencyId ? _self.competencyId : competencyId // ignore: cast_nullable_to_non_nullable
+as String,before: null == before ? _self.before : before // ignore: cast_nullable_to_non_nullable
+as String,after: null == after ? _self.after : after // ignore: cast_nullable_to_non_nullable
+as String,trend: null == trend ? _self.trend : trend // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$StudyPlanItemDto {
+
+ int get idx; String get focus; String get title; String get format; int get estMin; String get brief;
+/// Create a copy of StudyPlanItemDto
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StudyPlanItemDtoCopyWith<StudyPlanItemDto> get copyWith => _$StudyPlanItemDtoCopyWithImpl<StudyPlanItemDto>(this as StudyPlanItemDto, _$identity);
+
+  /// Serializes this StudyPlanItemDto to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as StudyPlanItemDto;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StudyPlanItemDto&&(identical(other.idx, _this.idx) || other.idx == _this.idx)&&(identical(other.focus, _this.focus) || other.focus == _this.focus)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.format, _this.format) || other.format == _this.format)&&(identical(other.estMin, _this.estMin) || other.estMin == _this.estMin)&&(identical(other.brief, _this.brief) || other.brief == _this.brief));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as StudyPlanItemDto;
+  return Object.hash(runtimeType,_this.idx,_this.focus,_this.title,_this.format,_this.estMin,_this.brief);
+}
+
+@override
+String toString() {
+  final _this = this as StudyPlanItemDto;
+  return 'StudyPlanItemDto(idx: ${_this.idx}, focus: ${_this.focus}, title: ${_this.title}, format: ${_this.format}, estMin: ${_this.estMin}, brief: ${_this.brief})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StudyPlanItemDtoCopyWith<$Res>  {
+  factory $StudyPlanItemDtoCopyWith(StudyPlanItemDto value, $Res Function(StudyPlanItemDto) _then) = _$StudyPlanItemDtoCopyWithImpl;
+@useResult
+$Res call({
+ int idx, String focus, String title, String format, int estMin, String brief
+});
+
+
+
+
+}
+/// @nodoc
+class _$StudyPlanItemDtoCopyWithImpl<$Res>
+    implements $StudyPlanItemDtoCopyWith<$Res> {
+  _$StudyPlanItemDtoCopyWithImpl(this._self, this._then);
+
+  final StudyPlanItemDto _self;
+  final $Res Function(StudyPlanItemDto) _then;
+
+/// Create a copy of StudyPlanItemDto
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? idx = null,Object? focus = null,Object? title = null,Object? format = null,Object? estMin = null,Object? brief = null,}) {
+  return _then(StudyPlanItemDto(
+idx: null == idx ? _self.idx : idx // ignore: cast_nullable_to_non_nullable
+as int,focus: null == focus ? _self.focus : focus // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as String,estMin: null == estMin ? _self.estMin : estMin // ignore: cast_nullable_to_non_nullable
+as int,brief: null == brief ? _self.brief : brief // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [StudyPlanItemDto].
+extension StudyPlanItemDtoPatterns on StudyPlanItemDto {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StudyPlanItemDto value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StudyPlanItemDto() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StudyPlanItemDto value)  $default,){
+final _that = this;
+switch (_that) {
+case _StudyPlanItemDto():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StudyPlanItemDto value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StudyPlanItemDto() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int idx,  String focus,  String title,  String format,  int estMin,  String brief)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StudyPlanItemDto() when $default != null:
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.brief);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int idx,  String focus,  String title,  String format,  int estMin,  String brief)  $default,) {final _that = this;
+switch (_that) {
+case _StudyPlanItemDto():
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.brief);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int idx,  String focus,  String title,  String format,  int estMin,  String brief)?  $default,) {final _that = this;
+switch (_that) {
+case _StudyPlanItemDto() when $default != null:
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.brief);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StudyPlanItemDto implements StudyPlanItemDto {
+  const _StudyPlanItemDto({required this.idx, required this.focus, required this.title, required this.format, required this.estMin, required this.brief});
+  factory _StudyPlanItemDto.fromJson(Map<String, dynamic> json) => _$StudyPlanItemDtoFromJson(json);
+
+@override final  int idx;
+@override final  String focus;
+@override final  String title;
+@override final  String format;
+@override final  int estMin;
+@override final  String brief;
+
+/// Create a copy of StudyPlanItemDto
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StudyPlanItemDtoCopyWith<_StudyPlanItemDto> get copyWith => __$StudyPlanItemDtoCopyWithImpl<_StudyPlanItemDto>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StudyPlanItemDtoToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _StudyPlanItemDto&&(identical(other.idx, idx) || other.idx == idx)&&(identical(other.focus, focus) || other.focus == focus)&&(identical(other.title, title) || other.title == title)&&(identical(other.format, format) || other.format == format)&&(identical(other.estMin, estMin) || other.estMin == estMin)&&(identical(other.brief, brief) || other.brief == brief));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,idx,focus,title,format,estMin,brief);
+}
+
+@override
+String toString() {
+    return 'StudyPlanItemDto(idx: $idx, focus: $focus, title: $title, format: $format, estMin: $estMin, brief: $brief)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StudyPlanItemDtoCopyWith<$Res> implements $StudyPlanItemDtoCopyWith<$Res> {
+  factory _$StudyPlanItemDtoCopyWith(_StudyPlanItemDto value, $Res Function(_StudyPlanItemDto) _then) = __$StudyPlanItemDtoCopyWithImpl;
+@override @useResult
+$Res call({
+ int idx, String focus, String title, String format, int estMin, String brief
+});
+
+
+
+
+}
+/// @nodoc
+class __$StudyPlanItemDtoCopyWithImpl<$Res>
+    implements _$StudyPlanItemDtoCopyWith<$Res> {
+  __$StudyPlanItemDtoCopyWithImpl(this._self, this._then);
+
+  final _StudyPlanItemDto _self;
+  final $Res Function(_StudyPlanItemDto) _then;
+
+/// Create a copy of StudyPlanItemDto
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? idx = null,Object? focus = null,Object? title = null,Object? format = null,Object? estMin = null,Object? brief = null,}) {
+  return _then(_StudyPlanItemDto(
+idx: null == idx ? _self.idx : idx // ignore: cast_nullable_to_non_nullable
+as int,focus: null == focus ? _self.focus : focus // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as String,estMin: null == estMin ? _self.estMin : estMin // ignore: cast_nullable_to_non_nullable
+as int,brief: null == brief ? _self.brief : brief // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$InterviewFeedback {
+
+ String get summary; List<CompetencyFeedback> get competencies; EnglishFeedback get english;/// Solo presente en una re-entrevista (FR-19, IE-08).
+ List<CompetencyComparison>? get comparison;/// Exactamente 5 items (invariante de I1).
+ List<StudyPlanItemDto> get studyPlan;
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewFeedbackCopyWith<InterviewFeedback> get copyWith => _$InterviewFeedbackCopyWithImpl<InterviewFeedback>(this as InterviewFeedback, _$identity);
+
+  /// Serializes this InterviewFeedback to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewFeedback;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewFeedback&&(identical(other.summary, _this.summary) || other.summary == _this.summary)&&const DeepCollectionEquality().equals(other.competencies, _this.competencies)&&(identical(other.english, _this.english) || other.english == _this.english)&&const DeepCollectionEquality().equals(other.comparison, _this.comparison)&&const DeepCollectionEquality().equals(other.studyPlan, _this.studyPlan));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewFeedback;
+  return Object.hash(runtimeType,_this.summary,const DeepCollectionEquality().hash(_this.competencies),_this.english,const DeepCollectionEquality().hash(_this.comparison),const DeepCollectionEquality().hash(_this.studyPlan));
+}
+
+@override
+String toString() {
+  final _this = this as InterviewFeedback;
+  return 'InterviewFeedback(summary: ${_this.summary}, competencies: ${_this.competencies}, english: ${_this.english}, comparison: ${_this.comparison}, studyPlan: ${_this.studyPlan})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewFeedbackCopyWith<$Res>  {
+  factory $InterviewFeedbackCopyWith(InterviewFeedback value, $Res Function(InterviewFeedback) _then) = _$InterviewFeedbackCopyWithImpl;
+@useResult
+$Res call({
+ String summary, List<CompetencyFeedback> competencies, EnglishFeedback english, List<CompetencyComparison>? comparison, List<StudyPlanItemDto> studyPlan
+});
+
+
+$EnglishFeedbackCopyWith<$Res> get english;
+
+}
+/// @nodoc
+class _$InterviewFeedbackCopyWithImpl<$Res>
+    implements $InterviewFeedbackCopyWith<$Res> {
+  _$InterviewFeedbackCopyWithImpl(this._self, this._then);
+
+  final InterviewFeedback _self;
+  final $Res Function(InterviewFeedback) _then;
+
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? summary = null,Object? competencies = null,Object? english = null,Object? comparison = freezed,Object? studyPlan = null,}) {
+  return _then(InterviewFeedback(
+summary: null == summary ? _self.summary : summary // ignore: cast_nullable_to_non_nullable
+as String,competencies: null == competencies ? _self.competencies : competencies // ignore: cast_nullable_to_non_nullable
+as List<CompetencyFeedback>,english: null == english ? _self.english : english // ignore: cast_nullable_to_non_nullable
+as EnglishFeedback,comparison: freezed == comparison ? _self.comparison : comparison // ignore: cast_nullable_to_non_nullable
+as List<CompetencyComparison>?,studyPlan: null == studyPlan ? _self.studyPlan : studyPlan // ignore: cast_nullable_to_non_nullable
+as List<StudyPlanItemDto>,
+  ));
+}
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishFeedbackCopyWith<$Res> get english {
+  
+  return $EnglishFeedbackCopyWith<$Res>(_self.english, (value) {
+    return _then(_self.copyWith(english: value));
+  });
+}
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewFeedback].
+extension InterviewFeedbackPatterns on InterviewFeedback {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewFeedback value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewFeedback() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewFeedback value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewFeedback():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewFeedback value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewFeedback() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String summary,  List<CompetencyFeedback> competencies,  EnglishFeedback english,  List<CompetencyComparison>? comparison,  List<StudyPlanItemDto> studyPlan)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewFeedback() when $default != null:
+return $default(_that.summary,_that.competencies,_that.english,_that.comparison,_that.studyPlan);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String summary,  List<CompetencyFeedback> competencies,  EnglishFeedback english,  List<CompetencyComparison>? comparison,  List<StudyPlanItemDto> studyPlan)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewFeedback():
+return $default(_that.summary,_that.competencies,_that.english,_that.comparison,_that.studyPlan);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String summary,  List<CompetencyFeedback> competencies,  EnglishFeedback english,  List<CompetencyComparison>? comparison,  List<StudyPlanItemDto> studyPlan)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewFeedback() when $default != null:
+return $default(_that.summary,_that.competencies,_that.english,_that.comparison,_that.studyPlan);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewFeedback implements InterviewFeedback {
+  const _InterviewFeedback({required this.summary,  List<CompetencyFeedback> competencies = const <CompetencyFeedback>[], required this.english,  List<CompetencyComparison>? comparison,  List<StudyPlanItemDto> studyPlan = const <StudyPlanItemDto>[]}): _competencies = competencies,_comparison = comparison,_studyPlan = studyPlan;
+  factory _InterviewFeedback.fromJson(Map<String, dynamic> json) => _$InterviewFeedbackFromJson(json);
+
+@override final  String summary;
+ final  List<CompetencyFeedback> _competencies;
+@override@JsonKey() List<CompetencyFeedback> get competencies {
+  if (_competencies is EqualUnmodifiableListView) return _competencies;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_competencies);
+}
+
+@override final  EnglishFeedback english;
+/// Solo presente en una re-entrevista (FR-19, IE-08).
+ final  List<CompetencyComparison>? _comparison;
+/// Solo presente en una re-entrevista (FR-19, IE-08).
+@override List<CompetencyComparison>? get comparison {
+  final value = _comparison;
+  if (value == null) return null;
+  if (_comparison is EqualUnmodifiableListView) return _comparison;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(value);
+}
+
+/// Exactamente 5 items (invariante de I1).
+ final  List<StudyPlanItemDto> _studyPlan;
+/// Exactamente 5 items (invariante de I1).
+@override@JsonKey() List<StudyPlanItemDto> get studyPlan {
+  if (_studyPlan is EqualUnmodifiableListView) return _studyPlan;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_studyPlan);
+}
+
+
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewFeedbackCopyWith<_InterviewFeedback> get copyWith => __$InterviewFeedbackCopyWithImpl<_InterviewFeedback>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewFeedbackToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewFeedback&&(identical(other.summary, summary) || other.summary == summary)&&const DeepCollectionEquality().equals(other.competencies, _competencies)&&(identical(other.english, english) || other.english == english)&&const DeepCollectionEquality().equals(other.comparison, _comparison)&&const DeepCollectionEquality().equals(other.studyPlan, _studyPlan));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,summary,const DeepCollectionEquality().hash(_competencies),english,const DeepCollectionEquality().hash(_comparison),const DeepCollectionEquality().hash(_studyPlan));
+}
+
+@override
+String toString() {
+    return 'InterviewFeedback(summary: $summary, competencies: $competencies, english: $english, comparison: $comparison, studyPlan: $studyPlan)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewFeedbackCopyWith<$Res> implements $InterviewFeedbackCopyWith<$Res> {
+  factory _$InterviewFeedbackCopyWith(_InterviewFeedback value, $Res Function(_InterviewFeedback) _then) = __$InterviewFeedbackCopyWithImpl;
+@override @useResult
+$Res call({
+ String summary, List<CompetencyFeedback> competencies, EnglishFeedback english, List<CompetencyComparison>? comparison, List<StudyPlanItemDto> studyPlan
+});
+
+
+@override $EnglishFeedbackCopyWith<$Res> get english;
+
+}
+/// @nodoc
+class __$InterviewFeedbackCopyWithImpl<$Res>
+    implements _$InterviewFeedbackCopyWith<$Res> {
+  __$InterviewFeedbackCopyWithImpl(this._self, this._then);
+
+  final _InterviewFeedback _self;
+  final $Res Function(_InterviewFeedback) _then;
+
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? summary = null,Object? competencies = null,Object? english = null,Object? comparison = freezed,Object? studyPlan = null,}) {
+  return _then(_InterviewFeedback(
+summary: null == summary ? _self.summary : summary // ignore: cast_nullable_to_non_nullable
+as String,competencies: null == competencies ? _self._competencies : competencies // ignore: cast_nullable_to_non_nullable
+as List<CompetencyFeedback>,english: null == english ? _self.english : english // ignore: cast_nullable_to_non_nullable
+as EnglishFeedback,comparison: freezed == comparison ? _self._comparison : comparison // ignore: cast_nullable_to_non_nullable
+as List<CompetencyComparison>?,studyPlan: null == studyPlan ? _self._studyPlan : studyPlan // ignore: cast_nullable_to_non_nullable
+as List<StudyPlanItemDto>,
+  ));
+}
+
+/// Create a copy of InterviewFeedback
+/// with the given fields replaced by the non-null parameter values.
+@override
+@pragma('vm:prefer-inline')
+$EnglishFeedbackCopyWith<$Res> get english {
+  
+  return $EnglishFeedbackCopyWith<$Res>(_self.english, (value) {
+    return _then(_self.copyWith(english: value));
+  });
+}
+}
+
+
+/// @nodoc
+mixin _$StudyCycleSession {
+
+ int get idx; String get focus; String get title; String get format; int get estMin; String get status; String? get doneAt;
+/// Create a copy of StudyCycleSession
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StudyCycleSessionCopyWith<StudyCycleSession> get copyWith => _$StudyCycleSessionCopyWithImpl<StudyCycleSession>(this as StudyCycleSession, _$identity);
+
+  /// Serializes this StudyCycleSession to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as StudyCycleSession;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StudyCycleSession&&(identical(other.idx, _this.idx) || other.idx == _this.idx)&&(identical(other.focus, _this.focus) || other.focus == _this.focus)&&(identical(other.title, _this.title) || other.title == _this.title)&&(identical(other.format, _this.format) || other.format == _this.format)&&(identical(other.estMin, _this.estMin) || other.estMin == _this.estMin)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.doneAt, _this.doneAt) || other.doneAt == _this.doneAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as StudyCycleSession;
+  return Object.hash(runtimeType,_this.idx,_this.focus,_this.title,_this.format,_this.estMin,_this.status,_this.doneAt);
+}
+
+@override
+String toString() {
+  final _this = this as StudyCycleSession;
+  return 'StudyCycleSession(idx: ${_this.idx}, focus: ${_this.focus}, title: ${_this.title}, format: ${_this.format}, estMin: ${_this.estMin}, status: ${_this.status}, doneAt: ${_this.doneAt})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StudyCycleSessionCopyWith<$Res>  {
+  factory $StudyCycleSessionCopyWith(StudyCycleSession value, $Res Function(StudyCycleSession) _then) = _$StudyCycleSessionCopyWithImpl;
+@useResult
+$Res call({
+ int idx, String focus, String title, String format, int estMin, String status, String? doneAt
+});
+
+
+
+
+}
+/// @nodoc
+class _$StudyCycleSessionCopyWithImpl<$Res>
+    implements $StudyCycleSessionCopyWith<$Res> {
+  _$StudyCycleSessionCopyWithImpl(this._self, this._then);
+
+  final StudyCycleSession _self;
+  final $Res Function(StudyCycleSession) _then;
+
+/// Create a copy of StudyCycleSession
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? idx = null,Object? focus = null,Object? title = null,Object? format = null,Object? estMin = null,Object? status = null,Object? doneAt = freezed,}) {
+  return _then(StudyCycleSession(
+idx: null == idx ? _self.idx : idx // ignore: cast_nullable_to_non_nullable
+as int,focus: null == focus ? _self.focus : focus // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as String,estMin: null == estMin ? _self.estMin : estMin // ignore: cast_nullable_to_non_nullable
+as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,doneAt: freezed == doneAt ? _self.doneAt : doneAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [StudyCycleSession].
+extension StudyCycleSessionPatterns on StudyCycleSession {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StudyCycleSession value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StudyCycleSession() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StudyCycleSession value)  $default,){
+final _that = this;
+switch (_that) {
+case _StudyCycleSession():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StudyCycleSession value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StudyCycleSession() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( int idx,  String focus,  String title,  String format,  int estMin,  String status,  String? doneAt)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StudyCycleSession() when $default != null:
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.status,_that.doneAt);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( int idx,  String focus,  String title,  String format,  int estMin,  String status,  String? doneAt)  $default,) {final _that = this;
+switch (_that) {
+case _StudyCycleSession():
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.status,_that.doneAt);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( int idx,  String focus,  String title,  String format,  int estMin,  String status,  String? doneAt)?  $default,) {final _that = this;
+switch (_that) {
+case _StudyCycleSession() when $default != null:
+return $default(_that.idx,_that.focus,_that.title,_that.format,_that.estMin,_that.status,_that.doneAt);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StudyCycleSession implements StudyCycleSession {
+  const _StudyCycleSession({required this.idx, required this.focus, required this.title, required this.format, required this.estMin, required this.status, this.doneAt});
+  factory _StudyCycleSession.fromJson(Map<String, dynamic> json) => _$StudyCycleSessionFromJson(json);
+
+@override final  int idx;
+@override final  String focus;
+@override final  String title;
+@override final  String format;
+@override final  int estMin;
+@override final  String status;
+@override final  String? doneAt;
+
+/// Create a copy of StudyCycleSession
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StudyCycleSessionCopyWith<_StudyCycleSession> get copyWith => __$StudyCycleSessionCopyWithImpl<_StudyCycleSession>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StudyCycleSessionToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _StudyCycleSession&&(identical(other.idx, idx) || other.idx == idx)&&(identical(other.focus, focus) || other.focus == focus)&&(identical(other.title, title) || other.title == title)&&(identical(other.format, format) || other.format == format)&&(identical(other.estMin, estMin) || other.estMin == estMin)&&(identical(other.status, status) || other.status == status)&&(identical(other.doneAt, doneAt) || other.doneAt == doneAt));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,idx,focus,title,format,estMin,status,doneAt);
+}
+
+@override
+String toString() {
+    return 'StudyCycleSession(idx: $idx, focus: $focus, title: $title, format: $format, estMin: $estMin, status: $status, doneAt: $doneAt)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StudyCycleSessionCopyWith<$Res> implements $StudyCycleSessionCopyWith<$Res> {
+  factory _$StudyCycleSessionCopyWith(_StudyCycleSession value, $Res Function(_StudyCycleSession) _then) = __$StudyCycleSessionCopyWithImpl;
+@override @useResult
+$Res call({
+ int idx, String focus, String title, String format, int estMin, String status, String? doneAt
+});
+
+
+
+
+}
+/// @nodoc
+class __$StudyCycleSessionCopyWithImpl<$Res>
+    implements _$StudyCycleSessionCopyWith<$Res> {
+  __$StudyCycleSessionCopyWithImpl(this._self, this._then);
+
+  final _StudyCycleSession _self;
+  final $Res Function(_StudyCycleSession) _then;
+
+/// Create a copy of StudyCycleSession
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? idx = null,Object? focus = null,Object? title = null,Object? format = null,Object? estMin = null,Object? status = null,Object? doneAt = freezed,}) {
+  return _then(_StudyCycleSession(
+idx: null == idx ? _self.idx : idx // ignore: cast_nullable_to_non_nullable
+as int,focus: null == focus ? _self.focus : focus // ignore: cast_nullable_to_non_nullable
+as String,title: null == title ? _self.title : title // ignore: cast_nullable_to_non_nullable
+as String,format: null == format ? _self.format : format // ignore: cast_nullable_to_non_nullable
+as String,estMin: null == estMin ? _self.estMin : estMin // ignore: cast_nullable_to_non_nullable
+as int,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,doneAt: freezed == doneAt ? _self.doneAt : doneAt // ignore: cast_nullable_to_non_nullable
+as String?,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
+mixin _$StudyCycle {
+
+ String get id; String get status; List<StudyCycleSession> get sessions;
+/// Create a copy of StudyCycle
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$StudyCycleCopyWith<StudyCycle> get copyWith => _$StudyCycleCopyWithImpl<StudyCycle>(this as StudyCycle, _$identity);
+
+  /// Serializes this StudyCycle to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as StudyCycle;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is StudyCycle&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.status, _this.status) || other.status == _this.status)&&const DeepCollectionEquality().equals(other.sessions, _this.sessions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as StudyCycle;
+  return Object.hash(runtimeType,_this.id,_this.status,const DeepCollectionEquality().hash(_this.sessions));
+}
+
+@override
+String toString() {
+  final _this = this as StudyCycle;
+  return 'StudyCycle(id: ${_this.id}, status: ${_this.status}, sessions: ${_this.sessions})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $StudyCycleCopyWith<$Res>  {
+  factory $StudyCycleCopyWith(StudyCycle value, $Res Function(StudyCycle) _then) = _$StudyCycleCopyWithImpl;
+@useResult
+$Res call({
+ String id, String status, List<StudyCycleSession> sessions
+});
+
+
+
+
+}
+/// @nodoc
+class _$StudyCycleCopyWithImpl<$Res>
+    implements $StudyCycleCopyWith<$Res> {
+  _$StudyCycleCopyWithImpl(this._self, this._then);
+
+  final StudyCycle _self;
+  final $Res Function(StudyCycle) _then;
+
+/// Create a copy of StudyCycle
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? status = null,Object? sessions = null,}) {
+  return _then(StudyCycle(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,sessions: null == sessions ? _self.sessions : sessions // ignore: cast_nullable_to_non_nullable
+as List<StudyCycleSession>,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [StudyCycle].
+extension StudyCyclePatterns on StudyCycle {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _StudyCycle value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _StudyCycle() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _StudyCycle value)  $default,){
+final _that = this;
+switch (_that) {
+case _StudyCycle():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _StudyCycle value)?  $default,){
+final _that = this;
+switch (_that) {
+case _StudyCycle() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String status,  List<StudyCycleSession> sessions)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _StudyCycle() when $default != null:
+return $default(_that.id,_that.status,_that.sessions);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String status,  List<StudyCycleSession> sessions)  $default,) {final _that = this;
+switch (_that) {
+case _StudyCycle():
+return $default(_that.id,_that.status,_that.sessions);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String status,  List<StudyCycleSession> sessions)?  $default,) {final _that = this;
+switch (_that) {
+case _StudyCycle() when $default != null:
+return $default(_that.id,_that.status,_that.sessions);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _StudyCycle implements StudyCycle {
+  const _StudyCycle({required this.id, required this.status,  List<StudyCycleSession> sessions = const <StudyCycleSession>[]}): _sessions = sessions;
+  factory _StudyCycle.fromJson(Map<String, dynamic> json) => _$StudyCycleFromJson(json);
+
+@override final  String id;
+@override final  String status;
+ final  List<StudyCycleSession> _sessions;
+@override@JsonKey() List<StudyCycleSession> get sessions {
+  if (_sessions is EqualUnmodifiableListView) return _sessions;
+  // ignore: implicit_dynamic_type
+  return EqualUnmodifiableListView(_sessions);
+}
+
+
+/// Create a copy of StudyCycle
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$StudyCycleCopyWith<_StudyCycle> get copyWith => __$StudyCycleCopyWithImpl<_StudyCycle>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$StudyCycleToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _StudyCycle&&(identical(other.id, id) || other.id == id)&&(identical(other.status, status) || other.status == status)&&const DeepCollectionEquality().equals(other.sessions, _sessions));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,status,const DeepCollectionEquality().hash(_sessions));
+}
+
+@override
+String toString() {
+    return 'StudyCycle(id: $id, status: $status, sessions: $sessions)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$StudyCycleCopyWith<$Res> implements $StudyCycleCopyWith<$Res> {
+  factory _$StudyCycleCopyWith(_StudyCycle value, $Res Function(_StudyCycle) _then) = __$StudyCycleCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String status, List<StudyCycleSession> sessions
+});
+
+
+
+
+}
+/// @nodoc
+class __$StudyCycleCopyWithImpl<$Res>
+    implements _$StudyCycleCopyWith<$Res> {
+  __$StudyCycleCopyWithImpl(this._self, this._then);
+
+  final _StudyCycle _self;
+  final $Res Function(_StudyCycle) _then;
+
+/// Create a copy of StudyCycle
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? status = null,Object? sessions = null,}) {
+  return _then(_StudyCycle(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,status: null == status ? _self.status : status // ignore: cast_nullable_to_non_nullable
+as String,sessions: null == sessions ? _self._sessions : sessions // ignore: cast_nullable_to_non_nullable
+as List<StudyCycleSession>,
+  ));
+}
+
+
+}
+
 // dart format on

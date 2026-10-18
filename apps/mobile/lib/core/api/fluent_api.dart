@@ -119,4 +119,37 @@ abstract class FluentApi {
   Future<LeaderboardResult> getLeaderboard({String? week});
   Future<List<ChallengeItem>> getChallenges();
   Future<WeeklySummaryResult?> getWeeklySummary({String? week});
+
+  // 4.6 Entrevistas (I2, docs/arch/003-simulador-entrevistas.md)
+  Future<InterviewQuota> getInterviewQuota();
+
+  /// `POST /interviews`. `422 OFFER_UNREADABLE` si la oferta es de LinkedIn
+  /// o ilegible; `429 INTERVIEWS_DAILY_CAP` si se agotó el tope diario.
+  Future<InterviewDetail> createInterview({
+    required String type,
+    String? offerText,
+    String? offerUrl,
+  });
+  Future<List<InterviewSummary>> getInterviews();
+  Future<InterviewDetail> getInterview(String id);
+
+  /// Reintenta una preparación o un parecer fallido; no consume tope.
+  Future<InterviewDetail> retryInterview(String id);
+
+  /// Abre o retoma la sesión `interview`.
+  Future<InterviewSessionStart> startInterviewSession(String id);
+
+  /// `409 TOO_SHORT` si hubo menos de 4 respuestas.
+  Future<InterviewFeedback> getInterviewFeedback(String id);
+  Future<StudyCycle> createStudyCycle(String id);
+  Future<StudyCycle> getStudyCycle(String id);
+
+  /// Abre una sesión `study`; `409` si la anterior del ciclo no está hecha.
+  Future<InterviewSessionStart> startStudyCycleSession({
+    required String interviewId,
+    required int idx,
+  });
+
+  /// Crea una entrevista hija con la misma oferta (requiere ciclo completo).
+  Future<InterviewDetail> reinterview(String id);
 }

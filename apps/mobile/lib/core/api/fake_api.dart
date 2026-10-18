@@ -839,4 +839,348 @@ class FakeApi implements FluentApi {
       weekStart: '2026-09-07',
     );
   }
+
+  // ---- 4.6 Entrevistas (I2) ------------------------------------------------
+
+  /// Tope diario de entrevistas simulado (FR-21); `setInterviewsDailyLimit`
+  /// para que los tests prueben IE-01d sin crear de verdad 3 entrevistas.
+  int interviewsDailyLimit = 3;
+  int _interviewsToday = 0;
+
+  final Map<String, InterviewDetail> _interviews = {};
+  final List<String> _interviewOrder = [];
+  final Map<String, int> _interviewAnsweredCount = {};
+  final Map<String, StudyCycle> _studyCycles = {};
+  final Map<String, String> _reinterviewParentId = {};
+  int _interviewCounter = 0;
+
+  @override
+  Future<InterviewQuota> getInterviewQuota() async {
+    await _delay();
+    return InterviewQuota(
+      remaining: (interviewsDailyLimit - _interviewsToday).clamp(
+        0,
+        interviewsDailyLimit,
+      ),
+      limit: interviewsDailyLimit,
+    );
+  }
+
+  InterviewDetail _requireInterview(String id) {
+    final current = _interviews[id];
+    if (current == null) {
+      _fail(ApiErrorCode.notFound, 'unknown interview', statusCode: 404);
+    }
+    return current;
+  }
+
+  @override
+  Future<InterviewDetail> createInterview({
+    required String type,
+    String? offerText,
+    String? offerUrl,
+  }) async {
+    await _delay();
+    if (offerUrl != null && offerUrl.contains('linkedin.com')) {
+      _fail(
+        ApiErrorCode.offerUnreadable,
+        'offer url is a LinkedIn page',
+        statusCode: 422,
+      );
+    }
+    if (_interviewsToday >= interviewsDailyLimit) {
+      _fail(
+        ApiErrorCode.interviewsDailyCap,
+        'daily interview cap reached',
+        statusCode: 429,
+      );
+    }
+    _interviewsToday++;
+    _interviewCounter++;
+    final id = 'interview-$_interviewCounter';
+    final detail = InterviewDetail(
+      id: id,
+      type: type,
+      status: 'preparing',
+      createdAt: DateTime.now().toIso8601String(),
+      prepStep: 'reading',
+    );
+    _interviews[id] = detail;
+    _interviewOrder.add(id);
+    _interviewAnsweredCount[id] = 8;
+    return detail;
+  }
+
+  @override
+  Future<List<InterviewSummary>> getInterviews() async {
+    await _delay();
+    return [
+      for (final id in _interviewOrder.reversed)
+        InterviewSummary(
+          id: id,
+          type: _interviews[id]!.type,
+          status: _interviews[id]!.status,
+          createdAt: _interviews[id]!.createdAt,
+          role: _interviews[id]!.role,
+          area: _interviews[id]!.area,
+          company: _interviews[id]!.company,
+          isReinterview: _reinterviewParentId.containsKey(id),
+          cycleCompletedSessions: _studyCycles[id]?.sessions
+              .where((s) => s.status == 'done')
+              .length,
+        ),
+    ];
+  }
+
+  /// Cada llamada mientras `preparing` avanza un paso (`reading →
+  /// researching → designing → done`); el último avance pasa a `ready` y
+  /// completa la ficha del plan. Así `interviewProvider`, que repolla cada
+  /// 3 s, ve el mismo progreso que mostraría la API real sin necesitar un
+  /// cron ni un `Timer` en el fake.
+  @override
+  Future<InterviewDetail> getInterview(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    if (current.status != 'preparing') return current;
+
+    final nextStep = switch (current.prepStep) {
+      'reading' => 'researching',
+      'researching' => 'designing',
+      _ => 'done',
+    };
+    final updated = nextStep != 'done'
+        ? current.copyWith(prepStep: nextStep)
+        : current.copyWith(
+            status: 'ready',
+            prepStep: 'done',
+            company: const CompanyInfo(
+              name: 'Acme Corp',
+              industry: 'Software',
+              city: 'Remoto',
+              workMode: 'remote',
+            ),
+            role: 'Backend Engineer',
+            area: 'Engineering',
+            seniority: 'semi_senior',
+            questionCount: 8,
+            estimatedMin: 10,
+            competencies: const [
+              'APIs REST',
+              'Bases de datos',
+              'Diseño de sistemas',
+              'Comunicación',
+            ],
+          );
+    _interviews[id] = updated;
+    return updated;
+  }
+
+  /// Gancho de test para simular IE-03b sin depender de que el agente falle.
+  void forceInterviewPrepFailed(String id) {
+    final current = _requireInterview(id);
+    _interviews[id] = current.copyWith(
+      status: 'prep_failed',
+      errorCode: 'AGENT_UNAVAILABLE',
+    );
+  }
+
+  @override
+  Future<InterviewDetail> retryInterview(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    final retried = current.copyWith(
+      status: 'preparing',
+      prepStep: 'reading',
+      errorCode: null,
+    );
+    _interviews[id] = retried;
+    return retried;
+  }
+
+  @override
+  Future<InterviewSessionStart> startInterviewSession(String id) async {
+    await _delay();
+    final current = _requireInterview(id);
+    return InterviewSessionStart(
+      sessionId: 'session-$id',
+      answeredCount: 0,
+      totalQuestions: current.questionCount ?? 8,
+    );
+  }
+
+  /// Gancho de test para simular `409 TOO_SHORT` (por defecto hay 8
+  /// respuestas, suficientes para pedir el parecer).
+  void setInterviewAnsweredCount(String id, int count) {
+    _interviewAnsweredCount[id] = count;
+  }
+
+  @override
+  Future<InterviewFeedback> getInterviewFeedback(String id) async {
+    await _delay();
+    _requireInterview(id);
+    final answered = _interviewAnsweredCount[id] ?? 8;
+    if (answered < 4) {
+      _fail(
+        ApiErrorCode.interviewTooShort,
+        'not enough answers for feedback',
+        statusCode: 409,
+      );
+    }
+    return const InterviewFeedback(
+      summary:
+          'Buen manejo general de las preguntas técnicas, con margen de '
+          'mejora en bases de datos.',
+      competencies: [
+        CompetencyFeedback(
+          competencyId: 'c1',
+          observedLevel: 'semi_senior',
+          expectedLevel: 'semi_senior',
+          evidence: 'I used an index to speed up that query.',
+          missing: '',
+          study: 'Repasar transacciones e índices compuestos.',
+          verified: true,
+        ),
+      ],
+      english: EnglishFeedback(
+        clarity: EnglishAspect(rating: 'good', note: 'Se entiende bien.'),
+        vocabulary: EnglishAspect(
+          rating: 'good',
+          note: 'Vocabulario técnico correcto.',
+        ),
+        errors: [],
+      ),
+      comparison: null,
+      studyPlan: [
+        StudyPlanItemDto(
+          idx: 1,
+          focus: 'c1',
+          title: 'Transacciones e índices',
+          format: 'guided',
+          estMin: 12,
+          brief: 'Practicar transacciones ACID e índices compuestos.',
+        ),
+        StudyPlanItemDto(
+          idx: 2,
+          focus: 'c2',
+          title: 'Diseño de APIs',
+          format: 'roleplay',
+          estMin: 12,
+          brief: 'Simular el diseño de un endpoint nuevo con un entrevistador.',
+        ),
+        StudyPlanItemDto(
+          idx: 3,
+          focus: 'c3',
+          title: 'Diseño de sistemas',
+          format: 'guided',
+          estMin: 15,
+          brief: 'Repasar trade-offs de escalabilidad.',
+        ),
+        StudyPlanItemDto(
+          idx: 4,
+          focus: 'english',
+          title: 'Vocabulario técnico',
+          format: 'guided',
+          estMin: 10,
+          brief: 'Practicar vocabulario de bases de datos en inglés.',
+        ),
+        StudyPlanItemDto(
+          idx: 5,
+          focus: 'english',
+          title: 'Comunicación bajo presión',
+          format: 'roleplay',
+          estMin: 12,
+          brief: 'Simular una repregunta difícil con un entrevistador.',
+        ),
+      ],
+    );
+  }
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) async {
+    await _delay();
+    _requireInterview(id);
+    final cycle = StudyCycle(
+      id: 'cycle-$id',
+      status: 'active',
+      sessions: [
+        for (var i = 1; i <= 5; i++)
+          StudyCycleSession(
+            idx: i,
+            focus: i <= 3 ? 'c$i' : 'english',
+            title: 'Sesión de estudio $i',
+            format: i.isOdd ? 'guided' : 'roleplay',
+            estMin: 12,
+            status: i == 1 ? 'available' : 'locked',
+          ),
+      ],
+    );
+    _studyCycles[id] = cycle;
+    return cycle;
+  }
+
+  @override
+  Future<StudyCycle> getStudyCycle(String id) async {
+    await _delay();
+    final cycle = _studyCycles[id];
+    if (cycle == null) {
+      _fail(ApiErrorCode.notFound, 'no cycle for interview', statusCode: 404);
+    }
+    return cycle;
+  }
+
+  @override
+  Future<InterviewSessionStart> startStudyCycleSession({
+    required String interviewId,
+    required int idx,
+  }) async {
+    await _delay();
+    final cycle = _studyCycles[interviewId];
+    if (cycle == null) {
+      _fail(ApiErrorCode.notFound, 'no cycle for interview', statusCode: 404);
+    }
+    final target = cycle.sessions.firstWhere(
+      (s) => s.idx == idx,
+      orElse: () =>
+          _fail(ApiErrorCode.notFound, 'unknown cycle session', statusCode: 404),
+    );
+    if (target.status == 'locked') {
+      _fail(
+        ApiErrorCode.validation,
+        'previous cycle session not done yet',
+        statusCode: 409,
+      );
+    }
+    _studyCycles[interviewId] = cycle.copyWith(
+      sessions: [
+        for (final s in cycle.sessions)
+          if (s.idx == idx)
+            s.copyWith(status: 'done', doneAt: DateTime.now().toIso8601String())
+          else if (s.idx == idx + 1 && s.status == 'locked')
+            s.copyWith(status: 'available')
+          else
+            s,
+      ],
+    );
+    return InterviewSessionStart(sessionId: 'study-session-$interviewId-$idx');
+  }
+
+  @override
+  Future<InterviewDetail> reinterview(String id) async {
+    await _delay();
+    _requireInterview(id);
+    _interviewCounter++;
+    final childId = 'interview-$_interviewCounter';
+    final child = InterviewDetail(
+      id: childId,
+      type: _interviews[id]!.type,
+      status: 'preparing',
+      createdAt: DateTime.now().toIso8601String(),
+      prepStep: 'reading',
+    );
+    _interviews[childId] = child;
+    _interviewOrder.add(childId);
+    _interviewAnsweredCount[childId] = 8;
+    _reinterviewParentId[childId] = id;
+    return child;
+  }
 }

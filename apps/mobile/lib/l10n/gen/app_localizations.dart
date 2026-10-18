@@ -1760,6 +1760,24 @@ abstract class AppLocalizations {
   /// **'Unite a un grupo con tu código de invitación para practicar.'**
   String get errorGroupRequired;
 
+  /// No description provided for @errorOfferUnreadable.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos leer esa oferta.'**
+  String get errorOfferUnreadable;
+
+  /// No description provided for @errorInterviewsDailyCap.
+  ///
+  /// In es, this message translates to:
+  /// **'Hoy ya usaste tus entrevistas. Mañana tienes más.'**
+  String get errorInterviewsDailyCap;
+
+  /// No description provided for @errorInterviewTooShort.
+  ///
+  /// In es, this message translates to:
+  /// **'Faltan respuestas para armar tu parecer.'**
+  String get errorInterviewTooShort;
+
   /// No description provided for @authContinueWithGoogle.
   ///
   /// In es, this message translates to:

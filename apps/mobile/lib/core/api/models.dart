@@ -547,3 +547,235 @@ abstract class BadgeItem with _$BadgeItem {
 extension BadgeState on BadgeItem {
   bool get isEarned => earnedAt != null;
 }
+
+/* ============================================================================
+   Simulador de entrevistas (I2, docs/arch/003-simulador-entrevistas.md).
+   ========================================================================== */
+
+@freezed
+abstract class CompanyInfo with _$CompanyInfo {
+  const factory CompanyInfo({
+    required String name,
+    String? industry,
+    String? city,
+    String? workMode,
+  }) = _CompanyInfo;
+
+  factory CompanyInfo.fromJson(Map<String, dynamic> json) =>
+      _$CompanyInfoFromJson(json);
+}
+
+/// `GET /interviews/quota` (FR-21, FR-33).
+@freezed
+abstract class InterviewQuota with _$InterviewQuota {
+  const factory InterviewQuota({
+    required int remaining,
+    required int limit,
+    @Default(false) bool requiresPro,
+    @Default(true) bool freeNotice,
+  }) = _InterviewQuota;
+
+  factory InterviewQuota.fromJson(Map<String, dynamic> json) =>
+      _$InterviewQuotaFromJson(json);
+}
+
+/// Fila del historial (`GET /interviews`, IE-09, FR-31).
+@freezed
+abstract class InterviewSummary with _$InterviewSummary {
+  const factory InterviewSummary({
+    required String id,
+    required String type,
+    required String status,
+    required String createdAt,
+    String? role,
+    String? area,
+    CompanyInfo? company,
+
+    /// `true` si viene de `POST /interviews/:id/reinterview` (FR-19, IE-08).
+    @Default(false) bool isReinterview,
+
+    /// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
+    /// se creó el ciclo (`POST /interviews/:id/cycle`).
+    int? cycleCompletedSessions,
+  }) = _InterviewSummary;
+
+  factory InterviewSummary.fromJson(Map<String, dynamic> json) =>
+      _$InterviewSummaryFromJson(json);
+}
+
+/// `GET /interviews/:id` (IE-03, IE-04): estado, paso de preparación y, una
+/// vez `ready`, la ficha del plan sin exponer las preguntas (FR-7).
+@freezed
+abstract class InterviewDetail with _$InterviewDetail {
+  const factory InterviewDetail({
+    required String id,
+    required String type,
+    required String status,
+    required String createdAt,
+
+    /// `reading | researching | designing | done`, solo mientras `preparing`.
+    String? prepStep,
+    CompanyInfo? company,
+    String? role,
+    String? area,
+    String? seniority,
+    int? questionCount,
+    int? estimatedMin,
+
+    /// Nombres de las competencias de la rúbrica (nunca las preguntas).
+    @Default(<String>[]) List<String> competencies,
+
+    /// Presente en `prep_failed` / `feedback_failed`.
+    String? errorCode,
+    @Default(false) bool isReinterview,
+  }) = _InterviewDetail;
+
+  factory InterviewDetail.fromJson(Map<String, dynamic> json) =>
+      _$InterviewDetailFromJson(json);
+}
+
+/// `POST /interviews/:id/session` y `POST
+/// /interviews/:id/cycle/sessions/:idx/start`: abren o retoman una sesión y
+/// devuelven con qué progreso. `answeredCount`/`totalQuestions` solo
+/// aplican a la sesión de entrevista, no a las del ciclo de estudio.
+@freezed
+abstract class InterviewSessionStart with _$InterviewSessionStart {
+  const factory InterviewSessionStart({
+    required String sessionId,
+    int? answeredCount,
+    int? totalQuestions,
+  }) = _InterviewSessionStart;
+
+  factory InterviewSessionStart.fromJson(Map<String, dynamic> json) =>
+      _$InterviewSessionStartFromJson(json);
+}
+
+@freezed
+abstract class CompetencyFeedback with _$CompetencyFeedback {
+  const factory CompetencyFeedback({
+    required String competencyId,
+    required String observedLevel,
+    required String expectedLevel,
+
+    /// Cita literal del candidato (I1: subcadena del transcript).
+    required String evidence,
+    required String missing,
+    required String study,
+    required bool verified,
+  }) = _CompetencyFeedback;
+
+  factory CompetencyFeedback.fromJson(Map<String, dynamic> json) =>
+      _$CompetencyFeedbackFromJson(json);
+}
+
+@freezed
+abstract class EnglishAspect with _$EnglishAspect {
+  const factory EnglishAspect({required String rating, required String note}) =
+      _EnglishAspect;
+
+  factory EnglishAspect.fromJson(Map<String, dynamic> json) =>
+      _$EnglishAspectFromJson(json);
+}
+
+@freezed
+abstract class EnglishErrorItem with _$EnglishErrorItem {
+  const factory EnglishErrorItem({
+    required String original,
+    required String corrected,
+    required String explanation,
+  }) = _EnglishErrorItem;
+
+  factory EnglishErrorItem.fromJson(Map<String, dynamic> json) =>
+      _$EnglishErrorItemFromJson(json);
+}
+
+@freezed
+abstract class EnglishFeedback with _$EnglishFeedback {
+  const factory EnglishFeedback({
+    required EnglishAspect clarity,
+    required EnglishAspect vocabulary,
+    @Default(<EnglishErrorItem>[]) List<EnglishErrorItem> errors,
+  }) = _EnglishFeedback;
+
+  factory EnglishFeedback.fromJson(Map<String, dynamic> json) =>
+      _$EnglishFeedbackFromJson(json);
+}
+
+@freezed
+abstract class CompetencyComparison with _$CompetencyComparison {
+  const factory CompetencyComparison({
+    required String competencyId,
+    required String before,
+    required String after,
+    required String trend,
+  }) = _CompetencyComparison;
+
+  factory CompetencyComparison.fromJson(Map<String, dynamic> json) =>
+      _$CompetencyComparisonFromJson(json);
+}
+
+@freezed
+abstract class StudyPlanItemDto with _$StudyPlanItemDto {
+  const factory StudyPlanItemDto({
+    required int idx,
+    required String focus,
+    required String title,
+    required String format,
+    required int estMin,
+    required String brief,
+  }) = _StudyPlanItemDto;
+
+  factory StudyPlanItemDto.fromJson(Map<String, dynamic> json) =>
+      _$StudyPlanItemDtoFromJson(json);
+}
+
+/// `GET /interviews/:id/feedback` (FR-12, FR-26, FR-27); `409 TOO_SHORT` si
+/// hubo menos de 4 respuestas.
+@freezed
+abstract class InterviewFeedback with _$InterviewFeedback {
+  const factory InterviewFeedback({
+    required String summary,
+    @Default(<CompetencyFeedback>[]) List<CompetencyFeedback> competencies,
+    required EnglishFeedback english,
+
+    /// Solo presente en una re-entrevista (FR-19, IE-08).
+    List<CompetencyComparison>? comparison,
+
+    /// Exactamente 5 items (invariante de I1).
+    @Default(<StudyPlanItemDto>[]) List<StudyPlanItemDto> studyPlan,
+  }) = _InterviewFeedback;
+
+  factory InterviewFeedback.fromJson(Map<String, dynamic> json) =>
+      _$InterviewFeedbackFromJson(json);
+}
+
+/// Sesión del ciclo de estudio (`study_cycle_sessions`), con el estado que
+/// ya resuelve la API: `locked | available | done`.
+@freezed
+abstract class StudyCycleSession with _$StudyCycleSession {
+  const factory StudyCycleSession({
+    required int idx,
+    required String focus,
+    required String title,
+    required String format,
+    required int estMin,
+    required String status,
+    String? doneAt,
+  }) = _StudyCycleSession;
+
+  factory StudyCycleSession.fromJson(Map<String, dynamic> json) =>
+      _$StudyCycleSessionFromJson(json);
+}
+
+/// `POST`/`GET /interviews/:id/cycle` (FR-17, IE-07).
+@freezed
+abstract class StudyCycle with _$StudyCycle {
+  const factory StudyCycle({
+    required String id,
+    required String status,
+    @Default(<StudyCycleSession>[]) List<StudyCycleSession> sessions,
+  }) = _StudyCycle;
+
+  factory StudyCycle.fromJson(Map<String, dynamic> json) =>
+      _$StudyCycleFromJson(json);
+}

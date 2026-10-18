@@ -450,4 +450,89 @@ class HttpFluentApi implements FluentApi {
       rethrow;
     }
   }
+
+  // ---- 4.6 Entrevistas (I2) -----------------------------------------------
+
+  @override
+  Future<InterviewQuota> getInterviewQuota() => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/quota');
+    return InterviewQuota.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> createInterview({
+    required String type,
+    String? offerText,
+    String? offerUrl,
+  }) => _client.guard(() async {
+    final res = await _client.dio.post(
+      '/interviews',
+      data: {'type': type, 'offerText': ?offerText, 'offerUrl': ?offerUrl},
+    );
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<List<InterviewSummary>> getInterviews() => _client.guard(() async {
+    final res = await _client.dio.get('/interviews');
+    final data = res.data as Map<String, dynamic>;
+    return (data['items'] as List)
+        .map((e) => InterviewSummary.fromJson(e as Map<String, dynamic>))
+        .toList();
+  });
+
+  @override
+  Future<InterviewDetail> getInterview(String id) => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/$id');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> retryInterview(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/retry');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewSessionStart> startInterviewSession(String id) =>
+      _client.guard(() async {
+        final res = await _client.dio.post('/interviews/$id/session');
+        return InterviewSessionStart.fromJson(res.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<InterviewFeedback> getInterviewFeedback(String id) =>
+      _client.guard(() async {
+        final res = await _client.dio.get('/interviews/$id/feedback');
+        return InterviewFeedback.fromJson(res.data as Map<String, dynamic>);
+      });
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/cycle');
+    return StudyCycle.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<StudyCycle> getStudyCycle(String id) => _client.guard(() async {
+    final res = await _client.dio.get('/interviews/$id/cycle');
+    return StudyCycle.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewSessionStart> startStudyCycleSession({
+    required String interviewId,
+    required int idx,
+  }) => _client.guard(() async {
+    final res = await _client.dio.post(
+      '/interviews/$interviewId/cycle/sessions/$idx/start',
+    );
+    return InterviewSessionStart.fromJson(res.data as Map<String, dynamic>);
+  });
+
+  @override
+  Future<InterviewDetail> reinterview(String id) => _client.guard(() async {
+    final res = await _client.dio.post('/interviews/$id/reinterview');
+    return InterviewDetail.fromJson(res.data as Map<String, dynamic>);
+  });
 }

@@ -13,8 +13,20 @@ import 'push_platform.dart';
 /// cualquier otra cosa se ignora (no se navega a lo que diga un payload).
 const _allowedRoutes = {'/', '/group', '/progress', '/badges', '/memory'};
 
-String? _safeRoute(String? route) =>
-    route != null && _allowedRoutes.contains(route) ? route : null;
+/// `/interviews/<uuid>`, `/interviews/<uuid>/feedback` o
+/// `/interviews/<uuid>/cycle` (FR-32: entrevista lista, preparación fallida,
+/// parecer listo, recordatorio de ciclo): el id siempre es un UUID, nunca un
+/// segmento arbitrario como `..` que intentaría salir de `/interviews`.
+final _interviewRoute = RegExp(
+  r'^/interviews/[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}'
+  r'(/feedback|/cycle)?$',
+);
+
+String? _safeRoute(String? route) {
+  if (route == null) return null;
+  if (_allowedRoutes.contains(route)) return route;
+  return _interviewRoute.hasMatch(route) ? route : null;
+}
 
 /// Push de Firebase Messaging: permiso, registro del token en la API y
 /// adónde llevan los push tocados.

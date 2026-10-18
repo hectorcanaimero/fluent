@@ -15,6 +15,7 @@ import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
+import '../features/interviews/presentation/history/interview_history_screen.dart';
 import '../features/interviews/presentation/prep/interview_prep_screen.dart';
 import '../features/memory/presentation/memory_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow.dart';
@@ -163,12 +164,9 @@ final routerProvider = Provider<GoRouter>((ref) {
           ),
         ],
       ),
-      // F11.2.T3 reemplaza esto por el historial (IE-09).
       GoRoute(
         path: '/interviews',
-        builder: (context, state) => PlaceholderScreen(
-          title: AppLocalizations.of(context).interviewEntryHistoryTooltip,
-        ),
+        builder: (context, state) => const InterviewHistoryScreen(),
       ),
       GoRoute(
         path: '/interviews/new',
@@ -192,6 +190,13 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/interviews/:id/feedback',
         builder: (context, state) => PlaceholderScreen(
           title: AppLocalizations.of(context).interviewFeedbackPlaceholderTitle,
+        ),
+      ),
+      // F12 reemplaza esto por el ciclo de estudio (IE-07).
+      GoRoute(
+        path: '/interviews/:id/cycle',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewCyclePlaceholderTitle,
         ),
       ),
       GoRoute(

@@ -451,5 +451,22 @@
   "interviewViewFeedbackCta": "Ver parecer",
   "interviewWorkModeRemote": "Remoto",
   "interviewWorkModeHybrid": "Híbrido",
-  "interviewWorkModeOnsite": "Presencial"
+  "interviewWorkModeOnsite": "Presencial",
+  "interviewHistoryTitle": "Histórico de entrevistas",
+  "interviewHistoryNewCta": "Nova entrevista",
+  "interviewHistoryEmpty": "Você ainda não tem entrevistas. Comece uma aqui.",
+  "interviewHistoryCompanyFallback": "Empresa sem nome",
+  "interviewHistoryStatusPreparing": "Preparando…",
+  "interviewHistoryStatusUnfinished": "Sem terminar",
+  "interviewHistoryStatusFeedbackReady": "Parecer pronto",
+  "interviewHistoryStatusCycle": "Ciclo {n} de 5",
+  "@interviewHistoryStatusCycle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewHistoryStatusReinterviewDone": "Reentrevista feita",
+  "interviewCyclePlaceholderTitle": "Ciclo de estudo"
 }

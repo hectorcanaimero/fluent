@@ -77,6 +77,20 @@ Map<String, dynamic> _$ModelPreferenceToJson(_ModelPreference instance) =>
       'briefModel': instance.briefModel,
     };
 
+_ActiveSessionRef _$ActiveSessionRefFromJson(Map<String, dynamic> json) =>
+    _ActiveSessionRef(
+      id: json['id'] as String,
+      kind: json['kind'] as String,
+      interviewId: json['interviewId'] as String?,
+    );
+
+Map<String, dynamic> _$ActiveSessionRefToJson(_ActiveSessionRef instance) =>
+    <String, dynamic>{
+      'id': instance.id,
+      'kind': instance.kind,
+      'interviewId': instance.interviewId,
+    };
+
 _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
   profile: Profile.fromJson(json['profile'] as Map<String, dynamic>),
   group: json['group'] == null
@@ -89,6 +103,11 @@ _MeResponse _$MeResponseFromJson(Map<String, dynamic> json) => _MeResponse(
         ),
   onboarded: json['onboarded'] as bool,
   activeSessionId: json['activeSessionId'] as String?,
+  activeSession: json['activeSession'] == null
+      ? null
+      : ActiveSessionRef.fromJson(
+          json['activeSession'] as Map<String, dynamic>,
+        ),
   interestsCatalog:
       (json['interestsCatalog'] as List<dynamic>?)
           ?.map((e) => e as String)
@@ -113,6 +132,7 @@ Map<String, dynamic> _$MeResponseToJson(_MeResponse instance) =>
       'modelPreference': instance.modelPreference,
       'onboarded': instance.onboarded,
       'activeSessionId': instance.activeSessionId,
+      'activeSession': instance.activeSession,
       'interestsCatalog': instance.interestsCatalog,
       'pendingActions': instance.pendingActions,
       'courtesySessionAvailable': instance.courtesySessionAvailable,
@@ -345,6 +365,9 @@ _TurnResult _$TurnResultFromJson(Map<String, dynamic> json) => _TurnResult(
   modelUsed: json['modelUsed'] as String?,
   degraded: json['degraded'] as bool? ?? false,
   unavailable: json['unavailable'] as bool? ?? false,
+  interview: json['interview'] == null
+      ? null
+      : TurnInterviewInfo.fromJson(json['interview'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
@@ -355,6 +378,25 @@ Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
       'modelUsed': instance.modelUsed,
       'degraded': instance.degraded,
       'unavailable': instance.unavailable,
+      'interview': instance.interview,
+    };
+
+_TurnInterviewInfo _$TurnInterviewInfoFromJson(Map<String, dynamic> json) =>
+    _TurnInterviewInfo(
+      questionIdx: (json['questionIdx'] as num).toInt(),
+      totalQuestions: (json['totalQuestions'] as num).toInt(),
+      competency: json['competency'] as String,
+      remainingSec: (json['remainingSec'] as num).toInt(),
+      done: json['done'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$TurnInterviewInfoToJson(_TurnInterviewInfo instance) =>
+    <String, dynamic>{
+      'questionIdx': instance.questionIdx,
+      'totalQuestions': instance.totalQuestions,
+      'competency': instance.competency,
+      'remainingSec': instance.remainingSec,
+      'done': instance.done,
     };
 
 _SessionSummary _$SessionSummaryFromJson(Map<String, dynamic> json) =>
@@ -780,6 +822,9 @@ _InterviewSessionStart _$InterviewSessionStartFromJson(
   sessionId: json['sessionId'] as String,
   answeredCount: (json['answeredCount'] as num?)?.toInt(),
   totalQuestions: (json['totalQuestions'] as num?)?.toInt(),
+  interview: json['interview'] == null
+      ? null
+      : TurnInterviewInfo.fromJson(json['interview'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$InterviewSessionStartToJson(
@@ -788,6 +833,7 @@ Map<String, dynamic> _$InterviewSessionStartToJson(
   'sessionId': instance.sessionId,
   'answeredCount': instance.answeredCount,
   'totalQuestions': instance.totalQuestions,
+  'interview': instance.interview,
 };
 
 _CompetencyFeedback _$CompetencyFeedbackFromJson(Map<String, dynamic> json) =>

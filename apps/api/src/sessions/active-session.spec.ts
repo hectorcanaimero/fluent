@@ -1,6 +1,6 @@
 import type { InsForgeClient } from '@insforge/sdk';
 
-import { findBlockingActiveSessionId } from './active-session.js';
+import { findBlockingActiveSession } from './active-session.js';
 
 type Row = Record<string, unknown>;
 
@@ -24,14 +24,14 @@ function fakeAdmin(tables: Record<string, Row[]>): InsForgeClient {
 
 const USER = 'u-1';
 
-describe('findBlockingActiveSessionId (una sola sesión activa, D5)', () => {
+describe('findBlockingActiveSession (una sola sesión activa, D5)', () => {
   it('una entrevista en pausa (too_short) no bloquea: sin otra sesión, null', async () => {
     const admin = fakeAdmin({
       sessions: [{ id: 's-int', user_id: USER, status: 'active', kind: 'interview', interview_id: 'i-1' }],
       interviews: [{ id: 'i-1', status: 'too_short' }],
     });
 
-    expect(await findBlockingActiveSessionId(admin, USER)).toBeNull();
+    expect(await findBlockingActiveSession(admin, USER)).toBeNull();
   });
 
   it('con una entrevista en pausa y una sesión normal activa, devuelve la normal', async () => {
@@ -43,7 +43,7 @@ describe('findBlockingActiveSessionId (una sola sesión activa, D5)', () => {
       interviews: [{ id: 'i-1', status: 'too_short' }],
     });
 
-    expect(await findBlockingActiveSessionId(admin, USER)).toBe('s-free');
+    expect((await findBlockingActiveSession(admin, USER))?.id).toBe('s-free');
   });
 
   it('una entrevista en curso (in_progress) sí bloquea', async () => {
@@ -52,7 +52,11 @@ describe('findBlockingActiveSessionId (una sola sesión activa, D5)', () => {
       interviews: [{ id: 'i-1', status: 'in_progress' }],
     });
 
-    expect(await findBlockingActiveSessionId(admin, USER)).toBe('s-int');
+    expect(await findBlockingActiveSession(admin, USER)).toEqual({
+      id: 's-int',
+      kind: 'interview',
+      interviewId: 'i-1',
+    });
   });
 
   it('una sesión normal activa bloquea (abrir o retomar una entrevista da 409)', async () => {
@@ -60,6 +64,6 @@ describe('findBlockingActiveSessionId (una sola sesión activa, D5)', () => {
       sessions: [{ id: 's-free', user_id: USER, status: 'active', kind: 'roleplay', interview_id: null }],
     });
 
-    expect(await findBlockingActiveSessionId(admin, USER)).toBe('s-free');
+    expect((await findBlockingActiveSession(admin, USER))?.id).toBe('s-free');
   });
 });

@@ -77,9 +77,9 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
       context.push('/session/${result.session.id}');
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.code == ApiErrorCode.sessionAlreadyActive &&
-          e.activeSessionId != null) {
-        context.push('/session/${e.activeSessionId}');
+      final activeRoute = e.activeSessionRoute;
+      if (e.code == ApiErrorCode.sessionAlreadyActive && activeRoute != null) {
+        context.push(activeRoute);
         return;
       }
       ScaffoldMessenger.of(context)
@@ -112,9 +112,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
           .shareText(l10n.groupInviteMessage(invitation.code));
     } on ApiException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(apiErrorSnackBar(context, e.code));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(apiErrorSnackBar(context, e.code));
     } catch (_) {
       if (mounted) _showGenericError();
     } finally {
@@ -124,9 +123,8 @@ class _GroupScreenState extends ConsumerState<GroupScreen> {
 
   void _showGenericError() {
     final l10n = AppLocalizations.of(context);
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
   }
 
   @override

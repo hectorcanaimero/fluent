@@ -25,7 +25,10 @@ void main() {
     });
 
     test('autenticado sin onboarded va a /onboarding', () {
-      const auth = AuthState(status: AuthStatus.authenticated, onboarded: false);
+      const auth = AuthState(
+        status: AuthStatus.authenticated,
+        onboarded: false,
+      );
       expect(computeRedirect(auth, '/'), '/onboarding');
       expect(computeRedirect(auth, '/onboarding'), isNull);
     });
@@ -47,19 +50,62 @@ void main() {
       expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
     });
 
-    test('estando en el resumen no vuelve a empujar a la conversación (MAL-04)', () {
+    test(
+      'una entrevista activa se retoma en modo entrevista, no en /session/:id',
+      () {
+        const auth = AuthState(
+          status: AuthStatus.authenticated,
+          onboarded: true,
+          activeSessionId: 'session-42',
+          activeSessionKind: 'interview',
+          activeInterviewId: 'interview-7',
+        );
+        expect(computeRedirect(auth, '/'), '/interviews/interview-7/session');
+        expect(
+          computeRedirect(auth, '/session/session-42'),
+          '/interviews/interview-7/session',
+        );
+        expect(
+          computeRedirect(auth, '/interviews/interview-7/session'),
+          isNull,
+        );
+      },
+    );
+
+    test('limpiar la sesión activa borra también kind e interviewId', () {
       const auth = AuthState(
         status: AuthStatus.authenticated,
         onboarded: true,
         activeSessionId: 'session-42',
+        activeSessionKind: 'interview',
+        activeInterviewId: 'interview-7',
       );
-      expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
-
-      // Y una vez que el resumen limpia la sesión activa, se puede volver al
-      // inicio sin que el router rebote.
-      const cleared = AuthState(status: AuthStatus.authenticated, onboarded: true);
+      final cleared = auth.copyWith(clearActiveSessionId: true);
+      expect(cleared.activeSessionId, isNull);
+      expect(cleared.activeInterviewId, isNull);
+      expect(cleared.activeSessionKind, isNull);
       expect(computeRedirect(cleared, '/'), isNull);
     });
+
+    test(
+      'estando en el resumen no vuelve a empujar a la conversación (MAL-04)',
+      () {
+        const auth = AuthState(
+          status: AuthStatus.authenticated,
+          onboarded: true,
+          activeSessionId: 'session-42',
+        );
+        expect(computeRedirect(auth, '/session/session-42/summary'), isNull);
+
+        // Y una vez que el resumen limpia la sesión activa, se puede volver al
+        // inicio sin que el router rebote.
+        const cleared = AuthState(
+          status: AuthStatus.authenticated,
+          onboarded: true,
+        );
+        expect(computeRedirect(cleared, '/'), isNull);
+      },
+    );
 
     test('en error se queda en /splash y no manda a /login (MAL-03)', () {
       const auth = AuthState(status: AuthStatus.error);

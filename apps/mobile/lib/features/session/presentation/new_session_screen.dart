@@ -93,9 +93,9 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
       context.pushReplacement('/session/${result.session.id}');
     } on ApiException catch (e) {
       if (!mounted) return;
-      if (e.code == ApiErrorCode.sessionAlreadyActive &&
-          e.activeSessionId != null) {
-        context.pushReplacement('/session/${e.activeSessionId}');
+      final activeRoute = e.activeSessionRoute;
+      if (e.code == ApiErrorCode.sessionAlreadyActive && activeRoute != null) {
+        context.pushReplacement(activeRoute);
         return;
       }
       ScaffoldMessenger.of(context)

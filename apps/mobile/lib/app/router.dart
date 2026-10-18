@@ -17,6 +17,7 @@ import '../features/home/presentation/home_shell.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
 import '../features/interviews/presentation/history/interview_history_screen.dart';
 import '../features/interviews/presentation/prep/interview_prep_screen.dart';
+import '../features/interviews/presentation/session/interview_session_screen.dart';
 import '../features/memory/presentation/memory_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow.dart';
 import '../features/progress/presentation/progress_screen.dart';
@@ -80,9 +81,15 @@ String? computeRedirect(
     return location.startsWith('/onboarding') ? null : '/onboarding';
   }
 
+  // Una entrevista activa se retoma en modo entrevista (F12.4.T1), nunca en
+  // la conversación normal de `/session/:id`.
   final activeId = auth.activeSessionId;
-  if (activeId != null && !location.startsWith('/session/$activeId')) {
-    return '/session/$activeId';
+  if (activeId != null) {
+    final interviewId = auth.activeInterviewId;
+    final target = interviewId != null
+        ? '/interviews/$interviewId/session'
+        : '/session/$activeId';
+    if (!location.startsWith(target)) return target;
   }
 
   if (isAuthRoute ||
@@ -180,12 +187,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             builder: (context, state) =>
                 InterviewPrepScreen(interviewId: state.pathParameters['id']!),
           ),
-          // F12.4.T1 reemplaza esto por la sesión de entrevista (IE-05).
           GoRoute(
             path: ':id/session',
-            builder: (context, state) => PlaceholderScreen(
-              title: AppLocalizations.of(context)
-                  .interviewSessionPlaceholderTitle,
+            builder: (context, state) => InterviewSessionScreen(
+              interviewId: state.pathParameters['id']!,
             ),
           ),
           // F12 reemplaza esto por el parecer (IE-06).

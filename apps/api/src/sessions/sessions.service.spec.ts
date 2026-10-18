@@ -142,7 +142,10 @@ function fakeRepository(options: FakeRepoOptions = {}): FakeRepo {
     pickCallbackCalls,
     findProfile: async () =>
       options.profile === undefined ? profileFixture() : options.profile,
-    findActiveSessionId: async () => options.activeSessionId ?? null,
+    findActiveSession: async () =>
+      options.activeSessionId
+        ? { id: options.activeSessionId, kind: 'free_topic' as const, interviewId: null }
+        : null,
     findChatModelPreference: async () => options.preference ?? null,
     findNewsItem: async () => options.newsItem ?? null,
     findBriefText: async () => options.brief ?? null,
@@ -367,6 +370,7 @@ describe('SessionsService.openSession · validación previa (SPEC-04 §3.1, §2)
       error: 'SESSION_ALREADY_ACTIVE',
       statusCode: 409,
       activeSessionId,
+      activeSession: { id: activeSessionId, kind: 'free_topic', interviewId: null },
     });
   });
 });

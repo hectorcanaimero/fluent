@@ -50,9 +50,9 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
       if (!mounted) return;
       // MEJ-10: ya hay una sesión abierta (por ejemplo, en otra pestaña o
       // dispositivo) — vamos directo a ella en vez de mostrar un error.
-      if (e.code == ApiErrorCode.sessionAlreadyActive &&
-          e.activeSessionId != null) {
-        context.push('/session/${e.activeSessionId}');
+      final activeRoute = e.activeSessionRoute;
+      if (e.code == ApiErrorCode.sessionAlreadyActive && activeRoute != null) {
+        context.push(activeRoute);
         return;
       }
       ScaffoldMessenger.of(context)

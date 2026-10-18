@@ -77,6 +77,20 @@ abstract class ModelPreference with _$ModelPreference {
       _$ModelPreferenceFromJson(json);
 }
 
+/// `MeResponse.activeSession` (F12.4.T1): la sesión activa con su `kind`; una
+/// entrevista (`interviewId` no nulo) se retoma en `/interviews/:id/session`.
+@freezed
+abstract class ActiveSessionRef with _$ActiveSessionRef {
+  const factory ActiveSessionRef({
+    required String id,
+    required String kind,
+    String? interviewId,
+  }) = _ActiveSessionRef;
+
+  factory ActiveSessionRef.fromJson(Map<String, dynamic> json) =>
+      _$ActiveSessionRefFromJson(json);
+}
+
 @freezed
 abstract class MeResponse with _$MeResponse {
   const factory MeResponse({
@@ -85,6 +99,7 @@ abstract class MeResponse with _$MeResponse {
     ModelPreference? modelPreference,
     required bool onboarded,
     String? activeSessionId,
+    ActiveSessionRef? activeSession,
     @Default(<String>[]) List<String> interestsCatalog,
     @Default(<String>[]) List<String> pendingActions,
 
@@ -291,10 +306,33 @@ abstract class TurnResult with _$TurnResult {
     /// no manda el campo en el resto de los casos, así que el `false` por
     /// defecto cubre esa ausencia (SPEC-02 §4.3, `docs/specs/SPEC-04-sesion-de-conversacion.md` §4).
     @Default(false) bool unavailable,
+
+    /// Solo presente en un turno de una sesión `kind = 'interview'` (F12.1.T2,
+    /// F12.4.T1): progreso de la entrevista para el encabezado "Pregunta n de
+    /// 8" de `conversation_screen.dart`.
+    TurnInterviewInfo? interview,
   }) = _TurnResult;
 
   factory TurnResult.fromJson(Map<String, dynamic> json) =>
       _$TurnResultFromJson(json);
+}
+
+/// `TurnResult.interview`: progreso de la entrevista tras este turno
+/// (F12.1.T2). `questionIdx` es la pregunta actual (1-based); `done` marca
+/// la última pregunta ya respondida (el agente dijo `done`), momento en el
+/// que la app navega al parecer.
+@freezed
+abstract class TurnInterviewInfo with _$TurnInterviewInfo {
+  const factory TurnInterviewInfo({
+    required int questionIdx,
+    required int totalQuestions,
+    required String competency,
+    required int remainingSec,
+    @Default(false) bool done,
+  }) = _TurnInterviewInfo;
+
+  factory TurnInterviewInfo.fromJson(Map<String, dynamic> json) =>
+      _$TurnInterviewInfoFromJson(json);
 }
 
 @freezed
@@ -662,6 +700,10 @@ abstract class InterviewSessionStart with _$InterviewSessionStart {
     required String sessionId,
     int? answeredCount,
     int? totalQuestions,
+
+    /// Progreso al abrir (F12.4.T1): "Pregunta n de 8" y el tiempo que
+    /// queda desde la apertura, antes del primer turno.
+    TurnInterviewInfo? interview,
   }) = _InterviewSessionStart;
 
   factory InterviewSessionStart.fromJson(Map<String, dynamic> json) =>

@@ -26,8 +26,11 @@ class _FailingMeApi extends FakeApi {
 
 /// `InsforgeAuthClient` que anota los logout remotos que recibe.
 class _RecordingAuthClient extends InsforgeAuthClient {
-  _RecordingAuthClient({required Dio dio, this.fails = false, this.hangs = false})
-    : super(dio: dio);
+  _RecordingAuthClient({
+    required Dio dio,
+    this.fails = false,
+    this.hangs = false,
+  }) : super(dio: dio);
 
   final bool fails;
   final bool hangs;
@@ -152,25 +155,28 @@ void main() {
       expect(await store.read(), isNull);
     });
 
-    test('un error de red conserva los tokens y deja el estado en error', () async {
-      final store = InMemoryTokenStore()..write(_tokens);
-      final controller = _controller(
-        tokenStore: store,
-        api: _FailingMeApi(
-          const ApiException(
-            code: ApiErrorCode.unknown,
-            message: 'network error',
-            statusCode: null,
+    test(
+      'un error de red conserva los tokens y deja el estado en error',
+      () async {
+        final store = InMemoryTokenStore()..write(_tokens);
+        final controller = _controller(
+          tokenStore: store,
+          api: _FailingMeApi(
+            const ApiException(
+              code: ApiErrorCode.unknown,
+              message: 'network error',
+              statusCode: null,
+            ),
           ),
-        ),
-      );
-      addTearDown(controller.dispose);
+        );
+        addTearDown(controller.dispose);
 
-      await controller.bootstrap();
+        await controller.bootstrap();
 
-      expect(controller.state.status, AuthStatus.error);
-      expect(await store.read(), isNotNull);
-    });
+        expect(controller.state.status, AuthStatus.error);
+        expect(await store.read(), isNotNull);
+      },
+    );
 
     test('un 500 tampoco cierra la sesión', () async {
       final store = InMemoryTokenStore()..write(_tokens);
@@ -192,19 +198,22 @@ void main() {
       expect(await store.read(), isNotNull);
     });
 
-    test('una excepción que no es ApiException tampoco cierra la sesión', () async {
-      final store = InMemoryTokenStore()..write(_tokens);
-      final controller = _controller(
-        tokenStore: store,
-        api: _FailingMeApi(StateError('inesperado')),
-      );
-      addTearDown(controller.dispose);
+    test(
+      'una excepción que no es ApiException tampoco cierra la sesión',
+      () async {
+        final store = InMemoryTokenStore()..write(_tokens);
+        final controller = _controller(
+          tokenStore: store,
+          api: _FailingMeApi(StateError('inesperado')),
+        );
+        addTearDown(controller.dispose);
 
-      await controller.bootstrap();
+        await controller.bootstrap();
 
-      expect(controller.state.status, AuthStatus.error);
-      expect(await store.read(), isNotNull);
-    });
+        expect(controller.state.status, AuthStatus.error);
+        expect(await store.read(), isNotNull);
+      },
+    );
 
     test('retry() vuelve a intentar y recupera la sesión', () async {
       final store = InMemoryTokenStore()..write(_tokens);
@@ -304,6 +313,21 @@ void main() {
       expect(controller.state.activeSessionId, isNull);
     });
 
+    test('/me con una entrevista activa guarda kind e interviewId', () async {
+      final store = InMemoryTokenStore()..write(_tokens);
+      final controller = _controller(
+        tokenStore: store,
+        api: _ActiveInterviewMeApi(),
+      );
+      addTearDown(controller.dispose);
+
+      await controller.bootstrap();
+
+      expect(controller.state.activeSessionId, 's-int');
+      expect(controller.state.activeSessionKind, 'interview');
+      expect(controller.state.activeInterviewId, 'i-1');
+    });
+
     test('no borra una sesión activa distinta', () async {
       final store = InMemoryTokenStore()..write(_tokens);
       final controller = _controller(tokenStore: store);
@@ -338,4 +362,19 @@ class _ToggleMeApi extends FakeApi {
     }
     return super.getMe();
   }
+}
+
+/// `/me` con una entrevista en curso como sesión activa (F12.4.T1).
+class _ActiveInterviewMeApi extends FakeApi {
+  _ActiveInterviewMeApi() : super(artificialDelay: Duration.zero);
+
+  @override
+  Future<MeResponse> getMe() async => (await super.getMe()).copyWith(
+    activeSessionId: 's-int',
+    activeSession: const ActiveSessionRef(
+      id: 's-int',
+      kind: 'interview',
+      interviewId: 'i-1',
+    ),
+  );
 }

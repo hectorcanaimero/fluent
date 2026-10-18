@@ -16,6 +16,7 @@ import '../../../../core/widgets/button_spinner.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/interviews_repository.dart';
 import 'offer_draft_prefs.dart';
+import 'starter_templates.dart';
 
 /// IE-01 (y sus estados 01a vacío, 01b carga, 01c servicio caído, 01d tope
 /// alcanzado) e IE-02 (URL no legible), FR-1, FR-2, FR-21, FR-22, FR-33.
@@ -29,6 +30,7 @@ class NewInterviewScreen extends ConsumerStatefulWidget {
 class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
   final _offerController = TextEditingController();
   final _offerFocus = FocusNode();
+  final _submitFocus = FocusNode();
   late final String? _userId;
   Timer? _saveDebounce;
 
@@ -87,7 +89,22 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
     _offerController.removeListener(_onOfferChanged);
     _offerController.dispose();
     _offerFocus.dispose();
+    _submitFocus.dispose();
     super.dispose();
+  }
+
+  /// Tocar una entrevista lista (F14.1.T1) rellena el campo con su
+  /// `offerText` y lleva el foco a "Preparar entrevista"; la persona decide
+  /// si la manda tal cual o la ajusta primero.
+  void _fillFromTemplate(StarterTemplate template) {
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _offerController.text = template.offerText(l10n);
+      _unreadable = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _submitFocus.requestFocus();
+    });
   }
 
   Future<void> _paste() async {
@@ -234,12 +251,14 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
               : _OfferForm(
                   controller: _offerController,
                   focusNode: _offerFocus,
+                  submitFocusNode: _submitFocus,
                   type: _type,
                   quota: quota,
                   submitting: _submitting,
                   onTypeChanged: (value) => setState(() => _type = value),
                   onPaste: _paste,
                   onSubmit: () => _prepare(quota.remaining),
+                  onTemplateTap: _fillFromTemplate,
                 ),
         ),
       ),
@@ -272,22 +291,26 @@ class _OfferForm extends StatelessWidget {
   const _OfferForm({
     required this.controller,
     required this.focusNode,
+    required this.submitFocusNode,
     required this.type,
     required this.quota,
     required this.submitting,
     required this.onTypeChanged,
     required this.onPaste,
     required this.onSubmit,
+    required this.onTemplateTap,
   });
 
   final TextEditingController controller;
   final FocusNode focusNode;
+  final FocusNode submitFocusNode;
   final String type;
   final InterviewQuota quota;
   final bool submitting;
   final ValueChanged<String> onTypeChanged;
   final VoidCallback onPaste;
   final VoidCallback onSubmit;
+  final ValueChanged<StarterTemplate> onTemplateTap;
 
   @override
   Widget build(BuildContext context) {
@@ -344,6 +367,15 @@ class _OfferForm extends StatelessWidget {
             ),
           ],
         ),
+        ValueListenableBuilder<TextEditingValue>(
+          valueListenable: controller,
+          builder: (context, value, _) => value.text.isNotEmpty
+              ? const SizedBox.shrink()
+              : _StarterTemplatesSection(
+                  enabled: !capReached,
+                  onTap: onTemplateTap,
+                ),
+        ),
         const SizedBox(height: AppSpacing.lg),
         SegmentedButton<String>(
           segments: [
@@ -366,6 +398,7 @@ class _OfferForm extends StatelessWidget {
                 !capReached && !submitting && value.text.trim().isNotEmpty;
             return ElevatedButton(
               key: const Key('interview_entry_submit_button'),
+              focusNode: submitFocusNode,
               onPressed: canSubmit ? onSubmit : null,
               child: submitting
                   ? const ButtonSpinner()
@@ -373,6 +406,61 @@ class _OfferForm extends StatelessWidget {
             );
           },
         ),
+      ],
+    );
+  }
+}
+
+/// F14.1.T1: entrevistas listas para empezar con un toque. Solo se muestra
+/// mientras el campo de la oferta está vacío (ver `_OfferForm`).
+class _StarterTemplatesSection extends StatelessWidget {
+  const _StarterTemplatesSection({required this.enabled, required this.onTap});
+
+  final bool enabled;
+  final ValueChanged<StarterTemplate> onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: AppSpacing.lg),
+        Text(
+          l10n.interviewStarterSectionTitle,
+          style: Theme.of(context).textTheme.titleSmall,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        for (final template in starterTemplates)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.sm),
+            child: Card(
+              margin: EdgeInsets.zero,
+              child: InkWell(
+                key: Key('interview_entry_starter_card_${template.id}'),
+                onTap: enabled ? () => onTap(template) : null,
+                borderRadius: BorderRadius.circular(12),
+                child: Padding(
+                  padding: const EdgeInsets.all(AppSpacing.md),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        template.title(l10n),
+                        style: Theme.of(context).textTheme.titleSmall,
+                      ),
+                      const SizedBox(height: AppSpacing.xs),
+                      Text(
+                        template.description(l10n),
+                        style: Theme.of(context).textTheme.bodySmall
+                            ?.copyWith(color: AppColors.textMuted),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
       ],
     );
   }

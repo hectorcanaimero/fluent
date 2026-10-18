@@ -1898,6 +1898,120 @@ abstract class AppLocalizations {
   /// **'Abrir en LinkedIn'**
   String get interviewOfferUnreadableLinkedinButton;
 
+  /// No description provided for @interviewStarterSectionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'O empieza con una entrevista lista'**
+  String get interviewStarterSectionTitle;
+
+  /// No description provided for @interviewStarterBackendTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollo backend'**
+  String get interviewStarterBackendTitle;
+
+  /// No description provided for @interviewStarterBackendDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas diseño de APIs, bases de datos y preguntas de sistema.'**
+  String get interviewStarterBackendDescription;
+
+  /// No description provided for @interviewStarterBackendOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista para desarrollador backend semi senior en una empresa de tecnología de producto'**
+  String get interviewStarterBackendOfferText;
+
+  /// No description provided for @interviewStarterFrontendTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Desarrollo frontend / móvil'**
+  String get interviewStarterFrontendTitle;
+
+  /// No description provided for @interviewStarterFrontendDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas componentes de interfaz, estado y rendimiento en el navegador o en apps.'**
+  String get interviewStarterFrontendDescription;
+
+  /// No description provided for @interviewStarterFrontendOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista para desarrollador frontend y móvil semi senior en una empresa de tecnología de producto'**
+  String get interviewStarterFrontendOfferText;
+
+  /// No description provided for @interviewStarterDataTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Datos y analítica'**
+  String get interviewStarterDataTitle;
+
+  /// No description provided for @interviewStarterDataDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas SQL, métricas y cómo contar una historia con datos.'**
+  String get interviewStarterDataDescription;
+
+  /// No description provided for @interviewStarterDataOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista para analista de datos semi senior en una empresa de tecnología de producto'**
+  String get interviewStarterDataOfferText;
+
+  /// No description provided for @interviewStarterProductTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Producto (Product Manager)'**
+  String get interviewStarterProductTitle;
+
+  /// No description provided for @interviewStarterProductDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas priorización, métricas de producto y casos de estrategia.'**
+  String get interviewStarterProductDescription;
+
+  /// No description provided for @interviewStarterProductOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista para product manager semi senior en una empresa de tecnología de producto'**
+  String get interviewStarterProductOfferText;
+
+  /// No description provided for @interviewStarterDesignTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Diseño UX/UI'**
+  String get interviewStarterDesignTitle;
+
+  /// No description provided for @interviewStarterDesignDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas procesos de diseño, decisiones de usabilidad y tu portafolio.'**
+  String get interviewStarterDesignDescription;
+
+  /// No description provided for @interviewStarterDesignOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista para diseñador UX/UI semi senior en una empresa de tecnología de producto'**
+  String get interviewStarterDesignOfferText;
+
+  /// No description provided for @interviewStarterSupportTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Atención al cliente / ventas en inglés'**
+  String get interviewStarterSupportTitle;
+
+  /// No description provided for @interviewStarterSupportDescription.
+  ///
+  /// In es, this message translates to:
+  /// **'Practicas conversación en inglés para atención al cliente y ventas.'**
+  String get interviewStarterSupportDescription;
+
+  /// No description provided for @interviewStarterSupportOfferText.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista en inglés para atención al cliente y ventas en una empresa de tecnología de producto, nivel semi senior'**
+  String get interviewStarterSupportOfferText;
+
   /// No description provided for @interviewPracticeCardTitle.
   ///
   /// In es, this message translates to:

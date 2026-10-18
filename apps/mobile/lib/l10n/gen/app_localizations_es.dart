@@ -1065,6 +1065,77 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interviewOfferUnreadableLinkedinButton => 'Abrir en LinkedIn';
 
   @override
+  String get interviewStarterSectionTitle =>
+      'O empieza con una entrevista lista';
+
+  @override
+  String get interviewStarterBackendTitle => 'Desarrollo backend';
+
+  @override
+  String get interviewStarterBackendDescription =>
+      'Practicas diseño de APIs, bases de datos y preguntas de sistema.';
+
+  @override
+  String get interviewStarterBackendOfferText =>
+      'Entrevista para desarrollador backend semi senior en una empresa de tecnología de producto';
+
+  @override
+  String get interviewStarterFrontendTitle => 'Desarrollo frontend / móvil';
+
+  @override
+  String get interviewStarterFrontendDescription =>
+      'Practicas componentes de interfaz, estado y rendimiento en el navegador o en apps.';
+
+  @override
+  String get interviewStarterFrontendOfferText =>
+      'Entrevista para desarrollador frontend y móvil semi senior en una empresa de tecnología de producto';
+
+  @override
+  String get interviewStarterDataTitle => 'Datos y analítica';
+
+  @override
+  String get interviewStarterDataDescription =>
+      'Practicas SQL, métricas y cómo contar una historia con datos.';
+
+  @override
+  String get interviewStarterDataOfferText =>
+      'Entrevista para analista de datos semi senior en una empresa de tecnología de producto';
+
+  @override
+  String get interviewStarterProductTitle => 'Producto (Product Manager)';
+
+  @override
+  String get interviewStarterProductDescription =>
+      'Practicas priorización, métricas de producto y casos de estrategia.';
+
+  @override
+  String get interviewStarterProductOfferText =>
+      'Entrevista para product manager semi senior en una empresa de tecnología de producto';
+
+  @override
+  String get interviewStarterDesignTitle => 'Diseño UX/UI';
+
+  @override
+  String get interviewStarterDesignDescription =>
+      'Practicas procesos de diseño, decisiones de usabilidad y tu portafolio.';
+
+  @override
+  String get interviewStarterDesignOfferText =>
+      'Entrevista para diseñador UX/UI semi senior en una empresa de tecnología de producto';
+
+  @override
+  String get interviewStarterSupportTitle =>
+      'Atención al cliente / ventas en inglés';
+
+  @override
+  String get interviewStarterSupportDescription =>
+      'Practicas conversación en inglés para atención al cliente y ventas.';
+
+  @override
+  String get interviewStarterSupportOfferText =>
+      'Entrevista en inglés para atención al cliente y ventas en una empresa de tecnología de producto, nivel semi senior';
+
+  @override
   String get interviewPracticeCardTitle => 'Simula tu entrevista';
 
   @override

@@ -26,6 +26,10 @@ import type {
 /** Últimas preguntas a considerar para `previousQuestions` (I1). */
 export const PREVIOUS_QUESTIONS_LIMIT = 50;
 
+/** DECR atómico que nunca baja de 0 ni crea la clave. */
+const REFUND_SCRIPT =
+  "local v = tonumber(redis.call('GET', KEYS[1]) or '0') if v > 0 then return redis.call('DECR', KEYS[1]) end return 0";
+
 /**
  * Nombres de las tablas de F10.1.T1. No viven en `db/schema.ts` porque esa
  * migración todavía no está reflejada ahí (fuera del alcance de F10.3.T3,
@@ -265,7 +269,9 @@ export class InsforgeInterviewPrepareRepository extends InterviewPrepareReposito
         'leer la zona horaria del perfil',
       )?.timezone;
       const key = `interviews:day:${userId}:${userDay(timezone)}`;
-      await this.redis.decr(key);
+      // Solo si queda algo que devolver: un DECR sobre una clave expirada la
+      // recrearía en -1 y sin TTL, regalando un cupo permanente.
+      await this.redis.eval(REFUND_SCRIPT, 1, key);
     } catch {
       // Fail-open (ver el contrato de `refundDailyCap`): perder el reembolso
       // del tope es mejor que tumbar el job por un fallo de Redis o de lectura

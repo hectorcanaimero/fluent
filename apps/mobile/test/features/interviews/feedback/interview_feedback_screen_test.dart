@@ -237,7 +237,11 @@ void main() {
       expect(find.text('Se entiende bien.'), findsOneWidget);
       expect(find.text('Vocabulario técnico correcto.'), findsOneWidget);
 
-      // FR-14: aviso fijo.
+      // FR-14: aviso fijo (debajo de los errores de inglés).
+      await tester.scrollUntilVisible(
+        find.text(l10n.interviewFeedbackDisclaimer),
+        200,
+      );
       expect(find.text(l10n.interviewFeedbackDisclaimer), findsOneWidget);
 
       // Sin botón de compartir en ningún estado de esta pantalla.

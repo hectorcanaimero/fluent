@@ -644,6 +644,9 @@ abstract class InterviewSummary with _$InterviewSummary {
     /// `true` si viene de `POST /interviews/:id/reinterview` (FR-19, IE-08).
     @Default(false) bool isReinterview,
 
+    /// La entrevista de la que esta es re-entrevista; `null` si no lo es.
+    String? parentInterviewId,
+
     /// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
     /// se creó el ciclo (`POST /interviews/:id/cycle`).
     int? cycleCompletedSessions,
@@ -684,6 +687,10 @@ abstract class InterviewDetail with _$InterviewDetail {
     /// `too_short` que se puede retomar con `POST /interviews/:id/session`.
     @Default(false) bool resumable,
     @Default(false) bool isReinterview,
+
+    /// La entrevista de la que esta es re-entrevista (FR-19, FR-30); `null`
+    /// si no lo es.
+    String? parentInterviewId,
   }) = _InterviewDetail;
 
   factory InterviewDetail.fromJson(Map<String, dynamic> json) =>
@@ -714,6 +721,9 @@ abstract class InterviewSessionStart with _$InterviewSessionStart {
 abstract class CompetencyFeedback with _$CompetencyFeedback {
   const factory CompetencyFeedback({
     required String competencyId,
+
+    /// Nombre de la competencia en la rúbrica (opcional en I1).
+    String? name,
     required String observedLevel,
     required String expectedLevel,
 

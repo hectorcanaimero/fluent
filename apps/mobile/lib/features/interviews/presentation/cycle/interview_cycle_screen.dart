@@ -34,6 +34,10 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
 
   bool _startingReinterview = false;
 
+  /// Hija devuelta por `POST /reinterview` (`201` nueva o `200` la que ya
+  /// estaba); antes de eso sale de `GET /interviews`.
+  String? _childId;
+
   Future<StudyCycle> _load() =>
       ref.read(interviewsRepositoryProvider).cycle(widget.interviewId);
 
@@ -72,8 +76,9 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
   }
 
   /// "Re-entrevista" (IE-07, FR-19): `POST /interviews/:id/reinterview` crea
-  /// la hija (`parent_interview_id`) y navega a su preparación
-  /// (`/interviews/:childId`, IE-03/IE-04).
+  /// la hija (`parent_interview_id`, idempotente) y reemplaza el ciclo por su
+  /// preparación (`/interviews/:childId`, IE-03/IE-04): volver atrás no
+  /// deja un ciclo con el botón de crear otra.
   Future<void> _startReinterview() async {
     if (_startingReinterview) return;
     setState(() => _startingReinterview = true);
@@ -82,7 +87,8 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
           .read(interviewsRepositoryProvider)
           .reinterview(widget.interviewId);
       if (!mounted) return;
-      context.push('/interviews/${child.id}');
+      setState(() => _childId = child.id);
+      context.pushReplacement('/interviews/${child.id}');
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
@@ -107,6 +113,14 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
     };
     // Sin la ficha todavía no hay subtítulo: mostrar el nombre genérico y
     // cambiarlo al llegar la empresa parpadeaba.
+    final childId =
+        _childId ??
+        ref
+            .watch(interviewsProvider)
+            .valueOrNull
+            ?.where((i) => i.parentInterviewId == widget.interviewId)
+            .firstOrNull
+            ?.id;
     final companyName = detail == null
         ? null
         : detail.company?.name ?? l10n.interviewHistoryCompanyFallback;
@@ -126,6 +140,7 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
               onStart: _startSession,
               reinterviewBusy: _startingReinterview,
               onReinterview: _startReinterview,
+              childId: childId,
             ),
           ),
         ),
@@ -143,6 +158,7 @@ class _CycleBody extends StatelessWidget {
     required this.onStart,
     required this.reinterviewBusy,
     required this.onReinterview,
+    required this.childId,
   });
 
   final StudyCycle cycle;
@@ -152,6 +168,7 @@ class _CycleBody extends StatelessWidget {
   final void Function(int idx) onStart;
   final bool reinterviewBusy;
   final VoidCallback onReinterview;
+  final String? childId;
 
   @override
   Widget build(BuildContext context) {
@@ -214,6 +231,7 @@ class _CycleBody extends StatelessWidget {
           total: total,
           busy: reinterviewBusy,
           onReinterview: onReinterview,
+          childId: childId,
         ),
       ],
     );
@@ -334,12 +352,16 @@ class _ReinterviewCard extends StatelessWidget {
     required this.total,
     required this.busy,
     required this.onReinterview,
+    required this.childId,
   });
 
   final bool completed;
   final int total;
   final bool busy;
   final VoidCallback onReinterview;
+
+  /// Re-entrevista ya creada: el botón lleva a ella en vez de crear otra.
+  final String? childId;
 
   @override
   Widget build(BuildContext context) {
@@ -378,7 +400,14 @@ class _ReinterviewCard extends StatelessWidget {
               ],
             ),
           ),
-          if (completed) ...[
+          if (completed && childId != null) ...[
+            const SizedBox(width: AppSpacing.md),
+            ElevatedButton(
+              key: const Key('interview_cycle_view_reinterview_button'),
+              onPressed: () => context.push('/interviews/$childId'),
+              child: Text(l10n.interviewCycleViewReinterviewCta),
+            ),
+          ] else if (completed) ...[
             const SizedBox(width: AppSpacing.md),
             ElevatedButton(
               key: const Key('interview_cycle_reinterview_button'),

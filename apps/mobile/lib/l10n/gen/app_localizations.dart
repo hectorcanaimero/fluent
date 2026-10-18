@@ -2987,13 +2987,13 @@ abstract class AppLocalizations {
   /// No description provided for @interviewCompareEnglishTitle.
   ///
   /// In es, this message translates to:
-  /// **'Errores de inglés repetidos'**
+  /// **'Inglés'**
   String get interviewCompareEnglishTitle;
 
   /// No description provided for @interviewCompareEnglishEmpty.
   ///
   /// In es, this message translates to:
-  /// **'No se repitió ningún error de inglés.'**
+  /// **'Ningún error se repitió'**
   String get interviewCompareEnglishEmpty;
 
   /// No description provided for @interviewCompareDisclaimer.
@@ -3007,6 +3007,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Ver el parecer completo'**
   String get interviewCompareViewFeedbackCta;
+
+  /// No description provided for @interviewCycleViewReinterviewCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver re-entrevista'**
+  String get interviewCycleViewReinterviewCta;
+
+  /// No description provided for @interviewCompareEnglishCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Errores de inglés: {before} → {after}'**
+  String interviewCompareEnglishCount(String before, String after);
+
+  /// No description provided for @interviewCompareEnglishRepeatedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Se repitieron'**
+  String get interviewCompareEnglishRepeatedTitle;
+
+  /// No description provided for @interviewCompareNoComparison.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista no tiene comparación'**
+  String get interviewCompareNoComparison;
 }
 
 class _AppLocalizationsDelegate

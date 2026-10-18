@@ -777,8 +777,22 @@
   "interviewCompareTrendUp": "Avanzó",
   "interviewCompareTrendSame": "Igual",
   "interviewCompareTrendDown": "Retrocedió",
-  "interviewCompareEnglishTitle": "Errores de inglés repetidos",
-  "interviewCompareEnglishEmpty": "No se repitió ningún error de inglés.",
+  "interviewCompareEnglishTitle": "Inglés",
+  "interviewCompareEnglishEmpty": "Ningún error se repitió",
   "interviewCompareDisclaimer": "Comparación orientativa generada por IA.",
-  "interviewCompareViewFeedbackCta": "Ver el parecer completo"
+  "interviewCompareViewFeedbackCta": "Ver el parecer completo",
+  "interviewCycleViewReinterviewCta": "Ver re-entrevista",
+  "interviewCompareEnglishCount": "Errores de inglés: {before} → {after}",
+  "@interviewCompareEnglishCount": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "interviewCompareEnglishRepeatedTitle": "Se repitieron",
+  "interviewCompareNoComparison": "Esta entrevista no tiene comparación"
 }

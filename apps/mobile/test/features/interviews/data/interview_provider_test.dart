@@ -24,22 +24,39 @@ class _ScriptedApi extends FakeApi {
   }
 }
 
-InterviewDetail _detail(String status) =>
-    InterviewDetail(id: 'i1', type: 'technical', status: status, createdAt: '2026-10-18');
+InterviewDetail _detail(String status) => InterviewDetail(
+  id: 'i1',
+  type: 'technical',
+  status: status,
+  createdAt: '2026-10-18',
+);
 
-const _netError = ApiException(code: ApiErrorCode.unknown, message: 'network error');
+const _netError = ApiException(
+  code: ApiErrorCode.unknown,
+  message: 'network error',
+);
 
 void main() {
   List<AsyncValue<InterviewDetail>> listen(ProviderContainer container) {
     final states = <AsyncValue<InterviewDetail>>[];
-    container.listen(interviewProvider('i1'), (_, next) => states.add(next), fireImmediately: true);
+    container.listen(
+      interviewProvider('i1'),
+      (_, next) => states.add(next),
+      fireImmediately: true,
+    );
     return states;
   }
 
   test('un GET fallido mientras preparing no corta el repolleo', () {
     fakeAsync((async) {
-      final api = _ScriptedApi([_detail('preparing'), _netError, _detail('ready')]);
-      final container = ProviderContainer(overrides: [fluentApiProvider.overrideWith((ref) => api)]);
+      final api = _ScriptedApi([
+        _detail('preparing'),
+        _netError,
+        _detail('ready'),
+      ]);
+      final container = ProviderContainer(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+      );
       addTearDown(container.dispose);
       final states = listen(container);
 
@@ -63,7 +80,9 @@ void main() {
   test('el error solo sale tras 5 fallos seguidos', () {
     fakeAsync((async) {
       final api = _ScriptedApi([_detail('feedback_pending'), _netError]);
-      final container = ProviderContainer(overrides: [fluentApiProvider.overrideWith((ref) => api)]);
+      final container = ProviderContainer(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+      );
       addTearDown(container.dispose);
       final states = listen(container);
 

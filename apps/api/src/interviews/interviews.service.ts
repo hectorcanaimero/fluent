@@ -76,6 +76,8 @@ export interface InterviewDetailDto extends InterviewDto {
   readonly errorCode: string | null;
   /** `too_short` que se puede retomar con `POST /interviews/:id/session` (D5). */
   readonly resumable: boolean;
+  /** Entrevista de la que esta es re-entrevista (FR-19); `null` si no lo es. */
+  readonly parentInterviewId: string | null;
 }
 
 export interface InterviewListItemDto extends InterviewDto {
@@ -86,6 +88,8 @@ export interface InterviewListItemDto extends InterviewDto {
   readonly resumable: boolean;
   /** Viene de `POST /interviews/:id/reinterview` (FR-19). */
   readonly isReinterview: boolean;
+  /** La padre de la re-entrevista; `null` si no lo es. */
+  readonly parentInterviewId: string | null;
   /** Sesiones del ciclo hechas; `null` sin ciclo (F13.1.T1). */
   readonly cycleCompletedSessions: number | null;
   readonly cycleStatus: StudyCycle['status'] | null;
@@ -551,6 +555,7 @@ function toDetailDto(row: Interview, estimatedMin: number): InterviewDetailDto {
     competencies,
     errorCode: row.error_code,
     resumable: row.resumable,
+    parentInterviewId: row.parent_interview_id,
   };
 }
 
@@ -590,6 +595,7 @@ function toListItemDto(
     historyStatus: HISTORY_STATUS[row.status],
     resumable: row.resumable,
     isReinterview: row.parent_interview_id !== null,
+    parentInterviewId: row.parent_interview_id,
     cycleCompletedSessions: cycle?.doneCount ?? null,
     cycleStatus: cycle?.status ?? null,
   };

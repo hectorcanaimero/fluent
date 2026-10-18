@@ -1662,11 +1662,10 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interviewCompareTrendDown => 'Retrocedeu';
 
   @override
-  String get interviewCompareEnglishTitle => 'Erros de inglês repetidos';
+  String get interviewCompareEnglishTitle => 'Inglês';
 
   @override
-  String get interviewCompareEnglishEmpty =>
-      'Nenhum erro de inglês se repetiu.';
+  String get interviewCompareEnglishEmpty => 'Nenhum erro se repetiu';
 
   @override
   String get interviewCompareDisclaimer =>
@@ -1674,4 +1673,19 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interviewCompareViewFeedbackCta => 'Ver o parecer completo';
+
+  @override
+  String get interviewCycleViewReinterviewCta => 'Ver reentrevista';
+
+  @override
+  String interviewCompareEnglishCount(String before, String after) {
+    return 'Erros de inglês: $before → $after';
+  }
+
+  @override
+  String get interviewCompareEnglishRepeatedTitle => 'Se repetiram';
+
+  @override
+  String get interviewCompareNoComparison =>
+      'Esta entrevista não tem comparação';
 }

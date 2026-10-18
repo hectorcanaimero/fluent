@@ -9,6 +9,7 @@ import '../../../../core/errors/api_exception.dart';
 import '../../../../core/widgets/async_body.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/interviews_repository.dart';
+import '../interview_widgets.dart';
 
 const _prepSteps = ['reading', 'researching', 'designing'];
 
@@ -264,7 +265,7 @@ class _PlanSummaryView extends StatelessWidget {
         if (detail.seniority != null)
           _InfoRow(
             label: l10n.interviewPlanSeniorityLabel,
-            value: _seniorityLabel(detail.seniority!, l10n),
+            value: seniorityLabel(detail.seniority!, l10n),
           ),
         _InfoRow(
           label: l10n.interviewPlanTypeLabel,
@@ -410,12 +411,4 @@ String _workModeLabel(String code, AppLocalizations l10n) => switch (code) {
 String _typeLabel(String type, AppLocalizations l10n) => switch (type) {
   'mixed' => l10n.interviewTypeMixed,
   _ => l10n.interviewTypeTechnical,
-};
-
-String _seniorityLabel(String code, AppLocalizations l10n) => switch (code) {
-  'junior' => l10n.interviewSeniorityJunior,
-  'semi_senior' => l10n.interviewSenioritySemiSenior,
-  'senior' => l10n.interviewSenioritySenior,
-  'staff_lead' => l10n.interviewSeniorityStaffLead,
-  _ => code,
 };

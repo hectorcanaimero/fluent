@@ -220,6 +220,10 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id/compare',
             builder: (context, state) => InterviewCompareScreen(
               interviewId: state.pathParameters['id']!,
+              // Solo llega desde el parecer (que ya lo tiene cargado).
+              initialFeedback: state.extra is InterviewFeedback
+                  ? state.extra! as InterviewFeedback
+                  : null,
             ),
           ),
         ],

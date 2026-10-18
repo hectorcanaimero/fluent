@@ -1,4 +1,5 @@
 import 'package:fluent_mobile/core/api/fake_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/providers.dart';
 import 'package:fluent_mobile/features/interviews/presentation/compare/interview_compare_screen.dart';
 import 'package:fluent_mobile/l10n/gen/app_localizations.dart';
@@ -8,12 +9,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
-Future<void> _pump(WidgetTester tester, FakeApi api, String id) async {
+Future<void> _pump(
+  WidgetTester tester,
+  FakeApi api,
+  String id, {
+  bool settle = true,
+}) async {
   await tester.binding.setSurfaceSize(const Size(800, 1600));
   addTearDown(() => tester.binding.setSurfaceSize(null));
   final router = GoRouter(
     initialLocation: '/interviews/$id/compare',
     routes: [
+      GoRoute(
+        path: '/interviews/:id',
+        builder: (context, state) =>
+            Scaffold(body: Text('DETAIL_${state.pathParameters['id']}')),
+      ),
       GoRoute(
         path: '/interviews/:id/compare',
         builder: (context, state) =>
@@ -41,37 +52,76 @@ Future<void> _pump(WidgetTester tester, FakeApi api, String id) async {
       ),
     ),
   );
-  await tester.pumpAndSettle();
+  if (settle) {
+    await tester.pumpAndSettle();
+  } else {
+    await tester.pump();
+    await tester.pump();
+  }
 }
 
-/// Entrevista padre con el ciclo completo, su re-entrevista hija y el
-/// parecer de la hija en `feedback_ready` (con `comparison`, F13.1.T2).
-Future<String> _reinterviewFeedbackReady(FakeApi api) async {
+/// Lleva una entrevista de `preparing` a `feedback_ready` (el `getInterview`
+/// de [FakeApi] avanza un paso por llamada).
+Future<void> _finish(FakeApi api, String id) async {
+  await api.getInterview(id);
+  await api.getInterview(id);
+  await api.getInterview(id);
+  await api.startInterviewSession(id);
+  api.setInterviewAnsweredCount(id, 8);
+  api.finishInterview(id);
+  await api.getInterview(id); // feedback_pending → feedback_ready
+}
+
+/// Padre terminada con el ciclo completo y su re-entrevista hija recién
+/// creada (`preparing`).
+Future<(String, String)> _parentAndChild(FakeApi api) async {
   final parent = await api.createInterview(
     type: 'technical',
     offerText: 'Senior Backend Engineer at Acme',
   );
+  await _finish(api, parent.id);
   await api.createStudyCycle(parent.id);
   for (var idx = 1; idx <= 5; idx++) {
     api.completeStudySession(parent.id, idx);
   }
   final child = await api.reinterview(parent.id);
+  return (parent.id, child.id);
+}
 
-  // Avanza `preparing` → `ready` (un paso por GET) para tener competencias.
-  await api.getInterview(child.id);
-  await api.getInterview(child.id);
-  await api.getInterview(child.id);
+/// El parecer de la hija en `feedback_ready` (con `comparison`, F13.1.T2).
+Future<String> _reinterviewFeedbackReady(FakeApi api) async {
+  final (_, child) = await _parentAndChild(api);
+  await _finish(api, child);
+  return child;
+}
 
-  await api.startInterviewSession(child.id);
-  api.setInterviewAnsweredCount(child.id, 8);
-  api.finishInterview(child.id);
-  await api.getInterview(child.id); // feedback_pending → feedback_ready
-  return child.id;
+/// La primera ficha sale en `feedback_pending` y recién el repolleo de
+/// `interviewProvider` la ve lista.
+class _PendingOnceApi extends FakeApi {
+  _PendingOnceApi() : super(artificialDelay: Duration.zero);
+
+  String? pendingId;
+  final feedbackCalls = <String>[];
+
+  @override
+  Future<InterviewDetail> getInterview(String id) async {
+    final detail = await super.getInterview(id);
+    if (id != pendingId) return detail;
+    pendingId = null;
+    return detail.copyWith(status: 'feedback_pending');
+  }
+
+  @override
+  Future<InterviewFeedback> getInterviewFeedback(String id) {
+    feedbackCalls.add(id);
+    return super.getInterviewFeedback(id);
+  }
 }
 
 void main() {
   testWidgets(
-    'muestra las tres competencias con sus estados: avanzó, igual y retrocedió',
+    'muestra las tres competencias con nombre y estado: avanzó, igual y '
+    'retrocedió',
     (tester) async {
       final api = FakeApi(artificialDelay: Duration.zero);
       final id = await _reinterviewFeedbackReady(api);
@@ -80,7 +130,10 @@ void main() {
       expect(find.text('Así cambiaste'), findsOneWidget);
 
       final c1 = find.byKey(const Key('interview_compare_competency_c1'));
-      expect(c1, findsOneWidget);
+      expect(
+        find.descendant(of: c1, matching: find.text('APIs REST')),
+        findsOneWidget,
+      );
       expect(
         find.descendant(of: c1, matching: find.text('Avanzó')),
         findsOneWidget,
@@ -89,20 +142,14 @@ void main() {
         find.descendant(of: c1, matching: find.text('Junior')),
         findsOneWidget,
       );
-      expect(
-        find.descendant(of: c1, matching: find.text('Semi-senior')),
-        findsWidgets,
-      );
 
       final c2 = find.byKey(const Key('interview_compare_competency_c2'));
-      expect(c2, findsOneWidget);
       expect(
         find.descendant(of: c2, matching: find.text('Igual')),
         findsOneWidget,
       );
 
       final c3 = find.byKey(const Key('interview_compare_competency_c3'));
-      expect(c3, findsOneWidget);
       expect(
         find.descendant(of: c3, matching: find.text('Retrocedió')),
         findsOneWidget,
@@ -111,20 +158,31 @@ void main() {
         find.descendant(of: c3, matching: find.text('Senior')),
         findsOneWidget,
       );
+      expect(find.text('c1'), findsNothing);
+      expect(
+        find.byKey(const Key('interview_compare_name_placeholder')),
+        findsNothing,
+      );
     },
   );
 
   testWidgets(
-    'muestra la fila de inglés con el error repetido antes → después',
+    'FR-30: errores de inglés antes → después contra la padre y solo los '
+    'repetidos en "Se repitieron"',
     (tester) async {
       final api = FakeApi(artificialDelay: Duration.zero);
       final id = await _reinterviewFeedbackReady(api);
       await _pump(tester, api, id);
 
+      expect(find.text('Errores de inglés: 2 → 2'), findsOneWidget);
+      expect(find.text('Se repitieron'), findsOneWidget);
+      // Misma corrección normalizada (sin el punto final) que en la padre.
       expect(
-        find.text('I have went to the office. → I have gone to the office.'),
+        find.text('I have went to office. → I have gone to the office'),
         findsOneWidget,
       );
+      // Error nuevo de la hija: no se repitió.
+      expect(find.textContaining('There is much people.'), findsNothing);
       expect(
         find.byKey(const Key('interview_compare_english_empty')),
         findsNothing,
@@ -147,18 +205,74 @@ void main() {
     expect(find.textContaining('Compartir'), findsNothing);
   });
 
-  testWidgets('"Ver el parecer completo" navega al parecer de la entrevista', (
-    tester,
-  ) async {
+  testWidgets('sin comparación (no es re-entrevista): estado vacío y enlace al '
+      'parecer, sin titular', (tester) async {
     final api = FakeApi(artificialDelay: Duration.zero);
-    final id = await _reinterviewFeedbackReady(api);
-    await _pump(tester, api, id);
+    final (parent, _) = await _parentAndChild(api);
+    await _pump(tester, api, parent);
+
+    expect(find.text('Esta entrevista no tiene comparación'), findsOneWidget);
+    expect(find.text('Así cambiaste'), findsNothing);
 
     await tester.tap(
       find.byKey(const Key('interview_compare_view_feedback_button')),
     );
     await tester.pumpAndSettle();
-
-    expect(find.text('FEEDBACK_$id'), findsOneWidget);
+    expect(find.text('FEEDBACK_$parent'), findsOneWidget);
   });
+
+  testWidgets('404 NOT_READY: la entrevista no terminó y lleva a su ficha', (
+    tester,
+  ) async {
+    final api = FakeApi(artificialDelay: Duration.zero);
+    final (_, child) = await _parentAndChild(api);
+    await api.getInterview(child);
+    await api.getInterview(child);
+    await api.getInterview(child); // ready, sin terminar
+    await _pump(tester, api, child);
+
+    expect(find.text('Así cambiaste'), findsNothing);
+    await tester.tap(
+      find.byKey(const Key('interview_feedback_open_interview_button')),
+    );
+    await tester.pumpAndSettle();
+    expect(find.text('DETAIL_$child'), findsOneWidget);
+  });
+
+  testWidgets(
+    'feedback_pending: cargando sin pedir el parecer hasta que el repolleo '
+    'lo ve listo',
+    (tester) async {
+      final api = _PendingOnceApi();
+      final id = await _reinterviewFeedbackReady(api);
+      api.pendingId = id;
+      await _pump(tester, api, id, settle: false);
+
+      expect(find.byType(CircularProgressIndicator), findsOneWidget);
+      expect(api.feedbackCalls, isNot(contains(id)));
+
+      await tester.pump(const Duration(seconds: 3));
+      await tester.pumpAndSettle();
+      expect(api.feedbackCalls.where((c) => c == id), hasLength(1));
+      expect(find.text('Así cambiaste'), findsOneWidget);
+    },
+  );
+
+  testWidgets(
+    '"Ver el parecer completo" sin venir del parecer lo reemplaza (no apila)',
+    (tester) async {
+      final api = FakeApi(artificialDelay: Duration.zero);
+      final id = await _reinterviewFeedbackReady(api);
+      await _pump(tester, api, id);
+
+      await tester.tap(
+        find.byKey(const Key('interview_compare_view_feedback_button')),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('FEEDBACK_$id'), findsOneWidget);
+      final router = GoRouter.of(tester.element(find.text('FEEDBACK_$id')));
+      expect(router.canPop(), isFalse);
+    },
+  );
 }

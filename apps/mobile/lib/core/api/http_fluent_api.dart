@@ -513,10 +513,10 @@ class HttpFluentApi implements FluentApi {
           if (e.response?.statusCode == 409 &&
               data is Map<String, dynamic> &&
               data['error'] == 'TOO_SHORT') {
-            throw ApiException(
-              code: ApiErrorCode.interviewTooShort,
+            throw InterviewTooShort(
+              resumable: data['resumable'] as bool? ?? false,
+              answeredCount: (data['answeredCount'] as num?)?.toInt() ?? 0,
               message: (data['message'] as String?) ?? 'too short',
-              statusCode: 409,
             );
           }
           rethrow;

@@ -1412,7 +1412,7 @@ class AppLocalizationsEs extends AppLocalizations {
       'No pudimos empezar la entrevista.';
 
   @override
-  String get interviewFeedbackPlaceholderTitle => 'Parecer';
+  String get interviewFeedbackTitle => 'Parecer';
 
   @override
   String get interviewInProgressTitle => 'Tienes una entrevista en curso';
@@ -1497,4 +1497,87 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get conversationInterviewContinue => 'Seguir hablando';
+
+  @override
+  String interviewFeedbackSummaryTitle(String name) {
+    return 'Así te vi, $name';
+  }
+
+  @override
+  String get interviewFeedbackObservedLabel => 'Observado';
+
+  @override
+  String get interviewFeedbackExpectedLabel => 'Esperado';
+
+  @override
+  String get interviewFeedbackMissingLabel => 'Qué faltó';
+
+  @override
+  String get interviewFeedbackStudyLabel => 'Qué estudiar';
+
+  @override
+  String get interviewFeedbackVerifiedBadge => 'Verificado';
+
+  @override
+  String get interviewFeedbackEnglishTitle => 'Tu inglés';
+
+  @override
+  String get interviewFeedbackClarityLabel => 'Claridad';
+
+  @override
+  String get interviewFeedbackVocabularyLabel => 'Vocabulario';
+
+  @override
+  String get interviewFeedbackDisclaimer =>
+      'Parecer orientativo generado por IA. Es una guía para estudiar, no una evaluación oficial.';
+
+  @override
+  String get interviewFeedbackStartCycleCta => 'Empezar ciclo de estudio';
+
+  @override
+  String get interviewEnglishRatingVeryGood => 'Muy bien';
+
+  @override
+  String get interviewEnglishRatingGood => 'Bien';
+
+  @override
+  String get interviewEnglishRatingFair => 'Regular';
+
+  @override
+  String get interviewEnglishRatingNeedsWork => 'A mejorar';
+
+  @override
+  String get interviewFeedbackTooShortTitle =>
+      'Entrevista muy corta para un parecer';
+
+  @override
+  String get interviewFeedbackTooShortBody =>
+      'Respondiste menos de 4 preguntas, así que no alcanza para armar un parecer.';
+
+  @override
+  String get interviewFeedbackResumeCta => 'Retomar entrevista';
+
+  @override
+  String get interviewFeedbackRestartCta => 'Empezar de nuevo';
+
+  @override
+  String get interviewFeedbackFailedTitle => 'No pudimos armar tu parecer';
+
+  @override
+  String get interviewFeedbackFailedBody =>
+      'Puedes reintentar ahora o te avisamos cuando esté listo.';
+
+  @override
+  String get interviewFeedbackNotifyLaterCta => 'Avísame cuando esté listo';
+
+  @override
+  String get interviewFeedbackNotifyLaterSnack =>
+      'Te avisamos cuando esté listo';
+
+  @override
+  String get interviewFeedbackNotFinishedTitle =>
+      'Tu entrevista todavía no terminó';
+
+  @override
+  String get interviewFeedbackNotFinishedCta => 'Ver mi entrevista';
 }

@@ -187,3 +187,16 @@ class ApiException implements Exception {
   @override
   String toString() => 'ApiException($code, $statusCode): $message';
 }
+
+/// `409 TOO_SHORT` de `GET /interviews/:id/feedback` (IE-06d), con los campos
+/// extra del cuerpo: si la sesión se puede retomar y cuántas respuestas hubo.
+class InterviewTooShort extends ApiException {
+  const InterviewTooShort({
+    required this.resumable,
+    required this.answeredCount,
+    super.message = 'too short',
+  }) : super(code: ApiErrorCode.interviewTooShort, statusCode: 409);
+
+  final bool resumable;
+  final int answeredCount;
+}

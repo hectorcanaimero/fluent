@@ -2540,11 +2540,11 @@ abstract class AppLocalizations {
   /// **'No pudimos empezar la entrevista.'**
   String get interviewSessionStartErrorGeneric;
 
-  /// No description provided for @interviewFeedbackPlaceholderTitle.
+  /// No description provided for @interviewFeedbackTitle.
   ///
   /// In es, this message translates to:
   /// **'Parecer'**
-  String get interviewFeedbackPlaceholderTitle;
+  String get interviewFeedbackTitle;
 
   /// No description provided for @interviewInProgressTitle.
   ///
@@ -2701,6 +2701,156 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Seguir hablando'**
   String get conversationInterviewContinue;
+
+  /// No description provided for @interviewFeedbackSummaryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Así te vi, {name}'**
+  String interviewFeedbackSummaryTitle(String name);
+
+  /// No description provided for @interviewFeedbackObservedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Observado'**
+  String get interviewFeedbackObservedLabel;
+
+  /// No description provided for @interviewFeedbackExpectedLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Esperado'**
+  String get interviewFeedbackExpectedLabel;
+
+  /// No description provided for @interviewFeedbackMissingLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué faltó'**
+  String get interviewFeedbackMissingLabel;
+
+  /// No description provided for @interviewFeedbackStudyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Qué estudiar'**
+  String get interviewFeedbackStudyLabel;
+
+  /// No description provided for @interviewFeedbackVerifiedBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Verificado'**
+  String get interviewFeedbackVerifiedBadge;
+
+  /// No description provided for @interviewFeedbackEnglishTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu inglés'**
+  String get interviewFeedbackEnglishTitle;
+
+  /// No description provided for @interviewFeedbackClarityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Claridad'**
+  String get interviewFeedbackClarityLabel;
+
+  /// No description provided for @interviewFeedbackVocabularyLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Vocabulario'**
+  String get interviewFeedbackVocabularyLabel;
+
+  /// No description provided for @interviewFeedbackDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer orientativo generado por IA. Es una guía para estudiar, no una evaluación oficial.'**
+  String get interviewFeedbackDisclaimer;
+
+  /// No description provided for @interviewFeedbackStartCycleCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar ciclo de estudio'**
+  String get interviewFeedbackStartCycleCta;
+
+  /// No description provided for @interviewEnglishRatingVeryGood.
+  ///
+  /// In es, this message translates to:
+  /// **'Muy bien'**
+  String get interviewEnglishRatingVeryGood;
+
+  /// No description provided for @interviewEnglishRatingGood.
+  ///
+  /// In es, this message translates to:
+  /// **'Bien'**
+  String get interviewEnglishRatingGood;
+
+  /// No description provided for @interviewEnglishRatingFair.
+  ///
+  /// In es, this message translates to:
+  /// **'Regular'**
+  String get interviewEnglishRatingFair;
+
+  /// No description provided for @interviewEnglishRatingNeedsWork.
+  ///
+  /// In es, this message translates to:
+  /// **'A mejorar'**
+  String get interviewEnglishRatingNeedsWork;
+
+  /// No description provided for @interviewFeedbackTooShortTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista muy corta para un parecer'**
+  String get interviewFeedbackTooShortTitle;
+
+  /// No description provided for @interviewFeedbackTooShortBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Respondiste menos de 4 preguntas, así que no alcanza para armar un parecer.'**
+  String get interviewFeedbackTooShortBody;
+
+  /// No description provided for @interviewFeedbackResumeCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Retomar entrevista'**
+  String get interviewFeedbackResumeCta;
+
+  /// No description provided for @interviewFeedbackRestartCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar de nuevo'**
+  String get interviewFeedbackRestartCta;
+
+  /// No description provided for @interviewFeedbackFailedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos armar tu parecer'**
+  String get interviewFeedbackFailedTitle;
+
+  /// No description provided for @interviewFeedbackFailedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes reintentar ahora o te avisamos cuando esté listo.'**
+  String get interviewFeedbackFailedBody;
+
+  /// No description provided for @interviewFeedbackNotifyLaterCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Avísame cuando esté listo'**
+  String get interviewFeedbackNotifyLaterCta;
+
+  /// No description provided for @interviewFeedbackNotifyLaterSnack.
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisamos cuando esté listo'**
+  String get interviewFeedbackNotifyLaterSnack;
+
+  /// No description provided for @interviewFeedbackNotFinishedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrevista todavía no terminó'**
+  String get interviewFeedbackNotFinishedTitle;
+
+  /// No description provided for @interviewFeedbackNotFinishedCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver mi entrevista'**
+  String get interviewFeedbackNotFinishedCta;
 }
 
 class _AppLocalizationsDelegate

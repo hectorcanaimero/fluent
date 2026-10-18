@@ -15,6 +15,7 @@ import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
+import '../features/interviews/presentation/feedback/interview_feedback_screen.dart';
 import '../features/interviews/presentation/history/interview_history_screen.dart';
 import '../features/interviews/presentation/prep/interview_prep_screen.dart';
 import '../features/interviews/presentation/session/interview_session_screen.dart';
@@ -193,12 +194,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               interviewId: state.pathParameters['id']!,
             ),
           ),
-          // F12 reemplaza esto por el parecer (IE-06).
           GoRoute(
             path: ':id/feedback',
-            builder: (context, state) => PlaceholderScreen(
-              title: AppLocalizations.of(context)
-                  .interviewFeedbackPlaceholderTitle,
+            builder: (context, state) => InterviewFeedbackScreen(
+              interviewId: state.pathParameters['id']!,
             ),
           ),
           // F12 reemplaza esto por el ciclo de estudio (IE-07).

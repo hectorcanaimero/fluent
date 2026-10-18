@@ -465,7 +465,7 @@
   "interviewSessionNotResumableBody": "Foi encerrada por tempo ou inatividade.",
   "interviewSessionNotResumableBackCta": "Voltar ao histórico",
   "interviewSessionStartErrorGeneric": "Não foi possível iniciar a entrevista.",
-  "interviewFeedbackPlaceholderTitle": "Parecer",
+  "interviewFeedbackTitle": "Parecer",
   "interviewInProgressTitle": "Você tem uma entrevista em andamento",
   "interviewContinueCta": "Continuar",
   "interviewFinishedTitle": "Sua entrevista terminou",
@@ -498,5 +498,37 @@
   "errorInterviewNotOpenable": "Essa entrevista não pode ser aberta agora.",
   "conversationInterviewPendingHint": "Sua resposta ainda não foi enviada.",
   "conversationInterviewRetrySend": "Tentar enviar de novo",
-  "conversationInterviewContinue": "Continuar falando"
+  "conversationInterviewContinue": "Continuar falando",
+  "interviewFeedbackSummaryTitle": "Foi assim que te vi, {name}",
+  "@interviewFeedbackSummaryTitle": {
+    "placeholders": {
+      "name": {
+        "type": "String"
+      }
+    }
+  },
+  "interviewFeedbackObservedLabel": "Observado",
+  "interviewFeedbackExpectedLabel": "Esperado",
+  "interviewFeedbackMissingLabel": "O que faltou",
+  "interviewFeedbackStudyLabel": "O que estudar",
+  "interviewFeedbackVerifiedBadge": "Verificado",
+  "interviewFeedbackEnglishTitle": "Seu inglês",
+  "interviewFeedbackClarityLabel": "Clareza",
+  "interviewFeedbackVocabularyLabel": "Vocabulário",
+  "interviewFeedbackDisclaimer": "Parecer orientativo gerado por IA. É um guia para estudar, não uma avaliação oficial.",
+  "interviewFeedbackStartCycleCta": "Começar ciclo de estudos",
+  "interviewEnglishRatingVeryGood": "Muito bom",
+  "interviewEnglishRatingGood": "Bom",
+  "interviewEnglishRatingFair": "Regular",
+  "interviewEnglishRatingNeedsWork": "A melhorar",
+  "interviewFeedbackTooShortTitle": "Entrevista muito curta para um parecer",
+  "interviewFeedbackTooShortBody": "Você respondeu menos de 4 perguntas, então não dá para montar um parecer.",
+  "interviewFeedbackResumeCta": "Retomar entrevista",
+  "interviewFeedbackRestartCta": "Começar de novo",
+  "interviewFeedbackFailedTitle": "Não conseguimos montar seu parecer",
+  "interviewFeedbackFailedBody": "Você pode tentar de novo agora ou te avisamos quando estiver pronto.",
+  "interviewFeedbackNotifyLaterCta": "Me avise quando estiver pronto",
+  "interviewFeedbackNotifyLaterSnack": "Avisamos você quando estiver pronto",
+  "interviewFeedbackNotFinishedTitle": "Sua entrevista ainda não terminou",
+  "interviewFeedbackNotFinishedCta": "Ver minha entrevista"
 }

@@ -253,7 +253,7 @@ Textos l10n en `app_es.arb` y `app_pt.arb`.
 Done when: hay widget tests del cierre (XP y luego recap) y de la vista en solo
 lectura desde el historial. `flutter analyze` queda limpio.
 
-- **Model**: agy/gemini-3.1-pro-high
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 3h
 - **Reason**: UI Flutter sobre contratos ya fijados.
 - **Dependencies**: F9.4.T1, F9.2.T1, F8.1.T2

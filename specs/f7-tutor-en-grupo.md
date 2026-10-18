@@ -248,7 +248,7 @@ Done when: hay widget tests de la burbuja en streaming (tokens y luego final),
 de los chips propios visibles, del toggle que llama a la API y de la línea
 `tutor_unavailable`. `flutter analyze` queda limpio.
 
-- **Model**: agy/gemini-3.1-pro-high
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 3h
 - **Reason**: UI Flutter sobre la capa de F6.5; reutiliza widgets existentes.
 - **Dependencies**: F6.5.T2

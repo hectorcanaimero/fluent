@@ -95,7 +95,7 @@ Done when: hay widget tests de la hoja de revisión (editar y enviar llama a la
 API correcta en ambos modos) y del mensaje con audio (reproductor visible; 410
 da el texto de caducado). `flutter analyze` queda limpio.
 
-- **Model**: agy/gemini-3.1-pro-high
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 3h
 - **Reason**: UI Flutter con un contrato claro.
 - **Dependencies**: F8.1.T1, F7.4.T1
@@ -159,7 +159,7 @@ anular su `audio_key`.
 Done when: el spec cubre que se borra el audio viejo, se respeta el reciente y
 un fallo de borrado de un objeto no detiene el lote.
 
-- **Model**: agy/gemini-3.8-flash-medium
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 1h
 - **Reason**: Un paso más en un job de retención existente; mecánico.
 - **Dependencies**: F8.2.T1

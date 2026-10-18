@@ -565,6 +565,18 @@ abstract class CompanyInfo with _$CompanyInfo {
       _$CompanyInfoFromJson(json);
 }
 
+/// Competencia de la rúbrica en `GET /interviews/:id` (`{id, name}`).
+@freezed
+abstract class InterviewCompetency with _$InterviewCompetency {
+  const factory InterviewCompetency({
+    required String id,
+    required String name,
+  }) = _InterviewCompetency;
+
+  factory InterviewCompetency.fromJson(Map<String, dynamic> json) =>
+      _$InterviewCompetencyFromJson(json);
+}
+
 /// `GET /interviews/quota` (FR-21, FR-33).
 @freezed
 abstract class InterviewQuota with _$InterviewQuota {
@@ -597,6 +609,9 @@ abstract class InterviewSummary with _$InterviewSummary {
     /// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
     /// se creó el ciclo (`POST /interviews/:id/cycle`).
     int? cycleCompletedSessions,
+
+    /// `too_short` que se puede retomar (D5); sin él, `false`.
+    @Default(false) bool resumable,
   }) = _InterviewSummary;
 
   factory InterviewSummary.fromJson(Map<String, dynamic> json) =>
@@ -622,11 +637,14 @@ abstract class InterviewDetail with _$InterviewDetail {
     int? questionCount,
     int? estimatedMin,
 
-    /// Nombres de las competencias de la rúbrica (nunca las preguntas).
-    @Default(<String>[]) List<String> competencies,
+    /// Competencias de la rúbrica (nunca las preguntas).
+    @Default(<InterviewCompetency>[]) List<InterviewCompetency> competencies,
 
     /// Presente en `prep_failed` / `feedback_failed`.
     String? errorCode,
+
+    /// `too_short` que se puede retomar con `POST /interviews/:id/session`.
+    @Default(false) bool resumable,
     @Default(false) bool isReinterview,
   }) = _InterviewDetail;
 

@@ -1306,7 +1306,139 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interviewOpenLinkError => 'No pudimos abrir el enlace.';
 
   @override
-  String interviewDetailPlaceholderTitle(String id) {
-    return 'Entrevista $id';
+  String get interviewDetailAppBarTitle => 'Tu entrevista';
+
+  @override
+  String get interviewPrepStepReading => 'Leyendo la oferta';
+
+  @override
+  String get interviewPrepStepResearching => 'Investigando la empresa';
+
+  @override
+  String get interviewPrepStepDesigning => 'Armando preguntas';
+
+  @override
+  String get interviewPrepEtaHint => 'Suele tardar menos de un minuto';
+
+  @override
+  String get interviewPrepExitHint =>
+      'Puedes salir: te mandamos una notificación';
+
+  @override
+  String get interviewPrepFailedTitle => 'No pudimos preparar tu entrevista';
+
+  @override
+  String get interviewPrepFailedBody =>
+      'Puedes intentarlo de nuevo cuando quieras.';
+
+  @override
+  String get interviewLowInfoBadge => 'Poca info';
+
+  @override
+  String get interviewPlanRoleLabel => 'Rol';
+
+  @override
+  String get interviewPlanAreaLabel => 'Área';
+
+  @override
+  String get interviewPlanSeniorityLabel => 'Seniority';
+
+  @override
+  String get interviewPlanTypeLabel => 'Tipo';
+
+  @override
+  String interviewPlanQuestionsSummary(int count, int minutes) {
+    return '$count preguntas · ~$minutes min';
   }
+
+  @override
+  String get interviewPlanStartCta => 'Empezar';
+
+  @override
+  String get interviewSeniorityJunior => 'Junior';
+
+  @override
+  String get interviewSenioritySemiSenior => 'Semi-senior';
+
+  @override
+  String get interviewSenioritySenior => 'Senior';
+
+  @override
+  String get interviewSeniorityStaffLead => 'Staff/Lead';
+
+  @override
+  String get interviewSessionPlaceholderTitle => 'Entrevista';
+
+  @override
+  String get interviewFeedbackPlaceholderTitle => 'Parecer';
+
+  @override
+  String get interviewInProgressTitle => 'Tienes una entrevista en curso';
+
+  @override
+  String get interviewContinueCta => 'Continuar';
+
+  @override
+  String get interviewFinishedTitle => 'Tu entrevista terminó';
+
+  @override
+  String get interviewViewFeedbackCta => 'Ver parecer';
+
+  @override
+  String get interviewWorkModeRemote => 'Remoto';
+
+  @override
+  String get interviewWorkModeHybrid => 'Híbrido';
+
+  @override
+  String get interviewWorkModeOnsite => 'Presencial';
+
+  @override
+  String get interviewHistoryTitle => 'Historial de entrevistas';
+
+  @override
+  String get interviewHistoryNewCta => 'Nueva entrevista';
+
+  @override
+  String get interviewHistoryEmpty =>
+      'Todavía no tienes entrevistas. Empieza una desde aquí.';
+
+  @override
+  String get interviewHistoryCompanyFallback => 'Empresa sin nombre';
+
+  @override
+  String get interviewHistoryStatusPreparing => 'Preparando…';
+
+  @override
+  String get interviewHistoryStatusUnfinished => 'Sin terminar';
+
+  @override
+  String get interviewHistoryStatusFeedbackReady => 'Parecer listo';
+
+  @override
+  String interviewHistoryStatusCycle(int n) {
+    return 'Ciclo $n de 5';
+  }
+
+  @override
+  String get interviewHistoryStatusReinterviewDone => 'Re-entrevista hecha';
+
+  @override
+  String get interviewCyclePlaceholderTitle => 'Ciclo de estudio';
+
+  @override
+  String get interviewHistoryStatusPrepFailed => 'No se pudo preparar';
+
+  @override
+  String get interviewHistoryStatusFeedbackPending => 'Armando tu parecer';
+
+  @override
+  String get interviewHistoryStatusFeedbackFailed => 'Parecer con error';
+
+  @override
+  String get interviewHistoryStatusFinishedNoFeedback =>
+      'Terminada sin parecer';
+
+  @override
+  String get interviewHistoryUnknownDate => 'Fecha desconocida';
 }

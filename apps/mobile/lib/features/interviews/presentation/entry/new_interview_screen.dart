@@ -212,7 +212,11 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
             key: const Key('interview_entry_history_button'),
             icon: const Icon(Icons.history),
             tooltip: l10n.interviewEntryHistoryTooltip,
-            onPressed: () => context.push('/interviews'),
+            // Si se llegó desde el historial, se vuelve a él en vez de
+            // apilar historial → nueva → historial → … sin fin.
+            onPressed: () => _historyIsBelow(context)
+                ? context.pop()
+                : context.push('/interviews'),
           ),
         ],
       ),
@@ -427,4 +431,15 @@ class _UnreadablePanel extends StatelessWidget {
       ),
     );
   }
+}
+
+/// `true` si la ruta justo debajo de esta es el historial (`/interviews`).
+bool _historyIsBelow(BuildContext context) {
+  final matches = GoRouter.of(context)
+      .routerDelegate
+      .currentConfiguration
+      .matches;
+  return context.canPop() &&
+      matches.length >= 2 &&
+      matches[matches.length - 2].matchedLocation == '/interviews';
 }

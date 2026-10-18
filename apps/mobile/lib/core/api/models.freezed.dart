@@ -11047,6 +11047,279 @@ as String?,
 
 
 /// @nodoc
+mixin _$InterviewCompetency {
+
+ String get id; String get name;
+/// Create a copy of InterviewCompetency
+/// with the given fields replaced by the non-null parameter values.
+@JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+$InterviewCompetencyCopyWith<InterviewCompetency> get copyWith => _$InterviewCompetencyCopyWithImpl<InterviewCompetency>(this as InterviewCompetency, _$identity);
+
+  /// Serializes this InterviewCompetency to a JSON map.
+  Map<String, dynamic> toJson();
+
+
+@override
+bool operator ==(Object other) {
+  final _this = this as InterviewCompetency;
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewCompetency&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.name, _this.name) || other.name == _this.name));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+  final _this = this as InterviewCompetency;
+  return Object.hash(runtimeType,_this.id,_this.name);
+}
+
+@override
+String toString() {
+  final _this = this as InterviewCompetency;
+  return 'InterviewCompetency(id: ${_this.id}, name: ${_this.name})';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class $InterviewCompetencyCopyWith<$Res>  {
+  factory $InterviewCompetencyCopyWith(InterviewCompetency value, $Res Function(InterviewCompetency) _then) = _$InterviewCompetencyCopyWithImpl;
+@useResult
+$Res call({
+ String id, String name
+});
+
+
+
+
+}
+/// @nodoc
+class _$InterviewCompetencyCopyWithImpl<$Res>
+    implements $InterviewCompetencyCopyWith<$Res> {
+  _$InterviewCompetencyCopyWithImpl(this._self, this._then);
+
+  final InterviewCompetency _self;
+  final $Res Function(InterviewCompetency) _then;
+
+/// Create a copy of InterviewCompetency
+/// with the given fields replaced by the non-null parameter values.
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? name = null,}) {
+  return _then(InterviewCompetency(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+}
+
+
+/// Adds pattern-matching-related methods to [InterviewCompetency].
+extension InterviewCompetencyPatterns on InterviewCompetency {
+/// A variant of `map` that fallback to returning `orElse`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeMap<TResult extends Object?>(TResult Function( _InterviewCompetency value)?  $default,{required TResult orElse(),}){
+final _that = this;
+switch (_that) {
+case _InterviewCompetency() when $default != null:
+return $default(_that);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// Callbacks receives the raw object, upcasted.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case final Subclass2 value:
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult map<TResult extends Object?>(TResult Function( _InterviewCompetency value)  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewCompetency():
+return $default(_that);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `map` that fallback to returning `null`.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case final Subclass value:
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? mapOrNull<TResult extends Object?>(TResult? Function( _InterviewCompetency value)?  $default,){
+final _that = this;
+switch (_that) {
+case _InterviewCompetency() when $default != null:
+return $default(_that);case _:
+  return null;
+
+}
+}
+/// A variant of `when` that fallback to an `orElse` callback.
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return orElse();
+/// }
+/// ```
+
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String name)?  $default,{required TResult orElse(),}) {final _that = this;
+switch (_that) {
+case _InterviewCompetency() when $default != null:
+return $default(_that.id,_that.name);case _:
+  return orElse();
+
+}
+}
+/// A `switch`-like method, using callbacks.
+///
+/// As opposed to `map`, this offers destructuring.
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case Subclass2(:final field2):
+///     return ...;
+/// }
+/// ```
+
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String name)  $default,) {final _that = this;
+switch (_that) {
+case _InterviewCompetency():
+return $default(_that.id,_that.name);case _:
+  throw StateError('Unexpected subclass');
+
+}
+}
+/// A variant of `when` that fallback to returning `null`
+///
+/// It is equivalent to doing:
+/// ```dart
+/// switch (sealedClass) {
+///   case Subclass(:final field):
+///     return ...;
+///   case _:
+///     return null;
+/// }
+/// ```
+
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String name)?  $default,) {final _that = this;
+switch (_that) {
+case _InterviewCompetency() when $default != null:
+return $default(_that.id,_that.name);case _:
+  return null;
+
+}
+}
+
+}
+
+/// @nodoc
+@JsonSerializable()
+
+class _InterviewCompetency implements InterviewCompetency {
+  const _InterviewCompetency({required this.id, required this.name});
+  factory _InterviewCompetency.fromJson(Map<String, dynamic> json) => _$InterviewCompetencyFromJson(json);
+
+@override final  String id;
+@override final  String name;
+
+/// Create a copy of InterviewCompetency
+/// with the given fields replaced by the non-null parameter values.
+@override @JsonKey(includeFromJson: false, includeToJson: false)
+@pragma('vm:prefer-inline')
+_$InterviewCompetencyCopyWith<_InterviewCompetency> get copyWith => __$InterviewCompetencyCopyWithImpl<_InterviewCompetency>(this, _$identity);
+
+@override
+Map<String, dynamic> toJson() {
+  return _$InterviewCompetencyToJson(this, );
+}
+
+@override
+bool operator ==(Object other) {
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewCompetency&&(identical(other.id, id) || other.id == id)&&(identical(other.name, name) || other.name == name));
+}
+
+@JsonKey(includeFromJson: false, includeToJson: false)
+@override
+int get hashCode {
+    return Object.hash(runtimeType,id,name);
+}
+
+@override
+String toString() {
+    return 'InterviewCompetency(id: $id, name: $name)';
+}
+
+
+}
+
+/// @nodoc
+abstract mixin class _$InterviewCompetencyCopyWith<$Res> implements $InterviewCompetencyCopyWith<$Res> {
+  factory _$InterviewCompetencyCopyWith(_InterviewCompetency value, $Res Function(_InterviewCompetency) _then) = __$InterviewCompetencyCopyWithImpl;
+@override @useResult
+$Res call({
+ String id, String name
+});
+
+
+
+
+}
+/// @nodoc
+class __$InterviewCompetencyCopyWithImpl<$Res>
+    implements _$InterviewCompetencyCopyWith<$Res> {
+  __$InterviewCompetencyCopyWithImpl(this._self, this._then);
+
+  final _InterviewCompetency _self;
+  final $Res Function(_InterviewCompetency) _then;
+
+/// Create a copy of InterviewCompetency
+/// with the given fields replaced by the non-null parameter values.
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? name = null,}) {
+  return _then(_InterviewCompetency(
+id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
+as String,name: null == name ? _self.name : name // ignore: cast_nullable_to_non_nullable
+as String,
+  ));
+}
+
+
+}
+
+
+/// @nodoc
 mixin _$InterviewQuota {
 
  int get remaining; int get limit; bool get requiresPro; bool get freeNotice;
@@ -11331,7 +11604,8 @@ mixin _$InterviewSummary {
  String get id; String get type; String get status; String get createdAt; String? get role; String? get area; CompanyInfo? get company;/// `true` si viene de `POST /interviews/:id/reinterview` (FR-19, IE-08).
  bool get isReinterview;/// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
 /// se creó el ciclo (`POST /interviews/:id/cycle`).
- int? get cycleCompletedSessions;
+ int? get cycleCompletedSessions;/// `too_short` que se puede retomar (D5); sin él, `false`.
+ bool get resumable;
 /// Create a copy of InterviewSummary
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -11345,20 +11619,20 @@ $InterviewSummaryCopyWith<InterviewSummary> get copyWith => _$InterviewSummaryCo
 @override
 bool operator ==(Object other) {
   final _this = this as InterviewSummary;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewSummary&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview)&&(identical(other.cycleCompletedSessions, _this.cycleCompletedSessions) || other.cycleCompletedSessions == _this.cycleCompletedSessions));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewSummary&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview)&&(identical(other.cycleCompletedSessions, _this.cycleCompletedSessions) || other.cycleCompletedSessions == _this.cycleCompletedSessions)&&(identical(other.resumable, _this.resumable) || other.resumable == _this.resumable));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as InterviewSummary;
-  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.role,_this.area,_this.company,_this.isReinterview,_this.cycleCompletedSessions);
+  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.role,_this.area,_this.company,_this.isReinterview,_this.cycleCompletedSessions,_this.resumable);
 }
 
 @override
 String toString() {
   final _this = this as InterviewSummary;
-  return 'InterviewSummary(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, role: ${_this.role}, area: ${_this.area}, company: ${_this.company}, isReinterview: ${_this.isReinterview}, cycleCompletedSessions: ${_this.cycleCompletedSessions})';
+  return 'InterviewSummary(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, role: ${_this.role}, area: ${_this.area}, company: ${_this.company}, isReinterview: ${_this.isReinterview}, cycleCompletedSessions: ${_this.cycleCompletedSessions}, resumable: ${_this.resumable})';
 }
 
 
@@ -11369,7 +11643,7 @@ abstract mixin class $InterviewSummaryCopyWith<$Res>  {
   factory $InterviewSummaryCopyWith(InterviewSummary value, $Res Function(InterviewSummary) _then) = _$InterviewSummaryCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions
+ String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions, bool resumable
 });
 
 
@@ -11386,7 +11660,7 @@ class _$InterviewSummaryCopyWithImpl<$Res>
 
 /// Create a copy of InterviewSummary
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,Object? resumable = null,}) {
   return _then(InterviewSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -11397,7 +11671,8 @@ as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to
 as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
 as CompanyInfo?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
 as bool,cycleCompletedSessions: freezed == cycleCompletedSessions ? _self.cycleCompletedSessions : cycleCompletedSessions // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,resumable: null == resumable ? _self.resumable : resumable // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 /// Create a copy of InterviewSummary
@@ -11494,10 +11769,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions,  bool resumable)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _InterviewSummary() when $default != null:
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions,_that.resumable);case _:
   return orElse();
 
 }
@@ -11515,10 +11790,10 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions,  bool resumable)  $default,) {final _that = this;
 switch (_that) {
 case _InterviewSummary():
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions,_that.resumable);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -11535,10 +11810,10 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_tha
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? role,  String? area,  CompanyInfo? company,  bool isReinterview,  int? cycleCompletedSessions,  bool resumable)?  $default,) {final _that = this;
 switch (_that) {
 case _InterviewSummary() when $default != null:
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_that.area,_that.company,_that.isReinterview,_that.cycleCompletedSessions,_that.resumable);case _:
   return null;
 
 }
@@ -11550,7 +11825,7 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.role,_tha
 @JsonSerializable()
 
 class _InterviewSummary implements InterviewSummary {
-  const _InterviewSummary({required this.id, required this.type, required this.status, required this.createdAt, this.role, this.area, this.company, this.isReinterview = false, this.cycleCompletedSessions});
+  const _InterviewSummary({required this.id, required this.type, required this.status, required this.createdAt, this.role, this.area, this.company, this.isReinterview = false, this.cycleCompletedSessions, this.resumable = false});
   factory _InterviewSummary.fromJson(Map<String, dynamic> json) => _$InterviewSummaryFromJson(json);
 
 @override final  String id;
@@ -11565,6 +11840,8 @@ class _InterviewSummary implements InterviewSummary {
 /// Sesiones del ciclo de estudio ya hechas (0–5); `null` si todavía no
 /// se creó el ciclo (`POST /interviews/:id/cycle`).
 @override final  int? cycleCompletedSessions;
+/// `too_short` que se puede retomar (D5); sin él, `false`.
+@override@JsonKey() final  bool resumable;
 
 /// Create a copy of InterviewSummary
 /// with the given fields replaced by the non-null parameter values.
@@ -11579,18 +11856,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.company, company) || other.company == company)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview)&&(identical(other.cycleCompletedSessions, cycleCompletedSessions) || other.cycleCompletedSessions == cycleCompletedSessions));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewSummary&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.company, company) || other.company == company)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview)&&(identical(other.cycleCompletedSessions, cycleCompletedSessions) || other.cycleCompletedSessions == cycleCompletedSessions)&&(identical(other.resumable, resumable) || other.resumable == resumable));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,type,status,createdAt,role,area,company,isReinterview,cycleCompletedSessions);
+    return Object.hash(runtimeType,id,type,status,createdAt,role,area,company,isReinterview,cycleCompletedSessions,resumable);
 }
 
 @override
 String toString() {
-    return 'InterviewSummary(id: $id, type: $type, status: $status, createdAt: $createdAt, role: $role, area: $area, company: $company, isReinterview: $isReinterview, cycleCompletedSessions: $cycleCompletedSessions)';
+    return 'InterviewSummary(id: $id, type: $type, status: $status, createdAt: $createdAt, role: $role, area: $area, company: $company, isReinterview: $isReinterview, cycleCompletedSessions: $cycleCompletedSessions, resumable: $resumable)';
 }
 
 
@@ -11601,7 +11878,7 @@ abstract mixin class _$InterviewSummaryCopyWith<$Res> implements $InterviewSumma
   factory _$InterviewSummaryCopyWith(_InterviewSummary value, $Res Function(_InterviewSummary) _then) = __$InterviewSummaryCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions
+ String id, String type, String status, String createdAt, String? role, String? area, CompanyInfo? company, bool isReinterview, int? cycleCompletedSessions, bool resumable
 });
 
 
@@ -11618,7 +11895,7 @@ class __$InterviewSummaryCopyWithImpl<$Res>
 
 /// Create a copy of InterviewSummary
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? role = freezed,Object? area = freezed,Object? company = freezed,Object? isReinterview = null,Object? cycleCompletedSessions = freezed,Object? resumable = null,}) {
   return _then(_InterviewSummary(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -11629,7 +11906,8 @@ as String?,area: freezed == area ? _self.area : area // ignore: cast_nullable_to
 as String?,company: freezed == company ? _self.company : company // ignore: cast_nullable_to_non_nullable
 as CompanyInfo?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
 as bool,cycleCompletedSessions: freezed == cycleCompletedSessions ? _self.cycleCompletedSessions : cycleCompletedSessions // ignore: cast_nullable_to_non_nullable
-as int?,
+as int?,resumable: null == resumable ? _self.resumable : resumable // ignore: cast_nullable_to_non_nullable
+as bool,
   ));
 }
 
@@ -11653,9 +11931,10 @@ $CompanyInfoCopyWith<$Res>? get company {
 mixin _$InterviewDetail {
 
  String get id; String get type; String get status; String get createdAt;/// `reading | researching | designing | done`, solo mientras `preparing`.
- String? get prepStep; CompanyInfo? get company; String? get role; String? get area; String? get seniority; int? get questionCount; int? get estimatedMin;/// Nombres de las competencias de la rúbrica (nunca las preguntas).
- List<String> get competencies;/// Presente en `prep_failed` / `feedback_failed`.
- String? get errorCode; bool get isReinterview;
+ String? get prepStep; CompanyInfo? get company; String? get role; String? get area; String? get seniority; int? get questionCount; int? get estimatedMin;/// Competencias de la rúbrica (nunca las preguntas).
+ List<InterviewCompetency> get competencies;/// Presente en `prep_failed` / `feedback_failed`.
+ String? get errorCode;/// `too_short` que se puede retomar con `POST /interviews/:id/session`.
+ bool get resumable; bool get isReinterview;
 /// Create a copy of InterviewDetail
 /// with the given fields replaced by the non-null parameter values.
 @JsonKey(includeFromJson: false, includeToJson: false)
@@ -11669,20 +11948,20 @@ $InterviewDetailCopyWith<InterviewDetail> get copyWith => _$InterviewDetailCopyW
 @override
 bool operator ==(Object other) {
   final _this = this as InterviewDetail;
-  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.prepStep, _this.prepStep) || other.prepStep == _this.prepStep)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.seniority, _this.seniority) || other.seniority == _this.seniority)&&(identical(other.questionCount, _this.questionCount) || other.questionCount == _this.questionCount)&&(identical(other.estimatedMin, _this.estimatedMin) || other.estimatedMin == _this.estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _this.competencies)&&(identical(other.errorCode, _this.errorCode) || other.errorCode == _this.errorCode)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview));
+  return identical(this, other) || (other.runtimeType == runtimeType&&other is InterviewDetail&&(identical(other.id, _this.id) || other.id == _this.id)&&(identical(other.type, _this.type) || other.type == _this.type)&&(identical(other.status, _this.status) || other.status == _this.status)&&(identical(other.createdAt, _this.createdAt) || other.createdAt == _this.createdAt)&&(identical(other.prepStep, _this.prepStep) || other.prepStep == _this.prepStep)&&(identical(other.company, _this.company) || other.company == _this.company)&&(identical(other.role, _this.role) || other.role == _this.role)&&(identical(other.area, _this.area) || other.area == _this.area)&&(identical(other.seniority, _this.seniority) || other.seniority == _this.seniority)&&(identical(other.questionCount, _this.questionCount) || other.questionCount == _this.questionCount)&&(identical(other.estimatedMin, _this.estimatedMin) || other.estimatedMin == _this.estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _this.competencies)&&(identical(other.errorCode, _this.errorCode) || other.errorCode == _this.errorCode)&&(identical(other.resumable, _this.resumable) || other.resumable == _this.resumable)&&(identical(other.isReinterview, _this.isReinterview) || other.isReinterview == _this.isReinterview));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
   final _this = this as InterviewDetail;
-  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.prepStep,_this.company,_this.role,_this.area,_this.seniority,_this.questionCount,_this.estimatedMin,const DeepCollectionEquality().hash(_this.competencies),_this.errorCode,_this.isReinterview);
+  return Object.hash(runtimeType,_this.id,_this.type,_this.status,_this.createdAt,_this.prepStep,_this.company,_this.role,_this.area,_this.seniority,_this.questionCount,_this.estimatedMin,const DeepCollectionEquality().hash(_this.competencies),_this.errorCode,_this.resumable,_this.isReinterview);
 }
 
 @override
 String toString() {
   final _this = this as InterviewDetail;
-  return 'InterviewDetail(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, prepStep: ${_this.prepStep}, company: ${_this.company}, role: ${_this.role}, area: ${_this.area}, seniority: ${_this.seniority}, questionCount: ${_this.questionCount}, estimatedMin: ${_this.estimatedMin}, competencies: ${_this.competencies}, errorCode: ${_this.errorCode}, isReinterview: ${_this.isReinterview})';
+  return 'InterviewDetail(id: ${_this.id}, type: ${_this.type}, status: ${_this.status}, createdAt: ${_this.createdAt}, prepStep: ${_this.prepStep}, company: ${_this.company}, role: ${_this.role}, area: ${_this.area}, seniority: ${_this.seniority}, questionCount: ${_this.questionCount}, estimatedMin: ${_this.estimatedMin}, competencies: ${_this.competencies}, errorCode: ${_this.errorCode}, resumable: ${_this.resumable}, isReinterview: ${_this.isReinterview})';
 }
 
 
@@ -11693,7 +11972,7 @@ abstract mixin class $InterviewDetailCopyWith<$Res>  {
   factory $InterviewDetailCopyWith(InterviewDetail value, $Res Function(InterviewDetail) _then) = _$InterviewDetailCopyWithImpl;
 @useResult
 $Res call({
- String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<String> competencies, String? errorCode, bool isReinterview
+ String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<InterviewCompetency> competencies, String? errorCode, bool resumable, bool isReinterview
 });
 
 
@@ -11710,7 +11989,7 @@ class _$InterviewDetailCopyWithImpl<$Res>
 
 /// Create a copy of InterviewDetail
 /// with the given fields replaced by the non-null parameter values.
-@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? isReinterview = null,}) {
+@pragma('vm:prefer-inline') @override $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? resumable = null,Object? isReinterview = null,}) {
   return _then(InterviewDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -11724,8 +12003,9 @@ as String?,seniority: freezed == seniority ? _self.seniority : seniority // igno
 as String?,questionCount: freezed == questionCount ? _self.questionCount : questionCount // ignore: cast_nullable_to_non_nullable
 as int?,estimatedMin: freezed == estimatedMin ? _self.estimatedMin : estimatedMin // ignore: cast_nullable_to_non_nullable
 as int?,competencies: null == competencies ? _self.competencies : competencies // ignore: cast_nullable_to_non_nullable
-as List<String>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
-as String?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as List<InterviewCompetency>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
+as String?,resumable: null == resumable ? _self.resumable : resumable // ignore: cast_nullable_to_non_nullable
+as bool,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }
@@ -11823,10 +12103,10 @@ return $default(_that);case _:
 /// }
 /// ```
 
-@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)?  $default,{required TResult orElse(),}) {final _that = this;
+@optionalTypeArgs TResult maybeWhen<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<InterviewCompetency> competencies,  String? errorCode,  bool resumable,  bool isReinterview)?  $default,{required TResult orElse(),}) {final _that = this;
 switch (_that) {
 case _InterviewDetail() when $default != null:
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.resumable,_that.isReinterview);case _:
   return orElse();
 
 }
@@ -11844,10 +12124,10 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,
 /// }
 /// ```
 
-@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)  $default,) {final _that = this;
+@optionalTypeArgs TResult when<TResult extends Object?>(TResult Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<InterviewCompetency> competencies,  String? errorCode,  bool resumable,  bool isReinterview)  $default,) {final _that = this;
 switch (_that) {
 case _InterviewDetail():
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.resumable,_that.isReinterview);case _:
   throw StateError('Unexpected subclass');
 
 }
@@ -11864,10 +12144,10 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,
 /// }
 /// ```
 
-@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<String> competencies,  String? errorCode,  bool isReinterview)?  $default,) {final _that = this;
+@optionalTypeArgs TResult? whenOrNull<TResult extends Object?>(TResult? Function( String id,  String type,  String status,  String createdAt,  String? prepStep,  CompanyInfo? company,  String? role,  String? area,  String? seniority,  int? questionCount,  int? estimatedMin,  List<InterviewCompetency> competencies,  String? errorCode,  bool resumable,  bool isReinterview)?  $default,) {final _that = this;
 switch (_that) {
 case _InterviewDetail() when $default != null:
-return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.isReinterview);case _:
+return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,_that.company,_that.role,_that.area,_that.seniority,_that.questionCount,_that.estimatedMin,_that.competencies,_that.errorCode,_that.resumable,_that.isReinterview);case _:
   return null;
 
 }
@@ -11879,7 +12159,7 @@ return $default(_that.id,_that.type,_that.status,_that.createdAt,_that.prepStep,
 @JsonSerializable()
 
 class _InterviewDetail implements InterviewDetail {
-  const _InterviewDetail({required this.id, required this.type, required this.status, required this.createdAt, this.prepStep, this.company, this.role, this.area, this.seniority, this.questionCount, this.estimatedMin,  List<String> competencies = const <String>[], this.errorCode, this.isReinterview = false}): _competencies = competencies;
+  const _InterviewDetail({required this.id, required this.type, required this.status, required this.createdAt, this.prepStep, this.company, this.role, this.area, this.seniority, this.questionCount, this.estimatedMin,  List<InterviewCompetency> competencies = const <InterviewCompetency>[], this.errorCode, this.resumable = false, this.isReinterview = false}): _competencies = competencies;
   factory _InterviewDetail.fromJson(Map<String, dynamic> json) => _$InterviewDetailFromJson(json);
 
 @override final  String id;
@@ -11894,10 +12174,10 @@ class _InterviewDetail implements InterviewDetail {
 @override final  String? seniority;
 @override final  int? questionCount;
 @override final  int? estimatedMin;
-/// Nombres de las competencias de la rúbrica (nunca las preguntas).
- final  List<String> _competencies;
-/// Nombres de las competencias de la rúbrica (nunca las preguntas).
-@override@JsonKey() List<String> get competencies {
+/// Competencias de la rúbrica (nunca las preguntas).
+ final  List<InterviewCompetency> _competencies;
+/// Competencias de la rúbrica (nunca las preguntas).
+@override@JsonKey() List<InterviewCompetency> get competencies {
   if (_competencies is EqualUnmodifiableListView) return _competencies;
   // ignore: implicit_dynamic_type
   return EqualUnmodifiableListView(_competencies);
@@ -11905,6 +12185,8 @@ class _InterviewDetail implements InterviewDetail {
 
 /// Presente en `prep_failed` / `feedback_failed`.
 @override final  String? errorCode;
+/// `too_short` que se puede retomar con `POST /interviews/:id/session`.
+@override@JsonKey() final  bool resumable;
 @override@JsonKey() final  bool isReinterview;
 
 /// Create a copy of InterviewDetail
@@ -11920,18 +12202,18 @@ Map<String, dynamic> toJson() {
 
 @override
 bool operator ==(Object other) {
-    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.prepStep, prepStep) || other.prepStep == prepStep)&&(identical(other.company, company) || other.company == company)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.seniority, seniority) || other.seniority == seniority)&&(identical(other.questionCount, questionCount) || other.questionCount == questionCount)&&(identical(other.estimatedMin, estimatedMin) || other.estimatedMin == estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _competencies)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview));
+    return identical(this, other) || (other.runtimeType == runtimeType&&other is _InterviewDetail&&(identical(other.id, id) || other.id == id)&&(identical(other.type, type) || other.type == type)&&(identical(other.status, status) || other.status == status)&&(identical(other.createdAt, createdAt) || other.createdAt == createdAt)&&(identical(other.prepStep, prepStep) || other.prepStep == prepStep)&&(identical(other.company, company) || other.company == company)&&(identical(other.role, role) || other.role == role)&&(identical(other.area, area) || other.area == area)&&(identical(other.seniority, seniority) || other.seniority == seniority)&&(identical(other.questionCount, questionCount) || other.questionCount == questionCount)&&(identical(other.estimatedMin, estimatedMin) || other.estimatedMin == estimatedMin)&&const DeepCollectionEquality().equals(other.competencies, _competencies)&&(identical(other.errorCode, errorCode) || other.errorCode == errorCode)&&(identical(other.resumable, resumable) || other.resumable == resumable)&&(identical(other.isReinterview, isReinterview) || other.isReinterview == isReinterview));
 }
 
 @JsonKey(includeFromJson: false, includeToJson: false)
 @override
 int get hashCode {
-    return Object.hash(runtimeType,id,type,status,createdAt,prepStep,company,role,area,seniority,questionCount,estimatedMin,const DeepCollectionEquality().hash(_competencies),errorCode,isReinterview);
+    return Object.hash(runtimeType,id,type,status,createdAt,prepStep,company,role,area,seniority,questionCount,estimatedMin,const DeepCollectionEquality().hash(_competencies),errorCode,resumable,isReinterview);
 }
 
 @override
 String toString() {
-    return 'InterviewDetail(id: $id, type: $type, status: $status, createdAt: $createdAt, prepStep: $prepStep, company: $company, role: $role, area: $area, seniority: $seniority, questionCount: $questionCount, estimatedMin: $estimatedMin, competencies: $competencies, errorCode: $errorCode, isReinterview: $isReinterview)';
+    return 'InterviewDetail(id: $id, type: $type, status: $status, createdAt: $createdAt, prepStep: $prepStep, company: $company, role: $role, area: $area, seniority: $seniority, questionCount: $questionCount, estimatedMin: $estimatedMin, competencies: $competencies, errorCode: $errorCode, resumable: $resumable, isReinterview: $isReinterview)';
 }
 
 
@@ -11942,7 +12224,7 @@ abstract mixin class _$InterviewDetailCopyWith<$Res> implements $InterviewDetail
   factory _$InterviewDetailCopyWith(_InterviewDetail value, $Res Function(_InterviewDetail) _then) = __$InterviewDetailCopyWithImpl;
 @override @useResult
 $Res call({
- String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<String> competencies, String? errorCode, bool isReinterview
+ String id, String type, String status, String createdAt, String? prepStep, CompanyInfo? company, String? role, String? area, String? seniority, int? questionCount, int? estimatedMin, List<InterviewCompetency> competencies, String? errorCode, bool resumable, bool isReinterview
 });
 
 
@@ -11959,7 +12241,7 @@ class __$InterviewDetailCopyWithImpl<$Res>
 
 /// Create a copy of InterviewDetail
 /// with the given fields replaced by the non-null parameter values.
-@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? isReinterview = null,}) {
+@override @pragma('vm:prefer-inline') $Res call({Object? id = null,Object? type = null,Object? status = null,Object? createdAt = null,Object? prepStep = freezed,Object? company = freezed,Object? role = freezed,Object? area = freezed,Object? seniority = freezed,Object? questionCount = freezed,Object? estimatedMin = freezed,Object? competencies = null,Object? errorCode = freezed,Object? resumable = null,Object? isReinterview = null,}) {
   return _then(_InterviewDetail(
 id: null == id ? _self.id : id // ignore: cast_nullable_to_non_nullable
 as String,type: null == type ? _self.type : type // ignore: cast_nullable_to_non_nullable
@@ -11973,8 +12255,9 @@ as String?,seniority: freezed == seniority ? _self.seniority : seniority // igno
 as String?,questionCount: freezed == questionCount ? _self.questionCount : questionCount // ignore: cast_nullable_to_non_nullable
 as int?,estimatedMin: freezed == estimatedMin ? _self.estimatedMin : estimatedMin // ignore: cast_nullable_to_non_nullable
 as int?,competencies: null == competencies ? _self._competencies : competencies // ignore: cast_nullable_to_non_nullable
-as List<String>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
-as String?,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
+as List<InterviewCompetency>,errorCode: freezed == errorCode ? _self.errorCode : errorCode // ignore: cast_nullable_to_non_nullable
+as String?,resumable: null == resumable ? _self.resumable : resumable // ignore: cast_nullable_to_non_nullable
+as bool,isReinterview: null == isReinterview ? _self.isReinterview : isReinterview // ignore: cast_nullable_to_non_nullable
 as bool,
   ));
 }

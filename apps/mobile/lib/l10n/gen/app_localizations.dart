@@ -2354,11 +2354,263 @@ abstract class AppLocalizations {
   /// **'No pudimos abrir el enlace.'**
   String get interviewOpenLinkError;
 
-  /// No description provided for @interviewDetailPlaceholderTitle.
+  /// No description provided for @interviewDetailAppBarTitle.
   ///
   /// In es, this message translates to:
-  /// **'Entrevista {id}'**
-  String interviewDetailPlaceholderTitle(String id);
+  /// **'Tu entrevista'**
+  String get interviewDetailAppBarTitle;
+
+  /// No description provided for @interviewPrepStepReading.
+  ///
+  /// In es, this message translates to:
+  /// **'Leyendo la oferta'**
+  String get interviewPrepStepReading;
+
+  /// No description provided for @interviewPrepStepResearching.
+  ///
+  /// In es, this message translates to:
+  /// **'Investigando la empresa'**
+  String get interviewPrepStepResearching;
+
+  /// No description provided for @interviewPrepStepDesigning.
+  ///
+  /// In es, this message translates to:
+  /// **'Armando preguntas'**
+  String get interviewPrepStepDesigning;
+
+  /// No description provided for @interviewPrepEtaHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Suele tardar menos de un minuto'**
+  String get interviewPrepEtaHint;
+
+  /// No description provided for @interviewPrepExitHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes salir: te mandamos una notificación'**
+  String get interviewPrepExitHint;
+
+  /// No description provided for @interviewPrepFailedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos preparar tu entrevista'**
+  String get interviewPrepFailedTitle;
+
+  /// No description provided for @interviewPrepFailedBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puedes intentarlo de nuevo cuando quieras.'**
+  String get interviewPrepFailedBody;
+
+  /// No description provided for @interviewLowInfoBadge.
+  ///
+  /// In es, this message translates to:
+  /// **'Poca info'**
+  String get interviewLowInfoBadge;
+
+  /// No description provided for @interviewPlanRoleLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Rol'**
+  String get interviewPlanRoleLabel;
+
+  /// No description provided for @interviewPlanAreaLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Área'**
+  String get interviewPlanAreaLabel;
+
+  /// No description provided for @interviewPlanSeniorityLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Seniority'**
+  String get interviewPlanSeniorityLabel;
+
+  /// No description provided for @interviewPlanTypeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Tipo'**
+  String get interviewPlanTypeLabel;
+
+  /// No description provided for @interviewPlanQuestionsSummary.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} preguntas · ~{minutes} min'**
+  String interviewPlanQuestionsSummary(int count, int minutes);
+
+  /// No description provided for @interviewPlanStartCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar'**
+  String get interviewPlanStartCta;
+
+  /// No description provided for @interviewSeniorityJunior.
+  ///
+  /// In es, this message translates to:
+  /// **'Junior'**
+  String get interviewSeniorityJunior;
+
+  /// No description provided for @interviewSenioritySemiSenior.
+  ///
+  /// In es, this message translates to:
+  /// **'Semi-senior'**
+  String get interviewSenioritySemiSenior;
+
+  /// No description provided for @interviewSenioritySenior.
+  ///
+  /// In es, this message translates to:
+  /// **'Senior'**
+  String get interviewSenioritySenior;
+
+  /// No description provided for @interviewSeniorityStaffLead.
+  ///
+  /// In es, this message translates to:
+  /// **'Staff/Lead'**
+  String get interviewSeniorityStaffLead;
+
+  /// No description provided for @interviewSessionPlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista'**
+  String get interviewSessionPlaceholderTitle;
+
+  /// No description provided for @interviewFeedbackPlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer'**
+  String get interviewFeedbackPlaceholderTitle;
+
+  /// No description provided for @interviewInProgressTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes una entrevista en curso'**
+  String get interviewInProgressTitle;
+
+  /// No description provided for @interviewContinueCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get interviewContinueCta;
+
+  /// No description provided for @interviewFinishedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrevista terminó'**
+  String get interviewFinishedTitle;
+
+  /// No description provided for @interviewViewFeedbackCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver parecer'**
+  String get interviewViewFeedbackCta;
+
+  /// No description provided for @interviewWorkModeRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Remoto'**
+  String get interviewWorkModeRemote;
+
+  /// No description provided for @interviewWorkModeHybrid.
+  ///
+  /// In es, this message translates to:
+  /// **'Híbrido'**
+  String get interviewWorkModeHybrid;
+
+  /// No description provided for @interviewWorkModeOnsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Presencial'**
+  String get interviewWorkModeOnsite;
+
+  /// No description provided for @interviewHistoryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de entrevistas'**
+  String get interviewHistoryTitle;
+
+  /// No description provided for @interviewHistoryNewCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Nueva entrevista'**
+  String get interviewHistoryNewCta;
+
+  /// No description provided for @interviewHistoryEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Todavía no tienes entrevistas. Empieza una desde aquí.'**
+  String get interviewHistoryEmpty;
+
+  /// No description provided for @interviewHistoryCompanyFallback.
+  ///
+  /// In es, this message translates to:
+  /// **'Empresa sin nombre'**
+  String get interviewHistoryCompanyFallback;
+
+  /// No description provided for @interviewHistoryStatusPreparing.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparando…'**
+  String get interviewHistoryStatusPreparing;
+
+  /// No description provided for @interviewHistoryStatusUnfinished.
+  ///
+  /// In es, this message translates to:
+  /// **'Sin terminar'**
+  String get interviewHistoryStatusUnfinished;
+
+  /// No description provided for @interviewHistoryStatusFeedbackReady.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer listo'**
+  String get interviewHistoryStatusFeedbackReady;
+
+  /// No description provided for @interviewHistoryStatusCycle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciclo {n} de 5'**
+  String interviewHistoryStatusCycle(int n);
+
+  /// No description provided for @interviewHistoryStatusReinterviewDone.
+  ///
+  /// In es, this message translates to:
+  /// **'Re-entrevista hecha'**
+  String get interviewHistoryStatusReinterviewDone;
+
+  /// No description provided for @interviewCyclePlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Ciclo de estudio'**
+  String get interviewCyclePlaceholderTitle;
+
+  /// No description provided for @interviewHistoryStatusPrepFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'No se pudo preparar'**
+  String get interviewHistoryStatusPrepFailed;
+
+  /// No description provided for @interviewHistoryStatusFeedbackPending.
+  ///
+  /// In es, this message translates to:
+  /// **'Armando tu parecer'**
+  String get interviewHistoryStatusFeedbackPending;
+
+  /// No description provided for @interviewHistoryStatusFeedbackFailed.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer con error'**
+  String get interviewHistoryStatusFeedbackFailed;
+
+  /// No description provided for @interviewHistoryStatusFinishedNoFeedback.
+  ///
+  /// In es, this message translates to:
+  /// **'Terminada sin parecer'**
+  String get interviewHistoryStatusFinishedNoFeedback;
+
+  /// No description provided for @interviewHistoryUnknownDate.
+  ///
+  /// In es, this message translates to:
+  /// **'Fecha desconocida'**
+  String get interviewHistoryUnknownDate;
 }
 
 class _AppLocalizationsDelegate

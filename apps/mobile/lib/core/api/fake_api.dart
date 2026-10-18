@@ -945,6 +945,7 @@ class FakeApi implements FluentApi {
           area: _interviews[id]!.area,
           company: _interviews[id]!.company,
           isReinterview: _interviews[id]!.isReinterview,
+          resumable: _interviews[id]!.resumable,
           cycleCompletedSessions: _studyCycles[id]?.sessions
               .where((s) => s.status == 'done')
               .length,
@@ -979,7 +980,7 @@ class FakeApi implements FluentApi {
             company: const CompanyInfo(
               name: 'Acme Corp',
               industry: 'Software',
-              city: 'Remoto',
+              city: 'Buenos Aires',
               workMode: 'remote',
             ),
             role: 'Backend Engineer',
@@ -988,10 +989,10 @@ class FakeApi implements FluentApi {
             questionCount: 8,
             estimatedMin: 10,
             competencies: const [
-              'APIs REST',
-              'Bases de datos',
-              'Diseño de sistemas',
-              'Comunicación',
+              InterviewCompetency(id: 'c1', name: 'APIs REST'),
+              InterviewCompetency(id: 'c2', name: 'Bases de datos'),
+              InterviewCompetency(id: 'c3', name: 'Diseño de sistemas'),
+              InterviewCompetency(id: 'c4', name: 'Comunicación'),
             ],
           );
     _interviews[id] = updated;
@@ -1044,7 +1045,7 @@ class FakeApi implements FluentApi {
     if (!const {'ready', 'in_progress', 'too_short'}.contains(current.status)) {
       _conflict('interview cannot start in status ${current.status}');
     }
-    _interviews[id] = current.copyWith(status: 'in_progress');
+    _interviews[id] = current.copyWith(status: 'in_progress', resumable: false);
     return InterviewSessionStart(
       sessionId: 'session-$id',
       answeredCount: _interviewAnsweredCount[id] ?? 0,
@@ -1064,6 +1065,7 @@ class FakeApi implements FluentApi {
     final enough = (_interviewAnsweredCount[id] ?? 0) >= 4;
     _interviews[id] = current.copyWith(
       status: enough ? 'feedback_pending' : 'too_short',
+      resumable: !enough,
     );
   }
 

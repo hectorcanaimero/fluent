@@ -1,5 +1,6 @@
 import 'package:dio/dio.dart';
 import 'package:fluent_mobile/core/api/http_fluent_api.dart';
+import 'package:fluent_mobile/core/api/models.dart';
 import 'package:fluent_mobile/core/errors/api_exception.dart';
 import 'package:fluent_mobile/core/http/api_client.dart';
 import 'package:fluent_mobile/core/http/token_refresher.dart';
@@ -198,7 +199,12 @@ void main() {
         'seniority': 'semi_senior',
         'questionCount': 8,
         'estimatedMin': 10,
-        'competencies': ['APIs REST', 'Bases de datos'],
+        'competencies': [
+          {'id': 'c1', 'name': 'APIs REST'},
+          {'id': 'c2', 'name': 'Bases de datos'},
+        ],
+        'errorCode': null,
+        'resumable': false,
       }),
     );
 
@@ -208,7 +214,51 @@ void main() {
     expect(detail.company?.name, 'Acme Corp');
     expect(detail.questionCount, 8);
     expect(detail.estimatedMin, 10);
-    expect(detail.competencies, ['APIs REST', 'Bases de datos']);
+    expect(detail.competencies.map((c) => c.name), [
+      'APIs REST',
+      'Bases de datos',
+    ]);
+  });
+
+  // Contrato: payload con la forma exacta de `InterviewDetailDto` (API,
+  // `toDetailDto`), incluidos los campos opcionales ausentes y `null`.
+  test('InterviewDetail.fromJson acepta el DTO real de la API', () {
+    final json = <String, dynamic>{
+      'id': 'interview-2',
+      'type': 'technical',
+      'status': 'too_short',
+      'prepStep': null,
+      'createdAt': '2026-10-18T10:00:00.000Z',
+      'company': {'name': 'Globex', 'workMode': 'hybrid'},
+      'role': 'Staff Platform Engineer',
+      'area': null,
+      'seniority': 'staff_lead',
+      'questionCount': 6,
+      'estimatedMin': 15,
+      'competencies': [
+        {'id': 'k8s', 'name': 'Kubernetes'},
+      ],
+      'errorCode': null,
+      'resumable': true,
+    };
+
+    final detail = InterviewDetail.fromJson(json);
+
+    expect(detail.status, 'too_short');
+    expect(detail.prepStep, isNull);
+    expect(detail.company?.name, 'Globex');
+    expect(detail.company?.industry, isNull);
+    expect(detail.company?.city, isNull);
+    expect(detail.company?.workMode, 'hybrid');
+    expect(detail.area, isNull);
+    expect(detail.seniority, 'staff_lead');
+    expect(detail.questionCount, 6);
+    expect(detail.estimatedMin, 15);
+    expect(
+      detail.competencies.single,
+      const InterviewCompetency(id: 'k8s', name: 'Kubernetes'),
+    );
+    expect(detail.resumable, isTrue);
   });
 
   // I2: POST /interviews/:id/retry.

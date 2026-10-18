@@ -600,12 +600,64 @@
   },
   "interviewOfferCopyTextHint": "Ese es el mismo enlace. Copia el texto de la oferta y pégalo aquí.",
   "interviewOpenLinkError": "No pudimos abrir el enlace.",
-  "interviewDetailPlaceholderTitle": "Entrevista {id}",
-  "@interviewDetailPlaceholderTitle": {
+  "interviewDetailAppBarTitle": "Tu entrevista",
+  "interviewPrepStepReading": "Leyendo la oferta",
+  "interviewPrepStepResearching": "Investigando la empresa",
+  "interviewPrepStepDesigning": "Armando preguntas",
+  "interviewPrepEtaHint": "Suele tardar menos de un minuto",
+  "interviewPrepExitHint": "Puedes salir: te mandamos una notificación",
+  "interviewPrepFailedTitle": "No pudimos preparar tu entrevista",
+  "interviewPrepFailedBody": "Puedes intentarlo de nuevo cuando quieras.",
+  "interviewLowInfoBadge": "Poca info",
+  "interviewPlanRoleLabel": "Rol",
+  "interviewPlanAreaLabel": "Área",
+  "interviewPlanSeniorityLabel": "Seniority",
+  "interviewPlanTypeLabel": "Tipo",
+  "interviewPlanQuestionsSummary": "{count} preguntas · ~{minutes} min",
+  "@interviewPlanQuestionsSummary": {
     "placeholders": {
-      "id": {
-        "type": "String"
+      "count": {
+        "type": "int"
+      },
+      "minutes": {
+        "type": "int"
       }
     }
-  }
+  },
+  "interviewPlanStartCta": "Empezar",
+  "interviewSeniorityJunior": "Junior",
+  "interviewSenioritySemiSenior": "Semi-senior",
+  "interviewSenioritySenior": "Senior",
+  "interviewSeniorityStaffLead": "Staff/Lead",
+  "interviewSessionPlaceholderTitle": "Entrevista",
+  "interviewFeedbackPlaceholderTitle": "Parecer",
+  "interviewInProgressTitle": "Tienes una entrevista en curso",
+  "interviewContinueCta": "Continuar",
+  "interviewFinishedTitle": "Tu entrevista terminó",
+  "interviewViewFeedbackCta": "Ver parecer",
+  "interviewWorkModeRemote": "Remoto",
+  "interviewWorkModeHybrid": "Híbrido",
+  "interviewWorkModeOnsite": "Presencial",
+  "interviewHistoryTitle": "Historial de entrevistas",
+  "interviewHistoryNewCta": "Nueva entrevista",
+  "interviewHistoryEmpty": "Todavía no tienes entrevistas. Empieza una desde aquí.",
+  "interviewHistoryCompanyFallback": "Empresa sin nombre",
+  "interviewHistoryStatusPreparing": "Preparando…",
+  "interviewHistoryStatusUnfinished": "Sin terminar",
+  "interviewHistoryStatusFeedbackReady": "Parecer listo",
+  "interviewHistoryStatusCycle": "Ciclo {n} de 5",
+  "@interviewHistoryStatusCycle": {
+    "placeholders": {
+      "n": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewHistoryStatusReinterviewDone": "Re-entrevista hecha",
+  "interviewCyclePlaceholderTitle": "Ciclo de estudio",
+  "interviewHistoryStatusPrepFailed": "No se pudo preparar",
+  "interviewHistoryStatusFeedbackPending": "Armando tu parecer",
+  "interviewHistoryStatusFeedbackFailed": "Parecer con error",
+  "interviewHistoryStatusFinishedNoFeedback": "Terminada sin parecer",
+  "interviewHistoryUnknownDate": "Fecha desconocida"
 }

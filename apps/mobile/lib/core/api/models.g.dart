@@ -672,6 +672,16 @@ Map<String, dynamic> _$CompanyInfoToJson(_CompanyInfo instance) =>
       'workMode': instance.workMode,
     };
 
+_InterviewCompetency _$InterviewCompetencyFromJson(Map<String, dynamic> json) =>
+    _InterviewCompetency(
+      id: json['id'] as String,
+      name: json['name'] as String,
+    );
+
+Map<String, dynamic> _$InterviewCompetencyToJson(
+  _InterviewCompetency instance,
+) => <String, dynamic>{'id': instance.id, 'name': instance.name};
+
 _InterviewQuota _$InterviewQuotaFromJson(Map<String, dynamic> json) =>
     _InterviewQuota(
       remaining: (json['remaining'] as num).toInt(),
@@ -701,6 +711,7 @@ _InterviewSummary _$InterviewSummaryFromJson(Map<String, dynamic> json) =>
           : CompanyInfo.fromJson(json['company'] as Map<String, dynamic>),
       isReinterview: json['isReinterview'] as bool? ?? false,
       cycleCompletedSessions: (json['cycleCompletedSessions'] as num?)?.toInt(),
+      resumable: json['resumable'] as bool? ?? false,
     );
 
 Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
@@ -714,6 +725,7 @@ Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
       'company': instance.company,
       'isReinterview': instance.isReinterview,
       'cycleCompletedSessions': instance.cycleCompletedSessions,
+      'resumable': instance.resumable,
     };
 
 _InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>
@@ -733,10 +745,13 @@ _InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>
       estimatedMin: (json['estimatedMin'] as num?)?.toInt(),
       competencies:
           (json['competencies'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map(
+                (e) => InterviewCompetency.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
-          const <String>[],
+          const <InterviewCompetency>[],
       errorCode: json['errorCode'] as String?,
+      resumable: json['resumable'] as bool? ?? false,
       isReinterview: json['isReinterview'] as bool? ?? false,
     );
 
@@ -755,6 +770,7 @@ Map<String, dynamic> _$InterviewDetailToJson(_InterviewDetail instance) =>
       'estimatedMin': instance.estimatedMin,
       'competencies': instance.competencies,
       'errorCode': instance.errorCode,
+      'resumable': instance.resumable,
       'isReinterview': instance.isReinterview,
     };
 

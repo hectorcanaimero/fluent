@@ -67,6 +67,27 @@ export const API_ERROR_STATUS = {
    * («mañana seguimos», no «esperá un momento»).
    */
   TURNS_DAILY_CAP: 429,
+  /**
+   * Tope diario de entrevistas alcanzado (F10.3, `INTERVIEWS_DAILY_CAP`).
+   * 429 con `retryAfter` en segundos, mismo criterio que `TURNS_DAILY_CAP`.
+   */
+  INTERVIEWS_DAILY_CAP: 429,
+  /**
+   * `POST /interviews` con una oferta que no se puede leer: host de LinkedIn
+   * (D8), vacía, 4xx o pared de login (F10.3/F10.2). 422 porque el cuerpo
+   * está bien formado y no consume el tope diario.
+   */
+  OFFER_UNREADABLE: 422,
+  /**
+   * `POST /interviews/:id/retry` sobre una entrevista que no está en
+   * `prep_failed` (F10.3, NFR-6).
+   */
+  INTERVIEW_NOT_RETRYABLE: 409,
+  /**
+   * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
+   * módulo arranca igual pero no puede preparar ninguna entrevista.
+   */
+  INTERVIEW_AGENT_UNAVAILABLE: 503,
   /** Resumen semanal aún no generado. */
   NOT_READY: 404,
   /**

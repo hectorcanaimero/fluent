@@ -307,6 +307,7 @@ describe('SessionSweeperService', () => {
       enqueueCoachingBrief: async (sessionId: string) => {
         enqueued.push(sessionId);
       },
+      enqueueInterviewPrepare: async () => {},
     };
 
     const realCloser = new SessionCloserService(endSessionRepository, jobs);

@@ -1778,6 +1778,114 @@ abstract class AppLocalizations {
   /// **'Faltan respuestas para armar tu parecer.'**
   String get errorInterviewTooShort;
 
+  /// No description provided for @interviewEntryTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Prepara tu entrevista'**
+  String get interviewEntryTitle;
+
+  /// No description provided for @interviewEntryHistoryTooltip.
+  ///
+  /// In es, this message translates to:
+  /// **'Historial de entrevistas'**
+  String get interviewEntryHistoryTooltip;
+
+  /// No description provided for @interviewQuotaRemaining.
+  ///
+  /// In es, this message translates to:
+  /// **'Te quedan {remaining} de {limit} entrevistas hoy'**
+  String interviewQuotaRemaining(int remaining, int limit);
+
+  /// No description provided for @interviewQuotaExhausted.
+  ///
+  /// In es, this message translates to:
+  /// **'Usaste tus {limit} entrevistas de hoy'**
+  String interviewQuotaExhausted(int limit);
+
+  /// No description provided for @interviewFreeNotice.
+  ///
+  /// In es, this message translates to:
+  /// **'Gratis por ahora. En el futuro esta función podría ser parte del plan Pro.'**
+  String get interviewFreeNotice;
+
+  /// No description provided for @interviewOfferFieldLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Oferta de trabajo'**
+  String get interviewOfferFieldLabel;
+
+  /// No description provided for @interviewOfferFieldHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Pega el texto de la oferta o el enlace'**
+  String get interviewOfferFieldHint;
+
+  /// No description provided for @interviewOfferCharCount.
+  ///
+  /// In es, this message translates to:
+  /// **'{count} caracteres'**
+  String interviewOfferCharCount(int count);
+
+  /// No description provided for @interviewPasteButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar'**
+  String get interviewPasteButton;
+
+  /// No description provided for @interviewTypeTechnical.
+  ///
+  /// In es, this message translates to:
+  /// **'Técnica'**
+  String get interviewTypeTechnical;
+
+  /// No description provided for @interviewTypeMixed.
+  ///
+  /// In es, this message translates to:
+  /// **'Mixta'**
+  String get interviewTypeMixed;
+
+  /// No description provided for @interviewPrepareCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Preparar entrevista'**
+  String get interviewPrepareCta;
+
+  /// No description provided for @interviewOfferUnreadableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos leer ese enlace'**
+  String get interviewOfferUnreadableTitle;
+
+  /// No description provided for @interviewOfferUnreadableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta para seguir.'**
+  String get interviewOfferUnreadableBody;
+
+  /// No description provided for @interviewOfferUnreadablePasteButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Pegar el texto de la oferta'**
+  String get interviewOfferUnreadablePasteButton;
+
+  /// No description provided for @interviewOfferUnreadableLinkedinButton.
+  ///
+  /// In es, this message translates to:
+  /// **'Abrir en LinkedIn'**
+  String get interviewOfferUnreadableLinkedinButton;
+
+  /// No description provided for @interviewPracticeCardTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Simula tu entrevista'**
+  String get interviewPracticeCardTitle;
+
+  /// No description provided for @interviewPracticeCardBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Pega una oferta y practica una entrevista técnica en inglés.'**
+  String get interviewPracticeCardBody;
+
   /// No description provided for @authContinueWithGoogle.
   ///
   /// In es, this message translates to:

@@ -439,6 +439,48 @@
   "errorOfferUnreadable": "No pudimos leer esa oferta.",
   "errorInterviewsDailyCap": "Hoy ya usaste tus entrevistas. Mañana tienes más.",
   "errorInterviewTooShort": "Faltan respuestas para armar tu parecer.",
+  "interviewEntryTitle": "Prepara tu entrevista",
+  "interviewEntryHistoryTooltip": "Historial de entrevistas",
+  "interviewQuotaRemaining": "Te quedan {remaining} de {limit} entrevistas hoy",
+  "@interviewQuotaRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewQuotaExhausted": "Usaste tus {limit} entrevistas de hoy",
+  "@interviewQuotaExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewFreeNotice": "Gratis por ahora. En el futuro esta función podría ser parte del plan Pro.",
+  "interviewOfferFieldLabel": "Oferta de trabajo",
+  "interviewOfferFieldHint": "Pega el texto de la oferta o el enlace",
+  "interviewOfferCharCount": "{count} caracteres",
+  "@interviewOfferCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewPasteButton": "Pegar",
+  "interviewTypeTechnical": "Técnica",
+  "interviewTypeMixed": "Mixta",
+  "interviewPrepareCta": "Preparar entrevista",
+  "interviewOfferUnreadableTitle": "No pudimos leer ese enlace",
+  "interviewOfferUnreadableBody": "Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta para seguir.",
+  "interviewOfferUnreadablePasteButton": "Pegar el texto de la oferta",
+  "interviewOfferUnreadableLinkedinButton": "Abrir en LinkedIn",
+  "interviewPracticeCardTitle": "Simula tu entrevista",
+  "interviewPracticeCardBody": "Pega una oferta y practica una entrevista técnica en inglés.",
   "authContinueWithGoogle": "Continuar con Google",
   "authContinueWithApple": "Continuar con Apple",
   "authSignInError": "No pudimos iniciar sesión. Probá de nuevo.",

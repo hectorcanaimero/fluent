@@ -33,6 +33,7 @@ class ConversationScreen extends ConsumerStatefulWidget {
     this.mode = ConversationMode.normal,
     this.interviewId,
     this.initialInterview,
+    this.cycleInterviewId,
     this.sessionDuration = const Duration(minutes: 10),
     this.warningThreshold = const Duration(minutes: 2),
   }) : assert(
@@ -53,6 +54,10 @@ class ConversationScreen extends ConsumerStatefulWidget {
   /// Progreso al abrir la entrevista (`POST /interviews/:id/session`), para
   /// mostrar "Pregunta n de 8" y el tiempo desde la apertura.
   final TurnInterviewInfo? initialInterview;
+
+  /// Sesión de estudio abierta desde `/interviews/:id/cycle`: el resumen
+  /// vuelve al ciclo en vez de a Home.
+  final String? cycleInterviewId;
 
   final Duration sessionDuration;
   final Duration warningThreshold;
@@ -342,8 +347,12 @@ class _ConversationScreenState extends ConsumerState<ConversationScreen>
     }
     if (!mounted) return;
     if (summary != null) {
+      final cycleId = widget.cycleInterviewId;
       context.pushReplacement(
-        '/session/${widget.sessionId}/summary',
+        cycleId == null
+            ? '/session/${widget.sessionId}/summary'
+            : '/session/${widget.sessionId}/summary'
+                  '?from=cycle&interviewId=$cycleId',
         extra: summary,
       );
     } else {

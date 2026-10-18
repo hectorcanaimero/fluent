@@ -17,7 +17,10 @@ import 'turn_stream_event.dart';
 /// El estado vive en memoria y se reinicia cada vez que se crea una nueva
 /// instancia (cada arranque de la app, o cada test).
 class FakeApi implements FluentApi {
-  FakeApi({this.artificialDelay = const Duration(milliseconds: 120), this.grace}) {
+  FakeApi({
+    this.artificialDelay = const Duration(milliseconds: 120),
+    this.grace,
+  }) {
     _seed();
   }
 
@@ -207,10 +210,7 @@ class FakeApi implements FluentApi {
       locale: locale,
     );
     _onboarded = true;
-    return PutProfileResult(
-      profile: _profile,
-      xpAwarded: awardXp ? 20 : null,
-    );
+    return PutProfileResult(profile: _profile, xpAwarded: awardXp ? 20 : null);
   }
 
   @override
@@ -250,10 +250,7 @@ class FakeApi implements FluentApi {
       _fail(ApiErrorCode.groupRequired, 'account has no group');
     }
     if (_groupInvitationsIssued >= 5) {
-      _fail(
-        ApiErrorCode.invitationLimitReached,
-        'too many unused invitations',
-      );
+      _fail(ApiErrorCode.invitationLimitReached, 'too many unused invitations');
     }
     _groupInvitationsIssued += 1;
     return GroupInvitationResult(
@@ -715,7 +712,11 @@ class FakeApi implements FluentApi {
   static const _badgesBase =
       'https://c4jzbm8x.us-east.insforge.app/api/storage/buckets/badges/objects';
 
-  final Set<String> _earnedBadges = {'level_newcomer', 'first_session', 'streak_3'};
+  final Set<String> _earnedBadges = {
+    'level_newcomer',
+    'first_session',
+    'streak_3',
+  };
 
   @override
   Future<List<BadgeItem>> getBadges() async {
@@ -756,7 +757,9 @@ class FakeApi implements FluentApi {
           id: id,
           category: category,
           imageUrl: '$_badgesBase/$id.png',
-          earnedAt: earned(id, category, target) ? '2026-09-12T10:00:00Z' : null,
+          earnedAt: earned(id, category, target)
+              ? '2026-09-12T10:00:00Z'
+              : null,
           progressCurrent: target == null ? null : current(category),
           progressTarget: target,
         ),
@@ -1175,6 +1178,11 @@ class FakeApi implements FluentApi {
   Future<StudyCycle> createStudyCycle(String id) async {
     await _delay();
     _requireInterview(id);
+    // Idempotente como la API real: una segunda llamada (por ejemplo, al
+    // reabrir `/interviews/:id/cycle`) devuelve el progreso ya hecho en vez
+    // de reiniciar las 5 sesiones.
+    final existing = _studyCycles[id];
+    if (existing != null) return existing;
     final cycle = StudyCycle(
       id: 'cycle-$id',
       status: 'active',

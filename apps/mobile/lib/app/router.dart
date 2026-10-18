@@ -8,12 +8,12 @@ import '../l10n/gen/app_localizations.dart';
 
 import '../core/api/models.dart';
 import '../core/providers.dart';
-import '../core/widgets/placeholder_screen.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/badges/presentation/badges_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
+import '../features/interviews/presentation/cycle/interview_cycle_screen.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
 import '../features/interviews/presentation/feedback/interview_feedback_screen.dart';
 import '../features/interviews/presentation/history/interview_history_screen.dart';
@@ -102,6 +102,13 @@ String? computeRedirect(
   return null;
 }
 
+/// `?from=cycle&interviewId=` (F13.2): la sesión de estudio se abrió desde
+/// el ciclo y su resumen tiene que volver a `/interviews/:id/cycle`.
+String? _cycleInterviewId(GoRouterState state) =>
+    state.uri.queryParameters['from'] == 'cycle'
+    ? state.uri.queryParameters['interviewId']
+    : null;
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
 
@@ -157,8 +164,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/session/:id',
-        builder: (context, state) =>
-            ConversationScreen(sessionId: state.pathParameters['id']!),
+        builder: (context, state) => ConversationScreen(
+          sessionId: state.pathParameters['id']!,
+          cycleInterviewId: _cycleInterviewId(state),
+        ),
         routes: [
           GoRoute(
             path: 'summary',
@@ -168,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               // ejemplo, si quedó como última ruta); sin el cast
               // opcional, `state.extra as SessionSummary` reventaba.
               summary: state.extra as SessionSummary?,
+              cycleInterviewId: _cycleInterviewId(state),
             ),
           ),
         ],
@@ -200,13 +210,10 @@ final routerProvider = Provider<GoRouter>((ref) {
               interviewId: state.pathParameters['id']!,
             ),
           ),
-          // F12 reemplaza esto por el ciclo de estudio (IE-07).
           GoRoute(
             path: ':id/cycle',
-            builder: (context, state) => PlaceholderScreen(
-              title: AppLocalizations.of(context)
-                  .interviewCyclePlaceholderTitle,
-            ),
+            builder: (context, state) =>
+                InterviewCycleScreen(interviewId: state.pathParameters['id']!),
           ),
         ],
       ),

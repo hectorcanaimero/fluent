@@ -33,9 +33,14 @@ class SessionSummaryScreen extends ConsumerStatefulWidget {
     super.key,
     required this.sessionId,
     this.summary,
+    this.cycleInterviewId,
   });
 
   final String sessionId;
+
+  /// Sesión de estudio (`kind: study`) abierta desde el ciclo: salir vuelve
+  /// a `/interviews/:id/cycle` en vez de a Home.
+  final String? cycleInterviewId;
 
   /// `null` si se llega sin pasar por `_endSession` (MEJ-20) — por ejemplo,
   /// la app se reinició justo en esta ruta. En ese caso no hay forma de
@@ -56,6 +61,11 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
   late final Future<List<BadgeItem>> _badgesFuture = ref
       .read(fluentApiProvider)
       .getBadges();
+
+  void _exit() {
+    final cycleId = widget.cycleInterviewId;
+    context.go(cycleId == null ? '/' : '/interviews/$cycleId/cycle');
+  }
 
   Future<SessionDetailResult> _loadDetail() =>
       ref.read(fluentApiProvider).getSession(widget.sessionId);
@@ -321,9 +331,7 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
         // Sin el resumen en `extra` (p. ej. tras reiniciar la app) la carga
         // puede fallar: antes el spinner giraba para siempre, sin salida.
         return Scaffold(
-          appBar: AppBar(
-            leading: CloseButton(onPressed: () => context.go('/')),
-          ),
+          appBar: AppBar(leading: CloseButton(onPressed: _exit)),
           body: AsyncBody<SessionDetailResult>(
             snapshot: snapshot,
             onRetry: () => setState(() {
@@ -531,13 +539,13 @@ class _SessionSummaryScreenState extends ConsumerState<SessionSummaryScreen> {
               if (tooShort)
                 OutlinedButton(
                   key: const Key('summary_back_button'),
-                  onPressed: () => context.go('/'),
+                  onPressed: _exit,
                   child: Text(l10n.summaryBackButton),
                 )
               else
                 ElevatedButton(
                   key: const Key('summary_back_button'),
-                  onPressed: () => context.go('/'),
+                  onPressed: _exit,
                   child: Text(l10n.summaryBackButton),
                 ),
             ],

@@ -1467,9 +1467,6 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interviewHistoryStatusReinterviewDone => 'Reentrevista feita';
 
   @override
-  String get interviewCyclePlaceholderTitle => 'Ciclo de estudo';
-
-  @override
   String get interviewHistoryStatusPrepFailed => 'Não foi possível preparar';
 
   @override
@@ -1583,4 +1580,57 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interviewFeedbackNotFinishedCta => 'Ver minha entrevista';
+
+  @override
+  String get interviewCycleTitle => 'Seu ciclo de estudos';
+
+  @override
+  String interviewCycleSubtitle(String company) {
+    return 'Montado com seu parecer da $company';
+  }
+
+  @override
+  String interviewCycleProgress(int n, int total) {
+    return '$n de $total sessões';
+  }
+
+  @override
+  String interviewCycleTotalDuration(int min) {
+    return '$min min no total';
+  }
+
+  @override
+  String interviewCycleSessionDuration(int min) {
+    return '$min min';
+  }
+
+  @override
+  String get interviewCycleSessionDoneLabel => 'Feita';
+
+  @override
+  String get interviewCycleSessionLockedLabel => 'Bloqueada';
+
+  @override
+  String get interviewCycleSessionStartCta => 'Começar';
+
+  @override
+  String get interviewCycleFormatGuided => 'Conversa guiada';
+
+  @override
+  String get interviewCycleFormatRoleplay => 'Situação de trabalho';
+
+  @override
+  String get interviewCycleFocusEnglish => 'Inglês';
+
+  @override
+  String get interviewCycleReinterviewTitle => 'Reentrevista';
+
+  @override
+  String interviewCycleReinterviewLocked(int total) {
+    return 'Desbloqueia ao completar as $total sessões';
+  }
+
+  @override
+  String get interviewCycleReinterviewReady =>
+      'Compare seu avanço com uma nova entrevista sobre a mesma vaga';
 }

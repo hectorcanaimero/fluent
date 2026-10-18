@@ -406,14 +406,58 @@ class _FeedbackBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.xl),
         _DisclaimerBanner(text: l10n.interviewFeedbackDisclaimer),
         const SizedBox(height: AppSpacing.lg),
-        ElevatedButton(
-          key: const Key('interview_feedback_start_cycle_button'),
-          onPressed: () => context.push('/interviews/$interviewId/cycle'),
-          child: Text(l10n.interviewFeedbackStartCycleCta),
-        ),
+        _StartCycleButton(interviewId: interviewId),
       ],
     );
   }
+}
+
+/// "Empezar ciclo de estudio": crea el ciclo (`POST /interviews/:id/cycle`,
+/// idempotente) y recién entonces navega; la pantalla del ciclo solo lo lee.
+class _StartCycleButton extends ConsumerStatefulWidget {
+  const _StartCycleButton({required this.interviewId});
+
+  final String interviewId;
+
+  @override
+  ConsumerState<_StartCycleButton> createState() => _StartCycleButtonState();
+}
+
+class _StartCycleButtonState extends ConsumerState<_StartCycleButton> {
+  bool _busy = false;
+
+  Future<void> _start() async {
+    setState(() => _busy = true);
+    try {
+      await ref
+          .read(interviewsRepositoryProvider)
+          .createCycle(widget.interviewId);
+      if (!mounted) return;
+      context.push('/interviews/${widget.interviewId}/cycle');
+    } on ApiException catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(apiErrorSnackBar(context, e.code));
+      }
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).errorGeneric)),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _busy = false);
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) => ElevatedButton(
+    key: const Key('interview_feedback_start_cycle_button'),
+    onPressed: _busy ? null : _start,
+    child: _busy
+        ? const ButtonSpinner()
+        : Text(AppLocalizations.of(context).interviewFeedbackStartCycleCta),
+  );
 }
 
 /// Una tarjeta por competencia (IE-06a): observado vs. esperado, la cita

@@ -8,5 +8,11 @@
 	     el perfil de distribución. Firebase resuelve el entorno solo. -->
 	<key>aps-environment</key>
 	<string>production</string>
+	<!-- Compartido con la share extension (F14.2): ella deja ahí el texto y
+	     la app lo lee al abrirse. -->
+	<key>com.apple.security.application-groups</key>
+	<array>
+		<string>group.com.guria.openfluent</string>
+	</array>
 </dict>
 </plist>

@@ -158,7 +158,8 @@ workflows:
       groups:
         - fluent_prod
       vars:
-        BUNDLE_ID: com.guria.openfluent
+        # La app y su share extension (F14.2): cada una con su perfil.
+        BUNDLE_IDS: com.guria.openfluent com.guria.openfluent.ShareExtension
     scripts:
       - *firebase_config
       # El proyecto usa Swift Package Manager (no hay Podfile): nada de
@@ -180,22 +181,29 @@ workflows:
           # «requires a provisioning profile with the Push Notifications
           # feature». Se borran para que se regeneren con las capacidades
           # actuales del identificador.
-          for id in $(app-store-connect list-profiles \
-                        --bundle-id-identifier "$BUNDLE_ID" \
-                        --profile-type IOS_APP_STORE --json 2>/dev/null \
-                      | jq -r '.[].id' || true); do
-            app-store-connect delete-profile "$id" --ignore-not-found || true
+          for bundle in $BUNDLE_IDS; do
+            for id in $(app-store-connect list-profiles \
+                          --bundle-id-identifier "$bundle" \
+                          --profile-type IOS_APP_STORE --json 2>/dev/null \
+                        | jq -r '.[].id' || true); do
+              app-store-connect delete-profile "$id" --ignore-not-found || true
+            done
           done
           # Sin `--certificate-key` el comando avisa «Cannot save Signing
           # Certificates without certificate private key» y no deja ni
           # certificado ni perfil: el archive falla después quejándose de la
           # primera capacidad que encuentra en los entitlements. La clave es
           # una RSA propia guardada en el grupo de variables; con `--create`
-          # se emite el certificado de distribución contra ella.
-          app-store-connect fetch-signing-files "$BUNDLE_ID" \
-            --type IOS_APP_STORE --create \
-            --certificate-key @env:CERTIFICATE_PRIVATE_KEY
+          # se emite el certificado de distribución contra ella (la segunda
+          # vuelta reutiliza el mismo). `--strict-match-identifier`: sin él,
+          # `com.guria.openfluent` también trae los de la extensión.
+          for bundle in $BUNDLE_IDS; do
+            app-store-connect fetch-signing-files "$bundle" \
+              --type IOS_APP_STORE --create --strict-match-identifier \
+              --certificate-key @env:CERTIFICATE_PRIVATE_KEY
+          done
           keychain add-certificates
+          # Asigna a cada target el perfil de su bundle id.
           xcode-project use-profiles
           # Sin perfil instalado el archive falla igual, pero culpando a la
           # primera capacidad de los entitlements («requires a provisioning
@@ -203,25 +211,31 @@ workflows:
           # investigar el lado equivocado. Se corta acá con el motivo real.
           # Los perfiles caen en el directorio de Xcode; el de MobileDevice
           # es el sitio clásico y se mira por si acaso. De paso se imprimen
-          # los entitlements: si no aparece `aps-environment`, la capacidad
-          # Push no está guardada en el identificador.
-          found=""
+          # los entitlements: si no aparece `aps-environment` (app) o
+          # `com.apple.security.application-groups` (las dos), la capacidad
+          # no está guardada en el identificador.
+          entitlements=""
           for dir in "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles" \
                      "$HOME/Library/MobileDevice/Provisioning Profiles"; do
             for profile in "$dir"/*.mobileprovision; do
               [ -f "$profile" ] || continue
-              found=1
               echo "== $profile"
-              security cms -D -i "$profile" \
-                | plutil -extract Entitlements xml1 -o - - || true
+              current=$(security cms -D -i "$profile" \
+                | plutil -extract Entitlements xml1 -o - - || true)
+              echo "$current"
+              entitlements="$entitlements$current"
             done
           done
-          if [ -z "$found" ]; then
-            echo "No se instalo ningun perfil de aprovisionamiento."
-            echo "Suele ser el certificado: sin CERTIFICATE_PRIVATE_KEY,"
-            echo "fetch-signing-files no guarda ni certificado ni perfiles."
-            exit 1
-          fi
+          for bundle in $BUNDLE_IDS; do
+            if ! echo "$entitlements" | grep -q "\.$bundle</string>"; then
+              echo "No se instalo el perfil de $bundle."
+              echo "Suele ser el certificado: sin CERTIFICATE_PRIVATE_KEY,"
+              echo "fetch-signing-files no guarda ni certificado ni perfiles."
+              echo "Si solo falta la extension: crear su identificador en"
+              echo "Apple Developer (docs/runbooks/despliegue.md, seccion 10)."
+              exit 1
+            fi
+          done
       - name: Build del IPA
         script: |
           # Número de build: uno más que el último en TestFlight; si falla la

@@ -1031,10 +1031,11 @@ class AppLocalizationsPt extends AppLocalizations {
       'Gratuito por enquanto. No futuro essa função pode ser parte do plano Pro.';
 
   @override
-  String get interviewOfferFieldLabel => 'Vaga de emprego';
+  String get interviewOfferFieldLabel => 'Para qual entrevista você vai?';
 
   @override
-  String get interviewOfferFieldHint => 'Cole o texto da vaga ou o link';
+  String get interviewOfferFieldHint =>
+      'Cole a vaga ou o link, ou conte com suas palavras: \"Backend Java sênior no Nubank\"';
 
   @override
   String interviewOfferCharCount(int count) {
@@ -1058,7 +1059,7 @@ class AppLocalizationsPt extends AppLocalizations {
 
   @override
   String get interviewOfferUnreadableBody =>
-      'Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga para continuar.';
+      'Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga ou conte com suas palavras.';
 
   @override
   String get interviewOfferUnreadablePasteButton => 'Colar o texto da vaga';

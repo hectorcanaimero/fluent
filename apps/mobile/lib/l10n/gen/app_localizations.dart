@@ -1835,13 +1835,13 @@ abstract class AppLocalizations {
   /// No description provided for @interviewOfferFieldLabel.
   ///
   /// In es, this message translates to:
-  /// **'Oferta de trabajo'**
+  /// **'¿A qué entrevista vas?'**
   String get interviewOfferFieldLabel;
 
   /// No description provided for @interviewOfferFieldHint.
   ///
   /// In es, this message translates to:
-  /// **'Pega el texto de la oferta o el enlace'**
+  /// **'Pega la oferta o el enlace, o cuéntalo con tus palabras: \"Backend Java senior en Nubank\"'**
   String get interviewOfferFieldHint;
 
   /// No description provided for @interviewOfferCharCount.
@@ -1883,7 +1883,7 @@ abstract class AppLocalizations {
   /// No description provided for @interviewOfferUnreadableBody.
   ///
   /// In es, this message translates to:
-  /// **'Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta para seguir.'**
+  /// **'Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta o cuéntala con tus palabras.'**
   String get interviewOfferUnreadableBody;
 
   /// No description provided for @interviewOfferUnreadablePasteButton.

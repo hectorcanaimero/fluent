@@ -475,8 +475,8 @@
     }
   },
   "interviewFreeNotice": "Gratis por ahora. En el futuro esta función podría ser parte del plan Pro.",
-  "interviewOfferFieldLabel": "Oferta de trabajo",
-  "interviewOfferFieldHint": "Pega el texto de la oferta o el enlace",
+  "interviewOfferFieldLabel": "¿A qué entrevista vas?",
+  "interviewOfferFieldHint": "Pega la oferta o el enlace, o cuéntalo con tus palabras: \"Backend Java senior en Nubank\"",
   "interviewOfferCharCount": "{count} caracteres",
   "@interviewOfferCharCount": {
     "placeholders": {
@@ -490,7 +490,7 @@
   "interviewTypeMixed": "Mixta",
   "interviewPrepareCta": "Preparar entrevista",
   "interviewOfferUnreadableTitle": "No pudimos leer ese enlace",
-  "interviewOfferUnreadableBody": "Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta para seguir.",
+  "interviewOfferUnreadableBody": "Puede ser de LinkedIn o estar protegido. Pega el texto de la oferta o cuéntala con tus palabras.",
   "interviewOfferUnreadablePasteButton": "Pegar el texto de la oferta",
   "interviewOfferUnreadableLinkedinButton": "Abrir en LinkedIn",
   "interviewPracticeCardTitle": "Simula tu entrevista",

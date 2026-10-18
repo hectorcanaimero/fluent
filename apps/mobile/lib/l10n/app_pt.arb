@@ -316,8 +316,8 @@
     }
   },
   "interviewFreeNotice": "Gratuito por enquanto. No futuro essa função pode ser parte do plano Pro.",
-  "interviewOfferFieldLabel": "Vaga de emprego",
-  "interviewOfferFieldHint": "Cole o texto da vaga ou o link",
+  "interviewOfferFieldLabel": "Para qual entrevista você vai?",
+  "interviewOfferFieldHint": "Cole a vaga ou o link, ou conte com suas palavras: \"Backend Java sênior no Nubank\"",
   "interviewOfferCharCount": "{count} caracteres",
   "@interviewOfferCharCount": {
     "placeholders": {
@@ -331,7 +331,7 @@
   "interviewTypeMixed": "Mista",
   "interviewPrepareCta": "Preparar entrevista",
   "interviewOfferUnreadableTitle": "Não conseguimos ler esse link",
-  "interviewOfferUnreadableBody": "Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga para continuar.",
+  "interviewOfferUnreadableBody": "Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga ou conte com suas palavras.",
   "interviewOfferUnreadablePasteButton": "Colar o texto da vaga",
   "interviewOfferUnreadableLinkedinButton": "Abrir no LinkedIn",
   "interviewPracticeCardTitle": "Simule sua entrevista",

@@ -276,8 +276,19 @@ en `fluent-api`):
 curl http://fluent-interview-agent:8000/healthz
 ```
 
-Debe devolver `200` con `{"ok": true}`. `/v1/prepare` y `/v1/feedback`
-responden `501` hasta que F10.2.T2 implemente el workflow.
+Debe devolver `200` con `{"ok": true}`. Para `/v1/prepare` (sin gastar
+tokens del modelo):
+
+```bash
+# sin token → 401
+curl -i -X POST http://fluent-interview-agent:8000/v1/prepare
+# con token y body inválido → 422 (pasa auth, falla la validación)
+curl -i -X POST http://fluent-interview-agent:8000/v1/prepare \
+  -H "Authorization: Bearer $INTERVIEW_AGENT_TOKEN" \
+  -H 'Content-Type: application/json' -d '{}'
+```
+
+`/v1/feedback` responde `501` hasta que se implemente.
 
 ---
 

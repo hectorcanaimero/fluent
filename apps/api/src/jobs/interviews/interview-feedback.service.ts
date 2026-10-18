@@ -3,7 +3,7 @@
  * §Components C3, §Interfaces I1; F12.3.T1).
  *
  * Entrada: `{ interviewId }`, encolado por
- * `InterviewSessionService.onInterviewSessionClosed` (F12.1.T2) cuando la
+ * `InterviewCloserService.onInterviewSessionClosed` (F12.1.T2) cuando la
  * entrevista queda `feedback_pending`, o por `InterviewsService.retry` desde
  * `feedback_failed`. Pasos:
  *   1. Candado `interview:feedback:{id}`; si lo tiene otro job, salir.
@@ -13,11 +13,11 @@
  *      `questionIdx`, `englishErrors` (de `corrections`), `locale` y nombre
  *      del perfil, `previousFeedback` si hay `parent_interview_id`.
  *   4. Llamar al agente. Descartar las competencias cuya `evidence` no sea
- *      subcadena literal de alguna respuesta del candidato (defensa en
+ *      cita literal (normalizada, ≥20 caracteres y 4 palabras) de alguna respuesta del candidato (defensa en
  *      profundidad: el agente ya reintenta y descarta por su cuenta, F12.2.T1,
  *      pero Nest es quien tiene el transcript real).
- *   5. Uso en `llm_calls`, guardar `feedback` (`feedback_ready`), memoria
- *      (D6) y push `notifyInterviewFeedbackReady`.
+ *   5. Uso en `llm_calls`, memoria (D6), `feedback_ready` (última escritura)
+ *      y push `notifyInterviewFeedbackReady`.
  *
  * Si algo lanza, se propaga para que BullMQ reintente (mismo criterio que
  * `interview-prepare`); al agotar los reintentos, el `Processor` llama a
@@ -47,9 +47,6 @@ import {
 
 /** El agente no resolvió todavía una empresa cuando falla: no hay nombre que mostrar. */
 const UNKNOWN_COMPANY_LABEL = 'esta oferta';
-
-/** D6: «hecho pending ... ≤160 caracteres». */
-const FACT_TEXT_MAX_LENGTH = 160;
 
 /** `error_code` de `feedback_failed` cuando el job falla del todo. */
 export type FeedbackErrorCode =
@@ -129,14 +126,14 @@ export class InterviewFeedbackService {
         ? this.repository.loadParentFeedback(interview.parent_interview_id)
         : Promise.resolve(null),
     ]);
-    const englishErrorRows = await this.repository.loadEnglishErrors(session.sessionIds);
+    const englishErrorRows = await this.repository.loadEnglishErrors(session.sessionId);
 
     const request: FeedbackRequest = {
       interviewId,
       locale: profile.locale,
       learnerName: profile.display_name,
       plan: interview.plan,
-      transcript: session.transcript.map((line) => toTranscriptLine(line)),
+      transcript: toTranscript(session.transcript),
       englishErrors: englishErrorRows.map((row) => ({
         original: row.original,
         corrected: row.corrected,
@@ -155,7 +152,7 @@ export class InterviewFeedbackService {
       .filter((line) => line.role === 'user')
       .map((line) => line.text);
     const competencies = response.competencies.filter((competency) =>
-      candidateAnswers.some((answer) => answer.includes(competency.evidence)),
+      quotedIn(competency.evidence, candidateAnswers),
     );
     const feedback: InterviewFeedback = { ...response, competencies };
 
@@ -170,11 +167,13 @@ export class InterviewFeedbackService {
       promptVersion: this.promptVersion,
     });
 
-    // Último paso persistente: tras él, un reintento ve `feedback_ready` y
-    // no vuelve a llamar al agente.
-    await this.repository.saveFeedback(interviewId, feedback);
-
+    // Memoria antes del cambio de estado: si falla, el reintento la repite
+    // (deduplica) en vez de perderla tras un `feedback_ready` ya escrito.
     await this.writeMemory(interview, feedback, englishErrorRows);
+
+    // Última escritura: tras ella, un reintento ve `feedback_ready` y no
+    // vuelve a llamar al agente.
+    await this.repository.markFeedbackReady(interviewId, feedback);
 
     await this.push.notifyInterviewFeedbackReady(
       interview.user_id,
@@ -198,11 +197,12 @@ export class InterviewFeedbackService {
     englishErrorRows: readonly EnglishErrorRow[],
   ): Promise<void> {
     if (interview.role && interview.company) {
-      const text = `Se prepara para una entrevista de ${interview.role} en ${interview.company.name}`.slice(
-        0,
-        FACT_TEXT_MAX_LENGTH,
+      // `addPendingFactIfNew` recorta a 160 caracteres y deduplica.
+      await this.memory.addPendingFactIfNew(
+        interview.user_id,
+        `Se prepara para una entrevista de ${interview.role} en ${interview.company.name}`,
+        null,
       );
-      await this.memory.addPendingFactIfNew(interview.user_id, text, null);
     }
 
     const recurringErrors = feedback.english.errors.map((error) =>
@@ -225,12 +225,44 @@ export class InterviewFeedbackService {
   }
 }
 
-function toTranscriptLine(line: TranscriptLineRow): FeedbackRequest['transcript'][number] {
-  return {
-    role: line.role === 'tutor' ? 'interviewer' : 'candidate',
-    questionIdx: line.question_idx ?? 1,
-    text: line.text,
-  };
+/**
+ * Solo los turnos del tutor llevan `question_idx` (`record_turn`); la
+ * respuesta del candidato y el cierre (sin etiqueta) heredan la última
+ * pregunta etiquetada.
+ */
+export function toTranscript(
+  lines: readonly TranscriptLineRow[],
+): FeedbackRequest['transcript'] {
+  let questionIdx = 1;
+  return lines.map((line) => {
+    if (line.role === 'tutor' && line.question_idx !== null) questionIdx = line.question_idx;
+    return {
+      role: line.role === 'tutor' ? 'interviewer' : 'candidate',
+      questionIdx,
+      text: line.text,
+    };
+  });
+}
+
+/** Mismas reglas que `quoted_in` del agente (`app/feedback/evaluator.py`). */
+const MIN_EVIDENCE_CHARS = 20;
+const MIN_EVIDENCE_WORDS = 4;
+const QUOTE_CHARS = /^[\s"'“”‘’«»]+|[\s"'“”‘’«»]+$/gu;
+
+function normalize(text: string): string {
+  return text.toLowerCase().split(/\s+/u).filter(Boolean).join(' ');
+}
+
+/**
+ * Cita literal (sin mayúsculas ni espacios extra) de una respuesta del
+ * candidato: de al menos 20 caracteres y 4 palabras, o la respuesta entera.
+ */
+export function quotedIn(evidence: string, answers: readonly string[]): boolean {
+  const quote = normalize(evidence.replace(QUOTE_CHARS, ''));
+  if (quote === '') return false;
+  const longEnough =
+    quote.length >= MIN_EVIDENCE_CHARS && quote.split(' ').length >= MIN_EVIDENCE_WORDS;
+  return answers.map(normalize).some((line) => quote === line || (longEnough && line.includes(quote)));
 }
 
 /**

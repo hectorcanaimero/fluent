@@ -22,6 +22,7 @@
   "INTERVIEW_NOT_RETRYABLE": "Só é possível tentar de novo uma entrevista cuja preparação falhou.",
   "INTERVIEW_NOT_OPENABLE": "Esta entrevista não pode ser iniciada agora.",
   "TOO_SHORT": "A entrevista foi muito curta para montar um parecer.",
+  "INTERVIEW_NOT_RESUMABLE": "Esta entrevista já terminou e não pode ser retomada.",
   "INTERVIEW_AGENT_UNAVAILABLE": "O simulador de entrevistas não está disponível neste momento.",
   "NOT_READY": "Ainda não está pronto.",
   "NOT_FOUND": "O recurso solicitado não existe.",

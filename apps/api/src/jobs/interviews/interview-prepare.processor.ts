@@ -27,7 +27,7 @@ import {
 
 /**
  * Carga de un job de la cola `interviews` (la encolan `POST /interviews`,
- * `POST /interviews/:id/retry` y `InterviewSessionService.onInterviewSessionClosed`).
+ * `POST /interviews/:id/retry` y `InterviewCloserService.onInterviewSessionClosed`).
  * `interview-prepare` e `interview-feedback` (F12.3.T1) comparten esta forma.
  */
 export interface InterviewPrepareJobData {

@@ -4,7 +4,6 @@ import { ConfigService } from '@nestjs/config';
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
 import type { Profile, Session } from '../db/schema.js';
-import { InterviewSessionService } from '../interviews/interview-session.service.js';
 import {
   DEGRADED_REPLY,
   TURN_MAX_ATTEMPTS,
@@ -14,11 +13,13 @@ import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
 import { buildInterviewTurnMessages } from '../llm/prompts/interview-turn.js';
 import { InterviewTurnOutput } from '../llm/schemas.js';
 import { effectivePlan } from '../profiles/plan.js';
+import type { InterviewPlan } from '../interviews/interviews.types.js';
 import {
   InterviewSessionRepository,
   type InterviewTurnRow,
 } from './interview-session.repository.js';
-import { competencyFor, rebuildScenario } from './scenario.js';
+import { InterviewCloserService } from './interview-closer.service.js';
+import { competencyFor } from './scenario.js';
 import { clampNote, roundLatency } from './sessions.mapper.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { TurnResultDto } from './sessions.types.js';
@@ -69,9 +70,13 @@ interface InterviewOutcome {
  * - Una repregunta por pregunta, impuesta aquí y no solo en el prompt: si el
  *   modelo repregunta una pregunta que ya tuvo la suya, la respuesta se cambia
  *   por la pregunta siguiente del plan.
- * - `interviews.answered_count` y `turns.question_idx`/`is_follow_up`.
+ * - `interviews.answered_count` y `turns.question_idx`/`is_follow_up` (las
+ *   etiquetas y `active_sec` van en la misma `record_turn` que el turno).
  * - Correcciones guardadas pero nunca enviadas (FR-10).
- * - Con `done`, `INTERVIEW_MAX_SEC` o las 8 respondidas, cierra la sesión.
+ * - Con `done`, `INTERVIEW_MAX_SEC` o las 8 respondidas termina
+ *   (`InterviewCloserService.end`).
+ *
+ * También genera la apertura (`opening`) con la misma llamada al modelo.
  *
  * La pregunta de cada turno la decide el servicio (orden estricto del plan),
  * no el `questionIdx` del modelo.
@@ -86,19 +91,17 @@ export class InterviewTurnsService {
     private readonly sessions: SessionsRepository,
     private readonly llm: LlmService,
     private readonly configService: ConfigService<Env, true>,
-    private readonly interviewSessions: InterviewSessionService,
+    private readonly closer: InterviewCloserService,
   ) {}
 
   async run(params: InterviewTurnParams): Promise<TurnResultDto> {
     const { userId, session, profile, text, userTurnIdx } = params;
-    const interviewId = session.interview_id;
-    const [interview, transcript] =
-      interviewId === null
-        ? [null, []]
-        : await Promise.all([
-            this.repository.findInterview(userId, interviewId),
-            this.repository.listTranscript(userId, interviewId),
-          ]);
+    const [interview, transcript] = await Promise.all([
+      session.interview_id === null
+        ? null
+        : this.repository.findInterview(userId, session.interview_id),
+      this.repository.listTranscript(session.id),
+    ]);
     if (
       interview === null ||
       interview.status !== 'in_progress' ||
@@ -107,21 +110,23 @@ export class InterviewTurnsService {
       throw ApiException.of('SESSION_NOT_ACTIVE', SESSION_NOT_ACTIVE_MESSAGE);
     }
 
-    const { plan, totalQuestions } = rebuildScenario(
-      session,
-      null,
-      interview.plan,
-    ).interview;
+    const plan = interview.plan;
+    const totalQuestions = plan.questions.length;
     const maxSec = this.configService.get('INTERVIEW_MAX_SEC', { infer: true });
     const warnSec = this.configService.get('INTERVIEW_WARN_SEC', {
       infer: true,
     });
 
     const lastTutor = transcript.findLast((line) => line.role === 'tutor');
-    const pendingQ = lastTutor?.question_idx ?? 1;
+    // El cierre va sin pregunta (null); tras él solo se sigue retomando, y
+    // retomar agrega un turno etiquetado. El fallback es por si acaso.
+    const pendingQ =
+      lastTutor?.question_idx ??
+      Math.min(interview.answered_count + 1, totalQuestions);
     const pendingFollowUp = lastTutor?.is_follow_up ?? false;
     const lastAt = transcript.at(-1)?.created_at ?? session.started_at;
-    const activeSec = session.active_sec + activeGapSec(lastAt, new Date());
+    const activeSecDelta = activeGapSec(lastAt, new Date());
+    const activeSec = session.active_sec + activeSecDelta;
     // Orden estricto: contestar la pregunta pendiente la deja respondida.
     const answeredCount = Math.max(interview.answered_count, pendingQ);
     const followUpUsedFor = [
@@ -148,21 +153,27 @@ export class InterviewTurnsService {
 
     let outcome: InterviewOutcome;
     try {
-      outcome = await this.complete(params, {
-        plan,
-        transcript: [
-          ...transcript.map(toTranscriptLine),
-          { role: 'candidate', text },
-        ],
-        answeredCount,
-        followUpUsedFor,
-        activeSec,
-        locale: profile.locale,
-        warnSec,
-        // El turno pendiente se generó con el `active_sec` guardado: si ya
-        // pasaba el aviso, ese turno anunció la última pregunta.
-        lastQuestionAnnounced: session.active_sec >= warnSec,
-      });
+      outcome = await this.complete(
+        userId,
+        session.id,
+        profile,
+        {
+          plan,
+          transcript: [
+            ...transcript.map(toTranscriptLine),
+            { role: 'candidate', text },
+          ],
+          answeredCount,
+          followUpUsedFor,
+          activeSec,
+          locale: profile.locale,
+          warnSec,
+          // El turno pendiente se generó con el `active_sec` guardado: si ya
+          // pasaba el aviso, ese turno anunció la última pregunta.
+          lastQuestionAnnounced: session.active_sec >= warnSec,
+        },
+        params,
+      );
     } catch (error) {
       await this.rollbackUserTurn(session.id, userTurnIdx);
       throw error;
@@ -190,12 +201,12 @@ export class InterviewTurnsService {
       params.onReset?.();
       params.onToken(reply);
     }
+    // El cierre no pregunta nada: en la app se queda en la última pregunta
+    // hecha y en la base va sin pregunta (nunca una que no se hizo).
     const questionIdx =
-      outcome.degraded && !done
+      done || outcome.degraded || isFollowUp
         ? pendingQ
-        : isFollowUp
-          ? pendingQ
-          : Math.min(answeredCount + 1, totalQuestions);
+        : Math.min(answeredCount + 1, totalQuestions);
 
     // Correcciones guardadas para el parecer (FR-10), nunca devueltas.
     const corrections: InsertCorrectionRow[] = outcome.corrections.map(
@@ -209,10 +220,10 @@ export class InterviewTurnsService {
         note: clampNote(correction.note),
       }),
     );
-    const tutorIdx = userTurnIdx + 1;
+    // Turno, pregunta y tiempo activo en una sola transacción (`record_turn`).
     await this.turns.recordTurn({
       sessionId: session.id,
-      tutorIdx,
+      tutorIdx: userTurnIdx + 1,
       text: reply,
       model: outcome.model,
       tokensIn: outcome.tokensIn,
@@ -220,21 +231,22 @@ export class InterviewTurnsService {
       latencyMs: outcome.latencyMs,
       turnsCount: session.turns_count + 1,
       corrections,
+      interview: {
+        questionIdx: done ? null : questionIdx,
+        isFollowUp,
+        activeSecDelta,
+      },
     });
-    await Promise.all([
-      this.repository.tagTurn(session.id, tutorIdx, questionIdx, isFollowUp),
-      this.repository.updateActiveSec(userId, session.id, activeSec),
-      answeredCount !== interview.answered_count
-        ? this.repository.updateAnsweredCount(
-            userId,
-            interview.id,
-            answeredCount,
-          )
-        : Promise.resolve(),
-    ]);
+    if (answeredCount !== interview.answered_count) {
+      await this.repository.updateAnsweredCount(
+        userId,
+        interview.id,
+        answeredCount,
+      );
+    }
 
     if (done) {
-      await this.interviewSessions.closeSession(
+      await this.closer.end(
         userId,
         {
           ...session,
@@ -262,20 +274,50 @@ export class InterviewTurnsService {
     };
   }
 
+  /**
+   * Apertura de la entrevista (I3): el modelo se presenta y hace la Q1. Sin
+   * modelo, una presentación fija con la Q1 del plan.
+   */
+  async opening(
+    userId: string,
+    sessionId: string,
+    profile: Profile,
+    plan: InterviewPlan,
+  ): Promise<{ text: string; model: string | null }> {
+    const outcome = await this.complete(userId, sessionId, profile, {
+      plan,
+      transcript: [],
+      answeredCount: 0,
+      followUpUsedFor: [],
+      activeSec: 0,
+      locale: profile.locale,
+      warnSec: this.configService.get('INTERVIEW_WARN_SEC', { infer: true }),
+      lastQuestionAnnounced: false,
+    });
+    if (!outcome.degraded) return { text: outcome.reply, model: outcome.model };
+    const first = plan.questions.find((q) => q.idx === 1)?.text ?? '';
+    return {
+      text: `Hi, I'll be your interviewer today. Please keep each answer to about one minute. ${first}`,
+      model: null,
+    };
+  }
+
+  /** Llamada al modelo de la entrevista (D7: combo del plan del usuario). */
   private async complete(
-    params: InterviewTurnParams,
+    userId: string,
+    sessionId: string,
+    profile: Profile,
     prompt: Parameters<typeof buildInterviewTurnMessages>[0],
+    stream?: Pick<InterviewTurnParams, 'onToken' | 'onReset'>,
   ): Promise<InterviewOutcome> {
-    const { userId, session, profile } = params;
     const preference = await this.sessions.findChatModelPreference(userId);
     try {
       const result = await this.llm.complete({
         userId,
-        sessionId: session.id,
+        sessionId,
         purpose: 'interview',
         messages: buildInterviewTurnMessages(prompt),
         schema: InterviewTurnOutput,
-        // D7: combo del plan del usuario, como cualquier turno.
         plan: effectivePlan(profile),
         preference:
           preference === null
@@ -288,8 +330,8 @@ export class InterviewTurnsService {
           this.configService.get('PROMPT_VERSION', { infer: true }),
         ),
         maxAttempts: TURN_MAX_ATTEMPTS,
-        onToken: params.onToken,
-        onReset: params.onReset,
+        onToken: stream?.onToken,
+        onReset: stream?.onReset,
       });
       return {
         reply: result.data.reply,
@@ -304,9 +346,7 @@ export class InterviewTurnsService {
       };
     } catch (error) {
       if (!(error instanceof LlmUnavailableError)) throw error;
-      this.logger.warn(
-        `Turno de entrevista degradado en la sesión ${session.id}.`,
-      );
+      this.logger.warn(`Llamada de entrevista degradada en la sesión ${sessionId}.`);
       return {
         reply: DEGRADED_REPLY,
         isFollowUp: false,

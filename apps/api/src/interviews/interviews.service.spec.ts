@@ -106,6 +106,7 @@ function interviewFixture(overrides: Partial<Interview> = {}): Interview {
     feedback: null,
     error_code: null,
     answered_count: 0,
+    resumable: true,
     created_at: '2026-03-10T09:00:00.000Z',
     updated_at: '2026-03-10T09:00:00.000Z',
     ...overrides,
@@ -442,6 +443,15 @@ describe('InterviewsService.detail', () => {
     expect(serialized).not.toContain('secret question text');
   });
 
+  it('expone resumable: un too_short cerrado por tiempo no se puede retomar (D5)', async () => {
+    const interview = interviewFixture({ status: 'too_short', resumable: false });
+    const { service } = buildService({ repoOptions: { findByIdResult: interview } });
+
+    const detail = await service.detail(USER_ID, INTERVIEW_ID);
+
+    expect(detail).toMatchObject({ status: 'too_short', resumable: false });
+  });
+
   it('con una entrevista de otro usuario responde 404', async () => {
     // El repositorio filtra por user_id; simular "no encontrada" devolviendo null.
     const { service } = buildService({ repoOptions: { findByIdResult: null } });
@@ -531,8 +541,8 @@ describe('InterviewsService.feedback', () => {
     expect(result).toEqual({ statusCode: 202, body: { status: 'feedback_pending' } });
   });
 
-  it('too_short → 409 TOO_SHORT con answeredCount', async () => {
-    const interview = interviewFixture({ status: 'too_short', answered_count: 2 });
+  it('too_short → 409 TOO_SHORT con answeredCount y resumable', async () => {
+    const interview = interviewFixture({ status: 'too_short', answered_count: 2, resumable: false });
     const { service } = buildService({ repoOptions: { findByIdResult: interview } });
 
     const error = await service.feedback(USER_ID, INTERVIEW_ID).catch((caught: unknown) => caught);
@@ -540,7 +550,7 @@ describe('InterviewsService.feedback', () => {
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('TOO_SHORT');
     expect((error as ApiException).getStatus()).toBe(409);
-    expect((error as ApiException).getApiBody().answeredCount).toBe(2);
+    expect((error as ApiException).getApiBody()).toMatchObject({ answeredCount: 2, resumable: false });
   });
 
   it('feedback_failed → 503 LLM_UNAVAILABLE (ofrecer reintentar)', async () => {

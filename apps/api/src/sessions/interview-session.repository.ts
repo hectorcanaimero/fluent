@@ -10,9 +10,11 @@ import {
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import type { InterviewStatus } from '../interviews/interviews.types.js';
+import { INTERVIEW_TOPIC } from './scenario.js';
 
 /** Turno de cualquier sesión de la entrevista, con su pregunta (F12.1.T2). */
 export interface InterviewTurnRow {
+  readonly idx: number;
   readonly role: TurnRole;
   readonly text: string;
   readonly created_at: string;
@@ -33,8 +35,8 @@ export interface InsertInterviewTurnRow {
 
 /**
  * Acceso a datos de la sesión de entrevista (C4): la fila de `interviews` que
- * leen los turnos, las sesiones `kind = 'interview'` y las columnas
- * `question_idx`/`is_follow_up` de `turns`.
+ * leen los turnos, su única sesión `kind = 'interview'` (D5) y sus turnos con
+ * `question_idx`/`is_follow_up`.
  *
  * Vive en `sessions/` y no en `InterviewsRepository` porque lo usan
  * `TurnsService` y `EndSessionService`, y `SessionsModule` no importa el
@@ -80,18 +82,36 @@ export class InterviewSessionRepository {
     return unwrapInsforge<Interview>(result);
   }
 
-  /** `in_progress` → `feedback_pending`/`too_short`; no pisa otro estado. */
+  /**
+   * `in_progress`/`too_short` → `feedback_pending`/`too_short` con su
+   * `resumable` (D5); no pisa ningún otro estado. `too_short` entra aquí
+   * cuando el sweeper cierra una entrevista que el usuario dejó en pausa.
+   */
   async finishInterview(
     userId: string,
     interviewId: string,
     status: Extract<InterviewStatus, 'feedback_pending' | 'too_short'>,
+    resumable: boolean,
   ): Promise<void> {
     const result = await this.admin.database
       .from(TABLES.interviews)
-      .update({ status })
+      .update({ status, resumable })
       .eq('id', interviewId)
       .eq('user_id', userId)
-      .eq('status', 'in_progress');
+      .in('status', ['in_progress', 'too_short']);
+    unwrapInsforge(result);
+  }
+
+  /**
+   * `feedback_pending` → `feedback_failed` cuando no se pudo encolar el
+   * parecer (F12.3.T1): así `POST /interviews/:id/retry` lo puede reencolar.
+   */
+  async markFeedbackEnqueueFailed(interviewId: string): Promise<void> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .update({ status: 'feedback_failed', error_code: 'enqueue_failed' })
+      .eq('id', interviewId)
+      .eq('status', 'feedback_pending');
     unwrapInsforge(result);
   }
 
@@ -124,20 +144,15 @@ export class InterviewSessionRepository {
     return unwrapInsforge<Session>(result);
   }
 
-  /** Sesión `interview` nueva; `activeSec` arrastra el tiempo de las anteriores (D4/D5). */
-  async createSession(
-    userId: string,
-    interviewId: string,
-    activeSec: number,
-  ): Promise<Session> {
+  /** La sesión `interview` de la entrevista; hay una sola (D5). */
+  async createSession(userId: string, interviewId: string): Promise<Session> {
     const result = await this.admin.database
       .from(TABLES.sessions)
       .insert({
         user_id: userId,
         kind: 'interview',
-        topic: 'Entrevista',
+        topic: INTERVIEW_TOPIC,
         interview_id: interviewId,
-        active_sec: activeSec,
         status: 'active',
       })
       .select('*')
@@ -151,63 +166,14 @@ export class InterviewSessionRepository {
     return created;
   }
 
-  async updateActiveSec(
-    userId: string,
-    sessionId: string,
-    activeSec: number,
-  ): Promise<void> {
+  /** Transcript de la sesión de la entrevista, en orden. */
+  async listTranscript(sessionId: string): Promise<InterviewTurnRow[]> {
     const result = await this.admin.database
-      .from(TABLES.sessions)
-      .update({ active_sec: activeSec })
-      .eq('id', sessionId)
-      .eq('user_id', userId);
-    unwrapInsforge(result);
-  }
-
-  /**
-   * Transcript de la entrevista entera, en orden: todas sus sesiones (una por
-   * cada vez que se retomó tras `too_short` o un abandono) y sus turnos.
-   */
-  async listTranscript(
-    userId: string,
-    interviewId: string,
-  ): Promise<InterviewTurnRow[]> {
-    const sessionsResult = await this.admin.database
-      .from(TABLES.sessions)
-      .select('id')
-      .eq('interview_id', interviewId)
-      .eq('user_id', userId)
-      .order('started_at', { ascending: true });
-    const sessionIds = (
-      unwrapInsforge<Array<{ id: string }>>(sessionsResult) ?? []
-    ).map((s) => s.id);
-    if (sessionIds.length === 0) return [];
-
-    const turnsResult = await this.admin.database
       .from(TABLES.turns)
-      .select(
-        'session_id, idx, role, text, created_at, question_idx, is_follow_up',
-      )
-      .in('session_id', sessionIds)
+      .select('idx, role, text, created_at, question_idx, is_follow_up')
+      .eq('session_id', sessionId)
       .order('idx', { ascending: true });
-    const rows =
-      unwrapInsforge<
-        Array<InterviewTurnRow & { session_id: string; idx: number }>
-      >(turnsResult) ?? [];
-
-    const order = new Map(sessionIds.map((id, i) => [id, i]));
-    return rows
-      .sort(
-        (a, b) =>
-          order.get(a.session_id)! - order.get(b.session_id)! || a.idx - b.idx,
-      )
-      .map(({ role, text, created_at, question_idx, is_follow_up }) => ({
-        role,
-        text,
-        created_at,
-        question_idx,
-        is_follow_up,
-      }));
+    return unwrapInsforge<InterviewTurnRow[]>(result) ?? [];
   }
 
   async insertTurn(row: InsertInterviewTurnRow): Promise<void> {
@@ -220,21 +186,6 @@ export class InterviewSessionRepository {
       question_idx: row.questionIdx,
       is_follow_up: row.isFollowUp,
     });
-    unwrapInsforge(result);
-  }
-
-  /** Etiqueta un turno que ya escribió `record_turn` (que no conoce estas columnas). */
-  async tagTurn(
-    sessionId: string,
-    idx: number,
-    questionIdx: number,
-    isFollowUp: boolean,
-  ): Promise<void> {
-    const result = await this.admin.database
-      .from(TABLES.turns)
-      .update({ question_idx: questionIdx, is_follow_up: isFollowUp })
-      .eq('session_id', sessionId)
-      .eq('idx', idx);
     unwrapInsforge(result);
   }
 }

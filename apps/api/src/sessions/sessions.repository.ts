@@ -13,6 +13,7 @@ import {
   type SessionKind,
 } from '../db/schema.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
+import { findBlockingActiveSessionId } from './active-session.js';
 import { OPENING_TURN_IDX } from './sessions.constants.js';
 
 /** Preferencia del rol `chat` de `model_preferences` (SPEC-01 §2.5, SPEC-03 §2). */
@@ -72,19 +73,11 @@ export class SessionsRepository {
   /**
    * Id de la sesión `active` del usuario, si la hay (SPEC-04 §2: «solo puede
    * haber una sesión `active` por usuario»). La más reciente por `started_at`,
-   * por si un bug histórico dejó más de una.
+   * por si un bug histórico dejó más de una. Una entrevista en pausa no
+   * cuenta (`findBlockingActiveSessionId`).
    */
-  async findActiveSessionId(userId: string): Promise<string | null> {
-    const result = await this.admin.database
-      .from(TABLES.sessions)
-      .select('id')
-      .eq('user_id', userId)
-      .eq('status', 'active')
-      .order('started_at', { ascending: false })
-      .limit(1)
-      .maybeSingle();
-
-    return unwrapInsforge<{ id: string }>(result)?.id ?? null;
+  findActiveSessionId(userId: string): Promise<string | null> {
+    return findBlockingActiveSessionId(this.admin, userId);
   }
 
   /**

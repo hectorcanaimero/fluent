@@ -6,7 +6,9 @@
 -- Cubre: inserción del turno con sus métricas, correcciones asociadas al
 -- turno del usuario, actualización de turns_count y chat_model_used, el caso
 -- sin correcciones, que un modelo nulo no borre el ya guardado, y la
--- atomicidad ante una corrección inválida. Cualquier fallo lanza EXCEPTION.
+-- atomicidad ante una corrección inválida, y (F12.1.T2) los parámetros
+-- opcionales de entrevista: question_idx/is_follow_up y active_sec.
+-- Cualquier fallo lanza EXCEPTION.
 
 DO $test$
 DECLARE
@@ -94,6 +96,29 @@ BEGIN
   SELECT count(*) INTO v_n FROM public.turns WHERE session_id = v_sid AND idx = 8;
   IF v_n <> 0 THEN
     RAISE EXCEPTION '4: el turno del tutor quedó insertado pese al fallo';
+  END IF;
+
+  -- 5. Entrevista (F12.1.T2): pregunta, repregunta y tiempo activo en la
+  -- misma escritura; sin esos parámetros quedan NULL y active_sec no cambia.
+  v_res := public.record_turn(
+    v_sid, 10, 'Question 2?', 'm', 1, 1, 1, 6, '[]'::jsonb, 2, false, 45
+  );
+  IF (v_res->>'active_sec')::int <> 45 THEN
+    RAISE EXCEPTION '5: active_sec devuelto %, esperaba 45', v_res->>'active_sec';
+  END IF;
+  SELECT count(*) INTO v_n FROM public.turns
+   WHERE session_id = v_sid AND idx = 10 AND question_idx = 2 AND is_follow_up = false;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION '5: el turno no quedó etiquetado con su pregunta';
+  END IF;
+  SELECT active_sec INTO v_n FROM public.sessions WHERE id = v_sid;
+  IF v_n <> 45 THEN
+    RAISE EXCEPTION '5: sessions.active_sec es %, esperaba 45', v_n;
+  END IF;
+  SELECT count(*) INTO v_n FROM public.turns
+   WHERE session_id = v_sid AND idx = 4 AND question_idx IS NULL AND is_follow_up IS NULL;
+  IF v_n <> 1 THEN
+    RAISE EXCEPTION '5: un turno sin los parámetros nuevos debía quedar sin etiqueta';
   END IF;
 
   DELETE FROM public.sessions WHERE id = v_sid;

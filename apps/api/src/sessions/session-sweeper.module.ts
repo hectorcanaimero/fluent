@@ -4,9 +4,12 @@ import { ConfigService } from '@nestjs/config';
 import type { Env } from '../config/env.js';
 import { SESSION_SWEEPER } from '../jobs/session-sweeper.js';
 import { EndSessionRepository } from './end-session.repository.js';
+import { InterviewCloserService } from './interview-closer.service.js';
+import { InterviewSessionRepository } from './interview-session.repository.js';
 import { SessionCloserService } from './session-closer.service.js';
 import { SessionSweeperRepository } from './session-sweeper.repository.js';
 import { SessionSweeperService } from './session-sweeper.service.js';
+import { SessionsRepository } from './sessions.repository.js';
 
 /**
  * Módulo hoja del binding real de `SESSION_SWEEPER` (SPEC-04 §6, PR-04/T5;
@@ -31,19 +34,24 @@ import { SessionSweeperService } from './session-sweeper.service.js';
     EndSessionRepository,
     SessionCloserService,
     SessionSweeperRepository,
+    // Cierre de entrevistas (D5): solo repositorios y `ConfigService`, sin LLM.
+    SessionsRepository,
+    InterviewSessionRepository,
+    InterviewCloserService,
     {
       provide: SESSION_SWEEPER,
-      // `ConfigService` opcional: sin él (tests del módulo) vale el defecto de 24 h.
-      inject: [SessionSweeperRepository, SessionCloserService, { token: ConfigService, optional: true }],
+      inject: [SessionSweeperRepository, SessionCloserService, InterviewCloserService, ConfigService],
       useFactory: (
         repository: SessionSweeperRepository,
         closer: SessionCloserService,
-        config?: ConfigService<Env, true>,
+        interviewCloser: InterviewCloserService,
+        config: ConfigService<Env, true>,
       ) =>
         new SessionSweeperService({
           repository,
           closer,
-          interviewAbandonAfterSec: config?.get('INTERVIEW_ABANDON_AFTER_SEC', { infer: true }),
+          interviewCloser,
+          interviewAbandonAfterSec: config.get('INTERVIEW_ABANDON_AFTER_SEC', { infer: true }),
         }),
     },
   ],

@@ -37,52 +37,50 @@ function fakeClient(respond: (call: Call) => unknown) {
 }
 
 describe('InsforgeInterviewFeedbackRepository.loadSessionData', () => {
-  it('ordena los turnos por sesión (más vieja primero) y luego por idx, aunque las filas lleguen desordenadas', async () => {
-    const { client } = fakeClient((call) => {
-      if (call.table === 'sessions') {
-        // La entrevista se retomó dos veces: tres sesiones, en orden de apertura.
-        return [{ id: 'session-old' }, { id: 'session-mid' }, { id: 'session-new' }];
-      }
-      // Los turnos llegan sin relación con el orden de sus sesiones.
+  it('lee la única sesión de la entrevista y sus turnos por session_id en orden de idx', async () => {
+    const { calls, client } = fakeClient((call) => {
+      if (call.table === 'sessions') return { id: 'session-1' };
       return [
-        { session_id: 'session-new', idx: 0, role: 'tutor', text: 'Welcome back', question_idx: 3 },
-        { session_id: 'session-old', idx: 1, role: 'user', text: 'First answer', question_idx: 1 },
-        { session_id: 'session-old', idx: 0, role: 'tutor', text: 'Q1', question_idx: 1 },
-        { session_id: 'session-mid', idx: 0, role: 'tutor', text: 'Q2', question_idx: 2 },
+        { role: 'tutor', text: 'Q1', question_idx: 1 },
+        { role: 'user', text: 'First answer', question_idx: null },
       ];
     });
     const repository = new InsforgeInterviewFeedbackRepository(client, {} as Redis);
 
     const result = await repository.loadSessionData(USER_ID, INTERVIEW_ID);
 
-    expect(result.sessionIds).toEqual(['session-old', 'session-mid', 'session-new']);
-    expect(result.transcript.map((line) => line.text)).toEqual([
-      'Q1',
-      'First answer',
-      'Q2',
-      'Welcome back',
-    ]);
+    expect(result.sessionId).toBe('session-1');
+    expect(result.transcript.map((line) => line.text)).toEqual(['Q1', 'First answer']);
+    expect(calls[1]!.ops).toContainEqual(['eq', ['session_id', 'session-1']]);
+    expect(calls[1]!.ops).toContainEqual(['order', ['idx', { ascending: true }]]);
   });
 
-  it('sin sesiones todavía, no consulta turnos', async () => {
-    const { calls, client } = fakeClient((call) => (call.table === 'sessions' ? [] : []));
+  it('sin sesión todavía, no consulta turnos', async () => {
+    const { calls, client } = fakeClient(() => null);
     const repository = new InsforgeInterviewFeedbackRepository(client, {} as Redis);
 
     const result = await repository.loadSessionData(USER_ID, INTERVIEW_ID);
 
-    expect(result).toEqual({ sessionIds: [], transcript: [] });
+    expect(result).toEqual({ sessionId: null, transcript: [] });
     expect(calls).toHaveLength(1);
   });
 });
 
 describe('InsforgeInterviewFeedbackRepository.loadEnglishErrors', () => {
-  it('sin sesiones, no consulta correcciones', async () => {
+  it('lee las correcciones de esa sesión', async () => {
+    const rows = [{ original: 'I go', corrected: 'I went', category: 'grammar' }];
+    const { calls, client } = fakeClient(() => rows);
+    const repository = new InsforgeInterviewFeedbackRepository(client, {} as Redis);
+
+    expect(await repository.loadEnglishErrors('session-1')).toEqual(rows);
+    expect(calls[0]!.ops).toContainEqual(['eq', ['session_id', 'session-1']]);
+  });
+
+  it('sin sesión, no consulta correcciones', async () => {
     const { calls, client } = fakeClient(() => []);
     const repository = new InsforgeInterviewFeedbackRepository(client, {} as Redis);
 
-    const result = await repository.loadEnglishErrors([]);
-
-    expect(result).toEqual([]);
+    expect(await repository.loadEnglishErrors(null)).toEqual([]);
     expect(calls).toHaveLength(0);
   });
 });

@@ -95,9 +95,14 @@ export const API_ERROR_STATUS = {
   INTERVIEW_NOT_OPENABLE: 409,
   /**
    * `GET /interviews/:id/feedback` sobre una entrevista `too_short` (F12.3):
-   * la respuesta lleva `answeredCount`.
+   * la respuesta lleva `answeredCount` y `resumable`.
    */
   TOO_SHORT: 409,
+  /**
+   * `POST /interviews/:id/session` cuando su única sesión ya se cerró (tope
+   * de tiempo o sweeper, D5): `too_short` con `resumable = false` (F12.1.T2).
+   */
+  INTERVIEW_NOT_RESUMABLE: 409,
   /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.

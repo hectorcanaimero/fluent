@@ -66,7 +66,7 @@ export interface TranscriptLineRow {
 }
 
 export interface SessionDataResult {
-  readonly sessionIds: readonly string[];
+  readonly sessionId: string | null;
   readonly transcript: readonly TranscriptLineRow[];
 }
 
@@ -91,14 +91,14 @@ export interface RecordFeedbackUsageInput {
 export abstract class InterviewFeedbackRepository {
   abstract loadInterview(interviewId: string): Promise<InterviewFeedbackRow | null>;
   abstract loadProfile(userId: string): Promise<FeedbackProfileRow | null>;
-  /** Transcript de toda la entrevista (todas sus sesiones) con `questionIdx`, en orden. */
+  /** La sesión de la entrevista (D5: una sola) y su transcript, en orden. */
   abstract loadSessionData(userId: string, interviewId: string): Promise<SessionDataResult>;
-  /** Correcciones de inglés guardadas en esas sesiones (`englishErrors` de I1). */
-  abstract loadEnglishErrors(sessionIds: readonly string[]): Promise<EnglishErrorRow[]>;
+  /** Correcciones de inglés guardadas en esa sesión (`englishErrors` de I1). */
+  abstract loadEnglishErrors(sessionId: string | null): Promise<EnglishErrorRow[]>;
   /** `feedback` de la entrevista padre, para `previousFeedback` (re-entrevista). */
   abstract loadParentFeedback(parentInterviewId: string): Promise<InterviewFeedback | null>;
   /** `feedback_pending` → `feedback_ready` con el parecer. Idempotente por el filtro de estado. */
-  abstract saveFeedback(interviewId: string, feedback: InterviewFeedback): Promise<void>;
+  abstract markFeedbackReady(interviewId: string, feedback: InterviewFeedback): Promise<void>;
   /** `feedback_pending` → `feedback_failed`. Solo desde `feedback_pending`. */
   abstract markFeedbackFailed(interviewId: string, errorCode: string): Promise<void>;
   abstract recordFeedbackUsage(input: RecordFeedbackUsageInput): Promise<void>;
@@ -138,54 +138,36 @@ export class InsforgeInterviewFeedbackRepository extends InterviewFeedbackReposi
     return unwrapInsforge(result as InsforgeResult<FeedbackProfileRow>);
   }
 
-  /**
-   * Mismo armado que `InterviewSessionRepository.listTranscript`
-   * (`sessions/interview-session.repository.ts`), duplicado aquí a
-   * propósito (ver cabecera del fichero): todas las sesiones de la
-   * entrevista, en orden, con sus turnos.
-   */
+  /** D5: una entrevista tiene una sola sesión; sus turnos en orden. */
   async loadSessionData(userId: string, interviewId: string): Promise<SessionDataResult> {
-    const sessionsResult = await this.db
+    const sessionResult = await this.db
       .from(SESSIONS_TABLE)
       .select('id')
       .eq('interview_id', interviewId)
       .eq('user_id', userId)
-      .order('started_at', { ascending: true });
-    const sessionIds = (
-      unwrapInsforge(sessionsResult as InsforgeResult<Array<{ id: string }>>) ?? []
-    ).map((row) => row.id);
-    if (sessionIds.length === 0) return { sessionIds: [], transcript: [] };
+      .order('started_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+    const session = unwrapInsforge(sessionResult as InsforgeResult<{ id: string }>);
+    if (session === null) return { sessionId: null, transcript: [] };
 
     const turnsResult = await this.db
       .from(TURNS_TABLE)
-      .select('session_id,idx,role,text,question_idx')
-      .in('session_id', sessionIds)
+      .select('role,text,question_idx')
+      .eq('session_id', session.id)
       .order('idx', { ascending: true });
-    const rows =
-      unwrapInsforge(
-        turnsResult as InsforgeResult<
-          Array<TranscriptLineRow & { session_id: string; idx: number }>
-        >,
-      ) ?? [];
-
-    const order = new Map(sessionIds.map((id, i) => [id, i]));
-    const transcript = rows
-      .sort(
-        (a, b) => order.get(a.session_id)! - order.get(b.session_id)! || a.idx - b.idx,
-      )
-      .map(({ role, text, question_idx }) => ({ role, text, question_idx }));
-    return { sessionIds, transcript };
+    const transcript = unwrapInsforge(turnsResult as InsforgeResult<TranscriptLineRow[]>) ?? [];
+    return { sessionId: session.id, transcript };
   }
 
-  async loadEnglishErrors(sessionIds: readonly string[]): Promise<EnglishErrorRow[]> {
-    if (sessionIds.length === 0) return [];
+  async loadEnglishErrors(sessionId: string | null): Promise<EnglishErrorRow[]> {
+    if (sessionId === null) return [];
     const result = await this.db
       .from(TABLES.corrections)
       .select('original,corrected,category')
-      .in('session_id', [...sessionIds]);
+      .eq('session_id', sessionId);
     return unwrapInsforge(result as InsforgeResult<EnglishErrorRow[]>) ?? [];
   }
-
   async loadParentFeedback(parentInterviewId: string): Promise<InterviewFeedback | null> {
     const result = await this.db
       .from(INTERVIEWS_TABLE)
@@ -198,7 +180,7 @@ export class InsforgeInterviewFeedbackRepository extends InterviewFeedbackReposi
     );
   }
 
-  async saveFeedback(interviewId: string, feedback: InterviewFeedback): Promise<void> {
+  async markFeedbackReady(interviewId: string, feedback: InterviewFeedback): Promise<void> {
     const result = await this.db
       .from(INTERVIEWS_TABLE)
       .update({ status: 'feedback_ready' satisfies InterviewStatus, feedback, error_code: null })

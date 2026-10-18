@@ -65,6 +65,8 @@ export interface InterviewDetailDto extends InterviewDto {
   readonly estimatedMin: number | null;
   readonly competencies: readonly InterviewCompetencyDto[];
   readonly errorCode: string | null;
+  /** `too_short` que se puede retomar con `POST /interviews/:id/session` (D5). */
+  readonly resumable: boolean;
 }
 
 export interface InterviewListItemDto extends InterviewDto {
@@ -242,7 +244,7 @@ export class InterviewsService {
   /**
    * `GET /interviews/:id/feedback` (F12.3.T1): el parecer en sus tres
    * estados — `200` listo, `202` todavía `feedback_pending`, `409 TOO_SHORT`
-   * con `answeredCount` si la entrevista quedó corta. `feedback_failed` usa
+   * con `answeredCount` y `resumable` si la entrevista quedó corta. `feedback_failed` usa
    * el mismo código que un agente caído (`LLM_UNAVAILABLE`): no hay parecer
    * y la app ofrece reintentar, igual que cuando el agente no responde.
    */
@@ -264,7 +266,7 @@ export class InterviewsService {
         return { statusCode: 202, body: { status: 'feedback_pending' } };
       case 'too_short':
         throw this.error('TOO_SHORT', await this.localeFor(userId, acceptLanguage), {
-          extra: { answeredCount: interview.answered_count },
+          extra: { answeredCount: interview.answered_count, resumable: interview.resumable },
         });
       case 'feedback_failed':
         throw this.error('LLM_UNAVAILABLE', await this.localeFor(userId, acceptLanguage));
@@ -433,6 +435,7 @@ function toDetailDto(row: Interview, estimatedMin: number): InterviewDetailDto {
     estimatedMin: row.plan !== null ? estimatedMin : null,
     competencies,
     errorCode: row.error_code,
+    resumable: row.resumable,
   };
 }
 

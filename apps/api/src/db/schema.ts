@@ -514,6 +514,8 @@ export interface Interview {
   feedback: InterviewFeedback | null;
   error_code: string | null;
   answered_count: number;
+  /** `too_short` que se puede retomar en su misma sesión (D5, F12.1.T2). */
+  resumable: boolean;
   created_at: string; // ISO 8601 timestamp
   updated_at: string; // ISO 8601 timestamp
 }

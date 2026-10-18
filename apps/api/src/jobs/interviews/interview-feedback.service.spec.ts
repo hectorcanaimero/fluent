@@ -9,7 +9,12 @@ import type { FeedbackRequest, InterviewFeedback, InterviewPlan } from '../../in
 import type { MemoryRepository } from '../../memory/memory.repository.js';
 import type { PushService } from '../../push/push.service.js';
 import { ProfileMissingError } from './interview-prepare.repository.js';
-import { classifyFeedbackError, InterviewFeedbackService } from './interview-feedback.service.js';
+import {
+  classifyFeedbackError,
+  InterviewFeedbackService,
+  quotedIn,
+  toTranscript,
+} from './interview-feedback.service.js';
 import type {
   EnglishErrorRow,
   InterviewFeedbackRepository,
@@ -77,10 +82,10 @@ function makeRepository(
   };
 
   const defaultTranscript: SessionDataResult = {
-    sessionIds: ['session-1'],
+    sessionId: 'session-1',
     transcript: [
       { role: 'tutor', text: 'Tell me about caching.', question_idx: 1 },
-      { role: 'user', text: 'I used Redis for caching sessions.', question_idx: 1 },
+      { role: 'user', text: 'I used Redis for caching sessions.', question_idx: null },
     ],
   };
 
@@ -106,7 +111,7 @@ function makeRepository(
     loadSessionData: vi.fn(async () => options.transcript ?? defaultTranscript),
     loadEnglishErrors: vi.fn(async () => options.englishErrors ?? []),
     loadParentFeedback: vi.fn(async () => options.parentFeedback ?? null),
-    saveFeedback: vi.fn(async (_id: string, feedback: InterviewFeedback) => {
+    markFeedbackReady: vi.fn(async (_id: string, feedback: InterviewFeedback) => {
       saved.push(feedback);
       state.status = 'feedback_ready';
     }),
@@ -426,6 +431,85 @@ describe('InterviewFeedbackService.run', () => {
     expect(second).toEqual({ status: 'skipped', reason: 'locked' });
     expect(await first).toEqual({ status: 'ready' });
     expect(agent.feedback).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('InterviewFeedbackService.run (orden de escrituras)', () => {
+  it('memoria antes de feedback_ready; si la memoria falla, no marca listo ni avisa', async () => {
+    const { repository, saved } = makeRepository({ status: 'feedback_pending' });
+    const { memory } = makeMemory();
+    memory.addRecurringErrors = vi.fn(async () => {
+      throw new Error('InsForge caído');
+    });
+    const { push, ready } = makePush();
+    const service = new InterviewFeedbackService(
+      repository as unknown as InterviewFeedbackRepository,
+      makeAgent(async () => feedbackResponse()),
+      memory as unknown as MemoryRepository,
+      push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await expect(service.run(INTERVIEW_ID, 1, 'job-1')).rejects.toThrow('InsForge caído');
+    expect(saved).toEqual([]);
+    expect(ready).toEqual([]);
+  });
+
+  it('lee las correcciones de la sesión de la entrevista', async () => {
+    const { repository } = makeRepository({ status: 'feedback_pending' });
+    const service = new InterviewFeedbackService(
+      repository as unknown as InterviewFeedbackRepository,
+      makeAgent(async () => feedbackResponse()),
+      makeMemory().memory as unknown as MemoryRepository,
+      makePush().push as unknown as PushService,
+      makeConfig(),
+    );
+
+    await service.run(INTERVIEW_ID, 1, 'job-1');
+
+    expect(repository.loadSessionData).toHaveBeenCalledWith(USER_ID, INTERVIEW_ID);
+    expect(repository.loadEnglishErrors).toHaveBeenCalledWith('session-1');
+  });
+});
+
+describe('toTranscript', () => {
+  it('la respuesta y el cierre heredan la última pregunta etiquetada del tutor', () => {
+    expect(
+      toTranscript([
+        { role: 'tutor', text: 'Q1', question_idx: 1 },
+        { role: 'user', text: 'A1', question_idx: null },
+        { role: 'tutor', text: 'Q3', question_idx: 3 },
+        { role: 'user', text: 'A3', question_idx: null },
+        { role: 'tutor', text: 'Thanks, bye', question_idx: null },
+      ]).map((line) => [line.role, line.questionIdx]),
+    ).toEqual([
+      ['interviewer', 1],
+      ['candidate', 1],
+      ['interviewer', 3],
+      ['candidate', 3],
+      ['interviewer', 3],
+    ]);
+  });
+});
+
+describe('quotedIn', () => {
+  const answers = ['I  used Redis\nfor caching sessions in production.', 'Yes.'];
+
+  it('cita normalizada (mayúsculas y espacios) de ≥20 caracteres y 4 palabras', () => {
+    expect(quotedIn('"i used REDIS for caching"', answers)).toBe(true);
+  });
+
+  it('cita corta que no es la respuesta entera → descartada', () => {
+    expect(quotedIn('Redis for caching', answers)).toBe(false);
+  });
+
+  it('la respuesta entera, aunque sea corta, vale', () => {
+    expect(quotedIn('yes.', answers)).toBe(true);
+  });
+
+  it('texto inventado o vacío → descartado', () => {
+    expect(quotedIn('I used Memcached for caching', answers)).toBe(false);
+    expect(quotedIn('  ', answers)).toBe(false);
   });
 });
 

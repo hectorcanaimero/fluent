@@ -1,4 +1,6 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { setTimeout as sleep } from 'node:timers/promises';
+
+import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
 import {
@@ -7,35 +9,20 @@ import {
   type ApiExceptionOptions,
 } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { Interview, Locale, Profile, Session } from '../db/schema.js';
 import { I18nService } from '../i18n/i18n.service.js';
-import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
-import {
-  TURN_MAX_ATTEMPTS,
-  type Provider as LlmProvider,
-} from '../llm/config.js';
-import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import { buildInterviewTurnMessages } from '../llm/prompts/interview-turn.js';
-import { InterviewTurnOutput } from '../llm/schemas.js';
-import { effectivePlan } from '../profiles/plan.js';
+import { RedisService } from '../redis/redis.service.js';
 import {
   InterviewSessionRepository,
   type InterviewTurnRow,
 } from '../sessions/interview-session.repository.js';
+import { InterviewTurnsService } from '../sessions/interview-turns.service.js';
 import { competencyFor } from '../sessions/scenario.js';
-import {
-  SessionCloserService,
-  type SessionCloseResult,
-} from '../sessions/session-closer.service.js';
 import { SESSION_ID_RE } from '../sessions/session-ownership.js';
 import { OPENING_TURN_IDX } from '../sessions/sessions.constants.js';
 import { SessionsRepository } from '../sessions/sessions.repository.js';
 import type { InterviewSessionDto } from '../sessions/sessions.types.js';
 import type { InterviewPlan, InterviewStatus } from './interviews.types.js';
-
-/** FR-11: con menos respuestas no hay parecer (`too_short`). */
-export const MIN_ANSWERS_FOR_FEEDBACK = 4;
 
 /** Estados desde los que `POST /interviews/:id/session` abre o retoma. */
 const OPENABLE: readonly InterviewStatus[] = [
@@ -44,35 +31,45 @@ const OPENABLE: readonly InterviewStatus[] = [
   'too_short',
 ];
 
+/** Prefijo de la reapertura; se quita al retomar dos veces seguidas. */
+export const WELCOME_BACK_PREFIX =
+  "Welcome back, let's pick up where we left off. ";
+
 /**
- * Sesión de la entrevista (C2/C4, F12.1.T2): abrirla, retomarla y cerrarla.
+ * Lock de `POST /interviews/:id/session`: la apertura llama al modelo, así
+ * que dura lo que un turno; la segunda petición espera y devuelve la misma
+ * sesión.
+ */
+export const OPEN_LOCK_TTL_SEC = 30;
+const OPEN_LOCK_POLL_MS = 250;
+export function openLockKey(interviewId: string): string {
+  return `interview:session:${interviewId}`;
+}
+
+/**
+ * Sesión de la entrevista (C2/C4, F12.1.T2, D5): **una** por entrevista.
  *
  * - **Abrir** (`ready`): sesión `kind = 'interview'` con la apertura del
- *   entrevistador (primer turno del prompt I3) y la entrevista a `in_progress`.
- * - **Retomar** (`in_progress`, FR-25): la sesión activa tal cual. Si el
- *   sweeper ya la cerró (24 h, D5) o la entrevista quedó en `too_short`, se
- *   abre otra sesión de la misma entrevista que arrastra `active_sec`; el
- *   transcript es la suma de todas (`InterviewSessionRepository.listTranscript`)
- *   y el entrevistador repite la pregunta pendiente.
- * - **Cerrar** (`done`, `INTERVIEW_MAX_SEC` o `POST /sessions/:id/end`):
- *   `SessionCloserService` como cualquier sesión y la entrevista a
- *   `feedback_pending` (≥ 4 respuestas) o `too_short`.
+ *   entrevistador y la entrevista a `in_progress`.
+ * - **Retomar** (`in_progress` con la sesión activa): la sesión tal cual.
+ * - **Retomar un `too_short`** que el usuario terminó antes de tiempo (la
+ *   sesión siguió abierta, ver `InterviewCloserService.end`): la misma sesión,
+ *   la entrevista otra vez `in_progress` y un "welcome back" que repite la
+ *   pregunta pendiente. Si la sesión ya se cerró (tope de tiempo o sweeper),
+ *   `409 INTERVIEW_NOT_RESUMABLE`.
  *
- * Lo provee `SessionsModule` (lo usan `TurnsService` y `EndSessionService`) y
- * lo reexporta para `InterviewsController`: así no hay ciclo entre módulos.
+ * Serializado por entrevista con un lock de Redis: dos POST a la vez no abren
+ * dos sesiones ni insertan dos aperturas.
  */
 @Injectable()
 export class InterviewSessionService {
-  private readonly logger = new Logger(InterviewSessionService.name);
-
   constructor(
     private readonly repository: InterviewSessionRepository,
     private readonly sessions: SessionsRepository,
-    private readonly closer: SessionCloserService,
-    private readonly llm: LlmService,
+    private readonly interviewTurns: InterviewTurnsService,
     private readonly configService: ConfigService<Env, true>,
     private readonly i18n: I18nService,
-    @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
+    private readonly redis: RedisService,
   ) {}
 
   async open(
@@ -82,10 +79,29 @@ export class InterviewSessionService {
   ): Promise<InterviewSessionDto> {
     const profile = await this.sessions.findProfile(userId);
     const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
+    if (!SESSION_ID_RE.test(interviewId)) throw this.error('NOT_FOUND', locale);
 
-    const interview = SESSION_ID_RE.test(interviewId)
-      ? await this.repository.findInterview(userId, interviewId)
-      : null;
+    const key = openLockKey(interviewId);
+    const deadline = Date.now() + OPEN_LOCK_TTL_SEC * 1000;
+    while (!(await this.redis.setIfAbsent(key, '1', OPEN_LOCK_TTL_SEC))) {
+      if (Date.now() >= deadline)
+        throw this.error('INTERVIEW_NOT_OPENABLE', locale);
+      await sleep(OPEN_LOCK_POLL_MS);
+    }
+    try {
+      return await this.openLocked(userId, interviewId, locale, profile);
+    } finally {
+      await this.redis.del(key);
+    }
+  }
+
+  private async openLocked(
+    userId: string,
+    interviewId: string,
+    locale: Locale,
+    profile: Profile | null,
+  ): Promise<InterviewSessionDto> {
+    const interview = await this.repository.findInterview(userId, interviewId);
     if (interview === null) throw this.error('NOT_FOUND', locale);
     if (!OPENABLE.includes(interview.status) || interview.plan === null) {
       throw this.error('INTERVIEW_NOT_OPENABLE', locale, {
@@ -94,229 +110,121 @@ export class InterviewSessionService {
     }
     if (profile === null || profile.onboarded_at === null)
       throw this.error('NOT_ONBOARDED', locale);
+    const plan = interview.plan;
 
-    const [latest, transcript] = await Promise.all([
-      this.repository.findLatestSession(userId, interviewId),
-      this.repository.listTranscript(userId, interviewId),
-    ]);
+    const latest = await this.repository.findLatestSession(userId, interviewId);
 
-    // Retomar la sesión que sigue abierta: misma sesión, mismo progreso.
-    if (interview.status === 'in_progress' && latest?.status === 'active') {
-      return this.toDto(
-        interview,
-        interview.plan,
-        latest,
-        transcript.findLast((line) => line.role === 'tutor'),
-      );
+    // Primera vez (o la apertura anterior falló y borró su sesión).
+    if (latest === null && interview.status !== 'too_short') {
+      // Una sola sesión activa por usuario (SPEC-04 §2), también aquí.
+      const activeSessionId = await this.sessions.findActiveSessionId(userId);
+      if (activeSessionId !== null) {
+        throw this.error('SESSION_ALREADY_ACTIVE', locale, {
+          extra: { activeSessionId },
+        });
+      }
+      if (
+        interview.status === 'ready' &&
+        (await this.repository.markInProgress(userId, interviewId, [
+          'ready',
+        ])) === null
+      ) {
+        throw this.error('INTERVIEW_NOT_OPENABLE', locale);
+      }
+
+      const session = await this.repository.createSession(userId, interviewId);
+      try {
+        const opening = await this.interviewTurns.opening(
+          userId,
+          session.id,
+          profile,
+          plan,
+        );
+        const turn = {
+          idx: OPENING_TURN_IDX,
+          role: 'tutor' as const,
+          text: opening.text,
+          questionIdx: 1,
+          isFollowUp: false,
+        };
+        await this.repository.insertTurn({
+          sessionId: session.id,
+          model: opening.model,
+          ...turn,
+        });
+        return this.toDto(interview, plan, session, turn);
+      } catch (error) {
+        // Sin apertura no dejamos una sesión fantasma que bloquee con
+        // SESSION_ALREADY_ACTIVE; la entrevista queda `in_progress` sin
+        // sesión y el siguiente POST abre otra.
+        await this.sessions.deleteSession(userId, session.id);
+        throw error;
+      }
     }
 
-    // Una sola sesión activa por usuario (SPEC-04 §2), también aquí.
+    // Una sola sesión por entrevista (D5): si ya se cerró no se retoma.
+    if (
+      latest === null ||
+      latest.status !== 'active' ||
+      (interview.status === 'too_short' && !interview.resumable)
+    ) {
+      throw this.error('INTERVIEW_NOT_RESUMABLE', locale, {
+        extra: { status: interview.status },
+      });
+    }
+
+    const transcript = await this.repository.listTranscript(latest.id);
+    if (interview.status === 'in_progress') {
+      const last = transcript.findLast((line) => line.role === 'tutor');
+      return this.toDto(interview, plan, latest, {
+        text: last?.text ?? '',
+        questionIdx: last?.question_idx ?? 1,
+      });
+    }
+
+    // `too_short` retomable: misma sesión, "welcome back" y la pregunta
+    // pendiente. En pausa no bloqueaba otras sesiones; al retomarla vuelve a
+    // contar, así que con otra activa (normal) es 409 como al abrir.
     const activeSessionId = await this.sessions.findActiveSessionId(userId);
     if (activeSessionId !== null) {
       throw this.error('SESSION_ALREADY_ACTIVE', locale, {
         extra: { activeSessionId },
       });
     }
-
-    if (interview.status !== 'in_progress') {
-      const moved = await this.repository.markInProgress(userId, interviewId, [
-        'ready',
+    if (
+      (await this.repository.markInProgress(userId, interviewId, [
         'too_short',
-      ]);
-      // Otra petición se adelantó: que el cliente reintente y la retome.
-      if (moved === null) throw this.error('INTERVIEW_NOT_OPENABLE', locale);
+      ])) === null
+    ) {
+      throw this.error('INTERVIEW_NOT_OPENABLE', locale);
     }
-
-    // ponytail: retomar un `too_short` que ya gastó INTERVIEW_MAX_SEC solo deja
-    // una respuesta más; dar tiempo extra si eso molesta en la práctica.
-    const session = await this.repository.createSession(
-      userId,
-      interviewId,
-      latest?.active_sec ?? 0,
-    );
-    try {
-      const opening = await this.opening(
-        userId,
-        session,
-        profile,
-        interview.plan,
-        transcript,
-      );
-      await this.repository.insertTurn({
-        sessionId: session.id,
-        idx: OPENING_TURN_IDX,
-        role: 'tutor',
-        ...opening,
-      });
-      return this.toDto(
-        { ...interview, status: 'in_progress' },
-        interview.plan,
-        session,
-        {
-          role: 'tutor',
-          text: opening.text,
-          created_at: session.started_at,
-          question_idx: opening.questionIdx,
-          is_follow_up: opening.isFollowUp,
-        },
-      );
-    } catch (error) {
-      // Sin apertura no dejamos una sesión fantasma que bloquee con
-      // SESSION_ALREADY_ACTIVE; la entrevista queda `in_progress` y el
-      // siguiente POST abre otra.
-      await this.sessions.deleteSession(userId, session.id);
-      throw error;
-    }
-  }
-
-  /**
-   * Cierre de una sesión `interview` (F12.1.T2, FR-11). `decide = false` cuando
-   * la sesión ya estaba cerrada: ni brief ni cambio de estado de la entrevista
-   * (que puede estar ya en otra sesión retomada).
-   */
-  async closeSession(
-    userId: string,
-    session: Session,
-    decide: boolean,
-  ): Promise<SessionCloseResult> {
-    const result = await this.closer.close({
-      userId,
-      sessionId: session.id,
-      // D4: la duración es el tiempo activo, no el reloj de pared con pausas.
-      durationSec: Math.min(SESSION_HARD_CAP_SEC, session.active_sec),
-      turnsCount: session.turns_count,
-      decideBrief: decide,
-    });
-    if (decide && session.interview_id !== null) {
-      await this.finishInterview(userId, session.interview_id);
-    }
-    return result;
-  }
-
-  /**
-   * Encolado del parecer (F12.3.T1). Solo se llama con la entrevista ya en
-   * `feedback_pending`; `JobDispatcher.enqueueInterviewFeedback` es
-   * idempotente por `jobId`, así que una doble llamada no encola dos veces.
-   */
-  async onInterviewSessionClosed(interviewId: string): Promise<void> {
-    this.logger.log(
-      `Entrevista ${interviewId} lista para el parecer (feedback_pending)`,
-    );
-    await this.jobs.enqueueInterviewFeedback(interviewId);
-  }
-
-  private async finishInterview(
-    userId: string,
-    interviewId: string,
-  ): Promise<void> {
-    const interview = await this.repository.findInterview(userId, interviewId);
-    if (interview === null || interview.status !== 'in_progress') return;
-
-    const status =
-      interview.answered_count >= MIN_ANSWERS_FOR_FEEDBACK
-        ? 'feedback_pending'
-        : 'too_short';
-    await this.repository.finishInterview(userId, interviewId, status);
-    if (status === 'feedback_pending')
-      await this.onInterviewSessionClosed(interviewId);
-  }
-
-  /**
-   * Primer turno de la sesión. Entrevista nueva: el modelo se presenta y hace
-   * la Q1 (I3). Retomada: se repite lo último que preguntó, sin modelo.
-   */
-  private async opening(
-    userId: string,
-    session: Session,
-    profile: Profile,
-    plan: InterviewPlan,
-    transcript: readonly InterviewTurnRow[],
-  ): Promise<{
-    text: string;
-    questionIdx: number;
-    isFollowUp: boolean;
-    model: string | null;
-  }> {
-    const last = transcript.findLast((line) => line.role === 'tutor');
-    if (last !== undefined) {
-      return {
-        text: `Welcome back, let's pick up where we left off. ${last.text}`,
-        questionIdx: last.question_idx ?? 1,
-        isFollowUp: last.is_follow_up ?? false,
-        model: null,
-      };
-    }
-
-    const preference = await this.sessions.findChatModelPreference(userId);
-    try {
-      const result = await this.llm.complete({
-        userId,
-        sessionId: session.id,
-        purpose: 'interview',
-        messages: buildInterviewTurnMessages({
-          plan,
-          transcript: [],
-          answeredCount: 0,
-          followUpUsedFor: [],
-          activeSec: 0,
-          locale: profile.locale,
-          warnSec: this.configService.get('INTERVIEW_WARN_SEC', {
-            infer: true,
-          }),
-          lastQuestionAnnounced: false,
-        }),
-        schema: InterviewTurnOutput,
-        // D7: los turnos usan el combo del plan del usuario.
-        plan: effectivePlan(profile),
-        preference:
-          preference === null
-            ? null
-            : {
-                provider: preference.provider as LlmProvider,
-                model: preference.model,
-              },
-        promptVersion: String(
-          this.configService.get('PROMPT_VERSION', { infer: true }),
-        ),
-        maxAttempts: TURN_MAX_ATTEMPTS,
-      });
-      return {
-        text: result.data.reply,
-        questionIdx: 1,
-        isFollowUp: false,
-        model: result.modelUsed,
-      };
-    } catch (error) {
-      if (!(error instanceof LlmUnavailableError)) throw error;
-      this.logger.warn(
-        `Apertura degradada de la entrevista en la sesión ${session.id}.`,
-      );
-      const first = plan.questions.find((q) => q.idx === 1)?.text ?? '';
-      return {
-        text: `Hi, I'll be your interviewer today. Please keep each answer to about one minute. ${first}`,
-        questionIdx: 1,
-        isFollowUp: false,
-        model: null,
-      };
-    }
+    const pending = pendingQuestion(plan, transcript, interview.answered_count);
+    const turn = {
+      idx: (transcript.at(-1)?.idx ?? -1) + 1,
+      role: 'tutor' as const,
+      text: `${WELCOME_BACK_PREFIX}${pending.text}`,
+      questionIdx: pending.questionIdx,
+      isFollowUp: pending.isFollowUp,
+    };
+    await this.repository.insertTurn({ sessionId: latest.id, ...turn });
+    return this.toDto(interview, plan, latest, turn);
   }
 
   private toDto(
     interview: Interview,
     plan: InterviewPlan,
     session: Session,
-    lastTutor: InterviewTurnRow | undefined,
+    opening: { text: string; questionIdx: number },
   ): InterviewSessionDto {
-    const questionIdx = lastTutor?.question_idx ?? 1;
     const maxSec = this.configService.get('INTERVIEW_MAX_SEC', { infer: true });
     return {
       sessionId: session.id,
-      opening: lastTutor?.text ?? '',
+      opening: opening.text,
       answeredCount: interview.answered_count,
       interview: {
-        questionIdx,
+        questionIdx: opening.questionIdx,
         totalQuestions: plan.questions.length,
-        competency: competencyFor(plan, questionIdx),
+        competency: competencyFor(plan, opening.questionIdx),
         remainingSec: Math.max(0, maxSec - session.active_sec),
         done: false,
       },
@@ -330,4 +238,35 @@ export class InterviewSessionService {
   ): ApiException {
     return ApiException.of(code, this.i18n.translate(code, locale), options);
   }
+}
+
+/**
+ * Pregunta que quedó sin responder. Si el último turno es una pregunta del
+ * entrevistador, esa (la del plan, o el texto de la repregunta); si es el
+ * cierre (sin `question_idx`) u otra cosa, la siguiente del plan. Nunca
+ * repite el cierre ni hace avanzar `answered_count`.
+ */
+export function pendingQuestion(
+  plan: InterviewPlan,
+  transcript: readonly InterviewTurnRow[],
+  answeredCount: number,
+): { questionIdx: number; isFollowUp: boolean; text: string } {
+  const planText = (idx: number) =>
+    plan.questions.find((q) => q.idx === idx)?.text ?? '';
+  const last = transcript.at(-1);
+  if (last?.role === 'tutor' && last.question_idx !== null) {
+    if (last.is_follow_up) {
+      const text = last.text.startsWith(WELCOME_BACK_PREFIX)
+        ? last.text.slice(WELCOME_BACK_PREFIX.length)
+        : last.text;
+      return { questionIdx: last.question_idx, isFollowUp: true, text };
+    }
+    return {
+      questionIdx: last.question_idx,
+      isFollowUp: false,
+      text: planText(last.question_idx),
+    };
+  }
+  const idx = Math.min(answeredCount + 1, plan.questions.length);
+  return { questionIdx: idx, isFollowUp: false, text: planText(idx) };
 }

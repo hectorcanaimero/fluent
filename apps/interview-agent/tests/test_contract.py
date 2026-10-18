@@ -59,9 +59,7 @@ def test_mixed_con_1_conductual_es_rechazado() -> None:
 
 def test_mixed_con_2_conductuales_pasa() -> None:
     questions = _questions(["behavioral", "behavioral"] + ["technical"] * 6)
-    PrepareOkResponse.model_validate(
-        _response(questions).model_dump(), context={"type": "mixed"}
-    )
+    PrepareOkResponse.model_validate(_response(questions).model_dump(), context={"type": "mixed"})
 
 
 def test_feedback_con_study_plan_de_4_es_rechazado() -> None:

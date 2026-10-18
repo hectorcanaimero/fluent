@@ -9,14 +9,11 @@ def test_sin_authorization_header_da_401(client: TestClient) -> None:
 
 
 def test_token_incorrecto_da_401(client: TestClient) -> None:
-    response = client.post(
-        "/v1/prepare", headers={"Authorization": "Bearer wrong-token"}
-    )
+    response = client.post("/v1/prepare", headers={"Authorization": "Bearer wrong-token"})
     assert response.status_code == 401
 
 
 def test_token_correcto_pasa_auth(client: TestClient) -> None:
-    response = client.post(
-        "/v1/prepare", headers={"Authorization": f"Bearer {TEST_TOKEN}"}
-    )
-    assert response.status_code == 501
+    response = client.post("/v1/prepare", headers={"Authorization": f"Bearer {TEST_TOKEN}"})
+    # pasa auth y llega a la validación del body
+    assert response.status_code == 422

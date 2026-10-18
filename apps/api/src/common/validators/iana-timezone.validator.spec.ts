@@ -1,4 +1,4 @@
-import { isValidIanaTimezone } from './iana-timezone.validator.js';
+import { canonicalTimezone, isValidIanaTimezone } from './iana-timezone.validator.js';
 
 describe('isValidIanaTimezone', () => {
   it.each([
@@ -22,5 +22,16 @@ describe('isValidIanaTimezone', () => {
     expect(isValidIanaTimezone(undefined)).toBe(false);
     expect(isValidIanaTimezone(null)).toBe(false);
     expect(isValidIanaTimezone(42)).toBe(false);
+  });
+});
+
+describe('canonicalTimezone', () => {
+  it('convierte los alias antiguos que Postgres no reconoce', () => {
+    expect(canonicalTimezone('US/Pacific')).toBe('America/Los_Angeles');
+    expect(canonicalTimezone('Brazil/East')).toBe('America/Sao_Paulo');
+  });
+
+  it('deja igual una zona canónica', () => {
+    expect(canonicalTimezone('America/Sao_Paulo')).toBe('America/Sao_Paulo');
   });
 });

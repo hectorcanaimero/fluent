@@ -7,6 +7,7 @@ import { PendingActionsService } from './pending-actions.service.js';
 import { toGroupDto, toModelPreferenceDto, toProfileDto } from './profile.mapper.js';
 import { ProfilesRepository } from './profiles.repository.js';
 import type { UpdateProfileDto } from './dto/update-profile.dto.js';
+import { canonicalTimezone } from '../common/validators/iana-timezone.validator.js';
 import { XP_PROFILE_COMPLETED } from '../config/product.js';
 import { effectivePlan } from './plan.js';
 import type { MeDto, UpdateProfileResultDto } from './profiles.types.js';
@@ -94,7 +95,7 @@ export class ProfilesService {
       display_name: dto.displayName,
       level: dto.level,
       interests: dto.interests,
-      timezone: dto.timezone,
+      timezone: canonicalTimezone(dto.timezone),
       locale: dto.locale,
       ...(shouldMarkOnboarded ? { onboarded_at: new Date().toISOString() } : {}),
     });

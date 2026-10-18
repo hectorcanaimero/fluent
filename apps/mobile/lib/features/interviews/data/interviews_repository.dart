@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/api/fluent_api.dart';
 import '../../../core/api/models.dart';
+import '../../../core/errors/api_exception.dart';
 import '../../../core/providers.dart';
 
 /// Repositorio delgado sobre [FluentApi] para el simulador de entrevistas
@@ -108,3 +109,25 @@ Duration _pollDelay(int failures) {
   final seconds = 3 * (1 << failures);
   return Duration(seconds: seconds > 30 ? 30 : seconds);
 }
+
+/// `GET /interviews/:id/feedback` una sola vez, cuando [interviewProvider]
+/// (que ya repolla `feedback_pending` con espera creciente y se corta solo
+/// con `autoDispose`) muestra que el parecer dejó de estar pendiente. Mientras
+/// sigue en `feedback_pending` no se pide nada y devuelve `null` (cargando);
+/// un `202` suelto también es `null`. Los errores se propagan tal cual:
+/// [InterviewTooShort] (IE-06d), `404 NOT_READY` (todavía no terminó),
+/// `LLM_UNAVAILABLE` (`feedback_failed`, IE-06e) o de red.
+final interviewFeedbackProvider = FutureProvider.autoDispose
+    .family<InterviewFeedback?, String>((ref, id) async {
+      final detail = await ref.watch(interviewProvider(id).future);
+      if (detail.status == 'feedback_pending') return null;
+      try {
+        return await ref.watch(interviewsRepositoryProvider).feedback(id);
+      } on ApiException catch (e) {
+        // ponytail: un 202 con la ficha ya fuera de `feedback_pending` es una
+        // carrera; se queda cargando sin repollar (atrás + volver lo pide de
+        // nuevo). Invalidar `interviewProvider` acá si llega a pasar en serio.
+        if (e.statusCode == 202) return null;
+        rethrow;
+      }
+    });

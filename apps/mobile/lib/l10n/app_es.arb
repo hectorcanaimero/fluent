@@ -767,5 +767,32 @@
       }
     }
   },
-  "interviewCycleReinterviewReady": "Compara tu avance con una nueva entrevista sobre la misma oferta"
+  "interviewCycleReinterviewReady": "Compara tu avance con una nueva entrevista sobre la misma oferta",
+  "interviewCycleReinterviewCta": "Empezar re-entrevista",
+  "interviewFeedbackViewComparisonCta": "Ver cómo cambiaste",
+  "interviewCompareTitle": "Comparación",
+  "interviewCompareHeadline": "Así cambiaste",
+  "interviewCompareBeforeLabel": "Antes",
+  "interviewCompareAfterLabel": "Después",
+  "interviewCompareTrendUp": "Avanzó",
+  "interviewCompareTrendSame": "Igual",
+  "interviewCompareTrendDown": "Retrocedió",
+  "interviewCompareEnglishTitle": "Inglés",
+  "interviewCompareEnglishEmpty": "Ningún error se repitió",
+  "interviewCompareDisclaimer": "Comparación orientativa generada por IA.",
+  "interviewCompareViewFeedbackCta": "Ver el parecer completo",
+  "interviewCycleViewReinterviewCta": "Ver re-entrevista",
+  "interviewCompareEnglishCount": "Errores de inglés: {before} → {after}",
+  "@interviewCompareEnglishCount": {
+    "placeholders": {
+      "before": {
+        "type": "String"
+      },
+      "after": {
+        "type": "String"
+      }
+    }
+  },
+  "interviewCompareEnglishRepeatedTitle": "Se repitieron",
+  "interviewCompareNoComparison": "Esta entrevista no tiene comparación"
 }

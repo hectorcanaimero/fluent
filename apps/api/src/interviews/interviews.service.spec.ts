@@ -487,6 +487,16 @@ describe('InterviewsService.detail', () => {
     expect(detail).toMatchObject({ status: 'too_short', resumable: false });
   });
 
+  it('expone parentInterviewId de una re-entrevista (FR-19, FR-30)', async () => {
+    const { service } = buildService({
+      repoOptions: { findByIdResult: interviewFixture({ parent_interview_id: 'parent-1' }) },
+    });
+    expect(await service.detail(USER_ID, INTERVIEW_ID)).toMatchObject({ parentInterviewId: 'parent-1' });
+
+    const { service: plain } = buildService({ repoOptions: { findByIdResult: interviewFixture() } });
+    expect(await plain.detail(USER_ID, INTERVIEW_ID)).toMatchObject({ parentInterviewId: null });
+  });
+
   it('con una entrevista de otro usuario responde 404', async () => {
     // El repositorio filtra por user_id; simular "no encontrada" devolviendo null.
     const { service } = buildService({ repoOptions: { findByIdResult: null } });
@@ -524,12 +534,14 @@ describe('InterviewsService.list', () => {
     expect(items[0]).toMatchObject({
       resumable: false,
       isReinterview: false,
+      parentInterviewId: null,
       cycleCompletedSessions: 2,
       cycleStatus: 'active',
     });
     expect(items[1]).toMatchObject({
       resumable: true,
       isReinterview: true,
+      parentInterviewId: 'p',
       cycleCompletedSessions: null,
       cycleStatus: null,
     });

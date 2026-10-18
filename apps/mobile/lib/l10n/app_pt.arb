@@ -581,5 +581,22 @@
       }
     }
   },
-  "interviewCycleReinterviewReady": "Compare seu avanço com uma nova entrevista sobre a mesma vaga"
+  "interviewCycleReinterviewReady": "Compare seu avanço com uma nova entrevista sobre a mesma vaga",
+  "interviewCycleReinterviewCta": "Começar reentrevista",
+  "interviewFeedbackViewComparisonCta": "Ver como você mudou",
+  "interviewCompareTitle": "Comparação",
+  "interviewCompareHeadline": "Assim você mudou",
+  "interviewCompareBeforeLabel": "Antes",
+  "interviewCompareAfterLabel": "Depois",
+  "interviewCompareTrendUp": "Avançou",
+  "interviewCompareTrendSame": "Igual",
+  "interviewCompareTrendDown": "Retrocedeu",
+  "interviewCompareEnglishTitle": "Inglês",
+  "interviewCompareEnglishEmpty": "Nenhum erro se repetiu",
+  "interviewCompareDisclaimer": "Comparação orientativa gerada por IA.",
+  "interviewCompareViewFeedbackCta": "Ver o parecer completo",
+  "interviewCycleViewReinterviewCta": "Ver reentrevista",
+  "interviewCompareEnglishCount": "Erros de inglês: {before} → {after}",
+  "interviewCompareEnglishRepeatedTitle": "Se repetiram",
+  "interviewCompareNoComparison": "Esta entrevista não tem comparação"
 }

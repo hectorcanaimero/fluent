@@ -1630,4 +1630,59 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get interviewCycleReinterviewReady =>
       'Compara tu avance con una nueva entrevista sobre la misma oferta';
+
+  @override
+  String get interviewCycleReinterviewCta => 'Empezar re-entrevista';
+
+  @override
+  String get interviewFeedbackViewComparisonCta => 'Ver cómo cambiaste';
+
+  @override
+  String get interviewCompareTitle => 'Comparación';
+
+  @override
+  String get interviewCompareHeadline => 'Así cambiaste';
+
+  @override
+  String get interviewCompareBeforeLabel => 'Antes';
+
+  @override
+  String get interviewCompareAfterLabel => 'Después';
+
+  @override
+  String get interviewCompareTrendUp => 'Avanzó';
+
+  @override
+  String get interviewCompareTrendSame => 'Igual';
+
+  @override
+  String get interviewCompareTrendDown => 'Retrocedió';
+
+  @override
+  String get interviewCompareEnglishTitle => 'Inglés';
+
+  @override
+  String get interviewCompareEnglishEmpty => 'Ningún error se repitió';
+
+  @override
+  String get interviewCompareDisclaimer =>
+      'Comparación orientativa generada por IA.';
+
+  @override
+  String get interviewCompareViewFeedbackCta => 'Ver el parecer completo';
+
+  @override
+  String get interviewCycleViewReinterviewCta => 'Ver re-entrevista';
+
+  @override
+  String interviewCompareEnglishCount(String before, String after) {
+    return 'Errores de inglés: $before → $after';
+  }
+
+  @override
+  String get interviewCompareEnglishRepeatedTitle => 'Se repitieron';
+
+  @override
+  String get interviewCompareNoComparison =>
+      'Esta entrevista no tiene comparación';
 }

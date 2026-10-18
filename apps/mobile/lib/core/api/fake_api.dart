@@ -916,7 +916,7 @@ class FakeApi implements FluentApi {
 
   InterviewDetail _addInterview({
     required String type,
-    bool isReinterview = false,
+    String? parentInterviewId,
   }) {
     _interviewCounter++;
     final id = 'interview-$_interviewCounter';
@@ -926,7 +926,8 @@ class FakeApi implements FluentApi {
       status: 'preparing',
       createdAt: DateTime.now().toIso8601String(),
       prepStep: 'reading',
-      isReinterview: isReinterview,
+      isReinterview: parentInterviewId != null,
+      parentInterviewId: parentInterviewId,
     );
     _interviews[id] = detail;
     _interviewOrder.add(id);
@@ -948,6 +949,7 @@ class FakeApi implements FluentApi {
           area: _interviews[id]!.area,
           company: _interviews[id]!.company,
           isReinterview: _interviews[id]!.isReinterview,
+          parentInterviewId: _interviews[id]!.parentInterviewId,
           resumable: _interviews[id]!.resumable,
           cycleCompletedSessions: _studyCycles[id]?.sessions
               .where((s) => s.status == 'done')
@@ -1115,7 +1117,18 @@ class FakeApi implements FluentApi {
           rating: 'good',
           note: 'Vocabulario técnico correcto.',
         ),
-        errors: [],
+        errors: [
+          EnglishErrorItem(
+            original: 'I have went to the office.',
+            corrected: 'I have gone to the office.',
+            explanation: 'Participio irregular de "go".',
+          ),
+          EnglishErrorItem(
+            original: 'He don\'t like tests.',
+            corrected: 'He doesn\'t like tests.',
+            explanation: 'Tercera persona del singular.',
+          ),
+        ],
       ),
       studyPlan: [
         StudyPlanItemDto(
@@ -1169,7 +1182,34 @@ class FakeApi implements FluentApi {
                 after: 'semi_senior',
                 trend: 'up',
               ),
+              CompetencyComparison(
+                competencyId: 'c2',
+                before: 'semi_senior',
+                after: 'semi_senior',
+                trend: 'same',
+              ),
+              CompetencyComparison(
+                competencyId: 'c3',
+                before: 'senior',
+                after: 'semi_senior',
+                trend: 'down',
+              ),
             ],
+            // Uno se repite con la padre (mismo `corrected`) y otro es nuevo.
+            english: feedback.english.copyWith(
+              errors: const [
+                EnglishErrorItem(
+                  original: 'I have went to office.',
+                  corrected: 'I have gone to the office',
+                  explanation: 'Participio irregular de "go".',
+                ),
+                EnglishErrorItem(
+                  original: 'There is much people.',
+                  corrected: 'There are many people.',
+                  explanation: '"People" es plural y contable.',
+                ),
+              ],
+            ),
           )
         : feedback;
   }
@@ -1276,6 +1316,20 @@ class FakeApi implements FluentApi {
     if (_studyCycles[id]?.status != 'completed') {
       _conflict('study cycle not completed');
     }
-    return _addInterview(type: parent.type, isReinterview: true);
+    // Idempotente como la API: si ya hay una hija sin terminar, la devuelve
+    // (el `200`) en vez de crear otra.
+    for (final childId in _interviewOrder.reversed) {
+      final child = _interviews[childId]!;
+      if (child.parentInterviewId == id &&
+          const {
+            'preparing',
+            'ready',
+            'in_progress',
+            'feedback_pending',
+          }.contains(child.status)) {
+        return child;
+      }
+    }
+    return _addInterview(type: parent.type, parentInterviewId: id);
   }
 }

@@ -2929,6 +2929,108 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Compara tu avance con una nueva entrevista sobre la misma oferta'**
   String get interviewCycleReinterviewReady;
+
+  /// No description provided for @interviewCycleReinterviewCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Empezar re-entrevista'**
+  String get interviewCycleReinterviewCta;
+
+  /// No description provided for @interviewFeedbackViewComparisonCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver cómo cambiaste'**
+  String get interviewFeedbackViewComparisonCta;
+
+  /// No description provided for @interviewCompareTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación'**
+  String get interviewCompareTitle;
+
+  /// No description provided for @interviewCompareHeadline.
+  ///
+  /// In es, this message translates to:
+  /// **'Así cambiaste'**
+  String get interviewCompareHeadline;
+
+  /// No description provided for @interviewCompareBeforeLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Antes'**
+  String get interviewCompareBeforeLabel;
+
+  /// No description provided for @interviewCompareAfterLabel.
+  ///
+  /// In es, this message translates to:
+  /// **'Después'**
+  String get interviewCompareAfterLabel;
+
+  /// No description provided for @interviewCompareTrendUp.
+  ///
+  /// In es, this message translates to:
+  /// **'Avanzó'**
+  String get interviewCompareTrendUp;
+
+  /// No description provided for @interviewCompareTrendSame.
+  ///
+  /// In es, this message translates to:
+  /// **'Igual'**
+  String get interviewCompareTrendSame;
+
+  /// No description provided for @interviewCompareTrendDown.
+  ///
+  /// In es, this message translates to:
+  /// **'Retrocedió'**
+  String get interviewCompareTrendDown;
+
+  /// No description provided for @interviewCompareEnglishTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Inglés'**
+  String get interviewCompareEnglishTitle;
+
+  /// No description provided for @interviewCompareEnglishEmpty.
+  ///
+  /// In es, this message translates to:
+  /// **'Ningún error se repitió'**
+  String get interviewCompareEnglishEmpty;
+
+  /// No description provided for @interviewCompareDisclaimer.
+  ///
+  /// In es, this message translates to:
+  /// **'Comparación orientativa generada por IA.'**
+  String get interviewCompareDisclaimer;
+
+  /// No description provided for @interviewCompareViewFeedbackCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver el parecer completo'**
+  String get interviewCompareViewFeedbackCta;
+
+  /// No description provided for @interviewCycleViewReinterviewCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver re-entrevista'**
+  String get interviewCycleViewReinterviewCta;
+
+  /// No description provided for @interviewCompareEnglishCount.
+  ///
+  /// In es, this message translates to:
+  /// **'Errores de inglés: {before} → {after}'**
+  String interviewCompareEnglishCount(String before, String after);
+
+  /// No description provided for @interviewCompareEnglishRepeatedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Se repitieron'**
+  String get interviewCompareEnglishRepeatedTitle;
+
+  /// No description provided for @interviewCompareNoComparison.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista no tiene comparación'**
+  String get interviewCompareNoComparison;
 }
 
 class _AppLocalizationsDelegate

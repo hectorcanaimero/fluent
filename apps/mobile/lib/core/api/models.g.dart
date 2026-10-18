@@ -752,6 +752,7 @@ _InterviewSummary _$InterviewSummaryFromJson(Map<String, dynamic> json) =>
           ? null
           : CompanyInfo.fromJson(json['company'] as Map<String, dynamic>),
       isReinterview: json['isReinterview'] as bool? ?? false,
+      parentInterviewId: json['parentInterviewId'] as String?,
       cycleCompletedSessions: (json['cycleCompletedSessions'] as num?)?.toInt(),
       resumable: json['resumable'] as bool? ?? false,
     );
@@ -766,6 +767,7 @@ Map<String, dynamic> _$InterviewSummaryToJson(_InterviewSummary instance) =>
       'area': instance.area,
       'company': instance.company,
       'isReinterview': instance.isReinterview,
+      'parentInterviewId': instance.parentInterviewId,
       'cycleCompletedSessions': instance.cycleCompletedSessions,
       'resumable': instance.resumable,
     };
@@ -795,6 +797,7 @@ _InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>
       errorCode: json['errorCode'] as String?,
       resumable: json['resumable'] as bool? ?? false,
       isReinterview: json['isReinterview'] as bool? ?? false,
+      parentInterviewId: json['parentInterviewId'] as String?,
     );
 
 Map<String, dynamic> _$InterviewDetailToJson(_InterviewDetail instance) =>
@@ -814,6 +817,7 @@ Map<String, dynamic> _$InterviewDetailToJson(_InterviewDetail instance) =>
       'errorCode': instance.errorCode,
       'resumable': instance.resumable,
       'isReinterview': instance.isReinterview,
+      'parentInterviewId': instance.parentInterviewId,
     };
 
 _InterviewSessionStart _$InterviewSessionStartFromJson(
@@ -839,6 +843,7 @@ Map<String, dynamic> _$InterviewSessionStartToJson(
 _CompetencyFeedback _$CompetencyFeedbackFromJson(Map<String, dynamic> json) =>
     _CompetencyFeedback(
       competencyId: json['competencyId'] as String,
+      name: json['name'] as String?,
       observedLevel: json['observedLevel'] as String,
       expectedLevel: json['expectedLevel'] as String,
       evidence: json['evidence'] as String,
@@ -850,6 +855,7 @@ _CompetencyFeedback _$CompetencyFeedbackFromJson(Map<String, dynamic> json) =>
 Map<String, dynamic> _$CompetencyFeedbackToJson(_CompetencyFeedback instance) =>
     <String, dynamic>{
       'competencyId': instance.competencyId,
+      'name': instance.name,
       'observedLevel': instance.observedLevel,
       'expectedLevel': instance.expectedLevel,
       'evidence': instance.evidence,

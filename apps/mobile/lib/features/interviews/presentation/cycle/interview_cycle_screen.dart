@@ -32,6 +32,12 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
   /// filas para no disparar dos `POST` a la vez).
   int? _startingIdx;
 
+  bool _startingReinterview = false;
+
+  /// Hija devuelta por `POST /reinterview` (`201` nueva o `200` la que ya
+  /// estaba); antes de eso sale de `GET /interviews`.
+  String? _childId;
+
   Future<StudyCycle> _load() =>
       ref.read(interviewsRepositoryProvider).cycle(widget.interviewId);
 
@@ -69,6 +75,34 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
     }
   }
 
+  /// "Re-entrevista" (IE-07, FR-19): `POST /interviews/:id/reinterview` crea
+  /// la hija (`parent_interview_id`, idempotente) y reemplaza el ciclo por su
+  /// preparación (`/interviews/:childId`, IE-03/IE-04): volver atrás no
+  /// deja un ciclo con el botón de crear otra.
+  Future<void> _startReinterview() async {
+    if (_startingReinterview) return;
+    setState(() => _startingReinterview = true);
+    try {
+      final child = await ref
+          .read(interviewsRepositoryProvider)
+          .reinterview(widget.interviewId);
+      if (!mounted) return;
+      setState(() => _childId = child.id);
+      context.pushReplacement('/interviews/${child.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(apiErrorSnackBar(context, e.code));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).errorGeneric)),
+      );
+    } finally {
+      if (mounted) setState(() => _startingReinterview = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -79,6 +113,14 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
     };
     // Sin la ficha todavía no hay subtítulo: mostrar el nombre genérico y
     // cambiarlo al llegar la empresa parpadeaba.
+    final childId =
+        _childId ??
+        ref
+            .watch(interviewsProvider)
+            .valueOrNull
+            ?.where((i) => i.parentInterviewId == widget.interviewId)
+            .firstOrNull
+            ?.id;
     final companyName = detail == null
         ? null
         : detail.company?.name ?? l10n.interviewHistoryCompanyFallback;
@@ -96,6 +138,9 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
               competencyNames: competencyNames,
               startingIdx: _startingIdx,
               onStart: _startSession,
+              reinterviewBusy: _startingReinterview,
+              onReinterview: _startReinterview,
+              childId: childId,
             ),
           ),
         ),
@@ -111,6 +156,9 @@ class _CycleBody extends StatelessWidget {
     required this.competencyNames,
     required this.startingIdx,
     required this.onStart,
+    required this.reinterviewBusy,
+    required this.onReinterview,
+    required this.childId,
   });
 
   final StudyCycle cycle;
@@ -118,6 +166,9 @@ class _CycleBody extends StatelessWidget {
   final Map<String, String> competencyNames;
   final int? startingIdx;
   final void Function(int idx) onStart;
+  final bool reinterviewBusy;
+  final VoidCallback onReinterview;
+  final String? childId;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +226,13 @@ class _CycleBody extends StatelessWidget {
             ),
           ),
         const SizedBox(height: AppSpacing.lg),
-        _ReinterviewCard(completed: completed, total: total),
+        _ReinterviewCard(
+          completed: completed,
+          total: total,
+          busy: reinterviewBusy,
+          onReinterview: onReinterview,
+          childId: childId,
+        ),
       ],
     );
   }
@@ -286,13 +343,25 @@ class _CycleSessionRow extends StatelessWidget {
 }
 
 /// La re-entrevista (IE-08) se queda bloqueada hasta completar las 5
-/// sesiones del ciclo (FR-30); llamar `POST /interviews/:id/reinterview` y navegar a
-/// la preparación de la hija es F13.2.T2.
+/// sesiones del ciclo (FR-30). Con el ciclo `completed`, "Re-entrevista"
+/// llama `POST /interviews/:id/reinterview` y navega a la preparación de la
+/// hija (F13.2.T2).
 class _ReinterviewCard extends StatelessWidget {
-  const _ReinterviewCard({required this.completed, required this.total});
+  const _ReinterviewCard({
+    required this.completed,
+    required this.total,
+    required this.busy,
+    required this.onReinterview,
+    required this.childId,
+  });
 
   final bool completed;
   final int total;
+  final bool busy;
+  final VoidCallback onReinterview;
+
+  /// Re-entrevista ya creada: el botón lleva a ella en vez de crear otra.
+  final String? childId;
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +400,23 @@ class _ReinterviewCard extends StatelessWidget {
               ],
             ),
           ),
+          if (completed && childId != null) ...[
+            const SizedBox(width: AppSpacing.md),
+            ElevatedButton(
+              key: const Key('interview_cycle_view_reinterview_button'),
+              onPressed: () => context.push('/interviews/$childId'),
+              child: Text(l10n.interviewCycleViewReinterviewCta),
+            ),
+          ] else if (completed) ...[
+            const SizedBox(width: AppSpacing.md),
+            ElevatedButton(
+              key: const Key('interview_cycle_reinterview_button'),
+              onPressed: busy ? null : onReinterview,
+              child: busy
+                  ? const ButtonSpinner()
+                  : Text(l10n.interviewCycleReinterviewCta),
+            ),
+          ],
         ],
       ),
     );

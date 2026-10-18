@@ -1,23 +1,19 @@
-import { Injectable, Logger } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
+import { setTimeout as sleep } from 'node:timers/promises';
+
+import { Injectable } from '@nestjs/common';
 
 import {
   ApiException,
   type ApiErrorCode,
   type ApiExceptionOptions,
 } from '../common/api-error.js';
-import type { Env } from '../config/env.js';
-import type { Locale, StudyCycle, StudyCycleSession } from '../db/schema.js';
+import type { StudyCycle, StudyCycleSession } from '../db/schema.js';
 import { I18nService } from '../i18n/i18n.service.js';
-import { MAX_FACTS_IN_PROMPT, type Provider as LlmProvider } from '../llm/config.js';
-import { LlmService, LlmUnavailableError } from '../llm/llm.service.js';
-import { buildTurnMessages } from '../llm/prompts/turn.js';
-import { TurnOutput } from '../llm/schemas.js';
-import { effectivePlan } from '../profiles/plan.js';
-import { studyScenario } from '../sessions/scenario.js';
+import { RedisService } from '../redis/redis.service.js';
 import { SESSION_ID_RE } from '../sessions/session-ownership.js';
-import { roundLatency, toSessionInfoDto } from '../sessions/sessions.mapper.js';
+import { toSessionInfoDto } from '../sessions/sessions.mapper.js';
 import { SessionsRepository } from '../sessions/sessions.repository.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import type { CreateSessionResultDto } from '../sessions/sessions.types.js';
 import {
   InterviewsRepository,
@@ -25,9 +21,16 @@ import {
   type StudyCycleWithSessions,
 } from './interviews.repository.js';
 
-/** Apertura fija si se agota la cadena de modelos (SPEC-03 §6), como `openingFor`. */
-export const STUDY_DEGRADED_OPENING =
-  "Hi! Let's practice today's study topic. Tell me what you already know about it.";
+/**
+ * Lock de `POST .../cycle/sessions/:idx/start`: la apertura llama al modelo,
+ * así que dura lo que un turno; el segundo tap espera y devuelve la misma
+ * sesión (mismo patrón que `InterviewSessionService`).
+ */
+export const START_LOCK_TTL_SEC = 30;
+const START_LOCK_POLL_MS = 250;
+export function startLockKey(cycleId: string, idx: number): string {
+  return `study:start:${cycleId}:${idx}`;
+}
 
 export type StudySessionState = 'done' | 'available' | 'locked';
 
@@ -61,20 +64,22 @@ export interface StudyCycleDto {
  */
 @Injectable()
 export class StudyCycleService {
-  private readonly logger = new Logger(StudyCycleService.name);
-
   constructor(
     private readonly repository: InterviewsRepository,
-    private readonly sessions: SessionsRepository,
-    private readonly llm: LlmService,
-    private readonly configService: ConfigService<Env, true>,
+    private readonly sessions: SessionsService,
+    private readonly sessionsRepository: SessionsRepository,
+    private readonly redis: RedisService,
     private readonly i18n: I18nService,
   ) {}
 
-  /** Idempotente: si el ciclo ya existe lo devuelve tal cual. */
+  /**
+   * Idempotente: si el ciclo ya existe completo lo devuelve tal cual; si una
+   * escritura anterior se cortó a medias, el `upsert` completa lo que falte.
+   */
   async create(userId: string, interviewId: string, acceptLanguage?: string): Promise<StudyCycleDto> {
-    const locale = await this.locale(userId, acceptLanguage);
-    if (!SESSION_ID_RE.test(interviewId)) throw this.error('NOT_FOUND', locale);
+    if (!SESSION_ID_RE.test(interviewId)) {
+      throw await this.error('NOT_FOUND', userId, acceptLanguage);
+    }
 
     const existing = await this.repository.findCycle(userId, interviewId);
     if (existing !== null && existing.sessions.length === STUDY_CYCLE_SIZE) {
@@ -82,9 +87,9 @@ export class StudyCycleService {
     }
 
     const interview = await this.repository.findById(userId, interviewId);
-    if (interview === null) throw this.error('NOT_FOUND', locale);
+    if (interview === null) throw await this.error('NOT_FOUND', userId, acceptLanguage);
     if (interview.status !== 'feedback_ready' || interview.feedback === null) {
-      throw this.error('STUDY_CYCLE_NOT_AVAILABLE', locale, {
+      throw await this.error('STUDY_CYCLE_NOT_AVAILABLE', userId, acceptLanguage, {
         extra: { status: interview.status },
       });
     }
@@ -93,19 +98,28 @@ export class StudyCycleService {
     );
   }
 
+  /** Un ciclo a medias (escritura cortada) se completa aquí también. */
   async get(userId: string, interviewId: string, acceptLanguage?: string): Promise<StudyCycleDto> {
-    const locale = await this.locale(userId, acceptLanguage);
-    if (!SESSION_ID_RE.test(interviewId)) throw this.error('NOT_FOUND', locale);
+    if (!SESSION_ID_RE.test(interviewId)) {
+      throw await this.error('NOT_FOUND', userId, acceptLanguage);
+    }
     const cycle = await this.repository.findCycle(userId, interviewId);
-    if (cycle === null) throw this.error('NOT_FOUND', locale);
+    if (cycle === null) throw await this.error('NOT_FOUND', userId, acceptLanguage);
+    if (cycle.sessions.length < STUDY_CYCLE_SIZE) {
+      return this.create(userId, interviewId, acceptLanguage);
+    }
     return toCycleDto(cycle);
   }
 
   /**
-   * Abre la sesión `idx` del ciclo: `409 STUDY_SESSION_LOCKED` si alguna
-   * anterior no está hecha (FR-29). Repetir una ya hecha está permitido.
-   * Misma apertura que `POST /sessions` (prompt de turno con el bloque de
-   * foco y apertura degradada si se agota la cadena).
+   * Abre la sesión `idx` del ciclo: `409 CYCLE_NOT_ACTIVE` si el ciclo ya no
+   * está `active`, `409 STUDY_SESSION_LOCKED` si alguna anterior no está
+   * hecha (FR-29). Repetir una ya hecha está permitido. La apertura es la de
+   * `POST /sessions` (`SessionsService.openStudySession`): grupo, onboarding,
+   * una sola sesión activa, apertura degradada, etc.
+   *
+   * Serializado por `(ciclo, idx)` con un lock de Redis: un doble tap no abre
+   * dos sesiones, el segundo devuelve la misma.
    */
   async start(
     userId: string,
@@ -113,101 +127,61 @@ export class StudyCycleService {
     idx: number,
     acceptLanguage?: string,
   ): Promise<CreateSessionResultDto> {
-    const profile = await this.sessions.findProfile(userId);
-    const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
-    if (!SESSION_ID_RE.test(interviewId)) throw this.error('NOT_FOUND', locale);
+    if (!SESSION_ID_RE.test(interviewId)) {
+      throw await this.error('NOT_FOUND', userId, acceptLanguage);
+    }
 
     const cycle = await this.repository.findCycle(userId, interviewId);
     const row = cycle?.sessions.find((item) => item.idx === idx);
-    if (cycle === null || row === undefined) throw this.error('NOT_FOUND', locale);
-    if (cycle.sessions.some((item) => item.idx < idx && item.done_at === null)) {
-      throw this.error('STUDY_SESSION_LOCKED', locale);
+    if (cycle === null || row === undefined) {
+      throw await this.error('NOT_FOUND', userId, acceptLanguage);
     }
-    if (profile === null || profile.onboarded_at === null) {
-      throw this.error('NOT_ONBOARDED', locale);
-    }
-    const activeSessionId = await this.sessions.findActiveSessionId(userId);
-    if (activeSessionId !== null) {
-      throw this.error('SESSION_ALREADY_ACTIVE', locale, { extra: { activeSessionId } });
-    }
-
-    const scenario = studyScenario(row);
-    const [brief, facts, preference] = await Promise.all([
-      this.sessions.findBriefText(userId),
-      this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
-      this.sessions.findChatModelPreference(userId),
-    ]);
-    const messages = buildTurnMessages({
-      locale: profile.locale,
-      level: profile.level,
-      kind: 'study',
-      study: scenario.study,
-      brief,
-      facts: facts.map((fact) => fact.text),
-      isFirstTurn: true,
-    });
-
-    const session = await this.repository.createStudySession(userId, row);
-    let opening: {
-      text: string;
-      model: string | null;
-      tokensIn: number | null;
-      tokensOut: number | null;
-      latencyMs: number | null;
-    };
-    try {
-      const result = await this.llm.complete({
-        userId,
-        sessionId: session.id,
-        purpose: 'turn',
-        messages,
-        schema: TurnOutput,
-        plan: effectivePlan(profile),
-        preference:
-          preference === null
-            ? null
-            : { provider: preference.provider as LlmProvider, model: preference.model },
-        promptVersion: String(this.configService.get('PROMPT_VERSION', { infer: true })),
+    if (cycle.cycle.status !== 'active') {
+      throw await this.error('CYCLE_NOT_ACTIVE', userId, acceptLanguage, {
+        extra: { status: cycle.cycle.status },
       });
-      opening = {
-        text: result.data.reply,
-        model: result.modelUsed,
-        tokensIn: result.usage.tokensIn,
-        tokensOut: result.usage.tokensOut,
-        latencyMs: roundLatency(result.attempts.at(-1)?.latencyMs ?? null),
-      };
-    } catch (error) {
-      if (!(error instanceof LlmUnavailableError)) {
-        // Sin sesión fantasma que bloquee con SESSION_ALREADY_ACTIVE.
-        await this.sessions.deleteSession(userId, session.id);
-        throw error;
-      }
-      this.logger.warn(`Apertura degradada de la sesión de estudio ${session.id}.`);
-      opening = { text: STUDY_DEGRADED_OPENING, model: null, tokensIn: null, tokensOut: null, latencyMs: null };
+    }
+    if (cycle.sessions.some((item) => item.idx < idx && item.done_at === null)) {
+      throw await this.error('STUDY_SESSION_LOCKED', userId, acceptLanguage);
     }
 
-    const updated = await this.sessions.updateAfterOpening(userId, session.id, {
-      chatModelUsed: opening.model,
-    });
-    await this.sessions.insertOpeningTurn({ sessionId: session.id, ...opening });
-
-    return {
-      session: toSessionInfoDto(updated ?? session),
-      opening: { text: opening.text, callbackUsed: false },
-    };
+    const key = startLockKey(cycle.cycle.id, idx);
+    const deadline = Date.now() + START_LOCK_TTL_SEC * 1000;
+    while (!(await this.redis.setIfAbsent(key, '1', START_LOCK_TTL_SEC))) {
+      if (Date.now() >= deadline) {
+        throw await this.error('SESSION_ALREADY_ACTIVE', userId, acceptLanguage);
+      }
+      await sleep(START_LOCK_POLL_MS);
+    }
+    try {
+      // Dentro del lock: si el primer tap ya la abrió, es la misma sesión.
+      const active = await this.sessionsRepository.findActiveStudySession(userId, row.id);
+      if (active !== null) {
+        return {
+          session: toSessionInfoDto(active.session),
+          opening: { text: active.openingText, callbackUsed: false },
+        };
+      }
+      return await this.sessions.openStudySession(userId, row);
+    } finally {
+      await this.redis.del(key);
+    }
   }
 
-  private async locale(userId: string, acceptLanguage?: string): Promise<Locale> {
-    const profile = await this.sessions.findProfile(userId);
-    return this.i18n.resolveLocale(profile?.locale, acceptLanguage);
-  }
-
-  private error(code: ApiErrorCode, locale: Locale, options?: ApiExceptionOptions): ApiException {
+  /** El `locale` solo se busca cuando hay que traducir un error. */
+  private async error(
+    code: ApiErrorCode,
+    userId: string,
+    acceptLanguage?: string,
+    options?: ApiExceptionOptions,
+  ): Promise<ApiException> {
+    const profile = await this.sessionsRepository.findProfile(userId);
+    const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
     return ApiException.of(code, this.i18n.translate(code, locale), options);
   }
 }
 
-/** `done` / `available` (la primera no hecha) / `locked`, más "n de 5" y duración. */
+/** `done` / `available` (la primera no hecha) / `locked`, más "n de N" y duración sobre las filas reales. */
 export function toCycleDto({ cycle, sessions }: StudyCycleWithSessions): StudyCycleDto {
   const firstPending = sessions.find((item) => item.done_at === null)?.idx;
   const state = (item: StudyCycleSession): StudySessionState =>
@@ -217,7 +191,7 @@ export function toCycleDto({ cycle, sessions }: StudyCycleWithSessions): StudyCy
     interviewId: cycle.interview_id,
     status: cycle.status,
     doneCount: sessions.filter((item) => item.done_at !== null).length,
-    totalSessions: STUDY_CYCLE_SIZE,
+    totalSessions: sessions.length,
     totalMin: sessions.reduce((sum, item) => sum + item.est_min, 0),
     sessions: sessions.map((item) => ({
       idx: item.idx,

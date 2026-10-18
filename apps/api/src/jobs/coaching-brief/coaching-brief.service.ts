@@ -41,7 +41,7 @@ export interface CoachingBriefJobResult {
     | 'session_not_found'
     | 'not_applied'
     | 'group_session'
-    | 'interview_or_study_session';
+    | 'interview_session';
   readonly factsInserted?: number;
   readonly factsSkipped?: number;
   readonly provider?: string;
@@ -91,11 +91,11 @@ export class CoachingBriefService {
       this.logger.warn(`Sesión ${sessionId} es de sala grupal; el brief 1:1 no aplica`);
       return { status: 'skipped', reason: 'group_session' };
     }
-    // F10: las sesiones `interview`/`study` tienen su propio flujo de
-    // preparación/parecer (C3); el brief 1:1 no les aplica.
-    if (session.kind === 'interview' || session.kind === 'study') {
-      this.logger.warn(`Sesión ${sessionId} es de entrevista/estudio; el brief 1:1 no aplica`);
-      return { status: 'skipped', reason: 'interview_or_study_session' };
+    // F10: las sesiones `interview` tienen su propio flujo de parecer (C3);
+    // el brief 1:1 no les aplica. Las `study` (F13) sí: son práctica normal.
+    if (session.kind === 'interview') {
+      this.logger.warn(`Sesión ${sessionId} es de entrevista; el brief 1:1 no aplica`);
+      return { status: 'skipped', reason: 'interview_session' };
     }
 
     await this.repository.markSessionRunning(sessionId);

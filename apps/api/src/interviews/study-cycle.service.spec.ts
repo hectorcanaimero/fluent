@@ -6,11 +6,13 @@ import { ApiException } from '../common/api-error.js';
 import type { Profile, StudyCycleSession } from '../db/schema.js';
 import type { I18nService } from '../i18n/i18n.service.js';
 import type { LlmService } from '../llm/llm.service.js';
+import type { RedisService } from '../redis/redis.service.js';
 import { buildTurnSystemPrompt } from '../llm/prompts/turn.js';
 import type { LlmMessage } from '../llm/types.js';
 import { rebuildScenario } from '../sessions/scenario.js';
 import { SessionCloserService } from '../sessions/session-closer.service.js';
-import type { SessionsRepository } from '../sessions/sessions.repository.js';
+import { SessionsRepository } from '../sessions/sessions.repository.js';
+import { SessionsService } from '../sessions/sessions.service.js';
 import { InterviewsRepository } from './interviews.repository.js';
 import type { StudyPlanItem } from './interviews.types.js';
 import { StudyCycleService } from './study-cycle.service.js';
@@ -40,8 +42,8 @@ function fakeDb(tables: Record<string, Row[]>) {
       let patch: Row = {};
       let single = false;
       let orderBy: string | null = null;
-      const filters: [string, unknown][] = [];
-      const matches = (row: Row) => filters.every(([col, value]) => row[col] === value);
+      const filters: [string, (value: unknown) => boolean][] = [];
+      const matches = (row: Row) => filters.every(([col, test]) => test(row[col]));
       const run = () => {
         let data: Row[];
         if (op === 'insert' || op === 'upsert') {
@@ -77,7 +79,10 @@ function fakeDb(tables: Record<string, Row[]>) {
         ),
         update: (value: Row) => ((op = 'update'), (patch = value), query),
         delete: () => query,
-        eq: (col: string, value: unknown) => (filters.push([col, value]), query),
+        eq: (col: string, value: unknown) => (filters.push([col, (v) => v === value]), query),
+        in: (col: string, values: unknown[]) => (filters.push([col, (v) => values.includes(v)]), query),
+        gte: () => query,
+        limit: () => query,
         order: (col: string) => ((orderBy = col), query),
         maybeSingle: () => ((single = true), query),
         then: (resolve: (value: unknown) => unknown, reject: (error: unknown) => unknown) =>
@@ -99,6 +104,7 @@ const PLAN: StudyPlanItem[] = Array.from({ length: 5 }, (_unused, i) => ({
 
 const PROFILE = {
   user_id: USER_ID,
+  group_id: 'g1',
   locale: 'es',
   level: 'B1',
   onboarded_at: '2026-10-01T00:00:00Z',
@@ -120,22 +126,27 @@ function build(tables: Record<string, Row[]> = {}) {
       };
     },
   } as unknown as LlmService;
-  const sessions = {
-    findProfile: async () => PROFILE,
-    findActiveSessionId: async () => null,
-    findBriefText: async () => null,
-    listConfirmedFacts: async () => [],
-    findChatModelPreference: async () => null,
-    updateAfterOpening: async () => null,
-    insertOpeningTurn: async () => undefined,
-    deleteSession: async () => undefined,
-  } as unknown as SessionsRepository;
+  tables.profiles ??= [{ ...PROFILE }];
+  const sessionsRepository = new SessionsRepository({ database: db } as never);
+  const sessions = new SessionsService(
+    sessionsRepository,
+    llm,
+    {} as never,
+    {} as never,
+    { enqueueCoachingBrief: async () => undefined } as never,
+    { get: () => '1' } as never,
+    () => 1,
+  );
   const i18n = {
     resolveLocale: () => 'es',
     translate: (code: string) => code,
   } as unknown as I18nService;
-  const config = { get: () => '1' } as never;
-  const service = new StudyCycleService(repository, sessions, llm, config, i18n);
+  const locks = new Set<string>();
+  const redis = {
+    setIfAbsent: async (key: string) => (locks.has(key) ? false : (locks.add(key), true)),
+    del: async (key: string) => locks.delete(key),
+  } as unknown as RedisService;
+  const service = new StudyCycleService(repository, sessions, sessionsRepository, redis, i18n);
   return { service, repository, tables, db, prompts };
 }
 
@@ -197,6 +208,16 @@ describe('StudyCycleService.create', () => {
 });
 
 describe('StudyCycleService.get', () => {
+  it('un ciclo a medias (escritura cortada) se completa al leerlo', async () => {
+    const { service, tables } = await seedCycle(0);
+    tables.study_cycle_sessions = tables.study_cycle_sessions!.slice(0, 2);
+
+    const cycle = await service.get(USER_ID, INTERVIEW_ID);
+
+    expect(tables.study_cycle_sessions).toHaveLength(5);
+    expect(cycle.totalSessions).toBe(5);
+  });
+
   it('estados done / available / locked y "n de 5"', async () => {
     const { service } = await seedCycle(2);
 
@@ -222,6 +243,39 @@ describe('StudyCycleService.start', () => {
     expect((error as ApiException).code).toBe('STUDY_SESSION_LOCKED');
     expect((error as ApiException).getApiBody().statusCode).toBe(409);
     expect(tables.sessions ?? []).toHaveLength(0);
+  });
+
+  it('ciclo ya completado → 409 CYCLE_NOT_ACTIVE', async () => {
+    const { service, tables } = await seedCycle(5);
+    tables.study_cycles![0]!.status = 'completed';
+
+    const error = await service.start(USER_ID, INTERVIEW_ID, 1).catch((e: unknown) => e);
+
+    expect((error as ApiException).code).toBe('CYCLE_NOT_ACTIVE');
+    expect((error as ApiException).getApiBody().statusCode).toBe(409);
+  });
+
+  it('sin grupo → GROUP_REQUIRED (mismas reglas que POST /sessions)', async () => {
+    const { service, tables } = await seedCycle(0);
+    tables.profiles![0]!.group_id = null;
+
+    const error = await service.start(USER_ID, INTERVIEW_ID, 1).catch((e: unknown) => e);
+
+    expect((error as ApiException).code).toBe('GROUP_REQUIRED');
+    expect(tables.sessions ?? []).toHaveLength(0);
+  });
+
+  it('doble tap: una sola sesión y las dos respuestas son la misma', async () => {
+    const { service, tables } = await seedCycle(0);
+
+    const [first, second] = await Promise.all([
+      service.start(USER_ID, INTERVIEW_ID, 1),
+      service.start(USER_ID, INTERVIEW_ID, 1),
+    ]);
+
+    expect(tables.sessions).toHaveLength(1);
+    expect(second.session.id).toBe(first.session.id);
+    expect(second.opening.text).toBe('Hi! Ready?');
   });
 
   it('crea una sesión `study` con el foco en el prompt', async () => {

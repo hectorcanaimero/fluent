@@ -31,7 +31,7 @@ export interface CreateInterviewRow {
 
 /** Columnas que necesita `GET /interviews` (sin oferta, plan ni feedback). */
 const LIST_COLUMNS =
-  'id, type, status, prep_step, created_at, company, role, parent_interview_id, answered_count';
+  'id, type, status, prep_step, created_at, company, role, parent_interview_id, answered_count, resumable';
 
 /** Tope de filas de `GET /interviews`. ponytail: sin paginación hasta que haga falta. */
 const LIST_LIMIT = 100;
@@ -47,6 +47,7 @@ export type InterviewListRow = Pick<
   | 'role'
   | 'parent_interview_id'
   | 'answered_count'
+  | 'resumable'
 >;
 
 /**
@@ -220,25 +221,39 @@ export class InterviewsRepository {
     return cycle === null ? null : { cycle, sessions: await this.listCycleSessions(cycle.id) };
   }
 
-  /** Sesión `study` activa enlazada a su fila del ciclo (`topic = title`). */
-  async createStudySession(userId: string, row: StudyCycleSession): Promise<Session> {
-    const result = await this.admin.database
-      .from(TABLES.sessions)
-      .insert({
-        user_id: userId,
-        kind: 'study',
-        topic: row.title,
-        study_cycle_session_id: row.id,
-        status: 'active',
-      })
-      .select('*')
-      .maybeSingle();
-
-    const created = unwrapInsforge<Session>(result);
-    if (created === null) {
-      throw new Error('InterviewsRepository.createStudySession: la inserción no devolvió ninguna fila');
-    }
-    return created;
+  /**
+   * Estado y sesiones hechas del ciclo de cada entrevista listada (`GET
+   * /interviews`, F13.1.T1), en una sola consulta. Sin ciclo, no hay entrada.
+   */
+  async listCycleProgress(
+    userId: string,
+    interviewIds: readonly string[],
+  ): Promise<Map<string, { status: StudyCycle['status']; doneCount: number }>> {
+    if (interviewIds.length === 0) return new Map();
+    const rows =
+      unwrapInsforge<
+        Array<
+          Pick<StudyCycle, 'interview_id' | 'status'> & {
+            study_cycle_sessions: Array<Pick<StudyCycleSession, 'done_at'>> | null;
+          }
+        >
+      >(
+        await this.admin.database
+          .from(TABLES.studyCycles)
+          .select(`interview_id, status, ${TABLES.studyCycleSessions}(done_at)`)
+          .eq('user_id', userId)
+          .in('interview_id', [...interviewIds]),
+      ) ?? [];
+    return new Map(
+      rows.map((row) => [
+        row.interview_id,
+        {
+          status: row.status,
+          doneCount: (row.study_cycle_sessions ?? []).filter((item) => item.done_at !== null)
+            .length,
+        },
+      ]),
+    );
   }
 
   private async findCycleRow(userId: string, interviewId: string): Promise<StudyCycle | null> {
@@ -300,7 +315,7 @@ export async function markStudySessionDone(db: AdminDatabase, sessionId: string)
     unwrapInsforge<Pick<StudyCycleSession, 'done_at'>[]>(
       await db.from(TABLES.studyCycleSessions).select('done_at').eq('cycle_id', row.cycle_id),
     ) ?? [];
-  if (all.length === STUDY_CYCLE_SIZE && all.every((item) => item.done_at !== null)) {
+  if (all.length > 0 && all.every((item) => item.done_at !== null)) {
     unwrapInsforge(
       await db
         .from(TABLES.studyCycles)

@@ -1,8 +1,6 @@
 import { Module } from '@nestjs/common';
-import { LlmModule } from '../llm/llm.module.js';
 import { ProfilesModule } from '../profiles/profiles.module.js';
 import { SessionsModule } from '../sessions/sessions.module.js';
-import { SessionsRepository } from '../sessions/sessions.repository.js';
 import { InterviewsController } from './interviews.controller.js';
 import { InterviewsRepository } from './interviews.repository.js';
 import { InterviewsService } from './interviews.service.js';
@@ -16,12 +14,11 @@ import { StudyCycleService } from './study-cycle.service.js';
  * (plan efectivo y zona horaria, mismo criterio que `ModelsModule`).
  */
 @Module({
-  // `SessionsModule` aporta `InterviewSessionService` (abrir/retomar, F12.1.T2).
-  // `LlmModule` y `SessionsRepository` (solo admin client): apertura de las
-  // sesiones del ciclo de estudio (F13.1.T1).
-  imports: [ProfilesModule, SessionsModule, LlmModule],
+  // `SessionsModule` aporta `InterviewSessionService` (abrir/retomar, F12.1.T2)
+  // y `SessionsService`/`SessionsRepository` (sesiones del ciclo, F13.1.T1).
+  imports: [ProfilesModule, SessionsModule],
   controllers: [InterviewsController],
-  providers: [InterviewsRepository, InterviewsService, SessionsRepository, StudyCycleService],
+  providers: [InterviewsRepository, InterviewsService, StudyCycleService],
   exports: [InterviewsService],
 })
 export class InterviewsModule {}

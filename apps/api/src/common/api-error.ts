@@ -107,6 +107,8 @@ export const API_ERROR_STATUS = {
   STUDY_CYCLE_NOT_AVAILABLE: 409,
   /** Empezar una sesión del ciclo con una anterior sin hacer (FR-29, F13.1.T1). */
   STUDY_SESSION_LOCKED: 409,
+  /** Empezar una sesión de un ciclo que ya no está `active` (F13.1.T1). */
+  CYCLE_NOT_ACTIVE: 409,
   /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.

@@ -32,6 +32,8 @@ export interface CreateSessionRow {
   /** Solo se escribe con `kind = 'news'` (CHECK de la migración 3). */
   readonly newsItemId?: string | null;
   readonly challengeFromUserId?: string | null;
+  /** Solo con `kind = 'study'`: su fila del ciclo (F13.1.T1). */
+  readonly studyCycleSessionId?: string | null;
 }
 
 /** Datos del turno de apertura del tutor (`turns[idx=0]`, SPEC-04 §3.5). */
@@ -120,6 +122,36 @@ export class SessionsRepository {
       .maybeSingle();
 
     return unwrapInsforge<StudyCycleSession>(result);
+  }
+
+  /**
+   * Sesión `study` activa del usuario abierta sobre esa fila del ciclo, con el
+   * texto de su apertura (doble tap en «Empezar», F13.1.T1); `null` si no hay.
+   */
+  async findActiveStudySession(
+    userId: string,
+    studyCycleSessionId: string,
+  ): Promise<{ session: Session; openingText: string } | null> {
+    const session = unwrapInsforge<Session>(
+      await this.admin.database
+        .from(TABLES.sessions)
+        .select('*')
+        .eq('user_id', userId)
+        .eq('study_cycle_session_id', studyCycleSessionId)
+        .eq('status', 'active')
+        .limit(1)
+        .maybeSingle(),
+    );
+    if (session === null) return null;
+    const turn = unwrapInsforge<{ text: string }>(
+      await this.admin.database
+        .from(TABLES.turns)
+        .select('text')
+        .eq('session_id', session.id)
+        .eq('idx', OPENING_TURN_IDX)
+        .maybeSingle(),
+    );
+    return { session, openingText: turn?.text ?? '' };
   }
 
   /** Texto del `coaching_briefs` del usuario, o `null` si aún no tiene. */
@@ -237,6 +269,7 @@ export class SessionsRepository {
         // CHECK `kind = 'news' OR news_item_id IS NULL` (migración 3).
         news_item_id: row.kind === 'news' ? (row.newsItemId ?? null) : null,
         challenge_from_user_id: row.challengeFromUserId ?? null,
+        study_cycle_session_id: row.kind === 'study' ? (row.studyCycleSessionId ?? null) : null,
         status: 'active',
       })
       .select('*')

@@ -85,6 +85,8 @@ import { TurnsService } from './turns.service.js';
   ],
   exports: [
     SessionsService,
+    // `InterviewsModule` lo usa en el ciclo de estudio (F13.1.T1).
+    SessionsRepository,
     TurnsService,
     DailyTurnsBudget,
     EndSessionService,

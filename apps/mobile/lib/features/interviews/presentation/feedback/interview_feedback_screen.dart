@@ -403,6 +403,14 @@ class _FeedbackBody extends StatelessWidget {
         ),
         for (final error in feedback.english.errors)
           _EnglishErrorTile(error: error),
+        if (feedback.comparison != null) ...[
+          const SizedBox(height: AppSpacing.lg),
+          OutlinedButton(
+            key: const Key('interview_feedback_view_comparison_button'),
+            onPressed: () => context.push('/interviews/$interviewId/compare'),
+            child: Text(l10n.interviewFeedbackViewComparisonCta),
+          ),
+        ],
         const SizedBox(height: AppSpacing.xl),
         _DisclaimerBanner(text: l10n.interviewFeedbackDisclaimer),
         const SizedBox(height: AppSpacing.lg),

@@ -1169,7 +1169,28 @@ class FakeApi implements FluentApi {
                 after: 'semi_senior',
                 trend: 'up',
               ),
+              CompetencyComparison(
+                competencyId: 'c2',
+                before: 'semi_senior',
+                after: 'semi_senior',
+                trend: 'same',
+              ),
+              CompetencyComparison(
+                competencyId: 'c3',
+                before: 'senior',
+                after: 'semi_senior',
+                trend: 'down',
+              ),
             ],
+            english: feedback.english.copyWith(
+              errors: const [
+                EnglishErrorItem(
+                  original: 'I have went to the office.',
+                  corrected: 'I have gone to the office.',
+                  explanation: 'Participio irregular de "go".',
+                ),
+              ],
+            ),
           )
         : feedback;
   }

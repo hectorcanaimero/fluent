@@ -13,6 +13,7 @@ import '../features/badges/presentation/badges_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
+import '../features/interviews/presentation/compare/interview_compare_screen.dart';
 import '../features/interviews/presentation/cycle/interview_cycle_screen.dart';
 import '../features/interviews/presentation/entry/new_interview_screen.dart';
 import '../features/interviews/presentation/feedback/interview_feedback_screen.dart';
@@ -214,6 +215,12 @@ final routerProvider = Provider<GoRouter>((ref) {
             path: ':id/cycle',
             builder: (context, state) =>
                 InterviewCycleScreen(interviewId: state.pathParameters['id']!),
+          ),
+          GoRoute(
+            path: ':id/compare',
+            builder: (context, state) => InterviewCompareScreen(
+              interviewId: state.pathParameters['id']!,
+            ),
           ),
         ],
       ),

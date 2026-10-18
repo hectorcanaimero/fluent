@@ -32,6 +32,8 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
   /// filas para no disparar dos `POST` a la vez).
   int? _startingIdx;
 
+  bool _startingReinterview = false;
+
   Future<StudyCycle> _load() =>
       ref.read(interviewsRepositoryProvider).cycle(widget.interviewId);
 
@@ -69,6 +71,32 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
     }
   }
 
+  /// "Re-entrevista" (IE-07, FR-19): `POST /interviews/:id/reinterview` crea
+  /// la hija (`parent_interview_id`) y navega a su preparación
+  /// (`/interviews/:childId`, IE-03/IE-04).
+  Future<void> _startReinterview() async {
+    if (_startingReinterview) return;
+    setState(() => _startingReinterview = true);
+    try {
+      final child = await ref
+          .read(interviewsRepositoryProvider)
+          .reinterview(widget.interviewId);
+      if (!mounted) return;
+      context.push('/interviews/${child.id}');
+    } on ApiException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context)
+          .showSnackBar(apiErrorSnackBar(context, e.code));
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).errorGeneric)),
+      );
+    } finally {
+      if (mounted) setState(() => _startingReinterview = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
@@ -96,6 +124,8 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
               competencyNames: competencyNames,
               startingIdx: _startingIdx,
               onStart: _startSession,
+              reinterviewBusy: _startingReinterview,
+              onReinterview: _startReinterview,
             ),
           ),
         ),
@@ -111,6 +141,8 @@ class _CycleBody extends StatelessWidget {
     required this.competencyNames,
     required this.startingIdx,
     required this.onStart,
+    required this.reinterviewBusy,
+    required this.onReinterview,
   });
 
   final StudyCycle cycle;
@@ -118,6 +150,8 @@ class _CycleBody extends StatelessWidget {
   final Map<String, String> competencyNames;
   final int? startingIdx;
   final void Function(int idx) onStart;
+  final bool reinterviewBusy;
+  final VoidCallback onReinterview;
 
   @override
   Widget build(BuildContext context) {
@@ -175,7 +209,12 @@ class _CycleBody extends StatelessWidget {
             ),
           ),
         const SizedBox(height: AppSpacing.lg),
-        _ReinterviewCard(completed: completed, total: total),
+        _ReinterviewCard(
+          completed: completed,
+          total: total,
+          busy: reinterviewBusy,
+          onReinterview: onReinterview,
+        ),
       ],
     );
   }
@@ -286,13 +325,21 @@ class _CycleSessionRow extends StatelessWidget {
 }
 
 /// La re-entrevista (IE-08) se queda bloqueada hasta completar las 5
-/// sesiones del ciclo (FR-30); llamar `POST /interviews/:id/reinterview` y navegar a
-/// la preparación de la hija es F13.2.T2.
+/// sesiones del ciclo (FR-30). Con el ciclo `completed`, "Re-entrevista"
+/// llama `POST /interviews/:id/reinterview` y navega a la preparación de la
+/// hija (F13.2.T2).
 class _ReinterviewCard extends StatelessWidget {
-  const _ReinterviewCard({required this.completed, required this.total});
+  const _ReinterviewCard({
+    required this.completed,
+    required this.total,
+    required this.busy,
+    required this.onReinterview,
+  });
 
   final bool completed;
   final int total;
+  final bool busy;
+  final VoidCallback onReinterview;
 
   @override
   Widget build(BuildContext context) {
@@ -331,6 +378,16 @@ class _ReinterviewCard extends StatelessWidget {
               ],
             ),
           ),
+          if (completed) ...[
+            const SizedBox(width: AppSpacing.md),
+            ElevatedButton(
+              key: const Key('interview_cycle_reinterview_button'),
+              onPressed: busy ? null : onReinterview,
+              child: busy
+                  ? const ButtonSpinner()
+                  : Text(l10n.interviewCycleReinterviewCta),
+            ),
+          ],
         ],
       ),
     );

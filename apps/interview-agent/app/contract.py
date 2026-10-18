@@ -25,6 +25,8 @@ class PrepareRequest(BaseModel):
     offerUrl: str | None = None
     learnerLevel: Literal["A2", "B1", "B2"]
     previousQuestions: list[str] = Field(default_factory=list)
+    # Re-entrevista: la rúbrica de la entrevista padre, para comparar lo mismo (F13.1.T2).
+    fixedRubric: list["RubricItem"] | None = None
 
 
 class Company(BaseModel):
@@ -138,6 +140,7 @@ class EnglishFeedback(BaseModel):
 
 class CompetencyFeedback(BaseModel):
     competencyId: str
+    name: str | None = None  # nombre de la rúbrica; compare() no cruza competencias distintas
     observedLevel: SeniorityLevel
     expectedLevel: SeniorityLevel
     evidence: str

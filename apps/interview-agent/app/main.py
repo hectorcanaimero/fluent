@@ -44,4 +44,5 @@ async def feedback(req: FeedbackRequest) -> FeedbackResponse:
     try:
         return await generate_feedback(req)
     except FeedbackFailed as exc:
-        raise HTTPException(status_code=502, detail=f"feedback generation failed: {exc}") from exc
+        # El motivo queda en el log; al cliente, nada interno.
+        raise HTTPException(status_code=502, detail="feedback generation failed") from exc

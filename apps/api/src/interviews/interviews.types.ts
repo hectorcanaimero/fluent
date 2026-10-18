@@ -166,6 +166,8 @@ export const PrepareRequest = z
     offerUrl: z.url().nullable(),
     learnerLevel: LearnerLevelSchema,
     previousQuestions: z.array(z.string()),
+    /** Re-entrevista: la rúbrica de la entrevista padre; el agente la reusa tal cual. */
+    fixedRubric: z.array(Competency).optional(),
   })
   .refine((value) => value.offerText !== null || value.offerUrl !== null, {
     message: 'offerText u offerUrl debe venir informado.',
@@ -237,6 +239,8 @@ const EnglishFeedback = z.object({
 
 const CompetencyFeedback = z.object({
   competencyId: z.string().min(1),
+  /** Nombre de la rúbrica: la comparación no cruza competencias con otro nombre. */
+  name: z.string().optional(),
   observedLevel: SeniorityLevelSchema,
   expectedLevel: SeniorityLevelSchema,
   evidence: z.string(),

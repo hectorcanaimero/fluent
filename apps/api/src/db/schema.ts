@@ -12,6 +12,7 @@
  * - 20260908191227_memoria-hechos-y-brief.sql
  * - 20260908191927_noticias-y-social.sql
  * - 20260923130000_planes.sql
+ * - 20261006120000_sesion-grupal.sql
  */
 
 /* ============================================================================
@@ -30,8 +31,8 @@ export type Plan = 'free' | 'pro';
 /** Proveedor de LLM (SPEC-01 §2.4, §2.5) */
 export type Provider = '9router';
 
-/** Tipo de sesión (SPEC-01 §2.6) */
-export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss';
+/** Tipo de sesión (SPEC-01 §2.6). `'group'`: F6, fila por participante al cerrar la sala. */
+export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss' | 'group';
 
 /** Estado de la sesión (SPEC-01 §2.6) */
 export type SessionStatus = 'active' | 'ended' | 'abandoned';
@@ -71,7 +72,29 @@ export type XpEventKind =
   | 'challenge'
   | 'streak_7'
   /** MEJ-14: una sola vez por usuario, sin `session_id`. */
-  | 'profile_completed';
+  | 'profile_completed'
+  /** F6/F9: cierre de una sala grupal. */
+  | 'group';
+
+/** Tipo de sala grupal (docs/arch/002-sesion-grupal.md §Data model). Sin `'boss'`. */
+export type GroupSessionKind = 'free_topic' | 'roleplay' | 'news';
+
+/** Estado de la sala grupal (docs/arch/002-sesion-grupal.md §Data model) */
+export type GroupSessionStatus = 'active' | 'ended';
+
+/** Motivo de cierre de la sala grupal (docs/arch/002-sesion-grupal.md §Data model) */
+export type GroupSessionEndReason = 'initiator' | 'max_duration' | 'idle';
+
+/** Rol de un mensaje de sala grupal (docs/arch/002-sesion-grupal.md §Data model) */
+export type GroupMessageRole = 'user' | 'tutor' | 'system';
+
+/** Evento de sistema en un mensaje de sala grupal (FR-14) */
+export type GroupSystemEvent =
+  | 'joined'
+  | 'left'
+  | 'ending_soon'
+  | 'ended'
+  | 'tutor_unavailable';
 
 /** Propósito de una llamada a LLM (SPEC-01 §2.14) */
 export type LlmCallPurpose = 'turn' | 'brief' | 'weekly';
@@ -206,6 +229,8 @@ export interface Session {
   chat_model_used: string | null;
   callback_fact_id: string | null;
   brief_job_status: BriefJobStatus;
+  /** Sala grupal de origen cuando `kind = 'group'` (F6). */
+  group_session_id: string | null;
 }
 
 /**
@@ -346,6 +371,76 @@ export interface WeeklySummary {
   created_at: string; // ISO 8601 timestamp
 }
 
+/**
+ * Sala grupal por texto (docs/arch/002-sesion-grupal.md §Data model, F6)
+ * Tabla: group_sessions
+ */
+export interface GroupSession {
+  id: string;
+  group_id: string;
+  initiator_id: string;
+  kind: GroupSessionKind;
+  topic: string | null;
+  roleplay_id: string | null;
+  news_item_id: string | null;
+  status: GroupSessionStatus;
+  end_reason: GroupSessionEndReason | null;
+  started_at: string; // ISO 8601 timestamp
+  ended_at: string | null; // ISO 8601 timestamp
+  last_message_at: string; // ISO 8601 timestamp
+  warned_at: string | null; // ISO 8601 timestamp
+  recap: Record<string, unknown> | null; // GroupRecapOutput (F9.2)
+}
+
+/**
+ * Participante de una sala grupal (docs/arch/002-sesion-grupal.md §Data model, F6)
+ * Tabla: group_session_participants
+ */
+export interface GroupSessionParticipant {
+  session_id: string;
+  user_id: string;
+  joined_at: string; // ISO 8601 timestamp
+  left_at: string | null; // ISO 8601 timestamp, null = activo
+  present_sec: number;
+  share_corrections: boolean;
+  messages_count: number;
+}
+
+/**
+ * Mensaje de una sala grupal (docs/arch/002-sesion-grupal.md §Data model, F6)
+ * Tabla: group_session_messages
+ */
+export interface GroupSessionMessage {
+  id: number;
+  session_id: string;
+  role: GroupMessageRole;
+  author_id: string | null; // null para tutor y sistema
+  text: string;
+  audio_key: string | null; // F8
+  audio_ms: number | null; // F8
+  system_event: GroupSystemEvent | null;
+  model: string | null;
+  tokens_in: number | null;
+  tokens_out: number | null;
+  latency_ms: number | null;
+  created_at: string; // ISO 8601 timestamp
+}
+
+/**
+ * Corrección de un mensaje de sala grupal (docs/arch/002-sesion-grupal.md §Data model, F6)
+ * Tabla: group_session_corrections
+ */
+export interface GroupSessionCorrection {
+  id: number;
+  session_id: string;
+  message_id: number;
+  user_id: string; // autor del mensaje corregido
+  original: string;
+  corrected: string;
+  category: CorrectionCategory;
+  note: string | null;
+}
+
 /* ============================================================================
    Constantes de tablas y vistas (para usar en repos sin strings sueltos)
    ========================================================================== */
@@ -369,4 +464,8 @@ export const TABLES = {
   badges: 'badges',
   userBadges: 'user_badges',
   pushTokens: 'push_tokens',
+  groupSessions: 'group_sessions',
+  groupSessionParticipants: 'group_session_participants',
+  groupSessionMessages: 'group_session_messages',
+  groupSessionCorrections: 'group_session_corrections',
 } as const;

@@ -11,7 +11,10 @@
  */
 import type { SessionKind } from '../db/schema.js';
 
-export const SESSION_OPENINGS: Readonly<Record<SessionKind, string>> = Object.freeze({
+/** `kind` que puede abrir `POST /sessions`; la sala grupal (`'group'`) se abre por `POST group-sessions` (F6.3). */
+type OpenableSessionKind = Exclude<SessionKind, 'group'>;
+
+export const SESSION_OPENINGS: Readonly<Record<OpenableSessionKind, string>> = Object.freeze({
   free_topic:
     "Hi! I'm glad you're here — what would you like to say about today's topic first?",
   roleplay:
@@ -21,6 +24,6 @@ export const SESSION_OPENINGS: Readonly<Record<SessionKind, string>> = Object.fr
 });
 
 /** Saludo fijo de la apertura degradada para un `kind`. */
-export function openingFor(kind: SessionKind): string {
+export function openingFor(kind: OpenableSessionKind): string {
   return SESSION_OPENINGS[kind];
 }

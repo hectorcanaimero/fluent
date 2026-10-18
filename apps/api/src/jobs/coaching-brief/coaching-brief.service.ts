@@ -112,7 +112,9 @@ export class CoachingBriefService {
       level: profile.level,
       previousBrief,
       knownFacts,
-      kind: session.kind,
+      // F9.3 añade la variante de grupo (sin `facts`); hasta entonces este job
+      // no procesa sesiones `kind='group'` (no las encola nada todavía).
+      kind: session.kind as Exclude<typeof session.kind, 'group'>,
       topic: session.topic,
       turns: history,
     });

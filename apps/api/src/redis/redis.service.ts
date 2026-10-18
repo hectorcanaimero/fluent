@@ -2,6 +2,13 @@ import { Inject, Injectable, Logger } from '@nestjs/common';
 import type { Redis } from 'ioredis';
 import { REDIS_CACHE_CLIENT } from './redis.constants.js';
 
+/** `DECR` solo si la clave existe y es > 0; si no, devuelve el valor tal cual. */
+const DECR_IF_POSITIVE = `
+local v = tonumber(redis.call('GET', KEYS[1]) or '0')
+if v > 0 then return redis.call('DECR', KEYS[1]) end
+return v
+`;
+
 /**
  * Envoltorio fino sobre la conexión de caché de Redis, para que otros
  * módulos (por ejemplo `HealthService` o `AuthGuard`) no se acoplen
@@ -123,6 +130,23 @@ export class RedisService {
     } catch (error) {
       this.logger.warn(
         `Redis INCR '${key}' falló: ${(error as Error).message}. Se continúa sin contador (fail-open).`,
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Resta 1 a un contador solo si es > 0, de forma atómica (Lua), para
+   * devolver un cupo consumido sin dejarlo nunca en negativo. Devuelve el
+   * valor resultante, o `null` si Redis falló.
+   */
+  async decrementIfPositive(key: string): Promise<number | null> {
+    try {
+      const value = await this.cacheClient.eval(DECR_IF_POSITIVE, 1, key);
+      return Number(value);
+    } catch (error) {
+      this.logger.warn(
+        `Redis DECR '${key}' falló: ${(error as Error).message}`,
       );
       return null;
     }

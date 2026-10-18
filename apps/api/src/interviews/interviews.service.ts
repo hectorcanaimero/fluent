@@ -1,30 +1,20 @@
 import { createHash } from 'node:crypto';
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { ApiException } from '../common/api-error.js';
+import { ApiException, type ApiErrorCode, type ApiExceptionOptions } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import type { Interview } from '../db/schema.js';
+import type { Interview, Locale } from '../db/schema.js';
+import { I18nService } from '../i18n/i18n.service.js';
 import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { effectivePlan } from '../profiles/plan.js';
 import { ProfilesRepository } from '../profiles/profiles.repository.js';
 import { RedisService } from '../redis/redis.service.js';
+import { SESSION_ID_RE } from '../sessions/session-ownership.js';
 import { secondsUntilUserMidnight, userDay } from '../sessions/user-day.js';
 import type { CreateInterviewDto } from './dto/create-interview.dto.js';
-import { InterviewsRepository } from './interviews.repository.js';
+import { InterviewsRepository, type InterviewListRow } from './interviews.repository.js';
 import type { InterviewStatus, InterviewType, PrepStep, SeniorityLevel } from './interviews.types.js';
-
-const AGENT_UNAVAILABLE_MESSAGE =
-  'El simulador de entrevistas no está disponible en este momento.';
-const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
-const OFFER_UNREADABLE_MESSAGE =
-  'No pudimos leer esa oferta de LinkedIn. Copia el texto y pégalo en vez del enlace.';
-const INTERVIEWS_DAILY_CAP_MESSAGE =
-  'Por hoy usaste tus entrevistas. Mañana tenés más.';
-const PLAN_REQUIRED_MESSAGE = 'El simulador de entrevistas requiere el plan Pro.';
-const NOT_FOUND_MESSAGE = 'No encontramos esa entrevista.';
-const NOT_RETRYABLE_MESSAGE =
-  'Solo se puede reintentar una entrevista cuya preparación falló.';
 
 /** Hosts de LinkedIn que `interview-agent` tampoco puede leer (D8). */
 const LINKEDIN_HOSTS = ['linkedin.com', 'lnkd.in'];
@@ -34,7 +24,9 @@ const LINKEDIN_HOSTS = ['linkedin.com', 'lnkd.in'];
    ========================================================================== */
 
 export interface InterviewQuotaDto {
-  readonly remaining: number;
+  /** `null` cuando `INTERVIEWS_DAILY_CAP = 0` (sin tope). */
+  readonly remaining: number | null;
+  /** `0` significa «sin tope», no «cero entrevistas». */
   readonly limit: number;
   readonly requiresPro: boolean;
   readonly freeNotice: true;
@@ -95,12 +87,15 @@ export interface InterviewListResultDto {
  */
 @Injectable()
 export class InterviewsService {
+  private readonly logger = new Logger(InterviewsService.name);
+
   constructor(
     private readonly repository: InterviewsRepository,
     private readonly profiles: ProfilesRepository,
     private readonly redis: RedisService,
     @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
     private readonly configService: ConfigService<Env, true>,
+    private readonly i18n: I18nService,
   ) {}
 
   async getQuota(userId: string, now: Date = new Date()): Promise<InterviewQuotaDto> {
@@ -108,9 +103,9 @@ export class InterviewsService {
     const requiresPro = this.configService.get('INTERVIEWS_REQUIRE_PRO', { infer: true });
 
     if (limit <= 0) {
-      // ponytail: 0 = tope desactivado (mismo criterio que TURNS_DAILY_CAP_*);
-      // se informa tal cual, no hay "ilimitado" en el contrato de I2.
-      return { remaining: limit, limit, requiresPro, freeNotice: true };
+      // 0 = tope desactivado (mismo criterio que `consumeDailyCap` y
+      // TURNS_DAILY_CAP_*): `remaining: null` = sin límite.
+      return { remaining: null, limit: 0, requiresPro, freeNotice: true };
     }
 
     const profile = await this.profiles.findByUserId(userId);
@@ -121,39 +116,52 @@ export class InterviewsService {
   async create(
     userId: string,
     dto: CreateInterviewDto,
+    acceptLanguage?: string,
     now: Date = new Date(),
   ): Promise<InterviewDto> {
+    const profile = await this.profiles.findByUserId(userId);
+    const locale = this.i18n.resolveLocale(profile?.locale, acceptLanguage);
+
     if (!this.configService.get('INTERVIEW_AGENT_URL', { infer: true })) {
-      throw ApiException.of('INTERVIEW_AGENT_UNAVAILABLE', AGENT_UNAVAILABLE_MESSAGE);
+      throw this.error('INTERVIEW_AGENT_UNAVAILABLE', locale);
     }
 
-    const offer = this.normalizeOffer(dto);
+    const offer = this.normalizeOffer(dto, locale);
 
     // D8: antes de consumir el tope, calcular el hash o tocar el agente.
     if (offer.offerUrl !== null && isLinkedInHost(offer.offerUrl)) {
-      throw ApiException.of('OFFER_UNREADABLE', OFFER_UNREADABLE_MESSAGE, {
-        extra: { reason: 'linkedin' },
-      });
+      throw this.error('OFFER_UNREADABLE', locale, { extra: { reason: 'linkedin' } });
     }
 
-    const profile = await this.profiles.findByUserId(userId);
+    // Perfil onboarded, igual que `POST /sessions` (SPEC-04 §3.1).
+    if (profile === null || profile.onboarded_at === null) {
+      throw this.error('NOT_ONBOARDED', locale);
+    }
 
     // El plan se comprueba antes del tope: un rechazo por plan no consume cupo.
     const requiresPro = this.configService.get('INTERVIEWS_REQUIRE_PRO', { infer: true });
-    if (requiresPro && (profile === null || effectivePlan(profile, now) === 'free')) {
-      throw ApiException.of('PLAN_REQUIRED', PLAN_REQUIRED_MESSAGE);
+    if (requiresPro && effectivePlan(profile, now) === 'free') {
+      throw this.error('PLAN_REQUIRED', locale);
     }
 
-    await this.consumeDailyCap(userId, profile?.timezone ?? null, now);
+    const capKey = await this.consumeDailyCap(userId, profile.timezone, now, locale);
 
-    const created = await this.repository.create({
-      userId,
-      type: dto.type,
-      ...offer,
-      offerHash: computeOfferHash(offer),
-    });
-
-    await this.jobs.enqueueInterviewPrepare(created.id);
+    let created: Interview | null = null;
+    try {
+      created = await this.repository.create({
+        userId,
+        type: dto.type,
+        ...offer,
+        offerHash: computeOfferHash(offer),
+      });
+      await this.jobs.enqueueInterviewPrepare(created.id);
+    } catch (error) {
+      // Si no llegó a prepararse, el intento no cuenta: se devuelve el cupo y,
+      // si la fila ya existe, queda en `prep_failed` para que `/retry` sirva.
+      if (capKey !== null) await this.redis.decrementIfPositive(capKey);
+      if (created !== null) await this.markEnqueueFailed(userId, created.id);
+      throw error;
+    }
 
     return toInterviewDto(created);
   }
@@ -163,32 +171,59 @@ export class InterviewsService {
     return { items: rows.map(toListItemDto) };
   }
 
-  async detail(userId: string, id: string): Promise<InterviewDetailDto> {
-    const interview = await this.repository.findById(userId, id);
+  async detail(userId: string, id: string, acceptLanguage?: string): Promise<InterviewDetailDto> {
+    const interview = SESSION_ID_RE.test(id) ? await this.repository.findById(userId, id) : null;
     if (interview === null) {
-      throw ApiException.of('NOT_FOUND', NOT_FOUND_MESSAGE);
+      throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
     }
     return toDetailDto(interview, this.estimatedMinutes());
   }
 
   /** `POST /interviews/:id/retry`: solo desde `prep_failed`, sin consumir tope (NFR-6). */
-  async retry(userId: string, id: string): Promise<InterviewDto> {
-    const interview = await this.repository.findById(userId, id);
-    if (interview === null) {
-      throw ApiException.of('NOT_FOUND', NOT_FOUND_MESSAGE);
-    }
-    if (interview.status !== 'prep_failed') {
-      throw ApiException.of('INTERVIEW_NOT_RETRYABLE', NOT_RETRYABLE_MESSAGE);
+  async retry(userId: string, id: string, acceptLanguage?: string): Promise<InterviewDto> {
+    if (!SESSION_ID_RE.test(id)) {
+      throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
     }
 
+    // La transición atómica va primero; `findById` solo decide 404 vs 409.
     const updated = await this.repository.markRetrying(userId, id);
     if (updated === null) {
-      // Reintento concurrente: alguien más ya la movió fuera de prep_failed.
-      throw ApiException.of('INTERVIEW_NOT_RETRYABLE', NOT_RETRYABLE_MESSAGE);
+      const exists = (await this.repository.findById(userId, id)) !== null;
+      throw this.error(
+        exists ? 'INTERVIEW_NOT_RETRYABLE' : 'NOT_FOUND',
+        await this.localeFor(userId, acceptLanguage),
+      );
     }
 
-    await this.jobs.enqueueInterviewPrepare(updated.id);
+    try {
+      await this.jobs.enqueueInterviewPrepare(updated.id, { retry: true });
+    } catch (error) {
+      await this.markEnqueueFailed(userId, updated.id);
+      throw error;
+    }
     return toInterviewDto(updated);
+  }
+
+  /** `ApiException` con el mensaje del catálogo i18n (es/pt-BR). */
+  private error(code: ApiErrorCode, locale: Locale, options?: ApiExceptionOptions): ApiException {
+    return ApiException.of(code, this.i18n.translate(code, locale), options);
+  }
+
+  /** Idioma de un error en rutas que no cargan el perfil de antemano. */
+  private async localeFor(userId: string, acceptLanguage?: string): Promise<Locale> {
+    const profile = await this.profiles.findByUserId(userId);
+    return this.i18n.resolveLocale(profile?.locale, acceptLanguage);
+  }
+
+  /** Deja la entrevista en `prep_failed` sin tapar el error original. */
+  private async markEnqueueFailed(userId: string, id: string): Promise<void> {
+    try {
+      await this.repository.markPrepFailed(userId, id, 'enqueue_failed');
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo marcar prep_failed la entrevista ${id}: ${(error as Error).message}`,
+      );
+    }
   }
 
   private estimatedMinutes(): number {
@@ -201,11 +236,11 @@ export class InterviewsService {
    * ausente), que cumple el CHECK `offer_text OR offer_url` y el
    * `PrepareRequest` de I1.
    */
-  private normalizeOffer(dto: CreateInterviewDto): Offer {
+  private normalizeOffer(dto: CreateInterviewDto, locale: Locale): Offer {
     const offerText = dto.offerText?.trim() ? dto.offerText : null;
     const offerUrl = dto.offerUrl?.trim() ? dto.offerUrl.trim() : null;
     if ((offerText === null) === (offerUrl === null)) {
-      throw ApiException.of('VALIDATION', VALIDATION_MESSAGE, {
+      throw this.error('VALIDATION', locale, {
         extra: {
           details: [
             { field: 'offerText', reason: 'Debes mandar exactamente uno de offerText u offerUrl.' },
@@ -219,25 +254,26 @@ export class InterviewsService {
   /**
    * Tope diario (`interviews:day:{userId}:{userDay}`, mismo patrón que
    * `turns:day` de `DailyTurnsBudget`): contador Redis por día natural del
-   * usuario, fail-open si Redis falla.
+   * usuario, fail-open si Redis falla. `0` = sin tope. Devuelve la clave si
+   * contó el intento (para devolver el cupo si luego falla), si no `null`.
    */
   private async consumeDailyCap(
     userId: string,
     timezone: string | null,
     now: Date,
-  ): Promise<void> {
+    locale: Locale,
+  ): Promise<string | null> {
     const limit = this.configService.get('INTERVIEWS_DAILY_CAP', { infer: true });
-    if (limit <= 0) return;
+    if (limit <= 0) return null;
 
     const retryAfter = secondsUntilUserMidnight(timezone, now);
     const key = interviewsDayKey(userId, userDay(timezone, now));
 
     const used = await this.redis.increment(key, retryAfter);
-    if (used === null || used <= limit) return;
+    if (used === null) return null;
+    if (used <= limit) return key;
 
-    throw ApiException.of('INTERVIEWS_DAILY_CAP', INTERVIEWS_DAILY_CAP_MESSAGE, {
-      extra: { retryAfter },
-    });
+    throw this.error('INTERVIEWS_DAILY_CAP', locale, { extra: { retryAfter } });
   }
 
   /** Lectura del contador sin incrementarlo, para `GET /interviews/quota`. */
@@ -263,7 +299,8 @@ function interviewsDayKey(userId: string, day: string): string {
 function isLinkedInHost(url: string): boolean {
   let hostname: string;
   try {
-    hostname = new URL(url).hostname.toLowerCase();
+    // Sin el punto final del FQDN (`linkedin.com.` también es LinkedIn).
+    hostname = new URL(url).hostname.toLowerCase().replace(/\.+$/, '');
   } catch {
     // Formato inválido: @IsUrl del DTO ya lo habría rechazado con 400 antes
     // de llegar aquí. No es LinkedIn, así que se deja que siga su curso.
@@ -288,7 +325,9 @@ function computeOfferHash(offer: Offer): string {
   return createHash('sha256').update(basis).digest('hex');
 }
 
-function toInterviewDto(row: Interview): InterviewDto {
+function toInterviewDto(
+  row: Pick<Interview, 'id' | 'type' | 'status' | 'prep_step' | 'created_at'>,
+): InterviewDto {
   return {
     id: row.id,
     type: row.type,
@@ -334,7 +373,7 @@ const HISTORY_STATUS: Readonly<Record<InterviewStatus, string>> = Object.freeze(
   feedback_failed: 'feedback_failed',
 });
 
-function toListItemDto(row: Interview): InterviewListItemDto {
+function toListItemDto(row: InterviewListRow): InterviewListItemDto {
   return {
     ...toInterviewDto(row),
     company: row.company ? { name: row.company.name } : null,

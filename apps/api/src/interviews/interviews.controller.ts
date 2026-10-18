@@ -1,4 +1,4 @@
-import { Body, Controller, Get, HttpCode, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Headers, HttpCode, Param, Post } from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import { CreateInterviewDto } from './dto/create-interview.dto.js';
@@ -33,8 +33,9 @@ export class InterviewsController {
   create(
     @CurrentUser('id') userId: string,
     @Body() dto: CreateInterviewDto,
+    @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewDto> {
-    return this.interviewsService.create(userId, dto);
+    return this.interviewsService.create(userId, dto, acceptLanguage);
   }
 
   @Get('interviews')
@@ -46,8 +47,9 @@ export class InterviewsController {
   detail(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewDetailDto> {
-    return this.interviewsService.detail(userId, id);
+    return this.interviewsService.detail(userId, id, acceptLanguage);
   }
 
   /** `200` explícito: no crea un recurso nuevo direccionable (mismo criterio que `sessions/:id/end`). */
@@ -56,7 +58,8 @@ export class InterviewsController {
   retry(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewDto> {
-    return this.interviewsService.retry(userId, id);
+    return this.interviewsService.retry(userId, id, acceptLanguage);
   }
 }

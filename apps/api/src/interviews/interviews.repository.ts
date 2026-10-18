@@ -14,6 +14,26 @@ export interface CreateInterviewRow {
   readonly offerHash: string;
 }
 
+/** Columnas que necesita `GET /interviews` (sin oferta, plan ni feedback). */
+const LIST_COLUMNS =
+  'id, type, status, prep_step, created_at, company, role, parent_interview_id, answered_count';
+
+/** Tope de filas de `GET /interviews`. ponytail: sin paginación hasta que haga falta. */
+const LIST_LIMIT = 100;
+
+export type InterviewListRow = Pick<
+  Interview,
+  | 'id'
+  | 'type'
+  | 'status'
+  | 'prep_step'
+  | 'created_at'
+  | 'company'
+  | 'role'
+  | 'parent_interview_id'
+  | 'answered_count'
+>;
+
 /**
  * Todo el acceso a datos del módulo `interviews` (I2) sobre el cliente admin
  * de InsForge.
@@ -63,14 +83,15 @@ export class InterviewsRepository {
   }
 
   /** Entrevistas del usuario, más nueva primero (I2, `GET /interviews`, FR-31). */
-  async listByUser(userId: string): Promise<Interview[]> {
+  async listByUser(userId: string): Promise<InterviewListRow[]> {
     const result = await this.admin.database
       .from(TABLES.interviews)
-      .select('*')
+      .select(LIST_COLUMNS)
       .eq('user_id', userId)
-      .order('created_at', { ascending: false });
+      .order('created_at', { ascending: false })
+      .limit(LIST_LIMIT);
 
-    return unwrapInsforge<Interview[]>(result) ?? [];
+    return unwrapInsforge<InterviewListRow[]>(result) ?? [];
   }
 
   /**
@@ -91,5 +112,21 @@ export class InterviewsRepository {
       .maybeSingle();
 
     return unwrapInsforge<Interview>(result);
+  }
+
+  /**
+   * `preparing` → `prep_failed` con `errorCode` (p. ej. `enqueue_failed` si
+   * no se pudo encolar el job). Solo desde `preparing`, para no pisar lo que
+   * el worker ya haya escrito.
+   */
+  async markPrepFailed(userId: string, id: string, errorCode: string): Promise<void> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .update({ status: 'prep_failed', prep_step: null, error_code: errorCode })
+      .eq('id', id)
+      .eq('user_id', userId)
+      .eq('status', 'preparing');
+
+    unwrapInsforge(result);
   }
 }

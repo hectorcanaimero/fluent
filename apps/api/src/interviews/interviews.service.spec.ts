@@ -2,6 +2,7 @@ import type { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
+import { I18nService } from '../i18n/i18n.service.js';
 import type { Interview, InterviewPlan, Profile } from '../db/schema.js';
 import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
@@ -115,15 +116,21 @@ function fakeRedis(): RedisService & { readonly counters: Map<string, number> } 
       const value = counters.get(key);
       return value === undefined ? null : String(value);
     },
+    decrementIfPositive: async (key: string) => {
+      const next = Math.max(0, (counters.get(key) ?? 0) - 1);
+      counters.set(key, next);
+      return next;
+    },
   } as unknown as RedisService & { readonly counters: Map<string, number> };
 }
 
-function fakeJobs(): JobDispatcher & { readonly enqueued: string[] } {
+function fakeJobs(fail = false): JobDispatcher & { readonly enqueued: string[] } {
   const enqueued: string[] = [];
   return {
     enqueued,
     enqueueCoachingBrief: async () => {},
     enqueueInterviewPrepare: async (interviewId: string) => {
+      if (fail) throw new Error('Redis caído');
       enqueued.push(interviewId);
     },
   } as unknown as JobDispatcher & { readonly enqueued: string[] };
@@ -135,13 +142,17 @@ function fakeProfiles(profile: Profile | null): ProfilesRepository {
 
 interface FakeRepoOptions {
   readonly findByIdResult?: Interview | null;
+  readonly createFails?: boolean;
 }
 
 function fakeRepository(options: FakeRepoOptions = {}) {
   const created: CreateInterviewRow[] = [];
   const markRetryingCalls: Array<{ userId: string; id: string }> = [];
+  const markPrepFailedCalls: Array<{ id: string; errorCode: string }> = [];
+  const findByIdCalls: string[] = [];
   const repository = {
     create: async (row: CreateInterviewRow) => {
+      if (options.createFails) throw new Error('InsForge caído');
       created.push(row);
       return interviewFixture({
         type: row.type,
@@ -150,19 +161,26 @@ function fakeRepository(options: FakeRepoOptions = {}) {
         offer_hash: row.offerHash,
       });
     },
-    findById: async () =>
-      options.findByIdResult === undefined ? null : options.findByIdResult,
+    findById: async (_userId: string, id: string) => {
+      findByIdCalls.push(id);
+      return options.findByIdResult === undefined ? null : options.findByIdResult;
+    },
     listByUser: async () => [],
     markRetrying: async (userId: string, id: string) => {
       markRetryingCalls.push({ userId, id });
-      if (options.findByIdResult === undefined || options.findByIdResult === null) return null;
+      if (options.findByIdResult?.status !== 'prep_failed') return null;
       return { ...options.findByIdResult, status: 'preparing', prep_step: 'reading', error_code: null } as Interview;
+    },
+    markPrepFailed: async (_userId: string, id: string, errorCode: string) => {
+      markPrepFailedCalls.push({ id, errorCode });
     },
   };
   return {
     repository: repository as unknown as InterviewsRepository,
     created,
     markRetryingCalls,
+    markPrepFailedCalls,
+    findByIdCalls,
   };
 }
 
@@ -170,18 +188,20 @@ function buildService(options: {
   readonly config?: Partial<Env>;
   readonly profile?: Profile | null;
   readonly repoOptions?: FakeRepoOptions;
+  readonly enqueueFails?: boolean;
 }) {
   const redis = fakeRedis();
-  const jobs = fakeJobs();
-  const { repository, created } = fakeRepository(options.repoOptions);
+  const jobs = fakeJobs(options.enqueueFails);
+  const { repository, created, markPrepFailedCalls, findByIdCalls } = fakeRepository(options.repoOptions);
   const service = new InterviewsService(
     repository,
     fakeProfiles(options.profile === undefined ? profileFixture() : options.profile),
     redis,
     jobs,
     fakeConfig(options.config),
+    new I18nService(),
   );
-  return { service, redis, jobs, created };
+  return { service, redis, jobs, created, markPrepFailedCalls, findByIdCalls };
 }
 
 const TEXT_DTO: CreateInterviewDto = { type: 'mixed', offerText: 'We are hiring a backend engineer' };
@@ -191,7 +211,7 @@ describe('InterviewsService.create', () => {
     const { service, redis, jobs } = buildService({});
 
     const dto: CreateInterviewDto = { type: 'mixed', offerUrl: 'https://www.linkedin.com/jobs/123' };
-    const error = await service.create(USER_ID, dto, NOW).catch((caught: unknown) => caught);
+    const error = await service.create(USER_ID, dto, undefined, NOW).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('OFFER_UNREADABLE');
@@ -203,15 +223,15 @@ describe('InterviewsService.create', () => {
   it('detecta también el dominio corto lnkd.in', async () => {
     const { service } = buildService({});
     const dto: CreateInterviewDto = { type: 'mixed', offerUrl: 'https://lnkd.in/abc123' };
-    const error = await service.create(USER_ID, dto, NOW).catch((caught: unknown) => caught);
+    const error = await service.create(USER_ID, dto, undefined, NOW).catch((caught: unknown) => caught);
     expect((error as ApiException).code).toBe('OFFER_UNREADABLE');
   });
 
   it('al pasarse del tope diario responde 429 INTERVIEWS_DAILY_CAP con retryAfter', async () => {
     const { service } = buildService({ config: { INTERVIEWS_DAILY_CAP: 1 } });
 
-    await service.create(USER_ID, TEXT_DTO, NOW);
-    const error = await service.create(USER_ID, TEXT_DTO, NOW).catch((caught: unknown) => caught);
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('INTERVIEWS_DAILY_CAP');
@@ -223,7 +243,7 @@ describe('InterviewsService.create', () => {
   it('sin INTERVIEW_AGENT_URL responde 503', async () => {
     const { service } = buildService({ config: { INTERVIEW_AGENT_URL: undefined } });
 
-    const error = await service.create(USER_ID, TEXT_DTO, NOW).catch((caught: unknown) => caught);
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('INTERVIEW_AGENT_UNAVAILABLE');
@@ -236,7 +256,7 @@ describe('InterviewsService.create', () => {
       profile: profileFixture({ plan: 'free' }),
     });
 
-    const error = await service.create(USER_ID, TEXT_DTO, NOW).catch((caught: unknown) => caught);
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
 
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('PLAN_REQUIRED');
@@ -247,9 +267,9 @@ describe('InterviewsService.create', () => {
     const { service } = buildService({});
 
     const bothError = await service
-      .create(USER_ID, { type: 'mixed', offerText: 'x', offerUrl: 'https://example.com' }, NOW)
+      .create(USER_ID, { type: 'mixed', offerText: 'x', offerUrl: 'https://example.com' }, undefined, NOW)
       .catch((caught: unknown) => caught);
-    const neitherError = await service.create(USER_ID, { type: 'mixed' }, NOW).catch((caught: unknown) => caught);
+    const neitherError = await service.create(USER_ID, { type: 'mixed' }, undefined, NOW).catch((caught: unknown) => caught);
 
     expect((bothError as ApiException).code).toBe('VALIDATION');
     expect((neitherError as ApiException).code).toBe('VALIDATION');
@@ -258,11 +278,89 @@ describe('InterviewsService.create', () => {
   it('con una oferta válida inserta, encola y devuelve la entrevista en preparing', async () => {
     const { service, jobs } = buildService({});
 
-    const result = await service.create(USER_ID, TEXT_DTO, NOW);
+    const result = await service.create(USER_ID, TEXT_DTO, undefined, NOW);
 
     expect(result.status).toBe('preparing');
     expect(result.prepStep).toBe('reading');
     expect(jobs.enqueued).toEqual([result.id]);
+  });
+});
+
+describe('InterviewsService.create (fallos y reglas)', () => {
+  it('detecta LinkedIn aunque el host lleve punto final', async () => {
+    const { service, redis } = buildService({});
+    const dto: CreateInterviewDto = { type: 'mixed', offerUrl: 'https://www.linkedin.com./jobs/view/123' };
+    const error = await service.create(USER_ID, dto, undefined, NOW).catch((caught: unknown) => caught);
+    expect((error as ApiException).code).toBe('OFFER_UNREADABLE');
+    expect((error as ApiException).getStatus()).toBe(422);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('sin perfil onboarded responde 409 NOT_ONBOARDED sin consumir el tope', async () => {
+    const { service, redis } = buildService({ profile: profileFixture({ onboarded_at: null }) });
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
+    expect((error as ApiException).code).toBe('NOT_ONBOARDED');
+    expect((error as ApiException).getStatus()).toBe(409);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('si falla la inserción devuelve el cupo', async () => {
+    const { service, redis, markPrepFailedCalls } = buildService({ repoOptions: { createFails: true } });
+    await expect(service.create(USER_ID, TEXT_DTO, undefined, NOW)).rejects.toThrow('InsForge caído');
+    expect([...redis.counters.values()]).toEqual([0]);
+    expect(markPrepFailedCalls).toEqual([]);
+  });
+
+  it('si falla el encolado devuelve el cupo y deja la fila en prep_failed (enqueue_failed)', async () => {
+    const { service, redis, markPrepFailedCalls } = buildService({ enqueueFails: true });
+    await expect(service.create(USER_ID, TEXT_DTO, undefined, NOW)).rejects.toThrow('Redis caído');
+    expect([...redis.counters.values()]).toEqual([0]);
+    expect(markPrepFailedCalls).toEqual([{ id: INTERVIEW_ID, errorCode: 'enqueue_failed' }]);
+  });
+
+  it('con INTERVIEWS_DAILY_CAP=0 no hay tope', async () => {
+    const { service, redis } = buildService({ config: { INTERVIEWS_DAILY_CAP: 0 } });
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
+    expect(redis.counters.size).toBe(0);
+    expect(await service.getQuota(USER_ID, NOW)).toEqual({
+      remaining: null,
+      limit: 0,
+      requiresPro: false,
+      freeNotice: true,
+    });
+  });
+
+  it('traduce el mensaje al pt-BR del perfil', async () => {
+    const { service } = buildService({
+      config: { INTERVIEWS_DAILY_CAP: 1 },
+      profile: profileFixture({ locale: 'pt-BR' }),
+    });
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
+    expect((error as ApiException).getApiBody().message).toBe(
+      'Hoje você já usou suas entrevistas. Amanhã tem mais.',
+    );
+  });
+
+  it('en es usa tuteo', async () => {
+    const { service } = buildService({ config: { INTERVIEWS_DAILY_CAP: 1 } });
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
+    const error = await service.create(USER_ID, TEXT_DTO, undefined, NOW).catch((caught: unknown) => caught);
+    expect((error as ApiException).getApiBody().message).toBe(
+      'Hoy ya usaste tus entrevistas. Mañana tienes más.',
+    );
+  });
+});
+
+describe('InterviewsService con un :id que no es UUID', () => {
+  it('detail y retry responden 404 sin consultar la base', async () => {
+    const { service, findByIdCalls } = buildService({});
+    const detailError = await service.detail(USER_ID, 'no-es-uuid').catch((caught: unknown) => caught);
+    const retryError = await service.retry(USER_ID, 'no-es-uuid').catch((caught: unknown) => caught);
+    expect((detailError as ApiException).code).toBe('NOT_FOUND');
+    expect((retryError as ApiException).code).toBe('NOT_FOUND');
+    expect(findByIdCalls).toEqual([]);
   });
 });
 
@@ -342,7 +440,7 @@ describe('InterviewsService.getQuota', () => {
   it('descuenta lo ya usado hoy', async () => {
     const { service } = buildService({ config: { INTERVIEWS_DAILY_CAP: 3 } });
 
-    await service.create(USER_ID, TEXT_DTO, NOW);
+    await service.create(USER_ID, TEXT_DTO, undefined, NOW);
     const quota = await service.getQuota(USER_ID, NOW);
 
     expect(quota).toEqual({ remaining: 2, limit: 3, requiresPro: false, freeNotice: true });

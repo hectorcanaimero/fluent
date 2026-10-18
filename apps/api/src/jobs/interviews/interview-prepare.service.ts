@@ -92,34 +92,20 @@ export class InterviewPrepareService {
     this.promptVersion = configService.get('PROMPT_VERSION', { infer: true });
   }
 
-  /**
-   * `owner` identifica al job (su id de BullMQ) como dueño del candado.
-   * `fixedRubric` (F13.1.T2, re-entrevista): la rúbrica de la entrevista
-   * padre, para que el agente la reuse tal cual y la comparación sea entre
-   * las mismas competencias (FR-19/FR-20).
-   */
-  async run(
-    interviewId: string,
-    attempt: number,
-    owner: string,
-    fixedRubric?: InterviewPlan['rubric'],
-  ): Promise<InterviewPrepareJobResult> {
+  /** `owner` identifica al job (su id de BullMQ) como dueño del candado. */
+  async run(interviewId: string, attempt: number, owner: string): Promise<InterviewPrepareJobResult> {
     if (!(await this.repository.acquirePrepareLock(interviewId, owner))) {
       this.logger.warn(`Entrevista ${interviewId} ya la prepara otro job; se omite`);
       return { status: 'skipped', reason: 'locked' };
     }
     try {
-      return await this.prepare(interviewId, attempt, fixedRubric);
+      return await this.prepare(interviewId, attempt);
     } finally {
       await this.repository.releasePrepareLock(interviewId, owner);
     }
   }
 
-  private async prepare(
-    interviewId: string,
-    attempt: number,
-    fixedRubric?: InterviewPlan['rubric'],
-  ): Promise<InterviewPrepareJobResult> {
+  private async prepare(interviewId: string, attempt: number): Promise<InterviewPrepareJobResult> {
     const interview = await this.repository.loadInterview(interviewId);
     if (!interview) {
       this.logger.warn(`Entrevista ${interviewId} inexistente; nada que hacer`);
@@ -131,9 +117,14 @@ export class InterviewPrepareService {
 
     await this.repository.setPrepStep(interviewId, 'researching');
 
-    const [learnerLevel, previousQuestions] = await Promise.all([
+    // Re-entrevista (F13.1.T2, FR-19/FR-20): la rúbrica sale siempre de la
+    // padre, no de la carga del job, para que `/retry` también la conserve.
+    const [learnerLevel, previousQuestions, fixedRubric] = await Promise.all([
       this.repository.loadLearnerLevel(interview.user_id),
       this.repository.loadPreviousQuestions(interview, PREVIOUS_QUESTIONS_LIMIT),
+      interview.parent_interview_id
+        ? this.repository.loadParentRubric(interview.parent_interview_id)
+        : null,
     ]);
 
     const request: PrepareRequest = {

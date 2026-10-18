@@ -101,6 +101,24 @@ export class InterviewsRepository {
     return unwrapInsforge<Interview>(result);
   }
 
+  /**
+   * Re-entrevista (F13.1.T2) todavía sin terminar de una padre: la más nueva
+   * en `preparing`/`ready`/`in_progress`/`feedback_pending`, o `null`.
+   */
+  async findActiveChild(userId: string, parentId: string): Promise<Interview | null> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .select('*')
+      .eq('user_id', userId)
+      .eq('parent_interview_id', parentId)
+      .in('status', ['preparing', 'ready', 'in_progress', 'feedback_pending'])
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    return unwrapInsforge<Interview>(result);
+  }
+
   /** Entrevistas del usuario, más nueva primero (I2, `GET /interviews`, FR-31). */
   async listByUser(userId: string): Promise<InterviewListRow[]> {
     const result = await this.admin.database

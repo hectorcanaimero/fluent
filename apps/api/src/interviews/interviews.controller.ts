@@ -143,13 +143,19 @@ export class InterviewsController {
     return this.studyCycles.start(userId, id, idx, acceptLanguage);
   }
 
-  /** Re-entrevista (F13.1.T2): `409 REINTERVIEW_NOT_AVAILABLE` sin ciclo `completed` (FR-19/FR-20). */
+  /**
+   * Re-entrevista (F13.1.T2): `409 REINTERVIEW_NOT_AVAILABLE` sin ciclo
+   * `completed` (FR-19/FR-20); `200` con la hija sin terminar si ya existe.
+   */
   @Post('interviews/:id/reinterview')
-  reinterview(
+  async reinterview(
     @CurrentUser('id') userId: string,
     @Param('id') id: string,
+    @Res({ passthrough: true }) res: Response,
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<InterviewDto> {
-    return this.interviewsService.reinterview(userId, id, acceptLanguage);
+    const result = await this.interviewsService.reinterview(userId, id, acceptLanguage);
+    res.status(result.statusCode);
+    return result.body;
   }
 }

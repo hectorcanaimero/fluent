@@ -131,8 +131,15 @@ function fakeConfig(overrides: Partial<Env> = {}): ConfigService<Env, true> {
 
 function fakeRedis(): RedisService & { readonly counters: Map<string, number> } {
   const counters = new Map<string, number>();
+  const locks = new Set<string>();
   return {
     counters,
+    setIfAbsent: async (key: string) => {
+      if (locks.has(key)) return false;
+      locks.add(key);
+      return true;
+    },
+    del: async (key: string) => locks.delete(key),
     increment: async (key: string) => {
       const next = (counters.get(key) ?? 0) + 1;
       counters.set(key, next);
@@ -199,17 +206,23 @@ function fakeRepository(options: FakeRepoOptions = {}) {
   const markFeedbackRetryingCalls: Array<{ userId: string; id: string }> = [];
   const markFeedbackFailedCalls: Array<{ id: string; errorCode: string }> = [];
   const findByIdCalls: string[] = [];
+  const rows: Interview[] = [];
   const repository = {
     create: async (row: CreateInterviewRow) => {
       if (options.createFails) throw new Error('InsForge caído');
       created.push(row);
-      return interviewFixture({
+      const interview = interviewFixture({
         type: row.type,
         offer_text: row.offerText,
         offer_url: row.offerUrl,
         offer_hash: row.offerHash,
+        parent_interview_id: row.parentInterviewId ?? null,
       });
+      rows.push(interview);
+      return interview;
     },
+    findActiveChild: async (_userId: string, parentId: string) =>
+      rows.findLast((row) => row.parent_interview_id === parentId && row.status === 'preparing') ?? null,
     findById: async (_userId: string, id: string) => {
       findByIdCalls.push(id);
       return options.findByIdResult === undefined ? null : options.findByIdResult;
@@ -694,25 +707,25 @@ describe('InterviewsService.reinterview', () => {
     expect((error as ApiException).code).toBe('NOT_FOUND');
   });
 
-  it('con el ciclo completed crea la entrevista hija en preparing, con la misma oferta/tipo, parentInterviewId y la rúbrica de la padre como fixedRubric', async () => {
-    const plan = planFixture();
+  it('con el ciclo completed crea la entrevista hija en preparing (201), con la misma oferta/tipo y parentInterviewId', async () => {
     const parent = interviewFixture({
       status: 'feedback_ready',
       type: 'mixed',
       offer_text: 'We are hiring a backend engineer',
       offer_url: null,
       offer_hash: 'hash',
-      plan,
+      plan: planFixture(),
       feedback: feedbackFixture(),
     });
     const { service, jobs, created, redis } = buildService({
       repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
     });
 
-    const result = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW);
+    const { statusCode, body } = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW);
 
-    expect(result.status).toBe('preparing');
-    expect(result.prepStep).toBe('reading');
+    expect(statusCode).toBe(201);
+    expect(body.status).toBe('preparing');
+    expect(body.prepStep).toBe('reading');
     expect(created).toHaveLength(1);
     expect(created[0]).toMatchObject({
       userId: USER_ID,
@@ -722,10 +735,56 @@ describe('InterviewsService.reinterview', () => {
       offerHash: 'hash',
       parentInterviewId: INTERVIEW_ID,
     });
-    expect(jobs.enqueued).toEqual([result.id]);
-    expect(jobs.enqueuedOptions[0]?.options).toMatchObject({ fixedRubric: plan.rubric });
+    // La rúbrica la busca el job desde la padre: no viaja en la carga.
+    expect(jobs.enqueuedOptions).toEqual([{ interviewId: body.id, options: undefined }]);
     // Consume el tope diario como `create` (un contador incrementado).
     expect([...redis.counters.values()]).toEqual([1]);
+  });
+
+  it('doble POST: devuelve la misma hija (200) y consume el tope una sola vez', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, jobs, created, redis } = buildService({
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const [first, second] = await Promise.all([
+      service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW),
+      service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW),
+    ]);
+
+    expect([first.statusCode, second.statusCode].sort()).toEqual([200, 201]);
+    expect(second.body).toEqual(first.body);
+    expect(created).toHaveLength(1);
+    expect(jobs.enqueued).toHaveLength(1);
+    expect([...redis.counters.values()]).toEqual([1]);
+  });
+
+  it('sin onboarding responde NOT_ONBOARDED sin consumir el tope', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, created, redis } = buildService({
+      profile: profileFixture({ onboarded_at: null }),
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('NOT_ONBOARDED');
+    expect(created).toEqual([]);
+    expect(redis.counters.size).toBe(0);
+  });
+
+  it('con INTERVIEWS_REQUIRE_PRO y plan free responde PLAN_REQUIRED sin consumir el tope', async () => {
+    const parent = interviewFixture({ status: 'feedback_ready', plan: planFixture(), feedback: feedbackFixture() });
+    const { service, created, redis } = buildService({
+      config: { INTERVIEWS_REQUIRE_PRO: true },
+      repoOptions: { findByIdResult: parent, findCycleResult: cycleFixture('completed') },
+    });
+
+    const error = await service.reinterview(USER_ID, INTERVIEW_ID, undefined, NOW).catch((caught: unknown) => caught);
+
+    expect((error as ApiException).code).toBe('PLAN_REQUIRED');
+    expect(created).toEqual([]);
+    expect(redis.counters.size).toBe(0);
   });
 
   it('con un :id que no es UUID responde 404 sin consultar la base', async () => {

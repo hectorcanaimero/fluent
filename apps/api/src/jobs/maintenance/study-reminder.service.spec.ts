@@ -25,11 +25,14 @@ function cycle(overrides: Partial<ActiveStudyCycleRow> = {}): ActiveStudyCycleRo
   };
 }
 
-function makeRepository(cycles: ActiveStudyCycleRow[]) {
+function makeRepository(cycles: ActiveStudyCycleRow[], timezones = new Map([[USER_ID, TZ]])) {
   return {
-    listActiveStudyCycles: vi.fn(async () => cycles),
-    loadTimezones: vi.fn(async () => new Map([[USER_ID, TZ]])),
-  } as unknown as MaintenanceRepository;
+    listActiveStudyCycleUserIds: vi.fn(async () => [...new Set(cycles.map((c) => c.userId))]),
+    listActiveStudyCycles: vi.fn(async (userIds: readonly string[]) =>
+      cycles.filter((c) => userIds.includes(c.userId)),
+    ),
+    loadTimezones: vi.fn(async () => timezones),
+  };
 }
 
 function makeRedis(initial: Record<string, string> = {}) {
@@ -45,11 +48,12 @@ function makeRedis(initial: Record<string, string> = {}) {
   return { redis, store, sets };
 }
 
-function makePush() {
+function makePush(delivered = true) {
   const sent: unknown[] = [];
   const push = {
     notifyStudyReminder: vi.fn(async (...args: unknown[]) => {
       sent.push(args);
+      return delivered;
     }),
   } as unknown as PushService;
   return { push, sent };
@@ -60,7 +64,7 @@ describe('StudyReminderService.run', () => {
     const repository = makeRepository([cycle()]);
     const { redis, sets } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     const result = await service.run(AT_18_LOCAL);
 
@@ -69,16 +73,48 @@ describe('StudyReminderService.run', () => {
     expect(sets).toEqual([{ key: 'study-reminder:last-sent:' + INTERVIEW_ID, value: '2026-10-18' }]);
   });
 
-  it('fuera de las 18:00 locales del usuario, no avisa', async () => {
+  it('fuera de las 18:00 locales del usuario, no avisa ni carga sus ciclos', async () => {
     const repository = makeRepository([cycle()]);
     const { redis } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     const result = await service.run(NOT_18_LOCAL);
 
     expect(result).toEqual({ status: 'done', candidates: 0, sent: 0 });
     expect(sent).toEqual([]);
+    expect(repository.listActiveStudyCycles).not.toHaveBeenCalled();
+  });
+
+  it('solo carga los ciclos de los usuarios que están ahora a las 18:00 locales', async () => {
+    const other = '33333333-3333-4333-8333-333333333333';
+    const repository = makeRepository(
+      [cycle(), cycle({ userId: other, interviewId: '44444444-4444-4444-8444-444444444444' })],
+      new Map([
+        [USER_ID, TZ],
+        [other, 'Asia/Tokyo'],
+      ]),
+    );
+    const { redis } = makeRedis();
+    const { push } = makePush();
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
+
+    await service.run(AT_18_LOCAL);
+
+    expect(repository.listActiveStudyCycles).toHaveBeenCalledWith([USER_ID]);
+  });
+
+  it('si el push no salió (sin tokens, desactivado o fallo), no cuenta ni guarda la fecha', async () => {
+    const repository = makeRepository([cycle()]);
+    const { redis, sets } = makeRedis();
+    const { push, sent } = makePush(false);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
+
+    const result = await service.run(AT_18_LOCAL);
+
+    expect(sent).toHaveLength(1);
+    expect(result).toEqual({ status: 'done', candidates: 1, sent: 0 });
+    expect(sets).toEqual([]);
   });
 
   it('si la última sesión hecha fue hoy (no ayer), no avisa', async () => {
@@ -87,7 +123,7 @@ describe('StudyReminderService.run', () => {
     ]);
     const { redis } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     await service.run(AT_18_LOCAL);
 
@@ -98,7 +134,7 @@ describe('StudyReminderService.run', () => {
     const repository = makeRepository([cycle()]);
     const { redis } = makeRedis({ ['study-reminder:last-sent:' + INTERVIEW_ID]: '2026-10-18' });
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     const result = await service.run(AT_18_LOCAL);
 
@@ -110,7 +146,7 @@ describe('StudyReminderService.run', () => {
     const repository = makeRepository([cycle()]);
     const { redis } = makeRedis({ ['study-reminder:last-sent:' + INTERVIEW_ID]: '2026-10-17' });
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     const result = await service.run(AT_18_LOCAL);
 
@@ -122,7 +158,7 @@ describe('StudyReminderService.run', () => {
     const repository = makeRepository([cycle()]);
     const { redis } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     // Día 1: avisa y guarda la fecha.
     await service.run(AT_18_LOCAL);
@@ -142,7 +178,7 @@ describe('StudyReminderService.run', () => {
     ]);
     const { redis } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     await service.run(AT_18_LOCAL);
 
@@ -150,13 +186,10 @@ describe('StudyReminderService.run', () => {
   });
 
   it('ciclo sin zona horaria de perfil: usa UTC', async () => {
-    const repository = {
-      listActiveStudyCycles: vi.fn(async () => [cycle()]),
-      loadTimezones: vi.fn(async () => new Map()),
-    } as unknown as MaintenanceRepository;
+    const repository = makeRepository([cycle()], new Map());
     const { redis } = makeRedis();
     const { push, sent } = makePush();
-    const service = new StudyReminderService(repository, redis, push);
+    const service = new StudyReminderService(repository as unknown as MaintenanceRepository, redis, push);
 
     // 18:00 UTC exacto.
     await service.run(new Date('2026-10-18T18:05:00.000Z'));

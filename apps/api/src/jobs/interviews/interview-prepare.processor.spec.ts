@@ -8,7 +8,7 @@ import {
 import { JOB_INTERVIEW_FEEDBACK, JOB_INTERVIEW_PREPARE } from '../jobs.constants.js';
 
 import type { InterviewFeedbackService } from './interview-feedback.service.js';
-import type { InterviewPrepareJobData } from './interview-prepare.processor.js';
+import type { InterviewPrepareJobData } from '../job-dispatcher.js';
 import { InterviewPrepareProcessor } from './interview-prepare.processor.js';
 import type { InterviewPrepareService } from './interview-prepare.service.js';
 

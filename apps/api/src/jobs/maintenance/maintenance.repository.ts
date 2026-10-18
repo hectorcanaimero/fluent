@@ -49,8 +49,10 @@ export abstract class MaintenanceRepository {
    * `.in('session_id', ids)` es suficiente.
    */
   abstract deleteTurnsForSessionsStartedBefore(cutoffIso: string): Promise<number>;
-  /** Ciclos de estudio `active` con sus sesiones, para `study-reminder` (F13.1.T2). */
-  abstract listActiveStudyCycles(): Promise<ActiveStudyCycleRow[]>;
+  /** Dueños (sin repetir) de ciclos de estudio `active`, para `study-reminder` (F13.1.T2). */
+  abstract listActiveStudyCycleUserIds(): Promise<string[]>;
+  /** Ciclos `active` de esos usuarios con sus sesiones, para `study-reminder` (F13.1.T2). */
+  abstract listActiveStudyCycles(userIds: readonly string[]): Promise<ActiveStudyCycleRow[]>;
   /** Zona horaria de cada perfil (`null` si no tiene), para `study-reminder` (F13.1.T2). */
   abstract loadTimezones(userIds: readonly string[]): Promise<Map<string, string | null>>;
 }
@@ -67,6 +69,15 @@ export interface ActiveStudyCycleRow {
   readonly interviewId: string;
   readonly userId: string;
   readonly sessions: readonly ActiveStudyCycleSessionRow[];
+}
+
+/** Ids por petición en un `.in()`: la lista va en la URL de PostgREST. */
+export const IN_CHUNK_SIZE = 200;
+
+function chunks<T>(items: readonly T[], size = IN_CHUNK_SIZE): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
 
 /* ============================================================================
@@ -154,42 +165,56 @@ export class InsforgeMaintenanceRepository extends MaintenanceRepository {
     return (result as PostgrestLike<unknown>).count ?? 0;
   }
 
-  async listActiveStudyCycles(): Promise<ActiveStudyCycleRow[]> {
-    const result = await this.db
-      .from(TABLES.studyCycles)
-      .select(`interview_id, user_id, ${TABLES.studyCycleSessions}(idx, title, done_at)`)
-      .eq('status', 'active');
+  async listActiveStudyCycleUserIds(): Promise<string[]> {
+    const result = await this.db.from(TABLES.studyCycles).select('user_id').eq('status', 'active');
     const rows =
-      unwrap(
-        result as PostgrestLike<
-          Array<{
-            interview_id: string;
-            user_id: string;
-            study_cycle_sessions: Array<{ idx: number; title: string; done_at: string | null }> | null;
-          }>
-        >,
-        'leer los ciclos de estudio activos',
-      ) ?? [];
-    return rows.map((row) => ({
-      interviewId: row.interview_id,
-      userId: row.user_id,
-      sessions: (row.study_cycle_sessions ?? [])
-        .map((session) => ({ idx: session.idx, title: session.title, doneAt: session.done_at }))
-        .sort((a, b) => a.idx - b.idx),
-    }));
+      unwrap(result as PostgrestLike<Array<{ user_id: string }>>, 'leer los dueños de ciclos activos') ?? [];
+    return [...new Set(rows.map((row) => row.user_id))];
+  }
+
+  async listActiveStudyCycles(userIds: readonly string[]): Promise<ActiveStudyCycleRow[]> {
+    const cycles: ActiveStudyCycleRow[] = [];
+    for (const ids of chunks(userIds)) {
+      const result = await this.db
+        .from(TABLES.studyCycles)
+        .select(`interview_id, user_id, ${TABLES.studyCycleSessions}(idx, title, done_at)`)
+        .eq('status', 'active')
+        .in('user_id', ids);
+      const rows =
+        unwrap(
+          result as PostgrestLike<
+            Array<{
+              interview_id: string;
+              user_id: string;
+              study_cycle_sessions: Array<{ idx: number; title: string; done_at: string | null }> | null;
+            }>
+          >,
+          'leer los ciclos de estudio activos',
+        ) ?? [];
+      for (const row of rows) {
+        cycles.push({
+          interviewId: row.interview_id,
+          userId: row.user_id,
+          sessions: (row.study_cycle_sessions ?? [])
+            .map((session) => ({ idx: session.idx, title: session.title, doneAt: session.done_at }))
+            .sort((a, b) => a.idx - b.idx),
+        });
+      }
+    }
+    return cycles;
   }
 
   async loadTimezones(userIds: readonly string[]): Promise<Map<string, string | null>> {
-    if (userIds.length === 0) return new Map();
-    const result = await this.db
-      .from(TABLES.profiles)
-      .select('user_id, timezone')
-      .in('user_id', [...userIds]);
-    const rows =
-      unwrap(
-        result as PostgrestLike<Array<{ user_id: string; timezone: string | null }>>,
-        'leer las zonas horarias de los perfiles',
-      ) ?? [];
-    return new Map(rows.map((row) => [row.user_id, row.timezone]));
+    const timezones = new Map<string, string | null>();
+    for (const ids of chunks(userIds)) {
+      const result = await this.db.from(TABLES.profiles).select('user_id, timezone').in('user_id', ids);
+      const rows =
+        unwrap(
+          result as PostgrestLike<Array<{ user_id: string; timezone: string | null }>>,
+          'leer las zonas horarias de los perfiles',
+        ) ?? [];
+      for (const row of rows) timezones.set(row.user_id, row.timezone);
+    }
+    return timezones;
   }
 }

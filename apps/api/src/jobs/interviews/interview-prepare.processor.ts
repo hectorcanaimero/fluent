@@ -8,13 +8,13 @@ import { OnWorkerEvent, Processor, WorkerHost } from '@nestjs/bullmq';
 import { Logger } from '@nestjs/common';
 import { UnrecoverableError, type Job } from 'bullmq';
 
-import type { InterviewPlan } from '../../interviews/interviews.types.js';
 import {
   JOB_INTERVIEW_FEEDBACK,
   JOB_INTERVIEW_PREPARE,
   QUEUE_CONCURRENCY,
   QUEUE_INTERVIEWS,
 } from '../jobs.constants.js';
+import type { InterviewPrepareJobData } from '../job-dispatcher.js';
 import {
   classifyFeedbackError,
   InterviewFeedbackService,
@@ -25,17 +25,6 @@ import {
   InterviewPrepareService,
   type InterviewPrepareJobResult,
 } from './interview-prepare.service.js';
-
-/**
- * Carga de un job de la cola `interviews` (la encolan `POST /interviews`,
- * `POST /interviews/:id/retry` y `InterviewCloserService.onInterviewSessionClosed`).
- * `interview-prepare` e `interview-feedback` (F12.3.T1) comparten esta forma.
- */
-export interface InterviewPrepareJobData {
-  readonly interviewId: string;
-  /** Re-entrevista (F13.1.T2): rúbrica de la padre, que el agente reusa tal cual (I1). */
-  readonly fixedRubric?: InterviewPlan['rubric'];
-}
 
 @Processor(QUEUE_INTERVIEWS, { concurrency: QUEUE_CONCURRENCY[QUEUE_INTERVIEWS] })
 export class InterviewPrepareProcessor extends WorkerHost {
@@ -151,9 +140,7 @@ export class InterviewPrepareProcessor extends WorkerHost {
   ): Promise<InterviewPrepareJobResult | InterviewFeedbackJobResult> {
     switch (job.name) {
       case JOB_INTERVIEW_PREPARE:
-        return job.data.fixedRubric
-          ? this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id), job.data.fixedRubric)
-          : this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
+        return this.service.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
       case JOB_INTERVIEW_FEEDBACK:
         return this.feedbackService.run(job.data.interviewId, job.attemptsMade + 1, String(job.id));
       default:

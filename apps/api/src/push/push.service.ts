@@ -117,25 +117,44 @@ export class PushService {
     });
   }
 
-  /** Recordatorio para continuar el ciclo de estudio. */
-  async notifyStudyReminder(userId: string, interviewId: string, n: number, total: number, title: string): Promise<void> {
+  /**
+   * Recordatorio para continuar el ciclo de estudio. `true` solo si FCM
+   * entregó al menos uno (no con el envío desactivado, sin tokens o si falló):
+   * `study-reminder` solo cuenta y recuerda los envíos reales.
+   */
+  async notifyStudyReminder(
+    userId: string,
+    interviewId: string,
+    n: number,
+    total: number,
+    title: string,
+  ): Promise<boolean> {
+    let delivered = false;
     await this.safely('study_reminder', async () => {
       if (!this.sender.enabled) return;
-      await this.sendTo([userId], (locale) => studyReminderMessage(locale, { interviewId, n, total, title }));
+      delivered =
+        (await this.sendTo([userId], (locale) =>
+          studyReminderMessage(locale, { interviewId, n, total, title }),
+        )) > 0;
     });
+    return delivered;
   }
 
+  /** Devuelve cuántos mensajes entregó FCM. */
   private async sendTo(
     userIds: readonly string[],
     build: (locale: Locale) => PushMessage,
-  ): Promise<void> {
+  ): Promise<number> {
     const recipients = await this.repository.listRecipients(userIds);
     const invalid: string[] = [];
+    let delivered = 0;
     for (const recipient of recipients) {
       const result = await this.sender.send(recipient.tokens, build(recipient.locale));
       invalid.push(...result.invalidTokens);
+      delivered += result.successCount;
     }
     await this.repository.deleteTokens(invalid);
+    return delivered;
   }
 
   private async safely(kind: string, work: () => Promise<void>): Promise<void> {

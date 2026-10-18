@@ -66,6 +66,10 @@ class FakeMaintenanceRepository extends MaintenanceRepository {
     return toDelete.length;
   }
 
+  async listActiveStudyCycleUserIds(): Promise<never[]> {
+    throw new Error('no usado en este test');
+  }
+
   async listActiveStudyCycles(): Promise<never[]> {
     throw new Error('no usado en este test');
   }

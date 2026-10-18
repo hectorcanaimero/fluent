@@ -45,6 +45,16 @@ export interface RecordTurnArgs {
   /** Valor ya calculado de `sessions.turns_count`. */
   readonly turnsCount: number;
   readonly corrections: readonly InsertCorrectionRow[];
+  /**
+   * Solo `kind = 'interview'` (F12.1.T2): pregunta del plan del turno del
+   * tutor y segundos a sumar a `sessions.active_sec` (D4), en la misma
+   * transacción. Sin esto la RPC usa sus defaults (NULL/0).
+   */
+  readonly interview?: {
+    readonly questionIdx: number | null;
+    readonly isFollowUp: boolean;
+    readonly activeSecDelta: number;
+  };
 }
 
 export interface InsertCorrectionRow {
@@ -178,6 +188,13 @@ export class TurnsRepository {
         category: row.category,
         note: row.note,
       })),
+      ...(args.interview
+        ? {
+            p_question_idx: args.interview.questionIdx,
+            p_is_follow_up: args.interview.isFollowUp,
+            p_active_sec_delta: args.interview.activeSecDelta,
+          }
+        : {}),
     });
 
     unwrapInsforge(result);

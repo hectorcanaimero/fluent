@@ -21,6 +21,7 @@
   "OFFER_UNREADABLE": "No pudimos leer esa oferta de LinkedIn. Copia el texto y pégalo en vez del enlace.",
   "INTERVIEW_NOT_RETRYABLE": "Solo se puede reintentar una entrevista cuya preparación falló.",
   "INTERVIEW_NOT_OPENABLE": "Esta entrevista no se puede empezar ahora.",
+  "INTERVIEW_NOT_RESUMABLE": "Esta entrevista ya terminó y no se puede retomar.",
   "INTERVIEW_AGENT_UNAVAILABLE": "El simulador de entrevistas no está disponible en este momento.",
   "NOT_READY": "Todavía no está listo.",
   "NOT_FOUND": "El recurso solicitado no existe.",

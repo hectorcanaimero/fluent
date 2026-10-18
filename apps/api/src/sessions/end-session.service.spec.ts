@@ -209,21 +209,23 @@ describe('computeDurationSec', () => {
     expect(computeDurationSec(startedAt, now)).toBe(720);
   });
 
-  it('sesión interview (FR-11): cierra con la regla de la entrevista y la duración en tiempo activo', async () => {
+  it('sesión interview (FR-11): delega en InterviewCloserService con la duración en tiempo activo', async () => {
     const session = sessionFixture({ kind: 'interview', active_sec: 240, interview_id: 'i-1' });
     const turns = fakeTurnsRepository({ session });
     const { repo } = fakeEndSessionRepository(0);
     const { closer, calls } = fakeSessionCloser();
-    const interviewSessions = {
-      closeSession: vi.fn(async () => ({ ...closeResultFixture(), newBadges: [] })),
+    const interviewCloser = {
+      end: vi.fn(async () => ({ ...closeResultFixture(), newBadges: [] })),
     };
-    const service = new EndSessionService(turns, repo, closer, fakePush(), interviewSessions as never);
+    const push = fakePush();
+    const service = new EndSessionService(turns, repo, closer, push, interviewCloser as never);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
-    expect(interviewSessions.closeSession).toHaveBeenCalledWith(USER_ID, session, true);
+    expect(interviewCloser.end).toHaveBeenCalledWith(USER_ID, session, true);
     expect(calls).toHaveLength(0);
     expect(result.summary.durationSec).toBe(240);
+    // Privacidad: una entrevista nunca avisa al grupo, aunque dé XP.
+    expect(push.notifyChallenge).not.toHaveBeenCalled();
   });
 });
-

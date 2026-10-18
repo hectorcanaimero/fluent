@@ -1,5 +1,6 @@
 import { getQueueToken } from '@nestjs/bullmq';
 import { Global, Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 
 import { INSFORGE_ADMIN_CLIENT } from '../../insforge/insforge.constants.js';
@@ -27,6 +28,7 @@ import { MaintenanceProcessor } from './maintenance.processor.js';
 @Module({
   providers: [
     { provide: INSFORGE_ADMIN_CLIENT, useValue: {} },
+    { provide: ConfigService, useValue: { get: vi.fn(() => 86_400) } },
     { provide: REDIS_CACHE_CLIENT, useValue: { get: vi.fn(), set: vi.fn() } },
     { provide: JOB_DISPATCHER, useValue: { enqueueCoachingBrief: vi.fn() } },
     {
@@ -36,6 +38,7 @@ import { MaintenanceProcessor } from './maintenance.processor.js';
   ],
   exports: [
     INSFORGE_ADMIN_CLIENT,
+    ConfigService,
     REDIS_CACHE_CLIENT,
     JOB_DISPATCHER,
     getQueueToken(QUEUE_MAINTENANCE),

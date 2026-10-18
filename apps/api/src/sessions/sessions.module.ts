@@ -7,6 +7,7 @@ import { InsforgeBossRepository } from './boss.repository.js';
 import { RedisBossSkipStore } from './boss-skip.store.js';
 import { InterviewSessionService } from '../interviews/interview-session.service.js';
 import { DailyTurnsBudget } from './daily-turns-budget.js';
+import { InterviewCloserService } from './interview-closer.service.js';
 import { InterviewSessionRepository } from './interview-session.repository.js';
 import { InterviewTurnsService } from './interview-turns.service.js';
 import { EndSessionRepository } from './end-session.repository.js';
@@ -70,6 +71,7 @@ import { TurnsService } from './turns.service.js';
     TurnsRepository,
     DailyTurnsBudget,
     InterviewSessionRepository,
+    InterviewCloserService,
     InterviewSessionService,
     InterviewTurnsService,
     TurnsService,

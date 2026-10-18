@@ -106,14 +106,6 @@ export interface RebuiltScenario extends SessionScenario {
   readonly fallback: boolean;
 }
 
-/** Escenario reconstruido de una sesión `interview` (con el plan). */
-export interface RebuiltInterviewScenario {
-  readonly kind: 'interview';
-  readonly fallback: false;
-  readonly topic: string;
-  readonly interview: InterviewScenario;
-}
-
 /**
  * Reconstruye el escenario de una sesión ya abierta para los turnos
  * siguientes (SPEC-04 §4 paso 4).
@@ -134,18 +126,8 @@ export interface RebuiltInterviewScenario {
  */
 export function rebuildScenario(
   session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
-  newsItem: null,
-  plan: InterviewPlan,
-): RebuiltInterviewScenario;
-export function rebuildScenario(
-  session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
-  newsItem?: NewsItem | null,
-): RebuiltScenario;
-export function rebuildScenario(
-  session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
   newsItem: NewsItem | null = null,
-  plan: InterviewPlan | null = null,
-): RebuiltScenario | RebuiltInterviewScenario {
+): RebuiltScenario {
   switch (session.kind) {
     case 'free_topic':
       return { kind: 'free_topic', fallback: false, ...freeTopicScenario(session.topic) };
@@ -169,21 +151,13 @@ export function rebuildScenario(
         : degradeToFreeTopic(session.topic);
     }
 
-    // Sin plan no hay entrevista que seguir: a diferencia del resto no se
-    // degrada a `free_topic`, porque eso rompería el rol (FR-8).
-    case 'interview': {
-      if (plan === null) {
-        throw new Error('rebuildScenario: kind=interview necesita el plan de la entrevista');
-      }
-      const interview = interviewScenario(plan);
-      return { kind: 'interview', fallback: false, topic: interview.topic, interview };
-    }
-
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
-    // `study` tampoco, hasta que F13 traiga `studyScenario`.
+    // `interview` tampoco: su turno usa `interviewScenario(plan)` (I3) y
+    // `study` espera a que F13 traiga `studyScenario`.
     case 'group':
+    case 'interview':
     case 'study':
       throw new Error(`rebuildScenario: kind='${session.kind}' no tiene escenario 1:1`);
 

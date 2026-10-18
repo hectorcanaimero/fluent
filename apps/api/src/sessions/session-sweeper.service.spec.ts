@@ -8,6 +8,7 @@ import type { EndSessionRepository } from './end-session.repository.js';
 import { SESSION_SWEEPER_BATCH_LIMIT, SessionSweeperService } from './session-sweeper.service.js';
 import type { ActiveSessionRow } from './session-sweeper.repository.js';
 import type { SessionSweeperRepository } from './session-sweeper.repository.js';
+import type { InterviewSessionRef } from './interview-closer.service.js';
 
 const NOW = new Date('2026-09-08T12:00:00.000Z');
 const NOW_ISO = NOW.toISOString();
@@ -23,6 +24,8 @@ function activeSession(overrides: Partial<ActiveSessionRow>): ActiveSessionRow {
     kind: 'free_topic',
     startedAt: isoMinus(100),
     turnsCount: 0,
+    interviewId: null,
+    activeSec: 0,
     ...overrides,
   };
 }
@@ -36,11 +39,15 @@ interface FakeSweeperRepoOptions {
 
 function fakeSweeperRepository(options: FakeSweeperRepoOptions) {
   const calls = {
+    listActiveSessions: [] as string[],
     markAbandoned: [] as Array<{ sessionId: string; durationSec: number; endedAtIso: string }>,
   };
 
   const repo = {
-    listActiveSessions: async (_limit: number) => options.sessions,
+    listActiveSessions: async (_limit: number, interviewStartedBeforeIso: string) => {
+      calls.listActiveSessions.push(interviewStartedBeforeIso);
+      return options.sessions;
+    },
     findLastTurnCreatedAt: async (sessionId: string) => {
       if (options.findLastTurnCreatedAtImpl) {
         return options.findLastTurnCreatedAtImpl(sessionId);
@@ -74,6 +81,17 @@ function fakeCloser(options: { throwFor?: Set<string> } = {}) {
   return { closer: closer as unknown as SessionCloserService, calls };
 }
 
+function fakeInterviewCloser() {
+  const calls: Array<{ userId: string; session: InterviewSessionRef; decide: boolean }> = [];
+  const interviewCloser = {
+    closeSession: async (userId: string, session: InterviewSessionRef, decide: boolean) => {
+      calls.push({ userId, session, decide });
+      return { xp_earned: 0, streak: 0, is_double_day: false, next_is_boss: false, newBadges: [] };
+    },
+  };
+  return { interviewCloser, calls };
+}
+
 describe('SessionSweeperService', () => {
   it('sesión sobre el hard cap (idle bajo) se cierra con XP, con SESSION_HARD_CAP_SEC', async () => {
     const session = activeSession({
@@ -87,7 +105,12 @@ describe('SessionSweeperService', () => {
       lastTurnAt: { 'session-hardcap': isoMinus(10) }, // conversación reciente: idle bajo
     });
     const { closer, calls } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -116,7 +139,12 @@ describe('SessionSweeperService', () => {
     });
     const { repo, calls: repoCalls } = fakeSweeperRepository({ sessions: [session] });
     const { closer, calls: closerCalls } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -144,7 +172,12 @@ describe('SessionSweeperService', () => {
       lastTurnAt: { 'session-abandoned-with-xp': isoMinus(3360) },
     });
     const { closer, calls: closerCalls } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -178,7 +211,12 @@ describe('SessionSweeperService', () => {
       lastTurnAt: { 'session-abandoned-short': isoMinus(3540) },
     });
     const { closer, calls: closerCalls } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -201,7 +239,12 @@ describe('SessionSweeperService', () => {
       lastTurnAt: { 'session-normal': isoMinus(5) },
     });
     const { closer, calls: closerCalls } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -234,7 +277,12 @@ describe('SessionSweeperService', () => {
       lastTurnAt: { 'session-fails': isoMinus(10), 'session-ok': isoMinus(10) },
     });
     const { closer, calls } = fakeCloser({ throwFor: new Set(['session-fails']) });
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     const result = await service.run();
 
@@ -259,7 +307,12 @@ describe('SessionSweeperService', () => {
       markAbandoned: async () => {},
     } as unknown as SessionSweeperRepository;
     const { closer } = fakeCloser();
-    const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     await service.run();
 
@@ -312,7 +365,12 @@ describe('SessionSweeperService', () => {
     };
 
     const realCloser = new SessionCloserService(endSessionRepository, jobs);
-    const service = new SessionSweeperService({ repository: repo, closer: realCloser, now: () => NOW });
+    const service = new SessionSweeperService({
+      repository: repo,
+      closer: realCloser,
+      interviewCloser: fakeInterviewCloser().interviewCloser,
+      now: () => NOW,
+    });
 
     await service.run();
 
@@ -335,11 +393,18 @@ describe('SessionSweeperService', () => {
         lastTurnAt: { 'session-interview': isoMinus(2 * 3600 - 300) }, // pausa de casi 2 h
       });
       const { closer, calls: closerCalls } = fakeCloser();
-      const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+      const { interviewCloser, calls: interviewCalls } = fakeInterviewCloser();
+      const service = new SessionSweeperService({
+        repository: repo,
+        closer,
+        interviewCloser,
+        now: () => NOW,
+      });
 
       const result = await service.run();
 
       expect(closerCalls).toEqual([]);
+      expect(interviewCalls).toEqual([]);
       expect(repoCalls.markAbandoned).toEqual([]);
       expect(result).toEqual<SessionSweeperResult>({
         closedByHardCap: 0,
@@ -348,26 +413,59 @@ describe('SessionSweeperService', () => {
       });
     });
 
-    it('a INTERVIEW_ABANDON_AFTER_SEC de inactividad sí se abandona', async () => {
+    it('a INTERVIEW_ABANDON_AFTER_SEC de inactividad se cierra con InterviewCloserService (active_sec, D4)', async () => {
       const session = activeSession({
         id: 'session-interview-old',
+        userId: 'user-interview',
         kind: 'interview',
         startedAt: isoMinus(90_000),
-        turnsCount: 0,
+        turnsCount: 2,
+        interviewId: 'interview-1',
+        activeSec: 180,
       });
       const { repo, calls: repoCalls } = fakeSweeperRepository({ sessions: [session] });
-      const { closer } = fakeCloser();
+      const { closer, calls: closerCalls } = fakeCloser();
+      const { interviewCloser, calls: interviewCalls } = fakeInterviewCloser();
       const service = new SessionSweeperService({
         repository: repo,
         closer,
+        interviewCloser,
         now: () => NOW,
         interviewAbandonAfterSec: 86_400,
       });
 
       const result = await service.run();
 
-      expect(repoCalls.markAbandoned).toHaveLength(1);
-      expect(result.markedAbandoned).toBe(1);
+      expect(interviewCalls).toEqual([
+        {
+          userId: 'user-interview',
+          session: {
+            id: 'session-interview-old',
+            interview_id: 'interview-1',
+            active_sec: 180,
+            turns_count: 2,
+          },
+          decide: true,
+        },
+      ]);
+      expect(closerCalls).toEqual([]);
+      expect(repoCalls.markAbandoned).toEqual([]);
+      expect(result.closedAsAbandoned).toBe(1);
+    });
+
+    it('pide el lote sin las entrevistas más nuevas que INTERVIEW_ABANDON_AFTER_SEC (no lo acaparan)', async () => {
+      const { repo, calls } = fakeSweeperRepository({ sessions: [] });
+      const service = new SessionSweeperService({
+        repository: repo,
+        closer: fakeCloser().closer,
+        interviewCloser: fakeInterviewCloser().interviewCloser,
+        now: () => NOW,
+        interviewAbandonAfterSec: 86_400,
+      });
+
+      await service.run();
+
+      expect(calls.listActiveSessions).toEqual([isoMinus(86_400)]);
     });
   });
 });

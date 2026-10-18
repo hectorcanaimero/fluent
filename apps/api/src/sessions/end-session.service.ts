@@ -1,9 +1,9 @@
 import { PushService } from '../push/push.service.js';
 import { Injectable } from '@nestjs/common';
-import { InterviewSessionService } from '../interviews/interview-session.service.js';
 import { SESSION_HARD_CAP_SEC } from '../config/product.js';
 import type { EndSessionDto } from './dto/end-session.dto.js';
 import { EndSessionRepository } from './end-session.repository.js';
+import { InterviewCloserService, interviewDurationSec } from './interview-closer.service.js';
 import { SessionCloserService } from './session-closer.service.js';
 import { findOwnedSessionOrThrow } from './session-ownership.js';
 import type { SessionEndResultDto } from './sessions.types.js';
@@ -36,7 +36,7 @@ export class EndSessionService {
     private readonly repository: EndSessionRepository,
     private readonly closer: SessionCloserService,
     private readonly push: PushService,
-    private readonly interviewSessions: InterviewSessionService,
+    private readonly interviewCloser: InterviewCloserService,
   ) {}
 
   async endSession(
@@ -47,16 +47,15 @@ export class EndSessionService {
     const session = await findOwnedSessionOrThrow(this.turnsRepository, userId, sessionId);
     const wasActive = session.status === 'active';
 
-    // Entrevista (FR-11): misma regla que el cierre por `done`, con la
-    // duración en tiempo activo (D4) y la entrevista a `feedback_pending` o
-    // `too_short`.
+    // Entrevista (FR-11, D5): `InterviewCloserService.end` decide si cierra o
+    // la deja en pausa (`too_short` retomable); duración en tiempo activo (D4).
     const isInterview = session.kind === 'interview';
     const durationSec = isInterview
-      ? Math.min(SESSION_HARD_CAP_SEC, session.active_sec)
+      ? interviewDurationSec(session)
       : computeDurationSec(session.started_at);
 
     const closeResult = isInterview
-      ? await this.interviewSessions.closeSession(userId, session, wasActive)
+      ? await this.interviewCloser.end(userId, session, wasActive)
       : await this.closer.close({
           userId,
           sessionId: session.id,
@@ -67,7 +66,8 @@ export class EndSessionService {
 
     // Sesión válida recién cerrada: aviso al resto del grupo ("X practicó
     // hoy, ¿te animás?"). Sin esperar: el push nunca demora ni tumba el cierre.
-    if (wasActive && closeResult.xp_earned > 0) {
+    // Nunca por una entrevista: es privada (no se cuenta al grupo).
+    if (wasActive && !isInterview && closeResult.xp_earned > 0) {
       void this.push.notifyChallenge(userId, session.topic);
     }
 

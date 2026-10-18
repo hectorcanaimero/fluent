@@ -1,8 +1,8 @@
 import type { Interview, Profile, Session } from '../db/schema.js';
-import type { InterviewSessionService } from '../interviews/interview-session.service.js';
 import type { InterviewPlan } from '../interviews/interviews.types.js';
 import { LlmUnavailableError, type LlmService } from '../llm/llm.service.js';
 import type { LlmMessage } from '../llm/types.js';
+import type { InterviewCloserService } from './interview-closer.service.js';
 import type {
   InterviewSessionRepository,
   InterviewTurnRow,
@@ -92,6 +92,7 @@ function transcript(
 ): InterviewTurnRow[] {
   return [
     {
+      idx: 0,
       role: 'tutor',
       text: 'Q1?',
       created_at: isoAgo(400),
@@ -99,6 +100,7 @@ function transcript(
       is_follow_up: false,
     },
     {
+      idx: 1,
       role: 'user',
       text: 'A1',
       created_at: isoAgo(300),
@@ -106,6 +108,7 @@ function transcript(
       is_follow_up: false,
     },
     {
+      idx: 2,
       role: 'tutor',
       text: 'Q2?',
       created_at: isoAgo(200),
@@ -113,6 +116,7 @@ function transcript(
       is_follow_up: false,
     },
     {
+      idx: 3,
       role: 'user',
       text: 'A2',
       created_at: isoAgo(100),
@@ -120,6 +124,7 @@ function transcript(
       is_follow_up: false,
     },
     {
+      idx: 4,
       role: 'tutor',
       text: 'Q3?',
       created_at: isoAgo(lastAgoSec),
@@ -153,8 +158,6 @@ function build(
 ) {
   const calls = {
     recordTurn: [] as RecordTurnArgs[],
-    tag: [] as Array<{ idx: number; questionIdx: number; isFollowUp: boolean }>,
-    activeSec: [] as number[],
     answered: [] as number[],
     closed: [] as Session[],
     messages: [] as LlmMessage[][],
@@ -163,17 +166,6 @@ function build(
     findInterview: async () => options.interview ?? interview(),
     listTranscript: async () => options.transcript ?? transcript(),
     insertTurn: async () => undefined,
-    tagTurn: async (
-      _s: string,
-      idx: number,
-      questionIdx: number,
-      isFollowUp: boolean,
-    ) => {
-      calls.tag.push({ idx, questionIdx, isFollowUp });
-    },
-    updateActiveSec: async (_u: string, _s: string, sec: number) => {
-      calls.activeSec.push(sec);
-    },
     updateAnsweredCount: async (_u: string, _i: string, n: number) => {
       calls.answered.push(n);
     },
@@ -211,11 +203,11 @@ function build(
         key
       ],
   };
-  const interviewSessions = {
-    closeSession: async (_u: string, closed: Session) => {
+  const closer = {
+    end: async (_u: string, closed: Session) => {
       calls.closed.push(closed);
     },
-  } as unknown as InterviewSessionService;
+  } as unknown as InterviewCloserService;
 
   const service = new InterviewTurnsService(
     repo,
@@ -223,7 +215,7 @@ function build(
     sessions,
     llm,
     config as never,
-    interviewSessions,
+    closer,
   );
   const run = (
     onToken?: (delta: string) => void,
@@ -238,7 +230,7 @@ function build(
       onToken,
       onReset,
     });
-  return { run, calls };
+  return { run, calls, service };
 }
 
 describe('InterviewTurnsService', () => {
@@ -247,9 +239,14 @@ describe('InterviewTurnsService', () => {
 
     const result = await run();
 
-    expect(calls.activeSec).toEqual([130]);
     expect(calls.answered).toEqual([3]);
-    expect(calls.tag).toEqual([{ idx: 6, questionIdx: 4, isFollowUp: false }]);
+    // Turno, pregunta y tiempo activo en la misma `record_turn` (atómico).
+    expect(calls.recordTurn).toEqual([
+      expect.objectContaining({
+        tutorIdx: 6,
+        interview: { questionIdx: 4, isFollowUp: false, activeSecDelta: 30 },
+      }),
+    ]);
     expect(result.interview).toEqual({
       questionIdx: 4,
       totalQuestions: 8,
@@ -264,7 +261,7 @@ describe('InterviewTurnsService', () => {
 
     await run();
 
-    expect(calls.activeSec).toEqual([220]);
+    expect(calls.recordTurn[0]!.interview?.activeSecDelta).toBe(120);
   });
 
   it('a 600 s de tiempo activo cierra la sesión aunque el modelo no diga done', async () => {
@@ -280,6 +277,10 @@ describe('InterviewTurnsService', () => {
     expect(result.reply).toBe(INTERVIEW_CLOSING_REPLY);
     expect(calls.closed).toHaveLength(1);
     expect(calls.closed[0]).toMatchObject({ active_sec: 600, turns_count: 3 });
+    // El cierre no se etiqueta con una pregunta que no se hizo (Q4).
+    expect(calls.recordTurn[0]!.interview?.questionIdx).toBeNull();
+    expect(result.interview?.questionIdx).toBe(3);
+    expect(calls.answered).toEqual([3]);
   });
 
   it('con done del modelo cierra la sesión', async () => {
@@ -351,7 +352,10 @@ describe('InterviewTurnsService', () => {
 
     expect(result.reply).toBe('Can you give an example?');
     expect(result.interview?.questionIdx).toBe(3);
-    expect(calls.tag).toEqual([{ idx: 6, questionIdx: 3, isFollowUp: true }]);
+    expect(calls.recordTurn[0]!.interview).toMatchObject({
+      questionIdx: 3,
+      isFollowUp: true,
+    });
   });
 
   it('una segunda repregunta a la misma pregunta se evita: pasa a la siguiente del plan', async () => {
@@ -371,7 +375,10 @@ describe('InterviewTurnsService', () => {
 
     expect(result.reply).toBe('Thank you. Question 4?');
     expect(result.interview?.questionIdx).toBe(4);
-    expect(calls.tag).toEqual([{ idx: 6, questionIdx: 4, isFollowUp: false }]);
+    expect(calls.recordTurn[0]!.interview).toMatchObject({
+      questionIdx: 4,
+      isFollowUp: false,
+    });
     expect(resets).toBe(1);
     expect(tokens.at(-1)).toBe('Thank you. Question 4?');
     expect(calls.messages[0]![0]!.content).toContain(
@@ -387,5 +394,25 @@ describe('InterviewTurnsService', () => {
     expect(result.degraded).toBe(true);
     expect(result.interview).toMatchObject({ questionIdx: 3, done: false });
     expect(calls.closed).toEqual([]);
+  });
+});
+
+describe('InterviewTurnsService.opening', () => {
+  it('usa la misma llamada al modelo que los turnos (purpose interview)', async () => {
+    const { service, calls } = build({ output: { reply: "Hi, I'm Sam. Question 1?" } });
+
+    const opening = await service.opening(USER_ID, SESSION_ID, PROFILE, PLAN);
+
+    expect(opening).toEqual({ text: "Hi, I'm Sam. Question 1?", model: 'fluent-free' });
+    expect(calls.messages).toHaveLength(1);
+  });
+
+  it('sin modelo: presentación fija con la Q1 del plan', async () => {
+    const { service } = build({ unavailable: true });
+
+    const opening = await service.opening(USER_ID, SESSION_ID, PROFILE, PLAN);
+
+    expect(opening.model).toBeNull();
+    expect(opening.text).toContain('Question 1?');
   });
 });

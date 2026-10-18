@@ -59,6 +59,8 @@ export interface InterviewDetailDto extends InterviewDto {
   readonly estimatedMin: number | null;
   readonly competencies: readonly InterviewCompetencyDto[];
   readonly errorCode: string | null;
+  /** `too_short` que se puede retomar con `POST /interviews/:id/session` (D5). */
+  readonly resumable: boolean;
 }
 
 export interface InterviewListItemDto extends InterviewDto {
@@ -351,6 +353,7 @@ function toDetailDto(row: Interview, estimatedMin: number): InterviewDetailDto {
     estimatedMin: row.plan !== null ? estimatedMin : null,
     competencies,
     errorCode: row.error_code,
+    resumable: row.resumable,
   };
 }
 

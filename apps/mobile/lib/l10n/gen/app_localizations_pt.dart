@@ -1413,7 +1413,7 @@ class AppLocalizationsPt extends AppLocalizations {
       'Não foi possível iniciar a entrevista.';
 
   @override
-  String get interviewFeedbackPlaceholderTitle => 'Parecer';
+  String get interviewFeedbackTitle => 'Parecer';
 
   @override
   String get interviewInProgressTitle => 'Você tem uma entrevista em andamento';
@@ -1572,4 +1572,15 @@ class AppLocalizationsPt extends AppLocalizations {
   @override
   String get interviewFeedbackNotifyLaterCta =>
       'Me avise quando estiver pronto';
+
+  @override
+  String get interviewFeedbackNotifyLaterSnack =>
+      'Avisamos você quando estiver pronto';
+
+  @override
+  String get interviewFeedbackNotFinishedTitle =>
+      'Sua entrevista ainda não terminou';
+
+  @override
+  String get interviewFeedbackNotFinishedCta => 'Ver minha entrevista';
 }

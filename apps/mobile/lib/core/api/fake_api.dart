@@ -1069,18 +1069,17 @@ class FakeApi implements FluentApi {
     );
   }
 
-  /// `feedback_pending` responde "todavía no" una vez y pasa a
-  /// `feedback_ready`, como el repolleo de la pantalla del parecer.
+  /// `feedback_pending` responde "todavía no" (`202`) una vez y pasa a
+  /// `feedback_ready`; antes de terminar la entrevista, `404 NOT_READY`.
   @override
   Future<InterviewFeedback> getInterviewFeedback(String id) async {
     await _delay();
     final current = _requireInterview(id);
     switch (current.status) {
       case 'too_short':
-        _fail(
-          ApiErrorCode.interviewTooShort,
-          'not enough answers for feedback',
-          statusCode: 409,
+        throw InterviewTooShort(
+          resumable: current.resumable,
+          answeredCount: _interviewAnsweredCount[id] ?? 0,
         );
       case 'feedback_pending':
         _interviews[id] = current.copyWith(status: 'feedback_ready');
@@ -1090,7 +1089,7 @@ class FakeApi implements FluentApi {
       case 'feedback_ready':
         break;
       default:
-        _fail(ApiErrorCode.notReady, 'interview not finished', statusCode: 409);
+        _fail(ApiErrorCode.notReady, 'interview not finished', statusCode: 404);
     }
     final feedback = const InterviewFeedback(
       summary:

@@ -79,6 +79,10 @@ final interviewsProvider = FutureProvider.autoDispose<List<InterviewSummary>>((
 final interviewProvider = StreamProvider.autoDispose
     .family<InterviewDetail, String>((ref, id) async* {
       final repo = ref.watch(interviewsRepositoryProvider);
+      // Un `async*` cancelado sigue hasta el próximo `yield`: sin esto, al
+      // salir de la pantalla se hacía un GET más tras la espera.
+      var disposed = false;
+      ref.onDispose(() => disposed = true);
       var hasValue = false;
       var failures = 0;
       while (true) {
@@ -93,6 +97,7 @@ final interviewProvider = StreamProvider.autoDispose
           if (!hasValue || failures >= interviewPollMaxFailures) rethrow;
         }
         await Future.delayed(_pollDelay(failures));
+        if (disposed) return;
       }
     });
 

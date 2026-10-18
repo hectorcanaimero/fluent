@@ -358,15 +358,20 @@ void main() {
         'error': 'TOO_SHORT',
         'message': 'No hay suficientes respuestas para el parecer.',
         'statusCode': 409,
+        'answeredCount': 2,
+        'resumable': true,
       }),
     );
 
+    // `resumable`/`answeredCount` salen del extra del 409, sin otra llamada.
     await expectLater(
       () => api.getInterviewFeedback('interview-1'),
       throwsA(
-        isA<ApiException>()
+        isA<InterviewTooShort>()
             .having((e) => e.code, 'code', ApiErrorCode.interviewTooShort)
-            .having((e) => e.statusCode, 'statusCode', 409),
+            .having((e) => e.statusCode, 'statusCode', 409)
+            .having((e) => e.resumable, 'resumable', isTrue)
+            .having((e) => e.answeredCount, 'answeredCount', 2),
       ),
     );
   });

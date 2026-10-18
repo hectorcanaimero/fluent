@@ -465,7 +465,7 @@
   "interviewSessionNotResumableBody": "Foi encerrada por tempo ou inatividade.",
   "interviewSessionNotResumableBackCta": "Voltar ao histórico",
   "interviewSessionStartErrorGeneric": "Não foi possível iniciar a entrevista.",
-  "interviewFeedbackPlaceholderTitle": "Parecer",
+  "interviewFeedbackTitle": "Parecer",
   "interviewInProgressTitle": "Você tem uma entrevista em andamento",
   "interviewContinueCta": "Continuar",
   "interviewFinishedTitle": "Sua entrevista terminou",
@@ -527,5 +527,8 @@
   "interviewFeedbackRestartCta": "Começar de novo",
   "interviewFeedbackFailedTitle": "Não conseguimos montar seu parecer",
   "interviewFeedbackFailedBody": "Você pode tentar de novo agora ou te avisamos quando estiver pronto.",
-  "interviewFeedbackNotifyLaterCta": "Me avise quando estiver pronto"
+  "interviewFeedbackNotifyLaterCta": "Me avise quando estiver pronto",
+  "interviewFeedbackNotifyLaterSnack": "Avisamos você quando estiver pronto",
+  "interviewFeedbackNotFinishedTitle": "Sua entrevista ainda não terminou",
+  "interviewFeedbackNotFinishedCta": "Ver minha entrevista"
 }

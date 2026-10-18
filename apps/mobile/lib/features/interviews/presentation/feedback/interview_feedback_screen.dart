@@ -11,65 +11,30 @@ import '../../../../core/widgets/button_spinner.dart';
 import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/interviews_repository.dart';
 
-/// Lo que junta la pantalla para no repetir llamadas en cada rebuild: el
-/// parecer (`GET /interviews/:id/feedback`), el nombre de las competencias
-/// (solo vive en `GET /interviews/:id`, el parecer solo trae `competencyId`)
-/// y el nombre de quien lo recibe, para el encabezado "Así te vi, {name}".
-class _FeedbackViewData {
-  const _FeedbackViewData({
-    required this.feedback,
-    required this.competencyNames,
-    required this.learnerName,
-  });
-
-  final InterviewFeedback feedback;
-  final Map<String, String> competencyNames;
-  final String learnerName;
-}
-
-/// `409 TOO_SHORT` (IE-06d): se guarda el `resumable` de
-/// `GET /interviews/:id` para decidir qué botones mostrar.
-class _TooShortFeedback implements Exception {
-  const _TooShortFeedback(this.resumable);
-
-  final bool resumable;
-}
-
-/// `GET /interviews/:id/feedback` (IE-06a a IE-06e): repite cada 3 s
-/// mientras responde `202` (`NOT_READY`, parecer en `feedback_pending`);
-/// `TOO_SHORT` se traduce a [_TooShortFeedback] con el `resumable` de la
-/// ficha; cualquier otro código u error de red queda como la excepción
-/// original (IE-06e).
-final _feedbackViewProvider = FutureProvider.autoDispose
-    .family<_FeedbackViewData, String>((ref, id) async {
-      final repo = ref.watch(interviewsRepositoryProvider);
-      final api = ref.watch(fluentApiProvider);
-      InterviewFeedback feedback;
-      while (true) {
-        try {
-          feedback = await repo.feedback(id);
-          break;
-        } on ApiException catch (e) {
-          if (e.code == ApiErrorCode.notReady) {
-            await Future.delayed(const Duration(seconds: 3));
-            continue;
-          }
-          if (e.code == ApiErrorCode.interviewTooShort) {
-            final detail = await repo.detail(id);
-            throw _TooShortFeedback(detail.resumable);
-          }
-          rethrow;
-        }
+/// `GET /interviews/:id/feedback` una sola vez, cuando [interviewProvider]
+/// (que ya repolla `feedback_pending` con espera creciente y se corta solo
+/// con `autoDispose`) muestra que el parecer dejó de estar pendiente. Mientras
+/// sigue en `feedback_pending` no se pide nada y devuelve `null` (cargando);
+/// un `202` suelto también es `null`. Los errores se propagan tal cual:
+/// [InterviewTooShort] (IE-06d), `404 NOT_READY` (todavía no terminó),
+/// `LLM_UNAVAILABLE` (`feedback_failed`, IE-06e) o de red.
+final _feedbackProvider = FutureProvider.autoDispose
+    .family<InterviewFeedback?, String>((ref, id) async {
+      final detail = await ref.watch(interviewProvider(id).future);
+      if (detail.status == 'feedback_pending') return null;
+      try {
+        return await ref.watch(interviewsRepositoryProvider).feedback(id);
+      } on ApiException catch (e) {
+        // ponytail: un 202 con la ficha ya fuera de `feedback_pending` es una
+        // carrera; se queda cargando sin repollar (atrás + volver lo pide de
+        // nuevo). Invalidar `interviewProvider` acá si llega a pasar en serio.
+        if (e.statusCode == 202) return null;
+        rethrow;
       }
-      final results = await Future.wait([repo.detail(id), api.getMe()]);
-      final detail = results[0] as InterviewDetail;
-      final me = results[1] as MeResponse;
-      return _FeedbackViewData(
-        feedback: feedback,
-        competencyNames: {for (final c in detail.competencies) c.id: c.name},
-        learnerName: me.profile.displayName,
-      );
     });
+
+bool _isFeedbackFailed(Object? error) =>
+    error is ApiException && error.code == ApiErrorCode.llmUnavailable;
 
 /// `/interviews/:id/feedback`: IE-06a (resumen y competencias), IE-06b
 /// (inglés), IE-06c (carga), IE-06d (`too_short`) e IE-06e (`feedback_failed`
@@ -90,44 +55,142 @@ class _InterviewFeedbackScreenState
 
   String get interviewId => widget.interviewId;
 
-  /// IE-06e "Reintentar": re-encola el parecer (`POST /interviews/:id/retry`
-  /// también acepta `feedback_failed`, F12.3.T1) y vuelve a pedirlo.
-  Future<void> _retry() async {
-    if (_retrying) return;
+  /// IE-06e "Reintentar": solo re-encola (`POST /interviews/:id/retry`) si
+  /// el parecer falló (`feedback_failed` → `LLM_UNAVAILABLE`); ante un error
+  /// de red solo vuelve a pedir. Siempre invalida al terminar. `false` si el
+  /// re-encolado falló.
+  Future<bool> _retry() async {
+    if (_retrying) return false;
     final l10n = AppLocalizations.of(context);
+    final requeue = _isFeedbackFailed(
+      ref.read(_feedbackProvider(interviewId)).error,
+    );
     setState(() => _retrying = true);
     try {
-      await ref.read(interviewsRepositoryProvider).retry(interviewId);
-      ref.invalidate(_feedbackViewProvider(interviewId));
+      if (requeue) {
+        await ref.read(interviewsRepositoryProvider).retry(interviewId);
+      }
+      return true;
     } on ApiException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(apiErrorSnackBar(context, e.code));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(apiErrorSnackBar(context, e.code));
+      }
+      return false;
     } catch (_) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text(l10n.errorGeneric)));
+      }
+      return false;
     } finally {
-      if (mounted) setState(() => _retrying = false);
+      if (mounted) {
+        ref.invalidate(interviewProvider(interviewId));
+        ref.invalidate(_feedbackProvider(interviewId));
+        setState(() => _retrying = false);
+      }
     }
+  }
+
+  /// "Avísame cuando esté listo": con el parecer fallido lo re-encola (el
+  /// push de "listo" sale solo cuando el job termina, F12.3.T1) y avisa;
+  /// en cualquier otro caso solo sale de la pantalla.
+  Future<void> _notifyLater() async {
+    final l10n = AppLocalizations.of(context);
+    final messenger = ScaffoldMessenger.of(context);
+    if (_isFeedbackFailed(ref.read(_feedbackProvider(interviewId)).error)) {
+      if (!await _retry() || !mounted) return;
+      messenger.showSnackBar(
+        SnackBar(content: Text(l10n.interviewFeedbackNotifyLaterSnack)),
+      );
+    }
+    if (!mounted) return;
+    context.canPop() ? context.pop() : context.go('/interviews');
   }
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final asyncView = ref.watch(_feedbackViewProvider(interviewId));
+    final asyncFeedback = ref.watch(_feedbackProvider(interviewId));
     return Scaffold(
-      appBar: AppBar(title: Text(l10n.interviewFeedbackPlaceholderTitle)),
+      appBar: AppBar(title: Text(l10n.interviewFeedbackTitle)),
       body: SafeArea(
-        child: asyncView.when(
-          data: (data) => _FeedbackBody(data: data, interviewId: interviewId),
-          loading: () => const _LoadingView(),
-          error: (error, _) => error is _TooShortFeedback
-              ? _TooShortView(
-                  resumable: error.resumable,
+        child: asyncFeedback.when(
+          data: (feedback) => feedback == null
+              ? const _LoadingView()
+              : _FeedbackBody(
+                  feedback: feedback,
+                  // El parecer solo trae `competencyId`; el nombre vive en
+                  // la ficha que ya tiene `interviewProvider`.
+                  competencyNames: {
+                    for (final c
+                        in ref
+                                .watch(interviewProvider(interviewId))
+                                .valueOrNull
+                                ?.competencies ??
+                            const <InterviewCompetency>[])
+                      c.id: c.name,
+                  },
+                  learnerName:
+                      ref.watch(
+                        authControllerProvider.select(
+                          (s) => s.me?.profile.displayName,
+                        ),
+                      ) ??
+                      '',
                   interviewId: interviewId,
-                )
-              : _FailedView(retrying: _retrying, onRetry: _retry),
+                ),
+          loading: () => const _LoadingView(),
+          error: (error, _) => switch (error) {
+            InterviewTooShort(:final resumable) => _TooShortView(
+              resumable: resumable,
+              interviewId: interviewId,
+            ),
+            ApiException(code: ApiErrorCode.notReady) => _NotFinishedView(
+              interviewId: interviewId,
+            ),
+            _ => _FailedView(
+              retrying: _retrying,
+              onRetry: _retry,
+              onNotifyLater: _notifyLater,
+            ),
+          },
+        ),
+      ),
+    );
+  }
+}
+
+/// `404 NOT_READY`: la entrevista sigue en `preparing`/`ready`/`in_progress`
+/// y todavía no hay parecer que pedir; lleva a su ficha.
+class _NotFinishedView extends StatelessWidget {
+  const _NotFinishedView({required this.interviewId});
+
+  final String interviewId;
+
+  @override
+  Widget build(BuildContext context) {
+    final l10n = AppLocalizations.of(context);
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.xl),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.schedule, size: 48, color: AppColors.textMuted),
+            const SizedBox(height: AppSpacing.lg),
+            Text(
+              l10n.interviewFeedbackNotFinishedTitle,
+              style: Theme.of(context).textTheme.titleMedium,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xl),
+            ElevatedButton(
+              key: const Key('interview_feedback_open_interview_button'),
+              onPressed: () => context.go('/interviews/$interviewId'),
+              child: Text(l10n.interviewFeedbackNotFinishedCta),
+            ),
+          ],
         ),
       ),
     );
@@ -238,10 +301,15 @@ class _TooShortView extends StatelessWidget {
 
 /// IE-06e: `feedback_failed` o cualquier error de red al pedir el parecer.
 class _FailedView extends StatelessWidget {
-  const _FailedView({required this.retrying, required this.onRetry});
+  const _FailedView({
+    required this.retrying,
+    required this.onRetry,
+    required this.onNotifyLater,
+  });
 
   final bool retrying;
   final VoidCallback onRetry;
+  final VoidCallback onNotifyLater;
 
   @override
   Widget build(BuildContext context) {
@@ -274,11 +342,7 @@ class _FailedView extends StatelessWidget {
             const SizedBox(height: AppSpacing.md),
             OutlinedButton(
               key: const Key('interview_feedback_notify_later_button'),
-              // El push de "tu parecer está listo" ya se manda solo cuando
-              // el job termina (F12.3.T1): este botón solo saca a la
-              // persona de la pantalla de error, no dispara nada más.
-              onPressed: () =>
-                  context.canPop() ? context.pop() : context.go('/interviews'),
+              onPressed: retrying ? null : onNotifyLater,
               child: Text(l10n.interviewFeedbackNotifyLaterCta),
             ),
           ],
@@ -290,21 +354,27 @@ class _FailedView extends StatelessWidget {
 
 /// IE-06a + IE-06b + FR-14 + CTA: el cuerpo normal con el parecer ya listo.
 class _FeedbackBody extends StatelessWidget {
-  const _FeedbackBody({required this.data, required this.interviewId});
+  const _FeedbackBody({
+    required this.feedback,
+    required this.competencyNames,
+    required this.learnerName,
+    required this.interviewId,
+  });
 
-  final _FeedbackViewData data;
+  final InterviewFeedback feedback;
+  final Map<String, String> competencyNames;
+  final String learnerName;
   final String interviewId;
 
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
-    final feedback = data.feedback;
     final theme = Theme.of(context).textTheme;
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenPad),
       children: [
         Text(
-          l10n.interviewFeedbackSummaryTitle(data.learnerName),
+          l10n.interviewFeedbackSummaryTitle(learnerName),
           key: const Key('interview_feedback_summary_title'),
           style: theme.headlineSmall,
         ),
@@ -317,7 +387,7 @@ class _FeedbackBody extends StatelessWidget {
             child: _CompetencyCard(
               competency: competency,
               name:
-                  data.competencyNames[competency.competencyId] ??
+                  competencyNames[competency.competencyId] ??
                   competency.competencyId,
             ),
           ),

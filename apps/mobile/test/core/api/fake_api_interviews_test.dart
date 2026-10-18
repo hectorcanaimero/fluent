@@ -160,8 +160,13 @@ void main() {
     Matcher code(ApiErrorCode c) =>
         throwsA(isA<ApiException>().having((e) => e.code, 'code', c));
 
-    // Antes de terminar la entrevista: 409 notReady.
-    await expectLater(() => api.getInterviewFeedback(created.id), code(ApiErrorCode.notReady));
+    // Antes de terminar la entrevista: 404 notReady.
+    await expectLater(
+      () => api.getInterviewFeedback(created.id),
+      throwsA(isA<ApiException>()
+          .having((e) => e.code, 'code', ApiErrorCode.notReady)
+          .having((e) => e.statusCode, 'statusCode', 404)),
+    );
 
     await _readyInterview(api, created.id);
     await api.startInterviewSession(created.id);

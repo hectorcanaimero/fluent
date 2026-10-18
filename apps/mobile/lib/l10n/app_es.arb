@@ -651,7 +651,7 @@
   "interviewSessionNotResumableBody": "Se cerró por tiempo o por inactividad.",
   "interviewSessionNotResumableBackCta": "Volver al historial",
   "interviewSessionStartErrorGeneric": "No pudimos empezar la entrevista.",
-  "interviewFeedbackPlaceholderTitle": "Parecer",
+  "interviewFeedbackTitle": "Parecer",
   "interviewInProgressTitle": "Tienes una entrevista en curso",
   "interviewContinueCta": "Continuar",
   "interviewFinishedTitle": "Tu entrevista terminó",
@@ -713,5 +713,8 @@
   "interviewFeedbackRestartCta": "Empezar de nuevo",
   "interviewFeedbackFailedTitle": "No pudimos armar tu parecer",
   "interviewFeedbackFailedBody": "Puedes reintentar ahora o te avisamos cuando esté listo.",
-  "interviewFeedbackNotifyLaterCta": "Avísame cuando esté listo"
+  "interviewFeedbackNotifyLaterCta": "Avísame cuando esté listo",
+  "interviewFeedbackNotifyLaterSnack": "Te avisamos cuando esté listo",
+  "interviewFeedbackNotFinishedTitle": "Tu entrevista todavía no terminó",
+  "interviewFeedbackNotFinishedCta": "Ver mi entrevista"
 }

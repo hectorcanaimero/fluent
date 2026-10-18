@@ -2540,11 +2540,11 @@ abstract class AppLocalizations {
   /// **'No pudimos empezar la entrevista.'**
   String get interviewSessionStartErrorGeneric;
 
-  /// No description provided for @interviewFeedbackPlaceholderTitle.
+  /// No description provided for @interviewFeedbackTitle.
   ///
   /// In es, this message translates to:
   /// **'Parecer'**
-  String get interviewFeedbackPlaceholderTitle;
+  String get interviewFeedbackTitle;
 
   /// No description provided for @interviewInProgressTitle.
   ///
@@ -2833,6 +2833,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Avísame cuando esté listo'**
   String get interviewFeedbackNotifyLaterCta;
+
+  /// No description provided for @interviewFeedbackNotifyLaterSnack.
+  ///
+  /// In es, this message translates to:
+  /// **'Te avisamos cuando esté listo'**
+  String get interviewFeedbackNotifyLaterSnack;
+
+  /// No description provided for @interviewFeedbackNotFinishedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrevista todavía no terminó'**
+  String get interviewFeedbackNotFinishedTitle;
+
+  /// No description provided for @interviewFeedbackNotFinishedCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver mi entrevista'**
+  String get interviewFeedbackNotFinishedCta;
 }
 
 class _AppLocalizationsDelegate

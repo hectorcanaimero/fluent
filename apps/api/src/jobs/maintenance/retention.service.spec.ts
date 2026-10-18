@@ -65,6 +65,18 @@ class FakeMaintenanceRepository extends MaintenanceRepository {
     this.turns = this.turns.filter((t) => !oldSessionIds.has(t.session_id));
     return toDelete.length;
   }
+
+  async listActiveStudyCycleUserIds(): Promise<never[]> {
+    throw new Error('no usado en este test');
+  }
+
+  async listActiveStudyCycles(): Promise<never[]> {
+    throw new Error('no usado en este test');
+  }
+
+  async loadTimezones(): Promise<Map<string, string | null>> {
+    throw new Error('no usado en este test');
+  }
 }
 
 function daysAgoIso(days: number): string {

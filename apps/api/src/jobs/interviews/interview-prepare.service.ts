@@ -117,9 +117,14 @@ export class InterviewPrepareService {
 
     await this.repository.setPrepStep(interviewId, 'researching');
 
-    const [learnerLevel, previousQuestions] = await Promise.all([
+    // Re-entrevista (F13.1.T2, FR-19/FR-20): la rúbrica sale siempre de la
+    // padre, no de la carga del job, para que `/retry` también la conserve.
+    const [learnerLevel, previousQuestions, fixedRubric] = await Promise.all([
       this.repository.loadLearnerLevel(interview.user_id),
       this.repository.loadPreviousQuestions(interview, PREVIOUS_QUESTIONS_LIMIT),
+      interview.parent_interview_id
+        ? this.repository.loadParentRubric(interview.parent_interview_id)
+        : null,
     ]);
 
     const request: PrepareRequest = {
@@ -129,6 +134,7 @@ export class InterviewPrepareService {
       offerUrl: interview.offer_url,
       learnerLevel,
       previousQuestions,
+      ...(fixedRubric ? { fixedRubric } : {}),
     };
 
     const startedAt = Date.now();

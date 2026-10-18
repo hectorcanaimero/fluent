@@ -5,8 +5,9 @@ import { getMessaging } from 'firebase-admin/messaging';
 import type { Env } from '../config/env.js';
 import type { PushMessage } from './push.messages.js';
 
-/** Resultado de un envío: los tokens que FCM dio por muertos. */
+/** Resultado de un envío: cuántos entregó FCM y los tokens que dio por muertos. */
 export interface PushSendResult {
+  readonly successCount: number;
   readonly invalidTokens: readonly string[];
 }
 
@@ -32,7 +33,7 @@ export class PushSender {
   }
 
   async send(tokens: readonly string[], message: PushMessage): Promise<PushSendResult> {
-    if (this.app === null || tokens.length === 0) return { invalidTokens: [] };
+    if (this.app === null || tokens.length === 0) return { successCount: 0, invalidTokens: [] };
     const response = await getMessaging(this.app).sendEachForMulticast({
       tokens: [...tokens],
       notification: { title: message.title, body: message.body },
@@ -47,7 +48,7 @@ export class PushSender {
         ? [tokens[i]!]
         : [],
     );
-    return { invalidTokens };
+    return { successCount: response.successCount, invalidTokens };
   }
 
   private initApp(encoded: string): App | null {

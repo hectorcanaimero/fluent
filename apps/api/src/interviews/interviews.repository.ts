@@ -27,6 +27,8 @@ export interface CreateInterviewRow {
   readonly offerText: string | null;
   readonly offerUrl: string | null;
   readonly offerHash: string;
+  /** Re-entrevista (`POST /interviews/:id/reinterview`, F13.1.T2): id de la entrevista padre. */
+  readonly parentInterviewId?: string;
 }
 
 /** Columnas que necesita `GET /interviews` (sin oferta, plan ni feedback). */
@@ -73,6 +75,7 @@ export class InterviewsRepository {
         offer_text: row.offerText,
         offer_url: row.offerUrl,
         offer_hash: row.offerHash,
+        parent_interview_id: row.parentInterviewId ?? null,
         status: 'preparing',
         prep_step: 'reading',
       })
@@ -93,6 +96,24 @@ export class InterviewsRepository {
       .select('*')
       .eq('id', id)
       .eq('user_id', userId)
+      .maybeSingle();
+
+    return unwrapInsforge<Interview>(result);
+  }
+
+  /**
+   * Re-entrevista (F13.1.T2) todavía sin terminar de una padre: la más nueva
+   * en `preparing`/`ready`/`in_progress`/`feedback_pending`, o `null`.
+   */
+  async findActiveChild(userId: string, parentId: string): Promise<Interview | null> {
+    const result = await this.admin.database
+      .from(TABLES.interviews)
+      .select('*')
+      .eq('user_id', userId)
+      .eq('parent_interview_id', parentId)
+      .in('status', ['preparing', 'ready', 'in_progress', 'feedback_pending'])
+      .order('created_at', { ascending: false })
+      .limit(1)
       .maybeSingle();
 
     return unwrapInsforge<Interview>(result);

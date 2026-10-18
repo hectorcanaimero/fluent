@@ -18,6 +18,9 @@ function makeRepository(
     }),
     deleteLlmCallsOlderThan: vi.fn(async () => 0),
     deleteTurnsForSessionsStartedBefore: vi.fn(async () => 0),
+    listActiveStudyCycleUserIds: vi.fn(async () => []),
+    listActiveStudyCycles: vi.fn(async () => []),
+    loadTimezones: vi.fn(async () => new Map()),
   };
   return { repository, calls };
 }

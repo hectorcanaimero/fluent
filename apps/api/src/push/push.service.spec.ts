@@ -53,7 +53,7 @@ function setup(opts: {
     enabled: opts.enabled ?? true,
     send: vi.fn(async (tokens: readonly string[], message: { title: string }) => {
       sent.push({ tokens, title: message.title });
-      return { invalidTokens: opts.invalidTokens ?? [] };
+      return { successCount: tokens.length, invalidTokens: opts.invalidTokens ?? [] };
     }),
   };
   const redis = {
@@ -166,7 +166,7 @@ describe('PushService', () => {
     await service.notifyInterviewReady('u1', 'i1', 'Engineer', 'Google');
     await service.notifyInterviewPrepFailed('u1', 'i1', 'Google');
     await service.notifyInterviewFeedbackReady('u1', 'i1', 'Google');
-    await service.notifyStudyReminder('u1', 'i1', 2, 5, 'Title');
+    await expect(service.notifyStudyReminder('u1', 'i1', 2, 5, 'Title')).resolves.toBe(false);
     expect(sent).toEqual([]);
     expect(repository.findSenderAndPeers).not.toHaveBeenCalled();
     expect(groupsRepository.listMembers).not.toHaveBeenCalled();
@@ -286,12 +286,17 @@ describe('PushService', () => {
         { userId: 'u2', locale: 'pt-BR' as const, tokens: ['tok-u2'] },
       ],
     });
-    await service.notifyStudyReminder('u1', 'i1', 2, 5, 'Vocabulario técnico');
-    await service.notifyStudyReminder('u2', 'i2', 2, 5, 'Vocabulário técnico');
+    await expect(service.notifyStudyReminder('u1', 'i1', 2, 5, 'Vocabulario técnico')).resolves.toBe(true);
+    await expect(service.notifyStudyReminder('u2', 'i2', 2, 5, 'Vocabulário técnico')).resolves.toBe(true);
     expect(sent).toEqual([
       { tokens: ['tok-u1'], title: 'Toca continuar' },
       { tokens: ['tok-u2'], title: 'Sessão de estudo' },
     ]);
+  });
+
+  it('el recordatorio de estudio sin tokens devuelve false', async () => {
+    const { service } = setup({ recipients: [] });
+    await expect(service.notifyStudyReminder('u1', 'i1', 2, 5, 'Title')).resolves.toBe(false);
   });
 
   it('un fallo al enviar notificaciones de entrevista nunca se propaga', async () => {
@@ -307,7 +312,7 @@ describe('PushService', () => {
     await expect(
       service.notifyInterviewFeedbackReady('u1', 'i1', 'Google'),
     ).resolves.toBeUndefined();
-    await expect(service.notifyStudyReminder('u1', 'i1', 2, 5, 'Title')).resolves.toBeUndefined();
+    await expect(service.notifyStudyReminder('u1', 'i1', 2, 5, 'Title')).resolves.toBe(false);
     expect(sender.send).toHaveBeenCalledTimes(4);
     warn.mockRestore();
   });

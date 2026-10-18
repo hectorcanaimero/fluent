@@ -1,9 +1,11 @@
 import 'reflect-metadata';
 
+import type { Response } from 'express';
+
 import { ApiException } from '../common/api-error.js';
 import type { CreateInterviewDto } from './dto/create-interview.dto.js';
 import { InterviewsController } from './interviews.controller.js';
-import type { InterviewDto } from './interviews.service.js';
+import type { InterviewDto, InterviewFeedbackResult } from './interviews.service.js';
 import type { InterviewsService } from './interviews.service.js';
 
 /**
@@ -52,9 +54,22 @@ function buildController() {
       calls.push({ method: 'retry', args: [userId, id] });
       return INTERVIEW;
     },
+    feedback: async (userId: string, id: string): Promise<InterviewFeedbackResult> => {
+      calls.push({ method: 'feedback', args: [userId, id] });
+      return { statusCode: 202, body: { status: 'feedback_pending' } };
+    },
   } as unknown as InterviewsService;
 
   return { controller: new InterviewsController(service, {} as never), calls };
+}
+
+function fakeResponse(): Response & { statusCode: number | null } {
+  const res = { statusCode: null as number | null } as Response & { statusCode: number | null };
+  (res as unknown as { status: (code: number) => Response }).status = (code: number) => {
+    res.statusCode = code;
+    return res;
+  };
+  return res;
 }
 
 describe('InterviewsController', () => {
@@ -92,5 +107,16 @@ describe('InterviewsController', () => {
     const result = await controller.retry(USER_ID, INTERVIEW_ID);
     expect(calls).toEqual([{ method: 'retry', args: [USER_ID, INTERVIEW_ID] }]);
     expect(result).toBe(INTERVIEW);
+  });
+
+  it('GET interviews/:id/feedback fija el statusCode que decide el service (202 feedback_pending)', async () => {
+    const { controller, calls } = buildController();
+    const res = fakeResponse();
+
+    const body = await controller.feedback(USER_ID, INTERVIEW_ID, res);
+
+    expect(calls).toEqual([{ method: 'feedback', args: [USER_ID, INTERVIEW_ID] }]);
+    expect(res.statusCode).toBe(202);
+    expect(body).toEqual({ status: 'feedback_pending' });
   });
 });

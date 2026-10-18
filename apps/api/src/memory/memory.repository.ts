@@ -1,13 +1,36 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
-import { TABLES, type CoachingBrief, type Fact, type FactStatus } from '../db/schema.js';
+import {
+  TABLES,
+  type CoachingBrief,
+  type Fact,
+  type FactStatus,
+  type RecurringError,
+} from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 
 /** Columnas que `PATCH /memory/facts/:id` puede tocar (SPEC-02 §4.4). */
 export interface FactPatch {
   status?: Extract<FactStatus, 'confirmed' | 'dismissed'>;
   text?: string;
+}
+
+/** `facts.text` (SPEC-01 §2.9) y D6: «hecho pending ... ≤160 caracteres». */
+export const FACT_TEXT_MAX_LENGTH = 160;
+
+/** `coaching_briefs.recurring_errors` (SPEC-01 §2.10, D6: «máx. 5, sin duplicar»). */
+export const MAX_RECURRING_ERRORS = 5;
+
+/**
+ * Mismo criterio que la función SQL `normalize_fact_text` (migración
+ * `20260908191227_memoria-hechos-y-brief.sql`): minúsculas y no-alfanuméricos
+ * colapsados a un espacio, para que dos hechos con distinta puntuación o
+ * mayúsculas deduplican igual. `\p{L}\p{N}` equivale a `[:alnum:]` de
+ * Postgres: conserva acentos y `ñ`.
+ */
+export function normalizeFactText(text: string): string {
+  return text.normalize('NFC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 }
 
 /**
@@ -130,6 +153,71 @@ export class MemoryRepository {
     await this.deleteWhereUserId(TABLES.facts, userId);
     await this.deleteWhereUserId(TABLES.coachingBriefHistory, userId);
     await this.deleteWhereUserId(TABLES.coachingBriefs, userId);
+  }
+
+  /**
+   * D6: hecho `pending` de preparación de entrevista (job `interview-feedback`,
+   * F12.3.T1). «No duplicar si ya existe para la misma oferta» se resuelve
+   * comparando el texto normalizado contra **todos** los hechos del usuario,
+   * también los `dismissed` (igual que `apply_brief`): uno descartado no se
+   * recrea. El texto ya codifica rol y empresa, así que dos entrevistas de la
+   * misma oferta producen el mismo texto normalizado.
+   */
+  async addPendingFactIfNew(
+    userId: string,
+    text: string,
+    happensOn: string | null,
+  ): Promise<void> {
+    const clamped = text.slice(0, FACT_TEXT_MAX_LENGTH);
+    const norm = normalizeFactText(clamped);
+    const existingResult = await this.admin.database
+      .from(TABLES.facts)
+      .select('text')
+      .eq('user_id', userId);
+    const existing = unwrapInsforge<Array<Pick<Fact, 'text'>>>(existingResult) ?? [];
+    if (existing.some((fact) => normalizeFactText(fact.text) === norm)) {
+      return;
+    }
+
+    const result = await this.admin.database.from(TABLES.facts).insert({
+      user_id: userId,
+      text: clamped,
+      happens_on: happensOn,
+      status: 'pending',
+    });
+    unwrapInsforge(result);
+  }
+
+  /**
+   * D6: suma los errores de inglés del parecer a `recurring_errors` del
+   * brief (máx. 5, sin duplicar por `category` + `example`, más recientes
+   * primero). No crea un
+   * brief nuevo si el usuario todavía no tiene uno: `coaching_briefs.text`
+   * es obligatorio (≥1 char) y esta escritura no tiene un texto de brief
+   * real que ofrecer.
+   *
+   * ponytail: sin brief previo se pierde este aporte puntual; subir de nivel
+   * (crear la fila con un texto por defecto) si en la práctica los pareceres
+   * llegan antes que la primera sesión de coaching.
+   */
+  async addRecurringErrors(userId: string, errors: readonly RecurringError[]): Promise<void> {
+    if (errors.length === 0) return;
+
+    const brief = await this.getBrief(userId);
+    if (brief === null) return;
+
+    // Más recientes primero: los nuevos desplazan a los más viejos.
+    const merged = [...errors, ...brief.recurring_errors].filter(
+      (error, idx, all) =>
+        all.findIndex((e) => e.category === error.category && e.example === error.example) === idx,
+    );
+    const capped = merged.slice(0, MAX_RECURRING_ERRORS);
+
+    const result = await this.admin.database
+      .from(TABLES.coachingBriefs)
+      .update({ recurring_errors: capped })
+      .eq('user_id', userId);
+    unwrapInsforge(result);
   }
 
   private async updateBriefText(userId: string, text: string): Promise<CoachingBrief | null> {

@@ -1,5 +1,6 @@
 import type { Interview, Profile, Session } from '../db/schema.js';
 import type { InterviewStatus } from '../interviews/interviews.types.js';
+import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import { InterviewCloserService } from './interview-closer.service.js';
 import type { InterviewSessionRepository } from './interview-session.repository.js';
 import type {
@@ -24,7 +25,16 @@ function sessionRow(overrides: Partial<Session> = {}): Session {
   } as Session;
 }
 
-function build(options: { status?: InterviewStatus; answered?: number } = {}) {
+function build(
+  options: {
+    status?: InterviewStatus;
+    answered?: number;
+    enqueueFails?: boolean;
+    markFails?: boolean;
+  } = {},
+) {
+  const enqueued: string[] = [];
+  const failedEnqueue: string[] = [];
   let status: InterviewStatus = options.status ?? 'in_progress';
   let resumable = true;
   const closed: SessionCloseParams[] = [];
@@ -46,7 +56,18 @@ function build(options: { status?: InterviewStatus; answered?: number } = {}) {
       status = next;
       resumable = nextResumable;
     },
+    markFeedbackEnqueueFailed: async (id: string) => {
+      if (options.markFails) throw new Error('InsForge caído');
+      failedEnqueue.push(id);
+      status = 'feedback_failed';
+    },
   } as unknown as InterviewSessionRepository;
+  const jobs = {
+    enqueueInterviewFeedback: async (id: string) => {
+      if (options.enqueueFails) throw new Error('redis caído');
+      enqueued.push(id);
+    },
+  } as unknown as JobDispatcher;
   const closer = {
     close: async (params: SessionCloseParams) => {
       closed.push(params);
@@ -69,10 +90,13 @@ function build(options: { status?: InterviewStatus; answered?: number } = {}) {
     closer,
     sessions,
     config as never,
+    jobs,
   );
   return {
     service,
     closed,
+    enqueued,
+    failedEnqueue,
     state: () => ({ status, resumable }),
   };
 }
@@ -134,5 +158,41 @@ describe('InterviewCloserService.closeSession (tope, 8 respuestas, sweeper)', ()
     expect(closed).toHaveLength(1);
     expect(state()).toEqual({ status: 'too_short', resumable: false });
     expect(hook).not.toHaveBeenCalled();
+  });
+
+  it('≥ 4 respuestas (tope o sweeper) → feedback_pending y encola interview-feedback (F12.3.T1)', async () => {
+    const { service, enqueued, state } = build({ answered: 5 });
+
+    await service.closeSession(USER_ID, sessionRow(), true);
+
+    expect(state().status).toBe('feedback_pending');
+    expect(enqueued).toEqual([INTERVIEW_ID]);
+  });
+
+  it('too_short → no encola el parecer', async () => {
+    const { service, enqueued } = build({ answered: 2 });
+
+    await service.closeSession(USER_ID, sessionRow(), true);
+
+    expect(enqueued).toEqual([]);
+  });
+
+  it('si el encolado falla → feedback_failed (reintentable) sin tumbar el cierre', async () => {
+    const { service, closed, failedEnqueue, state } = build({ answered: 4, enqueueFails: true });
+
+    await expect(service.closeSession(USER_ID, sessionRow(), true)).resolves.toBeDefined();
+
+    expect(closed).toHaveLength(1);
+    expect(failedEnqueue).toEqual([INTERVIEW_ID]);
+    expect(state().status).toBe('feedback_failed');
+  });
+
+  it('si fallan el encolado y el marcado → el cierre sigue sin lanzar', async () => {
+    const { service, closed, state } = build({ answered: 4, enqueueFails: true, markFails: true });
+
+    await expect(service.closeSession(USER_ID, sessionRow(), true)).resolves.toBeDefined();
+
+    expect(closed).toHaveLength(1);
+    expect(state().status).toBe('feedback_pending');
   });
 });

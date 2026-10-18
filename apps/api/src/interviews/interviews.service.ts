@@ -14,7 +14,13 @@ import { SESSION_ID_RE } from '../sessions/session-ownership.js';
 import { secondsUntilUserMidnight, userDay } from '../sessions/user-day.js';
 import type { CreateInterviewDto } from './dto/create-interview.dto.js';
 import { InterviewsRepository, type InterviewListRow } from './interviews.repository.js';
-import type { InterviewStatus, InterviewType, PrepStep, SeniorityLevel } from './interviews.types.js';
+import type {
+  InterviewFeedback,
+  InterviewStatus,
+  InterviewType,
+  PrepStep,
+  SeniorityLevel,
+} from './interviews.types.js';
 
 /** Hosts de LinkedIn que `interview-agent` tampoco puede leer (D8). */
 const LINKEDIN_HOSTS = ['linkedin.com', 'lnkd.in'];
@@ -71,6 +77,20 @@ export interface InterviewListItemDto extends InterviewDto {
 
 export interface InterviewListResultDto {
   readonly items: readonly InterviewListItemDto[];
+}
+
+/** `GET /interviews/:id/feedback` (I1 `InterviewFeedback` sin `usage`: detalle interno del agente, FR-7 por analogía). */
+export type InterviewFeedbackDto = Omit<InterviewFeedback, 'usage'>;
+
+/** `202` mientras el parecer sigue `feedback_pending`. */
+export interface InterviewFeedbackPendingDto {
+  readonly status: 'feedback_pending';
+}
+
+/** Resultado de `InterviewsService.feedback`: el controller fija el `statusCode` en la respuesta. */
+export interface InterviewFeedbackResult {
+  readonly statusCode: 200 | 202;
+  readonly body: InterviewFeedbackDto | InterviewFeedbackPendingDto;
 }
 
 /**
@@ -181,29 +201,80 @@ export class InterviewsService {
     return toDetailDto(interview, this.estimatedMinutes());
   }
 
-  /** `POST /interviews/:id/retry`: solo desde `prep_failed`, sin consumir tope (NFR-6). */
+  /**
+   * `POST /interviews/:id/retry`: desde `prep_failed` reencola la
+   * preparación; desde `feedback_failed` (F12.3.T1) reencola el parecer. Sin
+   * consumir tope (NFR-6).
+   */
   async retry(userId: string, id: string, acceptLanguage?: string): Promise<InterviewDto> {
     if (!SESSION_ID_RE.test(id)) {
       throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
     }
 
-    // La transición atómica va primero; `findById` solo decide 404 vs 409.
-    const updated = await this.repository.markRetrying(userId, id);
-    if (updated === null) {
-      const exists = (await this.repository.findById(userId, id)) !== null;
-      throw this.error(
-        exists ? 'INTERVIEW_NOT_RETRYABLE' : 'NOT_FOUND',
-        await this.localeFor(userId, acceptLanguage),
-      );
+    // Las transiciones atómicas van primero; `findById` solo decide 404 vs 409.
+    const prepRetry = await this.repository.markRetrying(userId, id);
+    if (prepRetry !== null) {
+      try {
+        await this.jobs.enqueueInterviewPrepare(prepRetry.id, { retry: true });
+      } catch (error) {
+        await this.markEnqueueFailed(userId, prepRetry.id);
+        throw error;
+      }
+      return toInterviewDto(prepRetry);
     }
 
-    try {
-      await this.jobs.enqueueInterviewPrepare(updated.id, { retry: true });
-    } catch (error) {
-      await this.markEnqueueFailed(userId, updated.id);
-      throw error;
+    const feedbackRetry = await this.repository.markFeedbackRetrying(userId, id);
+    if (feedbackRetry !== null) {
+      try {
+        await this.jobs.enqueueInterviewFeedback(feedbackRetry.id, { retry: true });
+      } catch (error) {
+        await this.markEnqueueFeedbackFailed(userId, feedbackRetry.id);
+        throw error;
+      }
+      return toInterviewDto(feedbackRetry);
     }
-    return toInterviewDto(updated);
+
+    const exists = (await this.repository.findById(userId, id)) !== null;
+    throw this.error(
+      exists ? 'INTERVIEW_NOT_RETRYABLE' : 'NOT_FOUND',
+      await this.localeFor(userId, acceptLanguage),
+    );
+  }
+
+  /**
+   * `GET /interviews/:id/feedback` (F12.3.T1): el parecer en sus tres
+   * estados — `200` listo, `202` todavía `feedback_pending`, `409 TOO_SHORT`
+   * con `answeredCount` y `resumable` si la entrevista quedó corta. `feedback_failed` usa
+   * el mismo código que un agente caído (`LLM_UNAVAILABLE`): no hay parecer
+   * y la app ofrece reintentar, igual que cuando el agente no responde.
+   */
+  async feedback(userId: string, id: string, acceptLanguage?: string): Promise<InterviewFeedbackResult> {
+    const interview = SESSION_ID_RE.test(id) ? await this.repository.findById(userId, id) : null;
+    if (interview === null) {
+      throw this.error('NOT_FOUND', await this.localeFor(userId, acceptLanguage));
+    }
+
+    switch (interview.status) {
+      case 'feedback_ready':
+        if (interview.feedback !== null) {
+          return { statusCode: 200, body: toFeedbackDto(interview.feedback) };
+        }
+        // No debería ocurrir (el job solo marca `feedback_ready` junto con
+        // `feedback`), pero sin dato no hay nada que devolver como listo.
+        throw this.error('NOT_READY', await this.localeFor(userId, acceptLanguage));
+      case 'feedback_pending':
+        return { statusCode: 202, body: { status: 'feedback_pending' } };
+      case 'too_short':
+        throw this.error('TOO_SHORT', await this.localeFor(userId, acceptLanguage), {
+          extra: { answeredCount: interview.answered_count, resumable: interview.resumable },
+        });
+      case 'feedback_failed':
+        throw this.error('LLM_UNAVAILABLE', await this.localeFor(userId, acceptLanguage));
+      default:
+        // `preparing`/`prep_failed`/`ready`/`in_progress`: la entrevista
+        // todavía no terminó, así que tampoco hay parecer que consultar.
+        throw this.error('NOT_READY', await this.localeFor(userId, acceptLanguage));
+    }
   }
 
   /** `ApiException` con el mensaje del catálogo i18n (es/pt-BR). */
@@ -224,6 +295,17 @@ export class InterviewsService {
     } catch (error) {
       this.logger.warn(
         `No se pudo marcar prep_failed la entrevista ${id}: ${(error as Error).message}`,
+      );
+    }
+  }
+
+  /** Igual que `markEnqueueFailed`, pero para el reintento del parecer. */
+  private async markEnqueueFeedbackFailed(userId: string, id: string): Promise<void> {
+    try {
+      await this.repository.markFeedbackFailed(userId, id, 'enqueue_failed');
+    } catch (error) {
+      this.logger.warn(
+        `No se pudo marcar feedback_failed la entrevista ${id}: ${(error as Error).message}`,
       );
     }
   }
@@ -375,6 +457,12 @@ const HISTORY_STATUS: Readonly<Record<InterviewStatus, string>> = Object.freeze(
   feedback_ready: 'feedback_ready',
   feedback_failed: 'feedback_failed',
 });
+
+/** `usage` es telemetría interna del agente (modelo, tokens): no sale de la API. */
+function toFeedbackDto(feedback: InterviewFeedback): InterviewFeedbackDto {
+  const { usage: _usage, ...rest } = feedback;
+  return rest;
+}
 
 function toListItemDto(row: InterviewListRow): InterviewListItemDto {
   return {

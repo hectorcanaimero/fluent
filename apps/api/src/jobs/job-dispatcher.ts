@@ -13,6 +13,7 @@ import type { Queue } from 'bullmq';
 
 import {
   JOB_COACHING_BRIEF,
+  JOB_INTERVIEW_FEEDBACK,
   JOB_INTERVIEW_PREPARE,
   QUEUE_BRIEF,
   QUEUE_INTERVIEWS,
@@ -25,6 +26,11 @@ export interface CoachingBriefJobData {
 
 /** Carga de un job `interview-prepare` (F10.3, arch 003 §Components C3). */
 export interface InterviewPrepareJobData {
+  readonly interviewId: string;
+}
+
+/** Carga de un job `interview-feedback` (F12.1.T2 hook, F12.3.T1). */
+export interface InterviewFeedbackJobData {
   readonly interviewId: string;
 }
 
@@ -43,6 +49,15 @@ export interface JobDispatcher {
    * usa un `jobId` por intento para que BullMQ no lo descarte.
    */
   enqueueInterviewPrepare(interviewId: string, options?: { retry?: boolean }): Promise<void>;
+
+  /**
+   * Encola el parecer de una entrevista cerrada (`onInterviewSessionClosed`,
+   * F12.1.T2/F12.3.T1) o su reintento (`POST /interviews/:id/retry` desde
+   * `feedback_failed`). Mismo criterio de `jobId` que
+   * `enqueueInterviewPrepare`: un prefijo propio (`-feedback`) para que no
+   * choque con el id del job `interview-prepare` de la misma entrevista.
+   */
+  enqueueInterviewFeedback(interviewId: string, options?: { retry?: boolean }): Promise<void>;
 }
 
 /** Token de inyección. `QueuesModule` (global) lo provee. */
@@ -90,10 +105,29 @@ export class BullJobDispatcher implements JobDispatcher {
     );
     this.logger.debug(`interview-prepare encolado para la entrevista ${interviewId}`);
   }
+
+  async enqueueInterviewFeedback(
+    interviewId: string,
+    options: { retry?: boolean } = {},
+  ): Promise<void> {
+    // `-feedback`: la misma entrevista ya usó `interviewId` tal cual como
+    // `jobId` de su job `interview-prepare`; sin este sufijo, `add` lo
+    // encontraría «vivo» en Redis y lo ignoraría en silencio.
+    const jobId = options.retry
+      ? `${interviewId}-feedback-retry-${Date.now()}`
+      : `${interviewId}-feedback`;
+    await this.interviewsQueue.add(
+      JOB_INTERVIEW_FEEDBACK,
+      { interviewId } satisfies InterviewFeedbackJobData,
+      { jobId },
+    );
+    this.logger.debug(`interview-feedback encolado para la entrevista ${interviewId}`);
+  }
 }
 
 /** Token opcional para tests: implementación que no hace nada. */
 export const NOOP_JOB_DISPATCHER: JobDispatcher = {
   enqueueCoachingBrief: async () => {},
   enqueueInterviewPrepare: async () => {},
+  enqueueInterviewFeedback: async () => {},
 };

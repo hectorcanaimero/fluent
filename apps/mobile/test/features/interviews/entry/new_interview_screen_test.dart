@@ -349,6 +349,48 @@ void main() {
     },
   );
 
+  testWidgets('F14.2.T1: el texto inicial (compartido) pisa el borrador', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({
+      offerDraftKey(null): 'borrador viejo',
+    });
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          fluentApiProvider.overrideWith(
+            (ref) => FakeApi(artificialDelay: Duration.zero),
+          ),
+        ],
+        child: const MaterialApp(
+          localizationsDelegates: [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+          home: NewInterviewScreen(
+            initialOfferText: 'Senior Backend Engineer at Acme (compartido)',
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Senior Backend Engineer at Acme (compartido)'),
+      findsOneWidget,
+    );
+    expect(find.text('borrador viejo'), findsNothing);
+    // Reemplazó el borrador: si se recarga la pantalla sin texto inicial,
+    // lo compartido sigue ahí (no vuelve el borrador anterior).
+    expect(
+      await loadOfferDraft(null),
+      'Senior Backend Engineer at Acme (compartido)',
+    );
+  });
+
   testWidgets('FR-22: el borrador es por cuenta y se borra al cerrar sesión', (
     tester,
   ) async {

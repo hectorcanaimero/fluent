@@ -192,7 +192,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         routes: [
           GoRoute(
             path: 'new',
-            builder: (context, state) => const NewInterviewScreen(),
+            // F14.2.T1: `extra` trae el texto compartido desde otra app
+            // (Android "Compartir"), si fue eso lo que abrió esta ruta.
+            builder: (context, state) =>
+                NewInterviewScreen(initialOfferText: state.extra as String?),
           ),
           GoRoute(
             path: ':id',

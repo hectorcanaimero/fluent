@@ -32,6 +32,17 @@
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
             </intent-filter>
+            <!-- F14.2.T1: Open Fluent en el menú "Compartir" de Android para
+                 texto y enlaces (receive_sharing_intent). `launchMode`
+                 queda en "singleTop" (ya evita una segunda instancia acá,
+                 como con cualquier otro intent) porque "singleTask" rompía
+                 el retorno de la Custom Tab del login con Google, ver
+                 dd7bcdf. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND"/>
+                <category android:name="android.intent.category.DEFAULT"/>
+                <data android:mimeType="text/plain"/>
+            </intent-filter>
         </activity>
         <!-- Retorno del PKCE de OpenRouter (SPEC-06 §7): flutter_web_auth_2
              necesita esta actividad para capturar fluent://oauth/openrouter. -->

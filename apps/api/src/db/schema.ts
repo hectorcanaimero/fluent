@@ -31,11 +31,26 @@ export type Plan = 'free' | 'pro';
 /** Proveedor de LLM (SPEC-01 §2.4, §2.5) */
 export type Provider = '9router';
 
-/** Tipo de sesión (SPEC-01 §2.6). `'group'`: F6, fila por participante al cerrar la sala. */
-export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss' | 'group';
+/**
+ * Tipo de sesión (SPEC-01 §2.6). `'group'`: F6, fila por participante al
+ * cerrar la sala. `'interview'`/`'study'`: F10, turno de entrevista y sesión
+ * del ciclo de estudio (docs/arch/003-simulador-entrevistas.md §Data model).
+ */
+export type SessionKind =
+  | 'free_topic'
+  | 'roleplay'
+  | 'news'
+  | 'boss'
+  | 'group'
+  | 'interview'
+  | 'study';
 
-/** `kind` que se abre por `POST /sessions`; la sala grupal (`'group'`) se abre por `POST group-sessions` (F6.3). */
-export type OpenableSessionKind = Exclude<SessionKind, 'group'>;
+/**
+ * `kind` que se abre por `POST /sessions`. La sala grupal (`'group'`) se abre
+ * por `POST group-sessions` (F6.3); `'interview'` y `'study'` los abre el
+ * módulo `interviews` (F10.3) por sus propias rutas.
+ */
+export type OpenableSessionKind = Exclude<SessionKind, 'group' | 'interview' | 'study'>;
 
 /** Estado de la sesión (SPEC-01 §2.6) */
 export type SessionStatus = 'active' | 'ended' | 'abandoned';

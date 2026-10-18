@@ -7,10 +7,10 @@ from fastapi import Header, HTTPException
 
 
 def require_token(authorization: str | None = Header(default=None)) -> None:
-    expected = os.environ.get("INTERVIEW_AGENT_TOKEN", "")
-    prefix = "Bearer "
-    if not authorization or not authorization.startswith(prefix):
+    scheme, _, token = (authorization or "").partition(" ")
+    if scheme.lower() != "bearer" or not token:
         raise HTTPException(status_code=401, detail="missing bearer token")
-    token = authorization[len(prefix) :]
-    if not expected or not hmac.compare_digest(token, expected):
+    # Bytes: compare_digest con str no ASCII lanza TypeError (500).
+    expected = os.environ["INTERVIEW_AGENT_TOKEN"]
+    if not hmac.compare_digest(token.encode(), expected.encode()):
         raise HTTPException(status_code=401, detail="invalid token")

@@ -25,8 +25,9 @@ def _questions(kinds: list[str]) -> list[Question]:
     ]
 
 
-def _response(questions: list[Question]) -> PrepareOkResponse:
+def _response(questions: list[Question], type_: str = "technical") -> PrepareOkResponse:
     return PrepareOkResponse(
+        type=type_,
         research=Research(found=True, notes="n/a"),
         company=Company(name="Acme"),
         role="Backend engineer",
@@ -49,19 +50,29 @@ def test_7_preguntas_es_rechazado() -> None:
         _response(_questions(["technical"] * 7))
 
 
-def test_mixed_con_1_conductual_es_rechazado() -> None:
+def test_mixed_con_1_conductual_es_rechazado_sin_contexto() -> None:
     questions = _questions(["behavioral"] + ["technical"] * 7)
     with pytest.raises(ValidationError):
-        PrepareOkResponse.model_validate(
-            _response(questions).model_dump(), context={"type": "mixed"}
-        )
+        _response(questions, "mixed")
 
 
 def test_mixed_con_2_conductuales_pasa() -> None:
     questions = _questions(["behavioral", "behavioral"] + ["technical"] * 6)
-    PrepareOkResponse.model_validate(
-        _response(questions).model_dump(), context={"type": "mixed"}
-    )
+    _response(questions, "mixed")
+
+
+def test_competency_id_huerfano_es_rechazado() -> None:
+    questions = _questions(["technical"] * 8)
+    questions[7] = questions[7].model_copy(update={"competencyId": "c99"})
+    with pytest.raises(ValidationError, match="rubric"):
+        _response(questions)
+
+
+def test_idx_duplicado_es_rechazado() -> None:
+    questions = _questions(["technical"] * 8)
+    questions[7] = questions[7].model_copy(update={"idx": 1})
+    with pytest.raises(ValidationError, match="idx"):
+        _response(questions)
 
 
 def test_feedback_con_study_plan_de_4_es_rechazado() -> None:

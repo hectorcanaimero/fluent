@@ -2,7 +2,7 @@
 
 from typing import Literal
 
-from pydantic import BaseModel, Field, ValidationInfo, model_validator
+from pydantic import BaseModel, Field, model_validator
 
 SeniorityLevel = Literal["junior", "semi_senior", "senior", "staff_lead"]
 Locale = Literal["es", "pt-BR"]
@@ -55,6 +55,7 @@ class Question(BaseModel):
 
 class PrepareOkResponse(BaseModel):
     status: Literal["ok"] = "ok"
+    type: Literal["technical", "mixed"]  # eco del request
     research: Research
     company: Company
     role: str
@@ -66,18 +67,21 @@ class PrepareOkResponse(BaseModel):
     usage: Usage
 
     @model_validator(mode="after")
-    def _check_invariants(self, info: ValidationInfo) -> "PrepareOkResponse":
+    def _check_invariants(self) -> "PrepareOkResponse":
         if not 4 <= len(self.rubric) <= 6:
             raise ValueError("rubric must have between 4 and 6 competencies")
         if len(self.questions) != 8:
             raise ValueError("questions must have exactly 8 items")
+        if sorted(q.idx for q in self.questions) != list(range(1, 9)):
+            raise ValueError("question idx values must be exactly 1..8")
         competency_ids = {item.id for item in self.rubric}
         covered = {question.competencyId for question in self.questions}
+        if not covered <= competency_ids:
+            raise ValueError("every question.competencyId must exist in the rubric")
         if not competency_ids <= covered:
             raise ValueError("every competency must have at least one question")
 
-        interview_type = (info.context or {}).get("type") if info.context else None
-        if interview_type == "mixed":
+        if self.type == "mixed":
             behavioral_count = sum(1 for q in self.questions if q.kind == "behavioral")
             if behavioral_count != 2:
                 raise ValueError("mixed interviews must have exactly 2 behavioral questions")

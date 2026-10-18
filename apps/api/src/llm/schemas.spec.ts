@@ -188,8 +188,27 @@ describe('InterviewTurnOutput', () => {
     expect(InterviewTurnOutput.parse({ ...base, corrections: 'none' }).corrections).toEqual([]);
   });
 
-  it('sin reply o con questionIdx fuera de 1–8 sí falla', () => {
+  it('sin reply o sin questionIdx numérico sí falla', () => {
     expect(InterviewTurnOutput.safeParse({ ...base, reply: '' }).success).toBe(false);
-    expect(InterviewTurnOutput.safeParse({ ...base, questionIdx: 9 }).success).toBe(false);
+    expect(InterviewTurnOutput.safeParse({ ...base, questionIdx: 'tres' }).success).toBe(false);
+  });
+
+  it('questionIdx tolera "3" y " #3 " y lleva 0/9 al borde', () => {
+    expect(InterviewTurnOutput.parse({ ...base, questionIdx: '3' }).questionIdx).toBe(3);
+    expect(InterviewTurnOutput.parse({ ...base, questionIdx: ' #3 ' }).questionIdx).toBe(3);
+    expect(InterviewTurnOutput.parse({ ...base, questionIdx: 0 }).questionIdx).toBe(1);
+    expect(InterviewTurnOutput.parse({ ...base, questionIdx: 9 }).questionIdx).toBe(8);
+  });
+
+  it('un reply de más de 600 se recorta en vez de fallar', () => {
+    expect(InterviewTurnOutput.parse({ ...base, reply: 'a'.repeat(700) }).reply).toHaveLength(600);
+  });
+
+  it('una note de más de 140 se recorta y la corrección se conserva', () => {
+    const parsed = InterviewTurnOutput.parse({ ...base, corrections: [{ ...correction, note: 'n'.repeat(200) }] });
+    expect(parsed.corrections).toHaveLength(1);
+    expect(parsed.corrections[0]?.note).toHaveLength(140);
+    // El turno 1:1 no cambia: ahí una note larga sigue sin validar.
+    expect(TurnOutput.safeParse({ reply: 'ok', corrections: [{ ...correction, note: 'n'.repeat(200) }] }).success).toBe(false);
   });
 });

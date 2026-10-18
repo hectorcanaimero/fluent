@@ -58,11 +58,13 @@ function keepValid<T extends z.ZodTypeAny>(item: T, max: number) {
  * El modelo a veces copia el id tal cual lo vio («#4», «4»): se acepta como
  * número si la cadena es solo eso; cualquier otra cosa sigue fallando.
  */
-const MessageId = z.preprocess((value) => {
+function numberFromId(value: unknown): unknown {
   if (typeof value !== 'string') return value;
   const match = /^#?(\d+)$/.exec(value.trim());
   return match ? Number(match[1]) : value;
-}, z.number().int().positive());
+}
+
+const MessageId = z.preprocess(numberFromId, z.number().int().positive());
 
 /** Corrección de grupo: apunta al mensaje corregido por su id (arch 002, Interfaces → LLM). */
 export const GroupCorrection = Correction.extend({
@@ -82,17 +84,35 @@ export const GroupTurnOutput = z.object({
 
 export type GroupTurnOutput = z.infer<typeof GroupTurnOutput>;
 
+/** Como `Correction`, pero una `note` larga se recorta en vez de tirar la corrección. */
+const InterviewCorrection = Correction.extend({
+  note: z
+    .string()
+    .transform((note) => note.slice(0, 140))
+    .default(''),
+});
+
 /**
  * Turno de entrevista (arch 003, I3). Las correcciones no se dicen en voz
  * alta: van ocultas para la app y alimentan el parecer. Como en el grupo, una
- * corrección rota o una séptima no tiran el `reply`.
+ * corrección rota o una séptima no tiran el `reply`; un `reply` largo se
+ * recorta y un `questionIdx` fuera de rango («#3», 0, 9) se lleva a 1..8.
  */
 export const InterviewTurnOutput = z.object({
-  reply: z.string().min(1).max(600),
-  questionIdx: z.number().int().min(1).max(8),
+  reply: z
+    .string()
+    .min(1)
+    .transform((reply) => reply.slice(0, 600)),
+  questionIdx: z.preprocess(
+    numberFromId,
+    z
+      .number()
+      .int()
+      .transform((idx) => Math.min(8, Math.max(1, idx))),
+  ),
   isFollowUp: z.boolean().catch(false).default(false),
   done: z.boolean().catch(false).default(false),
-  corrections: keepValid(Correction, 6),
+  corrections: keepValid(InterviewCorrection, 6),
 });
 
 export type InterviewTurnOutput = z.infer<typeof InterviewTurnOutput>;

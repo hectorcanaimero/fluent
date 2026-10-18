@@ -46,6 +46,8 @@ const BASE: InterviewTurnPromptInput = {
   followUpUsedFor: [],
   activeSec: 0,
   locale: 'es',
+  warnSec: 540,
+  lastQuestionAnnounced: false,
 };
 
 describe('buildInterviewTurnMessages', () => {
@@ -68,6 +70,29 @@ describe('buildInterviewTurnMessages', () => {
     const messages = buildInterviewTurnMessages({ ...BASE, transcript: MID, answeredCount: 2, followUpUsedFor: [1], activeSec: 560 });
     expect(messages).toMatchSnapshot();
     expect(messages[0]?.content).toContain('this is the last question and ask Q3');
+    expect(messages[0]?.content).toContain('no follow-ups now');
+    expect(messages[0]?.content).not.toContain('you may ask ONE follow-up');
+  });
+
+  it('dos turnos seguidos pasado warnSec: solo el primero anuncia la última pregunta', () => {
+    const turn = { ...BASE, transcript: MID, followUpUsedFor: [1] };
+    const [first] = buildInterviewTurnMessages({ ...turn, answeredCount: 2, activeSec: 560 });
+    const [second] = buildInterviewTurnMessages({
+      ...turn,
+      answeredCount: 3,
+      activeSec: 590,
+      lastQuestionAnnounced: true,
+    });
+    expect(first?.content).toContain('this is the last question');
+    expect(second?.content).not.toContain('this is the last question');
+    expect(second?.content).toContain('do not ask anything else');
+    expect(second?.content).toContain('set "done" to true');
+    expect(second?.content).not.toContain('you may ask ONE follow-up');
+  });
+
+  it('warnSec viene del env: con 300 avisa a los 320 s', () => {
+    const [system] = buildInterviewTurnMessages({ ...BASE, transcript: MID, answeredCount: 2, activeSec: 320, warnSec: 300 });
+    expect(system?.content).toContain('this is the last question and ask Q3');
   });
 
   it('tras la pregunta 8 marca done', () => {

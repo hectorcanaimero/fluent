@@ -2354,12 +2354,6 @@ abstract class AppLocalizations {
   /// **'No pudimos abrir el enlace.'**
   String get interviewOpenLinkError;
 
-  /// No description provided for @interviewDetailPlaceholderTitle.
-  ///
-  /// In es, this message translates to:
-  /// **'Entrevista {id}'**
-  String interviewDetailPlaceholderTitle(String id);
-
   /// No description provided for @interviewDetailAppBarTitle.
   ///
   /// In es, this message translates to:
@@ -2473,6 +2467,60 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Staff/Lead'**
   String get interviewSeniorityStaffLead;
+
+  /// No description provided for @interviewSessionPlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista'**
+  String get interviewSessionPlaceholderTitle;
+
+  /// No description provided for @interviewFeedbackPlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Parecer'**
+  String get interviewFeedbackPlaceholderTitle;
+
+  /// No description provided for @interviewInProgressTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes una entrevista en curso'**
+  String get interviewInProgressTitle;
+
+  /// No description provided for @interviewContinueCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Continuar'**
+  String get interviewContinueCta;
+
+  /// No description provided for @interviewFinishedTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu entrevista terminó'**
+  String get interviewFinishedTitle;
+
+  /// No description provided for @interviewViewFeedbackCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ver parecer'**
+  String get interviewViewFeedbackCta;
+
+  /// No description provided for @interviewWorkModeRemote.
+  ///
+  /// In es, this message translates to:
+  /// **'Remoto'**
+  String get interviewWorkModeRemote;
+
+  /// No description provided for @interviewWorkModeHybrid.
+  ///
+  /// In es, this message translates to:
+  /// **'Híbrido'**
+  String get interviewWorkModeHybrid;
+
+  /// No description provided for @interviewWorkModeOnsite.
+  ///
+  /// In es, this message translates to:
+  /// **'Presencial'**
+  String get interviewWorkModeOnsite;
 }
 
 class _AppLocalizationsDelegate

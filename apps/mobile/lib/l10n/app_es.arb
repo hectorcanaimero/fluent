@@ -600,14 +600,6 @@
   },
   "interviewOfferCopyTextHint": "Ese es el mismo enlace. Copia el texto de la oferta y pégalo aquí.",
   "interviewOpenLinkError": "No pudimos abrir el enlace.",
-  "interviewDetailPlaceholderTitle": "Entrevista {id}",
-  "@interviewDetailPlaceholderTitle": {
-    "placeholders": {
-      "id": {
-        "type": "String"
-      }
-    }
-  },
   "interviewDetailAppBarTitle": "Tu entrevista",
   "interviewPrepStepReading": "Leyendo la oferta",
   "interviewPrepStepResearching": "Investigando la empresa",
@@ -636,5 +628,14 @@
   "interviewSeniorityJunior": "Junior",
   "interviewSenioritySemiSenior": "Semi-senior",
   "interviewSenioritySenior": "Senior",
-  "interviewSeniorityStaffLead": "Staff/Lead"
+  "interviewSeniorityStaffLead": "Staff/Lead",
+  "interviewSessionPlaceholderTitle": "Entrevista",
+  "interviewFeedbackPlaceholderTitle": "Parecer",
+  "interviewInProgressTitle": "Tienes una entrevista en curso",
+  "interviewContinueCta": "Continuar",
+  "interviewFinishedTitle": "Tu entrevista terminó",
+  "interviewViewFeedbackCta": "Ver parecer",
+  "interviewWorkModeRemote": "Remoto",
+  "interviewWorkModeHybrid": "Híbrido",
+  "interviewWorkModeOnsite": "Presencial"
 }

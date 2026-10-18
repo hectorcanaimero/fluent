@@ -672,6 +672,16 @@ Map<String, dynamic> _$CompanyInfoToJson(_CompanyInfo instance) =>
       'workMode': instance.workMode,
     };
 
+_InterviewCompetency _$InterviewCompetencyFromJson(Map<String, dynamic> json) =>
+    _InterviewCompetency(
+      id: json['id'] as String,
+      name: json['name'] as String,
+    );
+
+Map<String, dynamic> _$InterviewCompetencyToJson(
+  _InterviewCompetency instance,
+) => <String, dynamic>{'id': instance.id, 'name': instance.name};
+
 _InterviewQuota _$InterviewQuotaFromJson(Map<String, dynamic> json) =>
     _InterviewQuota(
       remaining: (json['remaining'] as num).toInt(),
@@ -733,10 +743,13 @@ _InterviewDetail _$InterviewDetailFromJson(Map<String, dynamic> json) =>
       estimatedMin: (json['estimatedMin'] as num?)?.toInt(),
       competencies:
           (json['competencies'] as List<dynamic>?)
-              ?.map((e) => e as String)
+              ?.map(
+                (e) => InterviewCompetency.fromJson(e as Map<String, dynamic>),
+              )
               .toList() ??
-          const <String>[],
+          const <InterviewCompetency>[],
       errorCode: json['errorCode'] as String?,
+      resumable: json['resumable'] as bool? ?? false,
       isReinterview: json['isReinterview'] as bool? ?? false,
     );
 
@@ -755,6 +768,7 @@ Map<String, dynamic> _$InterviewDetailToJson(_InterviewDetail instance) =>
       'estimatedMin': instance.estimatedMin,
       'competencies': instance.competencies,
       'errorCode': instance.errorCode,
+      'resumable': instance.resumable,
       'isReinterview': instance.isReinterview,
     };
 

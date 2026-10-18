@@ -180,6 +180,20 @@ final routerProvider = Provider<GoRouter>((ref) {
           interviewId: state.pathParameters['id']!,
         ),
       ),
+      // F12.4.T1 reemplaza esto por la sesión de entrevista (IE-05).
+      GoRoute(
+        path: '/interviews/:id/session',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewSessionPlaceholderTitle,
+        ),
+      ),
+      // F12 reemplaza esto por el parecer (IE-06).
+      GoRoute(
+        path: '/interviews/:id/feedback',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewFeedbackPlaceholderTitle,
+        ),
+      ),
       GoRoute(
         path: '/badges',
         builder: (context, state) => const BadgesScreen(),

@@ -1306,11 +1306,6 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interviewOpenLinkError => 'No pudimos abrir el enlace.';
 
   @override
-  String interviewDetailPlaceholderTitle(String id) {
-    return 'Entrevista $id';
-  }
-
-  @override
   String get interviewDetailAppBarTitle => 'Tu entrevista';
 
   @override
@@ -1370,4 +1365,31 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get interviewSeniorityStaffLead => 'Staff/Lead';
+
+  @override
+  String get interviewSessionPlaceholderTitle => 'Entrevista';
+
+  @override
+  String get interviewFeedbackPlaceholderTitle => 'Parecer';
+
+  @override
+  String get interviewInProgressTitle => 'Tienes una entrevista en curso';
+
+  @override
+  String get interviewContinueCta => 'Continuar';
+
+  @override
+  String get interviewFinishedTitle => 'Tu entrevista terminó';
+
+  @override
+  String get interviewViewFeedbackCta => 'Ver parecer';
+
+  @override
+  String get interviewWorkModeRemote => 'Remoto';
+
+  @override
+  String get interviewWorkModeHybrid => 'Híbrido';
+
+  @override
+  String get interviewWorkModeOnsite => 'Presencial';
 }

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "g01",
+    "description": "A2 + B2: the reply must stay at B1 or below",
+    "scenario": { "kind": "free_topic", "topic": "weekend plans", "promptTopic": "weekend plans" },
+    "levels": ["A2", "B2"],
+    "participants": ["Marta", "João"],
+    "trigger": "every_n",
+    "messages": [
+      { "id": 1, "authorName": "Fluent", "role": "tutor", "locale": "es", "text": "Hi everyone! What are your plans for the weekend?" },
+      { "id": 2, "authorName": "Marta", "role": "user", "locale": "es", "text": "I go to the beach with my family on saturday." },
+      { "id": 3, "authorName": "João", "role": "user", "locale": "pt-BR", "text": "I'm contemplating a hike, though the forecast seems rather unpredictable." }
+    ],
+    "expect": { "maxVocabLevel": "B1", "bannedWords": ["contemplate", "unpredictable", "nevertheless", "endeavour", "ubiquitous"] }
+  },
+  {
+    "id": "g02",
+    "description": "A2 + B2 on open: greeting and first question at B1 or below",
+    "scenario": { "kind": "news", "topic": "City bans cars downtown", "news": { "title": "City bans cars downtown", "summary": "The city centre will be closed to private cars from next month." } },
+    "levels": ["B2", "A2", "B2"],
+    "participants": ["Ana", "Lucas", "Bea"],
+    "trigger": "open",
+    "messages": [],
+    "expect": { "maxVocabLevel": "B1", "bannedWords": ["controversial", "implications", "congestion", "detrimental", "advocate"] }
+  }
+]

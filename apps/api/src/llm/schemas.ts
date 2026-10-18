@@ -35,6 +35,20 @@ export const TurnOutput = z.object({
 
 export type TurnOutput = z.infer<typeof TurnOutput>;
 
+/** Corrección de grupo: apunta al mensaje corregido por su id (arch 002, Interfaces → LLM). */
+export const GroupCorrection = Correction.extend({
+  messageId: z.number().int().positive(),
+});
+
+export type GroupCorrection = z.infer<typeof GroupCorrection>;
+
+export const GroupTurnOutput = z.object({
+  reply: z.string().min(1).max(1200),
+  corrections: z.array(GroupCorrection).max(6).default([]),
+});
+
+export type GroupTurnOutput = z.infer<typeof GroupTurnOutput>;
+
 const BriefFact = z.object({
   text: z.string().transform((text) => text.slice(0, 200)),
   happens_on: z

@@ -35,34 +35,6 @@ export const TurnOutput = z.object({
 
 export type TurnOutput = z.infer<typeof TurnOutput>;
 
-/** Corrección de grupo: apunta al mensaje corregido por su id (arch 002, Interfaces → LLM). */
-export const GroupCorrection = Correction.extend({
-  messageId: z.number().int().positive(),
-});
-
-export type GroupCorrection = z.infer<typeof GroupCorrection>;
-
-export const GroupTurnOutput = z.object({
-  reply: z.string().min(1).max(1200),
-  corrections: z.array(GroupCorrection).max(6).default([]),
-});
-
-export type GroupTurnOutput = z.infer<typeof GroupTurnOutput>;
-
-const BriefFact = z.object({
-  text: z.string().transform((text) => text.slice(0, 200)),
-  happens_on: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}$/)
-    .nullable()
-    .default(null),
-});
-
-const RecurringError = z.object({
-  category: z.enum(CATEGORIES).catch('other'),
-  example: z.string().transform((text) => text.slice(0, 200)),
-});
-
 /**
  * Lista donde un elemento malo se tira solo: se queda con los que validan,
  * hasta `max`. Un dato con la fecha mal escrita no puede llevarse por delante
@@ -81,6 +53,48 @@ function keepValid<T extends z.ZodTypeAny>(item: T, max: number) {
     .catch([])
     .default([]);
 }
+
+/**
+ * El modelo a veces copia el id tal cual lo vio («#4», «4»): se acepta como
+ * número si la cadena es solo eso; cualquier otra cosa sigue fallando.
+ */
+const MessageId = z.preprocess((value) => {
+  if (typeof value !== 'string') return value;
+  const match = /^#?(\d+)$/.exec(value.trim());
+  return match ? Number(match[1]) : value;
+}, z.number().int().positive());
+
+/** Corrección de grupo: apunta al mensaje corregido por su id (arch 002, Interfaces → LLM). */
+export const GroupCorrection = Correction.extend({
+  messageId: MessageId,
+});
+
+export type GroupCorrection = z.infer<typeof GroupCorrection>;
+
+/**
+ * Una corrección rota o una séptima no tiran el `reply`: se descartan solas
+ * y la lista se recorta a 6, como en el brief.
+ */
+export const GroupTurnOutput = z.object({
+  reply: z.string().min(1).max(1200),
+  corrections: keepValid(GroupCorrection, 6),
+});
+
+export type GroupTurnOutput = z.infer<typeof GroupTurnOutput>;
+
+const BriefFact = z.object({
+  text: z.string().transform((text) => text.slice(0, 200)),
+  happens_on: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .nullable()
+    .default(null),
+});
+
+const RecurringError = z.object({
+  category: z.enum(CATEGORIES).catch('other'),
+  example: z.string().transform((text) => text.slice(0, 200)),
+});
 
 /**
  * Lo accesorio no tumba lo importante: un brief de 901 caracteres, un quinto

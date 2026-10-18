@@ -104,7 +104,9 @@ export class ChallengesService {
         );
 
         return rows
-          .filter((row) => row.xp_earned > 0 && row.ended_at !== null)
+          // `kind='group'`: fila de la sala grupal (F9.1); no se reabre por
+          // `POST /sessions`, así que no sirve como desafío.
+          .filter((row) => row.xp_earned > 0 && row.ended_at !== null && row.kind !== 'group')
           .map((row) => ({
             sessionId: row.id,
             userId: row.user_id,

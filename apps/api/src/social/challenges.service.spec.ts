@@ -96,6 +96,28 @@ describe('ChallengesService.listChallenges', () => {
     });
   });
 
+  it('excludes kind=group sessions from the candidates', async () => {
+    const members = [
+      { user_id: 'me', display_name: 'Me' },
+      { user_id: 'friend-1', display_name: 'Beto' },
+    ];
+    const candidateRows = [
+      {
+        id: 'session-group',
+        user_id: 'friend-1',
+        topic: 'travel',
+        kind: 'group',
+        ended_at: NOW.toISOString(),
+        xp_earned: 40,
+      },
+    ];
+    const { service } = createService({ members, candidateRows });
+
+    const result = await service.listChallenges('me', undefined, NOW);
+
+    expect(result).toEqual({ items: [] });
+  });
+
   it('excludes candidates whose topic the requesting user already practiced in 14 days', async () => {
     const members = [
       { user_id: 'me', display_name: 'Me' },

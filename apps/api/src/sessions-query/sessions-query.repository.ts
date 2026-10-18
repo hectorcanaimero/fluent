@@ -83,6 +83,8 @@ export class SessionsQueryRepository {
       .select('id, user_id, topic, kind, ended_at, xp_earned')
       .in('user_id', [...userIds])
       .eq('status', 'ended')
+      // Las filas de sala grupal no son candidatas y no deben gastar el límite.
+      .neq('kind', 'group')
       .gte('ended_at', sinceIso)
       .order('ended_at', { ascending: false })
       .limit(CANDIDATE_SESSIONS_ROW_LIMIT);

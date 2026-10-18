@@ -1,8 +1,8 @@
 import { IsIn, IsOptional, IsString, IsUUID, Length } from 'class-validator';
-import type { SessionKind } from '../../db/schema.js';
+import type { OpenableSessionKind } from '../../db/schema.js';
 
 /** Los cuatro `kind` de SPEC-01 §2.6 / SPEC-04 §3.2. */
-export const SESSION_KINDS: readonly SessionKind[] = [
+export const SESSION_KINDS: readonly OpenableSessionKind[] = [
   'free_topic',
   'roleplay',
   'news',
@@ -30,7 +30,7 @@ export const TOPIC_MAX_LENGTH = 80;
  */
 export class CreateSessionDto {
   @IsIn(SESSION_KINDS, { message: 'kind debe ser free_topic, roleplay, news o boss.' })
-  kind!: SessionKind;
+  kind!: OpenableSessionKind;
 
   @IsOptional()
   @IsString({ message: 'topic debe ser texto.' })

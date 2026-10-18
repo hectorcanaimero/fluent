@@ -9,10 +9,7 @@
  * el turno. No mencionan que hubo un fallo: el aviso de degradación lo pone la
  * app a partir de `callbackUsed`/`degraded`, no el texto del tutor.
  */
-import type { SessionKind } from '../db/schema.js';
-
-/** `kind` que puede abrir `POST /sessions`; la sala grupal (`'group'`) se abre por `POST group-sessions` (F6.3). */
-type OpenableSessionKind = Exclude<SessionKind, 'group'>;
+import type { OpenableSessionKind } from '../db/schema.js';
 
 export const SESSION_OPENINGS: Readonly<Record<OpenableSessionKind, string>> = Object.freeze({
   free_topic:

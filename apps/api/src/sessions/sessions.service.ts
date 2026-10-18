@@ -138,8 +138,7 @@ export class SessionsService {
     const messages = buildTurnMessages({
       locale: profile.locale,
       level: profile.level,
-      // `resolveScenario` ya descartó `kind='group'` (lanza antes de llegar aquí).
-      kind: dto.kind as Exclude<typeof dto.kind, 'group'>,
+      kind: dto.kind,
       topic: scenario.promptTopic,
       roleplay: scenario.roleplay,
       news: scenario.news,
@@ -207,8 +206,7 @@ export class SessionsService {
         `Apertura degradada de la sesión ${session.id}: se agotó la cadena de modelos.`,
       );
       opening = {
-        // `resolveScenario` ya descartó `kind='group'` (lanza antes de llegar aquí).
-        text: openingFor(dto.kind as Exclude<typeof dto.kind, 'group'>),
+        text: openingFor(dto.kind),
         model: null,
         tokensIn: null,
         tokensOut: null,
@@ -391,9 +389,6 @@ export class SessionsService {
         return this.resolveNews(dto.newsItemId);
       case 'boss':
         return this.resolveBoss(userId, profile);
-      case 'group':
-        // La sala grupal se abre por `POST group-sessions` (F6.3), no por aquí.
-        throw validationError('kind', 'kind=group no se abre por POST /sessions.');
     }
   }
 

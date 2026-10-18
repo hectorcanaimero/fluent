@@ -85,6 +85,10 @@ describe('constructores de escenario (SPEC-04 §3.2)', () => {
 });
 
 describe('rebuildScenario (SPEC-04 §4: mismo escenario en cada turno)', () => {
+  it("lanza con kind='group': la fila de sala grupal no tiene escenario 1:1", () => {
+    expect(() => rebuildScenario(sessionRow({ kind: 'group' }))).toThrow(/group/);
+  });
+
   it('free_topic se reconstruye desde `sessions.topic`', () => {
     const scenario = rebuildScenario(sessionRow({ topic: CATALOG_TOPIC.title_es }));
 

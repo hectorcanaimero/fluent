@@ -189,6 +189,29 @@ describe('CoachingBriefService (SPEC-05 §2)', () => {
     expect(llm.complete).not.toHaveBeenCalled();
   });
 
+  it('salta las sesiones de sala grupal sin llamar al LLM', async () => {
+    const state = baseState();
+    const repository = makeRepository(state);
+    const original = repository.loadSession;
+    repository.loadSession = vi.fn(async () => ({
+      ...(await original()),
+      kind: 'group' as const,
+    })) as never;
+    const llm = makeLlm();
+    const service = new CoachingBriefService(
+      repository as unknown as CoachingBriefRepository,
+      llm,
+      makeConfig(),
+    );
+
+    expect(await service.run(SESSION_ID)).toEqual({
+      status: 'skipped',
+      reason: 'group_session',
+    });
+    expect(llm.complete).not.toHaveBeenCalled();
+    expect(repository.markSessionRunning).not.toHaveBeenCalled();
+  });
+
   it('propaga LlmUnavailableError para que BullMQ reintente', async () => {
     const state = baseState();
     const repository = makeRepository(state);

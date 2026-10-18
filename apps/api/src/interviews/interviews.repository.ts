@@ -2,9 +2,23 @@ import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
-import { TABLES, type Interview } from '../db/schema.js';
+import {
+  TABLES,
+  type Interview,
+  type Session,
+  type StudyCycle,
+  type StudyCycleSession,
+} from '../db/schema.js';
 import { markInterviewFeedbackFailed } from '../jobs/interviews/interview-jobs.shared.js';
-import type { InterviewType } from './interviews.types.js';
+import type { InterviewType, StudyPlanItem } from './interviews.types.js';
+
+/** El ciclo con sus sesiones ordenadas por `idx` (F13.1.T1). */
+export interface StudyCycleWithSessions {
+  readonly cycle: StudyCycle;
+  readonly sessions: readonly StudyCycleSession[];
+}
+
+type AdminDatabase = InsForgeClient['database'];
 
 /** Fila a insertar al crear una entrevista (I2, `POST /interviews`). */
 export interface CreateInterviewRow {
@@ -158,4 +172,144 @@ export class InterviewsRepository {
   async markFeedbackFailed(userId: string, id: string, errorCode: string): Promise<void> {
     await markInterviewFeedbackFailed(this.admin.database, id, errorCode, userId);
   }
+
+  /**
+   * Crea el ciclo y sus 5 sesiones desde el `studyPlan` (F13.1.T1).
+   * Idempotente y sin carreras: los dos `upsert` ignoran duplicados
+   * (`UNIQUE (interview_id)` y `UNIQUE (cycle_id, idx)`), así que dos POST a
+   * la vez —o uno que se cortó entre las dos escrituras— acaban en una sola
+   * fila con sus 5 sesiones.
+   */
+  async upsertCycle(
+    userId: string,
+    interviewId: string,
+    plan: readonly StudyPlanItem[],
+  ): Promise<StudyCycleWithSessions> {
+    unwrapInsforge(
+      await this.admin.database
+        .from(TABLES.studyCycles)
+        .upsert(
+          { user_id: userId, interview_id: interviewId, status: 'active' },
+          { onConflict: 'interview_id', ignoreDuplicates: true },
+        ),
+    );
+    const cycle = await this.findCycleRow(userId, interviewId);
+    if (cycle === null) {
+      throw new Error('InterviewsRepository.upsertCycle: el ciclo no quedó escrito');
+    }
+    unwrapInsforge(
+      await this.admin.database.from(TABLES.studyCycleSessions).upsert(
+        plan.map((item) => ({
+          cycle_id: cycle.id,
+          idx: item.idx,
+          focus: item.focus,
+          title: item.title,
+          format: item.format,
+          est_min: item.estMin,
+          brief: item.brief,
+        })),
+        { onConflict: 'cycle_id,idx', ignoreDuplicates: true },
+      ),
+    );
+    return { cycle, sessions: await this.listCycleSessions(cycle.id) };
+  }
+
+  /** Ciclo de la entrevista con sus sesiones; `null` si no existe o es de otro. */
+  async findCycle(userId: string, interviewId: string): Promise<StudyCycleWithSessions | null> {
+    const cycle = await this.findCycleRow(userId, interviewId);
+    return cycle === null ? null : { cycle, sessions: await this.listCycleSessions(cycle.id) };
+  }
+
+  /** Sesión `study` activa enlazada a su fila del ciclo (`topic = title`). */
+  async createStudySession(userId: string, row: StudyCycleSession): Promise<Session> {
+    const result = await this.admin.database
+      .from(TABLES.sessions)
+      .insert({
+        user_id: userId,
+        kind: 'study',
+        topic: row.title,
+        study_cycle_session_id: row.id,
+        status: 'active',
+      })
+      .select('*')
+      .maybeSingle();
+
+    const created = unwrapInsforge<Session>(result);
+    if (created === null) {
+      throw new Error('InterviewsRepository.createStudySession: la inserción no devolvió ninguna fila');
+    }
+    return created;
+  }
+
+  private async findCycleRow(userId: string, interviewId: string): Promise<StudyCycle | null> {
+    const result = await this.admin.database
+      .from(TABLES.studyCycles)
+      .select('*')
+      .eq('interview_id', interviewId)
+      .eq('user_id', userId)
+      .maybeSingle();
+    return unwrapInsforge<StudyCycle>(result);
+  }
+
+  private async listCycleSessions(cycleId: string): Promise<StudyCycleSession[]> {
+    const result = await this.admin.database
+      .from(TABLES.studyCycleSessions)
+      .select('*')
+      .eq('cycle_id', cycleId)
+      .order('idx', { ascending: true });
+    return unwrapInsforge<StudyCycleSession[]>(result) ?? [];
+  }
 }
+
+/**
+ * Cierre de una sesión `study` (F13.1.T1): marca `done_at` en su fila del
+ * ciclo y, con las 5 hechas, pasa el ciclo a `completed`. Función suelta (no
+ * método) porque la llama `SessionCloserService`, que también vive en el
+ * worker del sweeper sin el módulo `interviews` (mismo patrón que
+ * `markInterviewFeedbackFailed`). No-op para cualquier otra sesión.
+ */
+export async function markStudySessionDone(db: AdminDatabase, sessionId: string): Promise<void> {
+  const session = unwrapInsforge<Pick<Session, 'kind' | 'study_cycle_session_id'>>(
+    await db
+      .from(TABLES.sessions)
+      .select('kind, study_cycle_session_id')
+      .eq('id', sessionId)
+      .maybeSingle(),
+  );
+  if (session?.kind !== 'study' || session.study_cycle_session_id === null) return;
+
+  const row = unwrapInsforge<Pick<StudyCycleSession, 'cycle_id' | 'done_at'>>(
+    await db
+      .from(TABLES.studyCycleSessions)
+      .select('cycle_id, done_at')
+      .eq('id', session.study_cycle_session_id)
+      .maybeSingle(),
+  );
+  if (row === null) return;
+  // Repetir una sesión ya hecha no mueve su `done_at` original.
+  if (row.done_at === null) {
+    unwrapInsforge(
+      await db
+        .from(TABLES.studyCycleSessions)
+        .update({ done_at: new Date().toISOString() })
+        .eq('id', session.study_cycle_session_id),
+    );
+  }
+
+  const all =
+    unwrapInsforge<Pick<StudyCycleSession, 'done_at'>[]>(
+      await db.from(TABLES.studyCycleSessions).select('done_at').eq('cycle_id', row.cycle_id),
+    ) ?? [];
+  if (all.length === STUDY_CYCLE_SIZE && all.every((item) => item.done_at !== null)) {
+    unwrapInsforge(
+      await db
+        .from(TABLES.studyCycles)
+        .update({ status: 'completed' })
+        .eq('id', row.cycle_id)
+        .eq('status', 'active'),
+    );
+  }
+}
+
+/** Sesiones de un ciclo (FR-17, invariante de `studyPlan` en I1). */
+export const STUDY_CYCLE_SIZE = 5;

@@ -1,4 +1,14 @@
-import { Body, Controller, Get, Headers, HttpCode, Param, Post, Res } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  Param,
+  ParseIntPipe,
+  Post,
+  Res,
+} from '@nestjs/common';
 import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import type { Response } from 'express';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -13,7 +23,8 @@ import {
   type InterviewQuotaDto,
 } from './interviews.service.js';
 import { InterviewSessionService } from './interview-session.service.js';
-import type { InterviewSessionDto } from '../sessions/sessions.types.js';
+import type { CreateSessionResultDto, InterviewSessionDto } from '../sessions/sessions.types.js';
+import { StudyCycleService, type StudyCycleDto } from './study-cycle.service.js';
 
 /**
  * `GET /interviews/quota`, `POST /interviews`, `GET /interviews`,
@@ -30,6 +41,7 @@ export class InterviewsController {
   constructor(
     private readonly interviewsService: InterviewsService,
     private readonly interviewSessions: InterviewSessionService,
+    private readonly studyCycles: StudyCycleService,
   ) {}
 
   @Get('interviews/quota')
@@ -98,5 +110,36 @@ export class InterviewsController {
     const result = await this.interviewsService.feedback(userId, id, acceptLanguage);
     res.status(result.statusCode);
     return result.body;
+  }
+
+  /** Crea (o devuelve, idempotente) el ciclo de estudio desde el parecer (F13.1.T1). */
+  @Post('interviews/:id/cycle')
+  @HttpCode(200)
+  createCycle(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<StudyCycleDto> {
+    return this.studyCycles.create(userId, id, acceptLanguage);
+  }
+
+  @Get('interviews/:id/cycle')
+  cycle(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<StudyCycleDto> {
+    return this.studyCycles.get(userId, id, acceptLanguage);
+  }
+
+  /** Abre la sesión `idx` del ciclo (`409 STUDY_SESSION_LOCKED` si una anterior no está hecha, FR-29). */
+  @Post('interviews/:id/cycle/sessions/:idx/start')
+  startStudySession(
+    @CurrentUser('id') userId: string,
+    @Param('id') id: string,
+    @Param('idx', ParseIntPipe) idx: number,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<CreateSessionResultDto> {
+    return this.studyCycles.start(userId, id, idx, acceptLanguage);
   }
 }

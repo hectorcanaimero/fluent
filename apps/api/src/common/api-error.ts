@@ -103,6 +103,10 @@ export const API_ERROR_STATUS = {
    * de tiempo o sweeper, D5): `too_short` con `resumable = false` (F12.1.T2).
    */
   INTERVIEW_NOT_RESUMABLE: 409,
+  /** `POST /interviews/:id/cycle` sobre una entrevista sin parecer listo (F13.1.T1). */
+  STUDY_CYCLE_NOT_AVAILABLE: 409,
+  /** Empezar una sesión del ciclo con una anterior sin hacer (FR-29, F13.1.T1). */
+  STUDY_SESSION_LOCKED: 409,
   /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.

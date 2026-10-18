@@ -30,6 +30,14 @@ export interface NewsScenario {
   readonly summary: string;
 }
 
+/** Foco de una sesión `study` del ciclo (F13.1.T1), desde `study_cycle_sessions`. */
+export interface StudyFocus {
+  readonly title: string;
+  readonly focus: string;
+  readonly format: 'guided' | 'roleplay';
+  readonly brief: string;
+}
+
 /** Hecho usado en la apertura (RF-4.4). `happensOn` en formato YYYY-MM-DD. */
 export interface CallbackFact {
   readonly text: string;
@@ -39,11 +47,13 @@ export interface CallbackFact {
 export interface TurnPromptInput {
   readonly locale: Locale;
   readonly level: Level;
-  readonly kind: SessionKind;
+  /** `study` (F13) usa este mismo prompt con el bloque de foco. */
+  readonly kind: SessionKind | 'study';
   /** Tema para `free_topic` y `boss`. */
   readonly topic?: string;
   readonly roleplay?: RoleplayScenario;
   readonly news?: NewsScenario;
+  readonly study?: StudyFocus;
   /** Notas de coaching acumuladas. Se recorta a 600 caracteres (SPEC-03 §3). */
   readonly brief?: string | null;
   /** Hechos confirmados. Se usan como mucho 3 (SPEC-03 §3). */
@@ -73,7 +83,23 @@ function scenarioBlock(input: TurnPromptInput): string {
       return `Challenge session. Topic outside the learner's comfort zone: ${
         input.topic ?? ''
       }. Push a bit harder: use one idiom per reply and ask follow-up "why" questions.`;
+    case 'study':
+      return studyBlock(input.study);
   }
+}
+
+/**
+ * Bloque de foco de una sesión del ciclo (F13.1.T1). Título y `brief` salen
+ * del parecer que escribió el agente a partir de la oferta del usuario, así
+ * que van delimitados como datos (MEJ-35).
+ */
+function studyBlock(study: StudyFocus | undefined): string {
+  const focus = `Study session focus: ${untrustedInline(
+    `${study?.title ?? ''} (${study?.focus ?? ''})`,
+  )}. What to practice: ${untrustedInline(study?.brief ?? '')}.`;
+  return study?.format === 'roleplay'
+    ? `${focus} Roleplay a realistic work situation where the learner must use this: you play a colleague, manager or client. Stay in character, but keep the corrections rule.`
+    : `${focus} Guided conversation: steer every question towards this topic and ask the learner to explain, give examples and justify choices.`;
 }
 
 function openingRule(input: TurnPromptInput): string | null {

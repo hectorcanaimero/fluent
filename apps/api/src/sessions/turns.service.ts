@@ -163,10 +163,14 @@ export class TurnsService {
     if (session.status !== 'active') {
       throw ApiException.of('SESSION_NOT_ACTIVE', SESSION_NOT_ACTIVE_MESSAGE);
     }
-    // Grupo y estudio no tienen escenario 1:1: sin esto `rebuildScenario`
-    // tiraría un 500 después de insertar el turno. La entrevista va por
-    // `InterviewTurnsService` (F12.1.T2).
-    if (session.kind !== 'interview' && !(SESSION_KINDS as readonly SessionKind[]).includes(session.kind)) {
+    // Grupo no tiene escenario 1:1: sin esto `rebuildScenario` tiraría un 500
+    // después de insertar el turno. La entrevista va por
+    // `InterviewTurnsService` (F12.1.T2); `study` (F13) es un turno normal.
+    if (
+      session.kind !== 'interview' &&
+      session.kind !== 'study' &&
+      !(SESSION_KINDS as readonly SessionKind[]).includes(session.kind)
+    ) {
       throw ApiException.of('WRONG_SESSION_KIND', WRONG_SESSION_KIND_MESSAGE);
     }
     return session;
@@ -268,16 +272,19 @@ export class TurnsService {
     // Lo que falta para el prompt, también en paralelo (MEJ-24): noticia,
     // brief, hechos y preferencia de modelo son cuatro lecturas
     // independientes entre sí.
-    const [newsItem, brief, facts, preference] = await Promise.all([
+    const [newsItem, studySession, brief, facts, preference] = await Promise.all([
       session.news_item_id === null
         ? Promise.resolve(null)
         : this.sessions.findNewsItem(session.news_item_id),
+      session.study_cycle_session_id == null
+        ? Promise.resolve(null)
+        : this.sessions.findStudyCycleSession(session.study_cycle_session_id),
       this.sessions.findBriefText(userId),
       this.sessions.listConfirmedFacts(userId, MAX_FACTS_IN_PROMPT),
       this.findPreference(userId),
     ]);
 
-    const scenario = rebuildScenario(session, newsItem);
+    const scenario = rebuildScenario(session, newsItem, studySession);
     if (scenario.fallback) {
       this.logger.warn(
         `No se pudo reconstruir el escenario ${session.kind} de la sesión ${session.id}; ` +
@@ -292,6 +299,7 @@ export class TurnsService {
       topic: scenario.promptTopic,
       roleplay: scenario.roleplay,
       news: scenario.news,
+      study: scenario.study,
       brief,
       facts: facts.map((fact) => fact.text),
       history,

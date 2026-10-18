@@ -21,8 +21,14 @@ import {
   type BossTopic,
   type Roleplay,
 } from '../content/index.js';
-import type { Locale, NewsItem, OpenableSessionKind, Session } from '../db/schema.js';
-import type { NewsScenario, RoleplayScenario } from '../llm/prompts/turn.js';
+import type {
+  Locale,
+  NewsItem,
+  OpenableSessionKind,
+  Session,
+  StudyCycleSession,
+} from '../db/schema.js';
+import type { NewsScenario, RoleplayScenario, StudyFocus } from '../llm/prompts/turn.js';
 import type { InterviewPlan } from '../interviews/interviews.types.js';
 import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
@@ -35,6 +41,7 @@ export interface SessionScenario {
   readonly roleplay?: RoleplayScenario;
   readonly news?: NewsScenario;
   readonly newsItemId?: string;
+  readonly study?: StudyFocus;
 }
 
 /** `free_topic`: el texto lo escribe el usuario; ver `topic-prompt.ts`. */
@@ -62,6 +69,16 @@ export function newsScenario(item: NewsItem): SessionScenario {
 /** `boss`: `sessions.topic` guarda el título en el idioma del usuario; el prompt usa `prompt_en`. */
 export function bossScenario(topic: BossTopic, locale: Locale = 'es'): SessionScenario {
   return { topic: titleFor(topic, locale), promptTopic: topic.prompt_en };
+}
+
+/** `study` (F13.1.T1): `sessions.topic` guarda el título; el prompt, el bloque de foco. */
+export function studyScenario(
+  row: Pick<StudyCycleSession, 'title' | 'focus' | 'format' | 'brief'>,
+): SessionScenario {
+  return {
+    topic: row.title,
+    study: { title: row.title, focus: row.focus, format: row.format, brief: row.brief },
+  };
 }
 
 /** `sessions.topic` de toda sesión `interview` (F12.1.T2). */
@@ -101,7 +118,7 @@ export interface RebuiltScenario extends SessionScenario {
    * `kind` **efectivo** para el prompt. Normalmente el de la sesión; es
    * `'free_topic'` cuando el original no se pudo reconstruir (ver abajo).
    */
-  readonly kind: OpenableSessionKind;
+  readonly kind: OpenableSessionKind | 'study';
   /** `true` si se cayó al bloque `free_topic` por no poder reconstruir. */
   readonly fallback: boolean;
 }
@@ -122,11 +139,13 @@ export interface RebuiltScenario extends SessionScenario {
  * desapareció del catálogo tras editarlo— se cae al bloque `free_topic` con el
  * `topic` guardado. Una sesión a medias no puede quedarse sin poder continuar
  * porque cambiara un JSON del catálogo; el aprendiz pierde el matiz del rol o
- * del reto, pero sigue hablando del mismo tema.
+ * del reto, pero sigue hablando del mismo tema. Lo mismo para `study` sin su
+ * fila de `study_cycle_sessions` (`on delete set null`).
  */
 export function rebuildScenario(
   session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
   newsItem: NewsItem | null = null,
+  studySession: StudyCycleSession | null = null,
 ): RebuiltScenario {
   switch (session.kind) {
     case 'free_topic':
@@ -154,11 +173,14 @@ export function rebuildScenario(
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
-    // `interview` tampoco: su turno usa `interviewScenario(plan)` (I3) y
-    // `study` espera a que F13 traiga `studyScenario`.
+    case 'study':
+      return studySession
+        ? { kind: 'study', fallback: false, ...studyScenario(studySession), topic: session.topic }
+        : degradeToFreeTopic(session.topic);
+
+    // `interview` tampoco: su turno usa `interviewScenario(plan)` (I3).
     case 'group':
     case 'interview':
-    case 'study':
       throw new Error(`rebuildScenario: kind='${session.kind}' no tiene escenario 1:1`);
 
     default: {

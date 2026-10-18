@@ -11,6 +11,7 @@ import {
   type Provider,
   type Session,
   type SessionKind,
+  type StudyCycleSession,
 } from '../db/schema.js';
 import { MAX_FACTS_IN_PROMPT } from '../llm/config.js';
 import { findBlockingActiveSessionId } from './active-session.js';
@@ -108,6 +109,17 @@ export class SessionsRepository {
       .maybeSingle();
 
     return unwrapInsforge<NewsItem>(result);
+  }
+
+  /** Fila del ciclo de una sesión `study` (F13.1.T1), o `null` si se borró. */
+  async findStudyCycleSession(id: string): Promise<StudyCycleSession | null> {
+    const result = await this.admin.database
+      .from(TABLES.studyCycleSessions)
+      .select('*')
+      .eq('id', id)
+      .maybeSingle();
+
+    return unwrapInsforge<StudyCycleSession>(result);
   }
 
   /** Texto del `coaching_briefs` del usuario, o `null` si aún no tiene. */

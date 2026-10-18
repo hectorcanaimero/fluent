@@ -151,7 +151,10 @@ export async function runTurnStream(
       // Ningún token: se manda el `reply` entero de una vez (ver cabecera).
       send(TURN_STREAM_EVENTS.token, { text: result.reply });
     }
-    send(TURN_STREAM_EVENTS.corrections, { corrections: result.corrections });
+    // Entrevista: sin evento `corrections` (FR-10); se guardan para el parecer.
+    if (result.interview === undefined) {
+      send(TURN_STREAM_EVENTS.corrections, { corrections: result.corrections });
+    }
     send(TURN_STREAM_EVENTS.done, result);
   });
 }

@@ -1,5 +1,7 @@
 import { Module } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 
+import type { Env } from '../config/env.js';
 import { SESSION_SWEEPER } from '../jobs/session-sweeper.js';
 import { EndSessionRepository } from './end-session.repository.js';
 import { SessionCloserService } from './session-closer.service.js';
@@ -31,9 +33,18 @@ import { SessionSweeperService } from './session-sweeper.service.js';
     SessionSweeperRepository,
     {
       provide: SESSION_SWEEPER,
-      inject: [SessionSweeperRepository, SessionCloserService],
-      useFactory: (repository: SessionSweeperRepository, closer: SessionCloserService) =>
-        new SessionSweeperService({ repository, closer }),
+      // `ConfigService` opcional: sin él (tests del módulo) vale el defecto de 24 h.
+      inject: [SessionSweeperRepository, SessionCloserService, { token: ConfigService, optional: true }],
+      useFactory: (
+        repository: SessionSweeperRepository,
+        closer: SessionCloserService,
+        config?: ConfigService<Env, true>,
+      ) =>
+        new SessionSweeperService({
+          repository,
+          closer,
+          interviewAbandonAfterSec: config?.get('INTERVIEW_ABANDON_AFTER_SEC', { infer: true }),
+        }),
     },
   ],
   exports: [SESSION_SWEEPER],

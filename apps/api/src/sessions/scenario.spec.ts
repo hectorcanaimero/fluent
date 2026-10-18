@@ -1,6 +1,7 @@
 import { BOSS_TOPICS, ROLEPLAYS, TOPICS } from '../content/index.js';
 import type { NewsItem, Session } from '../db/schema.js';
 import { buildTurnSystemPrompt } from '../llm/prompts/turn.js';
+import type { InterviewPlan } from '../interviews/interviews.types.js';
 import {
   bossScenario,
   freeTopicScenario,
@@ -213,4 +214,22 @@ describe('rebuildScenario (SPEC-04 §4: mismo escenario en cada turno)', () => {
     expect(prompt).toContain('Session type: free_topic. Topic: Un reto que ya no existe.');
     expect(prompt).not.toContain('Challenge session');
   });
+
+  it('interview: arma el escenario desde el plan; sin plan es un bug', () => {
+    const plan = {
+      rubric: [{ id: 'c1', name: 'APIs' }],
+      questions: [{ idx: 1, competencyId: 'c1' }],
+    } as unknown as InterviewPlan;
+
+    const scenario = rebuildScenario(sessionRow({ kind: 'interview', topic: 'Entrevista' }), null, plan);
+
+    expect(scenario).toEqual({
+      kind: 'interview',
+      fallback: false,
+      topic: 'Entrevista',
+      interview: { topic: 'Entrevista', plan, totalQuestions: 1 },
+    });
+    expect(() => rebuildScenario(sessionRow({ kind: 'interview' }))).toThrow(/plan/);
+  });
 });
+

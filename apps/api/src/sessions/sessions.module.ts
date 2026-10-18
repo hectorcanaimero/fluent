@@ -5,7 +5,10 @@ import { LlmModule } from '../llm/llm.module.js';
 import { SocialModule } from '../social/social.module.js';
 import { InsforgeBossRepository } from './boss.repository.js';
 import { RedisBossSkipStore } from './boss-skip.store.js';
+import { InterviewSessionService } from '../interviews/interview-session.service.js';
 import { DailyTurnsBudget } from './daily-turns-budget.js';
+import { InterviewSessionRepository } from './interview-session.repository.js';
+import { InterviewTurnsService } from './interview-turns.service.js';
 import { EndSessionRepository } from './end-session.repository.js';
 import { EndSessionService } from './end-session.service.js';
 import { SessionCloserService } from './session-closer.service.js';
@@ -66,6 +69,9 @@ import { TurnsService } from './turns.service.js';
     SessionsService,
     TurnsRepository,
     DailyTurnsBudget,
+    InterviewSessionRepository,
+    InterviewSessionService,
+    InterviewTurnsService,
     TurnsService,
     EndSessionRepository,
     SessionCloserService,
@@ -82,6 +88,8 @@ import { TurnsService } from './turns.service.js';
     EndSessionService,
     SuggestionsService,
     SessionsHistoryService,
+    // `InterviewsModule` lo reexpone en `POST /interviews/:id/session`.
+    InterviewSessionService,
   ],
 })
 export class SessionsModule {}

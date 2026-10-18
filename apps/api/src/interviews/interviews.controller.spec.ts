@@ -54,7 +54,7 @@ function buildController() {
     },
   } as unknown as InterviewsService;
 
-  return { controller: new InterviewsController(service), calls };
+  return { controller: new InterviewsController(service, {} as never), calls };
 }
 
 describe('InterviewsController', () => {

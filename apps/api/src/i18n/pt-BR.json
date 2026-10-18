@@ -20,6 +20,7 @@
   "INTERVIEWS_DAILY_CAP": "Hoje você já usou suas entrevistas. Amanhã tem mais.",
   "OFFER_UNREADABLE": "Não conseguimos ler essa vaga do LinkedIn. Copie o texto e cole no lugar do link.",
   "INTERVIEW_NOT_RETRYABLE": "Só é possível tentar de novo uma entrevista cuja preparação falhou.",
+  "INTERVIEW_NOT_OPENABLE": "Esta entrevista não pode ser iniciada agora.",
   "INTERVIEW_AGENT_UNAVAILABLE": "O simulador de entrevistas não está disponível neste momento.",
   "NOT_READY": "Ainda não está pronto.",
   "NOT_FOUND": "O recurso solicitado não existe.",

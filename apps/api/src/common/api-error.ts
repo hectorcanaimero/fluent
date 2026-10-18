@@ -89,6 +89,11 @@ export const API_ERROR_STATUS = {
    */
   INTERVIEW_NOT_RETRYABLE: 409,
   /**
+   * `POST /interviews/:id/session` sobre una entrevista que no está `ready`,
+   * `in_progress` ni `too_short` (F12.1.T2).
+   */
+  INTERVIEW_NOT_OPENABLE: 409,
+  /**
    * `POST /interviews` sin `INTERVIEW_AGENT_URL` configurada (F10.3, I4): el
    * módulo arranca igual pero no puede preparar ninguna entrevista.
    */

@@ -1,7 +1,7 @@
 import { Inject, Injectable } from '@nestjs/common';
 import type { InsForgeClient } from '@insforge/sdk';
 
-import { TABLES } from '../db/schema.js';
+import { TABLES, type SessionKind } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 
@@ -9,6 +9,7 @@ import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
 export interface ActiveSessionRow {
   readonly id: string;
   readonly userId: string;
+  readonly kind: SessionKind;
   readonly startedAt: string; // ISO 8601
   /** Turnos **del usuario** (decisión de la sesión líder, PR-04/T1). */
   readonly turnsCount: number;
@@ -37,19 +38,26 @@ export class SessionSweeperRepository {
   async listActiveSessions(limit: number): Promise<ActiveSessionRow[]> {
     const result = await this.admin.database
       .from(TABLES.sessions)
-      .select('id, user_id, started_at, turns_count')
+      .select('id, user_id, kind, started_at, turns_count')
       .eq('status', 'active')
       .order('started_at', { ascending: true })
       .limit(limit);
 
     const rows =
       unwrapInsforge<
-        Array<{ id: string; user_id: string; started_at: string; turns_count: number }>
+        Array<{
+          id: string;
+          user_id: string;
+          kind: SessionKind;
+          started_at: string;
+          turns_count: number;
+        }>
       >(result) ?? [];
 
     return rows.map((row) => ({
       id: row.id,
       userId: row.user_id,
+      kind: row.kind,
       startedAt: row.started_at,
       turnsCount: row.turns_count,
     }));

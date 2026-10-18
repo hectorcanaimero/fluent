@@ -88,7 +88,7 @@ describe('EndSessionService', () => {
     const turns = fakeTurnsRepository({ session: null });
     const { repo } = fakeEndSessionRepository();
     const { closer, calls } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer, fakePush());
+    const service = new EndSessionService(turns, repo, closer, fakePush(), {} as never);
 
     await expect(service.endSession(OTHER_USER_ID, SESSION_ID, DTO)).rejects.toMatchObject({
       code: 'FORBIDDEN',
@@ -100,7 +100,7 @@ describe('EndSessionService', () => {
     const turns = fakeTurnsRepository();
     const { repo } = fakeEndSessionRepository();
     const { closer } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer, fakePush());
+    const service = new EndSessionService(turns, repo, closer, fakePush(), {} as never);
 
     await expect(service.endSession(USER_ID, 'no-es-un-uuid', DTO)).rejects.toBeInstanceOf(
       ApiException,
@@ -114,7 +114,7 @@ describe('EndSessionService', () => {
     const { closer, calls } = fakeSessionCloser(
       closeResultFixture({ xp_earned: 90, streak: 4, is_double_day: true, next_is_boss: true }),
     );
-    const service = new EndSessionService(turns, repo, closer, fakePush());
+    const service = new EndSessionService(turns, repo, closer, fakePush(), {} as never);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
@@ -142,6 +142,7 @@ describe('EndSessionService', () => {
         fakeEndSessionRepository(0).repo,
         fakeSessionCloser(closeResultFixture({ xp_earned: xp })).closer,
         push,
+        {} as never,
       );
       await service.endSession(USER_ID, SESSION_ID, DTO);
       return push.notifyChallenge as unknown as ReturnType<typeof vi.fn>;
@@ -166,7 +167,7 @@ describe('EndSessionService', () => {
     const { closer, calls } = fakeSessionCloser(
       closeResultFixture({ xp_earned: 60, streak: 2, is_double_day: false, next_is_boss: false }),
     );
-    const service = new EndSessionService(turns, repo, closer, fakePush());
+    const service = new EndSessionService(turns, repo, closer, fakePush(), {} as never);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
 
@@ -182,7 +183,7 @@ describe('EndSessionService', () => {
     const turns = fakeTurnsRepository({ session });
     const { repo } = fakeEndSessionRepository();
     const { closer } = fakeSessionCloser();
-    const service = new EndSessionService(turns, repo, closer, fakePush());
+    const service = new EndSessionService(turns, repo, closer, fakePush(), {} as never);
 
     const result = await service.endSession(USER_ID, SESSION_ID, DTO);
     expect(result.summary.durationSec).toBe(0);
@@ -207,4 +208,22 @@ describe('computeDurationSec', () => {
     const now = new Date('2026-09-08T11:00:00.000Z'); // 1 hora después
     expect(computeDurationSec(startedAt, now)).toBe(720);
   });
+
+  it('sesión interview (FR-11): cierra con la regla de la entrevista y la duración en tiempo activo', async () => {
+    const session = sessionFixture({ kind: 'interview', active_sec: 240, interview_id: 'i-1' });
+    const turns = fakeTurnsRepository({ session });
+    const { repo } = fakeEndSessionRepository(0);
+    const { closer, calls } = fakeSessionCloser();
+    const interviewSessions = {
+      closeSession: vi.fn(async () => ({ ...closeResultFixture(), newBadges: [] })),
+    };
+    const service = new EndSessionService(turns, repo, closer, fakePush(), interviewSessions as never);
+
+    const result = await service.endSession(USER_ID, SESSION_ID, DTO);
+
+    expect(interviewSessions.closeSession).toHaveBeenCalledWith(USER_ID, session, true);
+    expect(calls).toHaveLength(0);
+    expect(result.summary.durationSec).toBe(240);
+  });
 });
+

@@ -8,11 +8,13 @@ import '../l10n/gen/app_localizations.dart';
 
 import '../core/api/models.dart';
 import '../core/providers.dart';
+import '../core/widgets/placeholder_screen.dart';
 import '../features/auth/domain/auth_state.dart';
 import '../features/badges/presentation/badges_screen.dart';
 import '../features/group/presentation/group_screen.dart';
 import '../features/home/presentation/home_screen.dart';
 import '../features/home/presentation/home_shell.dart';
+import '../features/interviews/presentation/entry/new_interview_screen.dart';
 import '../features/memory/presentation/memory_screen.dart';
 import '../features/onboarding/presentation/onboarding_flow.dart';
 import '../features/progress/presentation/progress_screen.dart';
@@ -159,6 +161,25 @@ final routerProvider = Provider<GoRouter>((ref) {
             ),
           ),
         ],
+      ),
+      // F11.2.T3 reemplaza esto por el historial (IE-09); F11.2.T2 por la
+      // pantalla de preparación/resumen del plan (IE-03, IE-04).
+      GoRoute(
+        path: '/interviews',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewEntryHistoryTooltip,
+        ),
+      ),
+      GoRoute(
+        path: '/interviews/new',
+        builder: (context, state) => const NewInterviewScreen(),
+      ),
+      GoRoute(
+        path: '/interviews/:id',
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context)
+              .interviewDetailPlaceholderTitle(state.pathParameters['id']!),
+        ),
       ),
       GoRoute(
         path: '/badges',

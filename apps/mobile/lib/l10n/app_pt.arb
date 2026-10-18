@@ -280,6 +280,48 @@
   "errorOfferUnreadable": "Não conseguimos ler essa vaga.",
   "errorInterviewsDailyCap": "Hoje você já usou suas entrevistas. Amanhã tem mais.",
   "errorInterviewTooShort": "Faltam respostas para montar seu parecer.",
+  "interviewEntryTitle": "Prepare sua entrevista",
+  "interviewEntryHistoryTooltip": "Histórico de entrevistas",
+  "interviewQuotaRemaining": "Faltam {remaining} de {limit} entrevistas hoje",
+  "@interviewQuotaRemaining": {
+    "placeholders": {
+      "remaining": {
+        "type": "int"
+      },
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewQuotaExhausted": "Você usou suas {limit} entrevistas de hoje",
+  "@interviewQuotaExhausted": {
+    "placeholders": {
+      "limit": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewFreeNotice": "Gratuito por enquanto. No futuro essa função pode ser parte do plano Pro.",
+  "interviewOfferFieldLabel": "Vaga de emprego",
+  "interviewOfferFieldHint": "Cole o texto da vaga ou o link",
+  "interviewOfferCharCount": "{count} caracteres",
+  "@interviewOfferCharCount": {
+    "placeholders": {
+      "count": {
+        "type": "int"
+      }
+    }
+  },
+  "interviewPasteButton": "Colar",
+  "interviewTypeTechnical": "Técnica",
+  "interviewTypeMixed": "Mista",
+  "interviewPrepareCta": "Preparar entrevista",
+  "interviewOfferUnreadableTitle": "Não conseguimos ler esse link",
+  "interviewOfferUnreadableBody": "Pode ser do LinkedIn ou estar protegido. Cole o texto da vaga para continuar.",
+  "interviewOfferUnreadablePasteButton": "Colar o texto da vaga",
+  "interviewOfferUnreadableLinkedinButton": "Abrir no LinkedIn",
+  "interviewPracticeCardTitle": "Simule sua entrevista",
+  "interviewPracticeCardBody": "Cole uma vaga e pratique uma entrevista técnica em inglês.",
   "authContinueWithGoogle": "Continuar com Google",
   "authContinueWithApple": "Continuar com Apple",
   "authSignInError": "Não conseguimos entrar. Tente de novo.",
@@ -369,5 +411,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "interviewOfferCopyTextHint": "Esse é o mesmo link. Copie o texto da vaga e cole aqui.",
+  "interviewOpenLinkError": "Não conseguimos abrir o link.",
+  "interviewDetailPlaceholderTitle": "Entrevista {id}"
 }

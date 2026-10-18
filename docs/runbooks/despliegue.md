@@ -290,6 +290,59 @@ curl -i -X POST http://fluent-interview-agent:8000/v1/prepare \
 
 `/v1/feedback` responde `501` hasta que se implemente.
 
+## 10. iOS: share extension y App Group (F14.2)
+
+La app trae un segundo target, `ShareExtension`
+(`com.guria.openfluent.ShareExtension`), que pone Open Fluent en la hoja de
+compartir de iOS. La extensión y la app se pasan lo compartido por el App
+Group `group.com.guria.openfluent`. Codemagic (`ios-release`) borra, regenera
+e instala los perfiles App Store de los dos identificadores, pero la API de
+App Store Connect no gestiona App Groups, así que esto se hace a mano **una
+vez**, antes del primer build con la extensión, en
+[Apple Developer → Certificates, Identifiers & Profiles](https://developer.apple.com/account/resources/identifiers/list):
+
+1. **Crear el App Group**: Identifiers → **+** → **App Groups** →
+   descripción `Open Fluent`, identificador `group.com.guria.openfluent`.
+2. **Crear el identificador de la extensión**: Identifiers → **+** → **App
+   IDs** → **App** → descripción `Open Fluent Share Extension`, Bundle ID
+   **Explicit** `com.guria.openfluent.ShareExtension`. Marcar solo **App
+   Groups** (la extensión no usa Push).
+3. **Asignar el App Group a los dos identificadores**: abrir
+   `com.guria.openfluent` y después `com.guria.openfluent.ShareExtension` →
+   **App Groups** → **Configure** → marcar `group.com.guria.openfluent` →
+   **Continue** → **Save**. En la app, Apple avisa que los perfiles quedan
+   inválidos: es lo esperado, el workflow los regenera. **Push Notifications**
+   tiene que seguir marcada en `com.guria.openfluent`.
+
+No hace falta tocar perfiles ni certificados: el workflow borra los perfiles
+viejos de los dos identificadores y crea los nuevos con las capacidades de
+arriba.
+
+**Verificación**
+
+- En el portal, cada identificador muestra **App Groups** con
+  `group.com.guria.openfluent` (la app, además, **Push Notifications**).
+- En el log de Codemagic, paso «Certificado y perfil de firma»: aparecen dos
+  perfiles y los dos traen `com.apple.security.application-groups` con
+  `group.com.guria.openfluent`; el de la app, también `aps-environment`. Si
+  falta un perfil, el paso corta con «No se instalo el perfil de …».
+- Si el archive falla con «requires a provisioning profile with the App
+  Groups feature», el App Group no quedó guardado en ese identificador
+  (paso 3).
+
+**Prueba manual en iPhone (TestFlight)**
+
+1. Instalar desde TestFlight el build que trae la extensión e iniciar sesión.
+2. En la app de LinkedIn, abrir una vacante → **Compartir** → **Más** (o
+   **Compartir mediante…**) → **Open Fluent**. Si no aparece, en la hoja de
+   compartir → **Editar acciones** y activarla.
+3. Se abre Open Fluent en la entrada de entrevista con el texto de la
+   vacante (título, empresa y enlace) ya cargado; con la app cerrada y con la
+   app abierta en segundo plano, las dos.
+4. Desde Safari, compartir solo el enlace de una vacante: llega como enlace.
+5. Con la sesión cerrada: compartir una vacante, iniciar sesión, y la
+   entrada se abre con lo compartido.
+
 ---
 
 ## Notas

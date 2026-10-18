@@ -56,6 +56,18 @@ enum ApiErrorCode {
   /// P1 MEJ-33/MEJ-41: la cuenta todavía no tiene grupo (crear invitación,
   /// o abrir sesión sin grupo).
   groupRequired,
+
+  /// F12.4.T1: `409` al pedir `POST /interviews/:id/session` de una
+  /// entrevista que se cerró por tiempo o por abandono (no se puede retomar).
+  interviewNotResumable,
+
+  /// F12.4.T1: `409` al pedir `POST /interviews/:id/retry` de una entrevista
+  /// que no está en un estado que se pueda reintentar.
+  interviewNotRetryable,
+
+  /// F12.4.T1: `409` de `POST /interviews/:id/session` cuando la entrevista
+  /// no está en un estado que se pueda abrir (ya terminó, sin plan…).
+  interviewNotOpenable,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {
@@ -106,6 +118,12 @@ enum ApiErrorCode {
         return ApiErrorCode.offerUnreadable;
       case 'INTERVIEWS_DAILY_CAP':
         return ApiErrorCode.interviewsDailyCap;
+      case 'INTERVIEW_NOT_RESUMABLE':
+        return ApiErrorCode.interviewNotResumable;
+      case 'INTERVIEW_NOT_RETRYABLE':
+        return ApiErrorCode.interviewNotRetryable;
+      case 'INTERVIEW_NOT_OPENABLE':
+        return ApiErrorCode.interviewNotOpenable;
       default:
         return ApiErrorCode.unknown;
     }
@@ -121,7 +139,28 @@ class ApiException implements Exception {
     this.statusCode,
     this.details,
     this.activeSessionId,
+    this.activeInterviewId,
   });
+
+  /// Lee el cuerpo de error de la API (`error`, `message`, `details`,
+  /// `activeSessionId` y `activeSession`).
+  factory ApiException.fromBody(
+    Map<String, dynamic> body, {
+    int? statusCode,
+    String? fallbackMessage,
+  }) {
+    final active = body['activeSession'];
+    return ApiException(
+      code: ApiErrorCode.fromWire(body['error'] as String?),
+      message: (body['message'] as String?) ?? fallbackMessage ?? 'error',
+      statusCode: statusCode,
+      details: (body['details'] as List?)?.cast<Map<String, dynamic>>(),
+      activeSessionId: body['activeSessionId'] as String?,
+      activeInterviewId: active is Map
+          ? active['interviewId'] as String?
+          : null,
+    );
+  }
 
   final ApiErrorCode code;
   final String message;
@@ -132,6 +171,18 @@ class ApiException implements Exception {
   /// agrega como campo extra junto a `error`/`message`/`statusCode`, no
   /// dentro de `details`.
   final String? activeSessionId;
+
+  /// `activeSession.interviewId` del mismo 409 (F12.4.T1): la sesión activa
+  /// es una entrevista y se retoma en modo entrevista.
+  final String? activeInterviewId;
+
+  /// Dónde retomar la sesión activa de un `SESSION_ALREADY_ACTIVE`.
+  String? get activeSessionRoute {
+    final interviewId = activeInterviewId;
+    if (interviewId != null) return '/interviews/$interviewId/session';
+    final id = activeSessionId;
+    return id == null ? null : '/session/$id';
+  }
 
   @override
   String toString() => 'ApiException($code, $statusCode): $message';

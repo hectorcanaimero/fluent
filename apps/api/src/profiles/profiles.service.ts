@@ -41,14 +41,14 @@ export class ProfilesService {
     const [
       group,
       modelPreference,
-      activeSessionId,
+      activeSession,
       pendingActions,
       sessionsToday,
       avatarUrl,
     ] = await Promise.all([
       profile.group_id ? this.groupsRepository.findById(profile.group_id) : Promise.resolve(null),
       this.profilesRepository.getModelPreference(userId),
-      this.profilesRepository.getActiveSessionId(userId),
+      this.profilesRepository.getActiveSession(userId),
       this.pendingActions.listFor(userId),
       this.sessionsQuery.countValidSessionsSince(userId, since),
       // Quien vinculó Google después de tener perfil no tiene la foto
@@ -65,7 +65,8 @@ export class ProfilesService {
       planExpiresAt: profile.plan_expires_at,
       modelPreference: toModelPreferenceDto(modelPreference),
       onboarded: profile.onboarded_at !== null,
-      activeSessionId,
+      activeSessionId: activeSession?.id ?? null,
+      activeSession,
       interestsCatalog: INTERESTS_CATALOG_IDS,
       pendingActions,
       sessionsToday,

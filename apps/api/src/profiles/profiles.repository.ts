@@ -5,7 +5,7 @@ import { InsforgeHttp } from '../insforge/insforge.http.js';
 import { TABLES, type Level, type Locale, type Profile } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 import { RPC } from '../db/rpc.js';
-import { findBlockingActiveSessionId } from '../sessions/active-session.js';
+import { findBlockingActiveSession, type ActiveSessionRef } from '../sessions/active-session.js';
 
 /**
  * Nivel inicial de un perfil creado por `ensureProfile` (docs/specs/pendientes/PR-02.md):
@@ -225,8 +225,8 @@ export class ProfilesRepository {
   }
 
   /** Sesión a retomar en `GET /me`; una entrevista en pausa no cuenta (D5). */
-  getActiveSessionId(userId: string): Promise<string | null> {
-    return findBlockingActiveSessionId(this.admin, userId);
+  getActiveSession(userId: string): Promise<ActiveSessionRef | null> {
+    return findBlockingActiveSession(this.admin, userId);
   }
 
   /**

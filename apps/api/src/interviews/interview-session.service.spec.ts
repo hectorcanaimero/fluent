@@ -121,7 +121,10 @@ function build(
         onboarded_at: '2026-09-01',
         plan: 'free',
       }) as Profile,
-    findActiveSessionId: async () => options.activeSessionId ?? null,
+    findActiveSession: async () =>
+      options.activeSessionId
+        ? { id: options.activeSessionId, kind: 'free_topic' as const, interviewId: null }
+        : null,
     deleteSession: async () => undefined,
   } as unknown as SessionsRepository;
   const interviewTurns = {

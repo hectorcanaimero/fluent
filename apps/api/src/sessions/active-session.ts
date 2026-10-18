@@ -3,8 +3,16 @@ import type { InsForgeClient } from '@insforge/sdk';
 import { TABLES, type SessionKind } from '../db/schema.js';
 import { unwrapInsforge } from '../insforge/insforge-result.js';
 
+/** Sesión activa que bloquea: la app la usa para saber a qué pantalla volver. */
+export interface ActiveSessionRef {
+  readonly id: string;
+  readonly kind: SessionKind;
+  /** Solo en `kind = 'interview'`: la app la retoma en `/interviews/:id/session`. */
+  readonly interviewId: string | null;
+}
+
 /**
- * Id de la sesión `active` del usuario que cuenta para «una sola sesión
+ * Sesión `active` del usuario que cuenta para «una sola sesión
  * activa» (SPEC-04 §2), la más reciente por `started_at`.
  *
  * Una entrevista en pausa (D5: el usuario terminó antes de tiempo, la
@@ -12,10 +20,10 @@ import { unwrapInsforge } from '../insforge/insforge-result.js';
  * cuenta: no bloquea las sesiones normales ni sale en `GET /me` como sesión
  * a retomar. Al retomarla vuelve a `in_progress` y sí cuenta.
  */
-export async function findBlockingActiveSessionId(
+export async function findBlockingActiveSession(
   admin: InsForgeClient,
   userId: string,
-): Promise<string | null> {
+): Promise<ActiveSessionRef | null> {
   const result = await admin.database
     .from(TABLES.sessions)
     .select('id, kind, interview_id')
@@ -42,10 +50,8 @@ export async function findBlockingActiveSessionId(
     );
   }
 
-  return (
-    rows.find(
-      (row) =>
-        !(row.kind === 'interview' && row.interview_id !== null && paused.has(row.interview_id)),
-    )?.id ?? null
+  const row = rows.find(
+    (r) => !(r.kind === 'interview' && r.interview_id !== null && paused.has(r.interview_id)),
   );
+  return row ? { id: row.id, kind: row.kind, interviewId: row.interview_id } : null;
 }

@@ -163,6 +163,18 @@
   "conversationSttErrorTimeout": "O tempo de escuta acabou. Tente de novo.",
   "conversationSttErrorGeneric": "Houve um problema com o microfone. Tente de novo.",
   "conversationReplayAudio": "Repetir áudio",
+  "conversationInterviewModeBanner": "Modo entrevista · sem correções",
+  "conversationInterviewQuestionHeader": "Pergunta {idx} de {total}",
+  "@conversationInterviewQuestionHeader": {
+    "placeholders": {
+      "idx": {
+        "type": "int"
+      },
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "summaryTitle": "Sessão feita",
   "summaryXpEarnedLabel": "XP ganho",
   "summaryStreakLabel": "Sequência",
@@ -280,6 +292,8 @@
   "errorOfferUnreadable": "Não conseguimos ler essa vaga.",
   "errorInterviewsDailyCap": "Hoje você já usou suas entrevistas. Amanhã tem mais.",
   "errorInterviewTooShort": "Faltam respostas para montar seu parecer.",
+  "errorInterviewNotResumable": "Essa entrevista não pode mais ser retomada. Foi encerrada por tempo ou inatividade.",
+  "errorInterviewNotRetryable": "Essa entrevista não pode ser tentada novamente agora.",
   "interviewEntryTitle": "Prepare sua entrevista",
   "interviewEntryHistoryTooltip": "Histórico de entrevistas",
   "interviewQuotaRemaining": "Faltam {remaining} de {limit} entrevistas hoje",
@@ -444,6 +458,13 @@
   "interviewSenioritySenior": "Sênior",
   "interviewSeniorityStaffLead": "Staff/Lead",
   "interviewSessionPlaceholderTitle": "Entrevista",
+  "interviewSessionActiveSessionTitle": "Você tem outra sessão aberta",
+  "interviewSessionActiveSessionBody": "Termine sua sessão de prática atual para começar a entrevista.",
+  "interviewSessionActiveSessionCta": "Ir para essa sessão",
+  "interviewSessionNotResumableTitle": "Não foi possível retomar esta entrevista",
+  "interviewSessionNotResumableBody": "Foi encerrada por tempo ou inatividade.",
+  "interviewSessionNotResumableBackCta": "Voltar ao histórico",
+  "interviewSessionStartErrorGeneric": "Não foi possível iniciar a entrevista.",
   "interviewFeedbackPlaceholderTitle": "Parecer",
   "interviewInProgressTitle": "Você tem uma entrevista em andamento",
   "interviewContinueCta": "Continuar",
@@ -473,5 +494,9 @@
   "interviewHistoryStatusFeedbackPending": "Montando seu parecer",
   "interviewHistoryStatusFeedbackFailed": "Parecer com erro",
   "interviewHistoryStatusFinishedNoFeedback": "Terminada sem parecer",
-  "interviewHistoryUnknownDate": "Data desconhecida"
+  "interviewHistoryUnknownDate": "Data desconhecida",
+  "errorInterviewNotOpenable": "Essa entrevista não pode ser aberta agora.",
+  "conversationInterviewPendingHint": "Sua resposta ainda não foi enviada.",
+  "conversationInterviewRetrySend": "Tentar enviar de novo",
+  "conversationInterviewContinue": "Continuar falando"
 }

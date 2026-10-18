@@ -81,6 +81,8 @@ class AuthController extends StateNotifier<AuthState> {
         status: AuthStatus.authenticated,
         onboarded: me.onboarded,
         activeSessionId: me.activeSessionId,
+        activeSessionKind: me.activeSession?.kind,
+        activeInterviewId: me.activeSession?.interviewId,
         clearActiveSessionId: me.activeSessionId == null,
         me: me,
       );

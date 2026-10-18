@@ -57,7 +57,7 @@ function createService(
       ...patch,
     })),
     getModelPreference: vi.fn().mockResolvedValue(null),
-    getActiveSessionId: vi.fn().mockResolvedValue(null),
+    getActiveSession: vi.fn().mockResolvedValue(null),
     awardProfileCompleted: vi.fn().mockResolvedValue(20),
     purgeAppData: vi.fn().mockResolvedValue(undefined),
     refreshAvatar: vi.fn().mockResolvedValue(null),
@@ -135,6 +135,26 @@ describe('ProfilesService.updateProfile — cálculo de onboarded_at', () => {
 });
 
 describe('ProfilesService.getMe', () => {
+  it('expone la sesión activa con kind e interviewId, y activeSessionId por compatibilidad', async () => {
+    const { service, profilesRepository } = createService(makeProfile());
+    const activeSession = { id: 's-int', kind: 'interview' as const, interviewId: 'i-1' };
+    profilesRepository.getActiveSession.mockResolvedValue(activeSession);
+
+    const me = await service.getMe('user-1');
+
+    expect(me.activeSessionId).toBe('s-int');
+    expect(me.activeSession).toEqual(activeSession);
+  });
+
+  it('sin sesión activa: activeSessionId y activeSession en null', async () => {
+    const { service } = createService(makeProfile());
+
+    const me = await service.getMe('user-1');
+
+    expect(me.activeSessionId).toBeNull();
+    expect(me.activeSession).toBeNull();
+  });
+
   it('reports onboarded: true only when onboarded_at is set', async () => {
     const profile = makeProfile({ onboarded_at: '2026-08-15T00:00:00.000Z' });
     const { service } = createService(profile);

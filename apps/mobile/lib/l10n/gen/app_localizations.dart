@@ -1076,6 +1076,18 @@ abstract class AppLocalizations {
   /// **'Repetir audio'**
   String get conversationReplayAudio;
 
+  /// No description provided for @conversationInterviewModeBanner.
+  ///
+  /// In es, this message translates to:
+  /// **'Modo entrevista · sin correcciones'**
+  String get conversationInterviewModeBanner;
+
+  /// No description provided for @conversationInterviewQuestionHeader.
+  ///
+  /// In es, this message translates to:
+  /// **'Pregunta {idx} de {total}'**
+  String conversationInterviewQuestionHeader(int idx, int total);
+
   /// No description provided for @summaryTitle.
   ///
   /// In es, this message translates to:
@@ -1778,6 +1790,18 @@ abstract class AppLocalizations {
   /// **'Faltan respuestas para armar tu parecer.'**
   String get errorInterviewTooShort;
 
+  /// No description provided for @errorInterviewNotResumable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista ya no se puede retomar. Se cerró por tiempo o por inactividad.'**
+  String get errorInterviewNotResumable;
+
+  /// No description provided for @errorInterviewNotRetryable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista no se puede reintentar en este momento.'**
+  String get errorInterviewNotRetryable;
+
   /// No description provided for @interviewEntryTitle.
   ///
   /// In es, this message translates to:
@@ -2474,6 +2498,48 @@ abstract class AppLocalizations {
   /// **'Entrevista'**
   String get interviewSessionPlaceholderTitle;
 
+  /// No description provided for @interviewSessionActiveSessionTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Tienes otra sesión abierta'**
+  String get interviewSessionActiveSessionTitle;
+
+  /// No description provided for @interviewSessionActiveSessionBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Termina tu sesión de práctica actual para empezar la entrevista.'**
+  String get interviewSessionActiveSessionBody;
+
+  /// No description provided for @interviewSessionActiveSessionCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Ir a esa sesión'**
+  String get interviewSessionActiveSessionCta;
+
+  /// No description provided for @interviewSessionNotResumableTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos retomar esta entrevista'**
+  String get interviewSessionNotResumableTitle;
+
+  /// No description provided for @interviewSessionNotResumableBody.
+  ///
+  /// In es, this message translates to:
+  /// **'Se cerró por tiempo o por inactividad.'**
+  String get interviewSessionNotResumableBody;
+
+  /// No description provided for @interviewSessionNotResumableBackCta.
+  ///
+  /// In es, this message translates to:
+  /// **'Volver al historial'**
+  String get interviewSessionNotResumableBackCta;
+
+  /// No description provided for @interviewSessionStartErrorGeneric.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos empezar la entrevista.'**
+  String get interviewSessionStartErrorGeneric;
+
   /// No description provided for @interviewFeedbackPlaceholderTitle.
   ///
   /// In es, this message translates to:
@@ -2611,6 +2677,30 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'Fecha desconocida'**
   String get interviewHistoryUnknownDate;
+
+  /// No description provided for @errorInterviewNotOpenable.
+  ///
+  /// In es, this message translates to:
+  /// **'Esta entrevista no se puede abrir ahora.'**
+  String get errorInterviewNotOpenable;
+
+  /// No description provided for @conversationInterviewPendingHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Tu respuesta todavía no se envió.'**
+  String get conversationInterviewPendingHint;
+
+  /// No description provided for @conversationInterviewRetrySend.
+  ///
+  /// In es, this message translates to:
+  /// **'Reintentar envío'**
+  String get conversationInterviewRetrySend;
+
+  /// No description provided for @conversationInterviewContinue.
+  ///
+  /// In es, this message translates to:
+  /// **'Seguir hablando'**
+  String get conversationInterviewContinue;
 }
 
 class _AppLocalizationsDelegate

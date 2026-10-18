@@ -1,4 +1,5 @@
 import type { Level, Locale, Plan } from '../db/schema.js';
+import type { ActiveSessionRef } from '../sessions/active-session.js';
 
 /**
  * `profile` de `GET /me` y cuerpo de `PUT /me/profile` (SPEC-02 §4.1).
@@ -46,6 +47,11 @@ export interface MeDto {
   modelPreference: ModelPreferenceDto | null;
   onboarded: boolean;
   activeSessionId: string | null;
+  /**
+   * La misma sesión con su `kind` e `interviewId` (F12.4.T1): una entrevista
+   * se retoma en `/interviews/:id/session`, no en `/session/:id`.
+   */
+  activeSession: ActiveSessionRef | null;
   interestsCatalog: string[];
   /**
    * PR-05 (SPEC-05 §4): avisar al owner sin credencial activa. No hay

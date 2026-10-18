@@ -588,6 +588,15 @@ class AppLocalizationsEs extends AppLocalizations {
   String get conversationReplayAudio => 'Repetir audio';
 
   @override
+  String get conversationInterviewModeBanner =>
+      'Modo entrevista · sin correcciones';
+
+  @override
+  String conversationInterviewQuestionHeader(int idx, int total) {
+    return 'Pregunta $idx de $total';
+  }
+
+  @override
   String get summaryTitle => 'Sesión hecha';
 
   @override
@@ -990,6 +999,14 @@ class AppLocalizationsEs extends AppLocalizations {
       'Faltan respuestas para armar tu parecer.';
 
   @override
+  String get errorInterviewNotResumable =>
+      'Esta entrevista ya no se puede retomar. Se cerró por tiempo o por inactividad.';
+
+  @override
+  String get errorInterviewNotRetryable =>
+      'Esta entrevista no se puede reintentar en este momento.';
+
+  @override
   String get interviewEntryTitle => 'Prepara tu entrevista';
 
   @override
@@ -1370,6 +1387,31 @@ class AppLocalizationsEs extends AppLocalizations {
   String get interviewSessionPlaceholderTitle => 'Entrevista';
 
   @override
+  String get interviewSessionActiveSessionTitle => 'Tienes otra sesión abierta';
+
+  @override
+  String get interviewSessionActiveSessionBody =>
+      'Termina tu sesión de práctica actual para empezar la entrevista.';
+
+  @override
+  String get interviewSessionActiveSessionCta => 'Ir a esa sesión';
+
+  @override
+  String get interviewSessionNotResumableTitle =>
+      'No pudimos retomar esta entrevista';
+
+  @override
+  String get interviewSessionNotResumableBody =>
+      'Se cerró por tiempo o por inactividad.';
+
+  @override
+  String get interviewSessionNotResumableBackCta => 'Volver al historial';
+
+  @override
+  String get interviewSessionStartErrorGeneric =>
+      'No pudimos empezar la entrevista.';
+
+  @override
   String get interviewFeedbackPlaceholderTitle => 'Parecer';
 
   @override
@@ -1441,4 +1483,18 @@ class AppLocalizationsEs extends AppLocalizations {
 
   @override
   String get interviewHistoryUnknownDate => 'Fecha desconocida';
+
+  @override
+  String get errorInterviewNotOpenable =>
+      'Esta entrevista no se puede abrir ahora.';
+
+  @override
+  String get conversationInterviewPendingHint =>
+      'Tu respuesta todavía no se envió.';
+
+  @override
+  String get conversationInterviewRetrySend => 'Reintentar envío';
+
+  @override
+  String get conversationInterviewContinue => 'Seguir hablando';
 }

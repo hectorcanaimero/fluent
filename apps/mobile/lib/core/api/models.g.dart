@@ -345,6 +345,9 @@ _TurnResult _$TurnResultFromJson(Map<String, dynamic> json) => _TurnResult(
   modelUsed: json['modelUsed'] as String?,
   degraded: json['degraded'] as bool? ?? false,
   unavailable: json['unavailable'] as bool? ?? false,
+  interview: json['interview'] == null
+      ? null
+      : TurnInterviewInfo.fromJson(json['interview'] as Map<String, dynamic>),
 );
 
 Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
@@ -355,6 +358,25 @@ Map<String, dynamic> _$TurnResultToJson(_TurnResult instance) =>
       'modelUsed': instance.modelUsed,
       'degraded': instance.degraded,
       'unavailable': instance.unavailable,
+      'interview': instance.interview,
+    };
+
+_TurnInterviewInfo _$TurnInterviewInfoFromJson(Map<String, dynamic> json) =>
+    _TurnInterviewInfo(
+      questionIdx: (json['questionIdx'] as num).toInt(),
+      totalQuestions: (json['totalQuestions'] as num).toInt(),
+      competency: json['competency'] as String,
+      remainingSec: (json['remainingSec'] as num).toInt(),
+      done: json['done'] as bool? ?? false,
+    );
+
+Map<String, dynamic> _$TurnInterviewInfoToJson(_TurnInterviewInfo instance) =>
+    <String, dynamic>{
+      'questionIdx': instance.questionIdx,
+      'totalQuestions': instance.totalQuestions,
+      'competency': instance.competency,
+      'remainingSec': instance.remainingSec,
+      'done': instance.done,
     };
 
 _SessionSummary _$SessionSummaryFromJson(Map<String, dynamic> json) =>

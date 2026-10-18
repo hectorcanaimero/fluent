@@ -42,6 +42,10 @@ String l10nForApiError(ApiErrorCode code, AppLocalizations l10n) {
     ApiErrorCode.offerUnreadable => l10n.errorOfferUnreadable,
     ApiErrorCode.interviewsDailyCap => l10n.errorInterviewsDailyCap,
     ApiErrorCode.interviewTooShort => l10n.errorInterviewTooShort,
+    // F12.4.T1 (PR #94): la sesión de entrevista se cerró por tiempo o por
+    // abandono y ya no se puede retomar.
+    ApiErrorCode.interviewNotResumable => l10n.errorInterviewNotResumable,
+    ApiErrorCode.interviewNotRetryable => l10n.errorInterviewNotRetryable,
     ApiErrorCode.unknown => l10n.errorGeneric,
   };
 }

@@ -56,6 +56,14 @@ enum ApiErrorCode {
   /// P1 MEJ-33/MEJ-41: la cuenta todavía no tiene grupo (crear invitación,
   /// o abrir sesión sin grupo).
   groupRequired,
+
+  /// F12.4.T1: `409` al pedir `POST /interviews/:id/session` de una
+  /// entrevista que se cerró por tiempo o por abandono (no se puede retomar).
+  interviewNotResumable,
+
+  /// F12.4.T1: `409` al pedir `POST /interviews/:id/retry` de una entrevista
+  /// que no está en un estado que se pueda reintentar.
+  interviewNotRetryable,
   unknown;
 
   static ApiErrorCode fromWire(String? code) {
@@ -106,6 +114,10 @@ enum ApiErrorCode {
         return ApiErrorCode.offerUnreadable;
       case 'INTERVIEWS_DAILY_CAP':
         return ApiErrorCode.interviewsDailyCap;
+      case 'INTERVIEW_NOT_RESUMABLE':
+        return ApiErrorCode.interviewNotResumable;
+      case 'INTERVIEW_NOT_RETRYABLE':
+        return ApiErrorCode.interviewNotRetryable;
       default:
         return ApiErrorCode.unknown;
     }

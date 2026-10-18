@@ -65,6 +65,30 @@ export interface TurnResultDto {
   readonly degraded: boolean;
   /** Solo presente (y `true`) en la respuesta degradada de SPEC-03 §6. */
   readonly unavailable?: boolean;
+  /** Solo en `kind = 'interview'`; ahí `corrections` va siempre vacío (FR-10). */
+  readonly interview?: InterviewTurnInfoDto;
+}
+
+/** Progreso de la entrevista tras un turno (C4, FR-11, FR-24). */
+export interface InterviewTurnInfoDto {
+  /** Pregunta del plan que hace (o repregunta) la respuesta del entrevistador. */
+  readonly questionIdx: number;
+  readonly totalQuestions: number;
+  /** Nombre de la competencia de esa pregunta. */
+  readonly competency: string;
+  /** `INTERVIEW_MAX_SEC - active_sec`, nunca negativo. */
+  readonly remainingSec: number;
+  /** `true` si la entrevista terminó y la sesión ya se cerró. */
+  readonly done: boolean;
+}
+
+/** Respuesta de `POST /interviews/:id/session` (abrir o retomar, FR-25). */
+export interface InterviewSessionDto {
+  readonly sessionId: string;
+  /** Lo último que dijo el entrevistador: la apertura o la pregunta pendiente. */
+  readonly opening: string;
+  readonly answeredCount: number;
+  readonly interview: InterviewTurnInfoDto;
 }
 
 /**

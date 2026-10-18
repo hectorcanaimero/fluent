@@ -38,6 +38,10 @@ import { SessionSweeperRepository, type ActiveSessionRow } from './session-sweep
  * `active` en el momento de leerlas, así que cada cierre es la primera vez
  * que esa sesión concreta deja de estarlo).
  *
+ * **Entrevistas** (`kind = 'interview'`, D5): se abandonan a
+ * `interviewAbandonAfterSec` (24 h) de inactividad y nunca por hard cap, para
+ * poder retomarlas (FR-25); su tiempo lo controla `active_sec` en el turno.
+ *
  * Clase pura (sin decorador de Nest), mismo patrón que `RetentionService`
  * (`src/jobs/maintenance/retention.service.ts`): se construye con un
  * `useFactory` en `session-sweeper.module.ts` para poder inyectar un reloj
@@ -49,7 +53,11 @@ export interface SessionSweeperServiceOptions {
   /** Reloj inyectable para que los tests fijen "ahora". Por defecto `() => new Date()`. */
   readonly now?: () => Date;
   readonly batchLimit?: number;
+  /** `INTERVIEW_ABANDON_AFTER_SEC`; por defecto 24 h. */
+  readonly interviewAbandonAfterSec?: number;
 }
+
+const DEFAULT_INTERVIEW_ABANDON_AFTER_SEC = 86_400;
 
 /**
  * Sesiones `active` que se procesan por ejecución. El cron corre cada minuto
@@ -74,12 +82,15 @@ export class SessionSweeperService implements SessionSweeper {
   private readonly closer: SessionCloserService;
   private readonly now: () => Date;
   private readonly batchLimit: number;
+  private readonly interviewAbandonAfterSec: number;
 
   constructor(options: SessionSweeperServiceOptions) {
     this.repository = options.repository;
     this.closer = options.closer;
     this.now = options.now ?? (() => new Date());
     this.batchLimit = options.batchLimit ?? SESSION_SWEEPER_BATCH_LIMIT;
+    this.interviewAbandonAfterSec =
+      options.interviewAbandonAfterSec ?? DEFAULT_INTERVIEW_ABANDON_AFTER_SEC;
   }
 
   async run(): Promise<SessionSweeperResult> {
@@ -124,9 +135,10 @@ export class SessionSweeperService implements SessionSweeper {
       (await this.repository.findLastTurnCreatedAt(session.id)) ?? session.startedAt;
 
     const idleSec = secondsBetween(lastTurnAtIso, nowIso);
+    const isInterview = session.kind === 'interview';
 
     // 1. Abandono primero (ver cabecera del archivo: por qué antes que el hard cap).
-    if (idleSec >= ABANDON_AFTER_SEC) {
+    if (idleSec >= (isInterview ? this.interviewAbandonAfterSec : ABANDON_AFTER_SEC)) {
       const conversationSec = Math.min(
         SESSION_HARD_CAP_SEC,
         secondsBetween(session.startedAt, lastTurnAtIso),
@@ -147,9 +159,9 @@ export class SessionSweeperService implements SessionSweeper {
       return 'abandoned';
     }
 
-    // 2. Hard cap después.
+    // 2. Hard cap después (no en entrevistas: una pausa no la cierra).
     const elapsedSec = secondsBetween(session.startedAt, nowIso);
-    if (elapsedSec >= SESSION_HARD_CAP_SEC) {
+    if (!isInterview && elapsedSec >= SESSION_HARD_CAP_SEC) {
       await this.closer.close({
         userId: session.userId,
         sessionId: session.id,

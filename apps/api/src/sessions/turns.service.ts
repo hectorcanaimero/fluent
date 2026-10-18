@@ -19,6 +19,7 @@ import { buildTurnMessages } from '../llm/prompts/turn.js';
 import { TurnOutput, type Correction as CorrectionOutput } from '../llm/schemas.js';
 import { RedisService } from '../redis/redis.service.js';
 import { DailyTurnsBudget } from './daily-turns-budget.js';
+import { InterviewTurnsService } from './interview-turns.service.js';
 import { SESSION_KINDS } from './dto/create-session.dto.js';
 import type { CreateTurnDto } from './dto/create-turn.dto.js';
 import { rebuildScenario } from './scenario.js';
@@ -30,7 +31,7 @@ import {
   turnLockKey,
   turnPaceKey,
 } from './sessions.constants.js';
-import { roundLatency, toCorrectionDto } from './sessions.mapper.js';
+import { clampNote, roundLatency, toCorrectionDto } from './sessions.mapper.js';
 import { SessionsRepository } from './sessions.repository.js';
 import type { CorrectionDto, TurnResultDto } from './sessions.types.js';
 import { TurnsRepository, type InsertCorrectionRow } from './turns.repository.js';
@@ -41,14 +42,6 @@ const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar o
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
 const NOT_ONBOARDED_MESSAGE = 'Completa tu perfil antes de seguir la conversación.';
-
-/**
- * `corrections.note` tiene un CHECK de 140 caracteres (migración 3). El
- * esquema zod `Correction` ya lo limita, pero el modelo escribe ese texto y no
- * se confía en que el `.max(140)` haya recortado en vez de rechazar: se vuelve
- * a recortar aquí antes del INSERT.
- */
-const CORRECTION_NOTE_MAX_CHARS = 140;
 
 /** Lo que se persiste en el turno del tutor, venga del modelo o de la degradación. */
 interface TutorOutcome {
@@ -98,6 +91,7 @@ export class TurnsService {
     private readonly redis: RedisService,
     private readonly configService: ConfigService<Env, true>,
     private readonly dailyTurnsBudget: DailyTurnsBudget,
+    private readonly interviewTurns: InterviewTurnsService,
   ) {}
 
   async addTurn(
@@ -169,10 +163,10 @@ export class TurnsService {
     if (session.status !== 'active') {
       throw ApiException.of('SESSION_NOT_ACTIVE', SESSION_NOT_ACTIVE_MESSAGE);
     }
-    // Grupo, entrevista y estudio no tienen escenario 1:1: sin esto
-    // `rebuildScenario` tiraría un 500 después de insertar el turno. F12.1.T2
-    // reemplaza este guard cuando enrute los turnos de entrevista.
-    if (!(SESSION_KINDS as readonly SessionKind[]).includes(session.kind)) {
+    // Grupo y estudio no tienen escenario 1:1: sin esto `rebuildScenario`
+    // tiraría un 500 después de insertar el turno. La entrevista va por
+    // `InterviewTurnsService` (F12.1.T2).
+    if (session.kind !== 'interview' && !(SESSION_KINDS as readonly SessionKind[]).includes(session.kind)) {
       throw ApiException.of('WRONG_SESSION_KIND', WRONG_SESSION_KIND_MESSAGE);
     }
     return session;
@@ -220,6 +214,10 @@ export class TurnsService {
     // el 0) el primer turno del usuario sería el 0.
     const lastIdx = history.at(-1)?.idx ?? -1;
     const userTurnIdx = lastIdx + 1;
+
+    if (session.kind === 'interview') {
+      return this.interviewTurns.run({ userId, session, profile, text, userTurnIdx, onToken, onReset });
+    }
 
     // 2. Turno del usuario (SPEC-04 §4 paso 2).
     await this.turns.insertTurn({
@@ -428,14 +426,4 @@ export class TurnsService {
       );
     }
   }
-}
-
-/** Recorte defensivo al CHECK de 140 caracteres de `corrections.note`. */
-function clampNote(note: string | null | undefined): string | null {
-  if (note === null || note === undefined) {
-    return null;
-  }
-  return note.length > CORRECTION_NOTE_MAX_CHARS
-    ? note.slice(0, CORRECTION_NOTE_MAX_CHARS)
-    : note;
 }

@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ProfilesModule } from '../profiles/profiles.module.js';
+import { SessionsModule } from '../sessions/sessions.module.js';
 import { InterviewsController } from './interviews.controller.js';
 import { InterviewsRepository } from './interviews.repository.js';
 import { InterviewsService } from './interviews.service.js';
@@ -12,7 +13,8 @@ import { InterviewsService } from './interviews.service.js';
  * (plan efectivo y zona horaria, mismo criterio que `ModelsModule`).
  */
 @Module({
-  imports: [ProfilesModule],
+  // `SessionsModule` aporta `InterviewSessionService` (abrir/retomar, F12.1.T2).
+  imports: [ProfilesModule, SessionsModule],
   controllers: [InterviewsController],
   providers: [InterviewsRepository, InterviewsService],
   exports: [InterviewsService],

@@ -20,6 +20,7 @@ function activeSession(overrides: Partial<ActiveSessionRow>): ActiveSessionRow {
   return {
     id: 'session-default',
     userId: 'user-default',
+    kind: 'free_topic',
     startedAt: isoMinus(100),
     turnsCount: 0,
     ...overrides,
@@ -319,5 +320,54 @@ describe('SessionSweeperService', () => {
     expect(endSessionCalls.markBriefDone).toEqual([
       { userId: 'user-no-brief', sessionId: 'session-no-brief' },
     ]);
+  });
+
+  describe('entrevistas (D5, F12.1.T2)', () => {
+    it('una entrevista de 2 h sin turnos recientes no se abandona ni se cierra por hard cap', async () => {
+      const session = activeSession({
+        id: 'session-interview',
+        kind: 'interview',
+        startedAt: isoMinus(2 * 3600),
+        turnsCount: 3,
+      });
+      const { repo, calls: repoCalls } = fakeSweeperRepository({
+        sessions: [session],
+        lastTurnAt: { 'session-interview': isoMinus(2 * 3600 - 300) }, // pausa de casi 2 h
+      });
+      const { closer, calls: closerCalls } = fakeCloser();
+      const service = new SessionSweeperService({ repository: repo, closer, now: () => NOW });
+
+      const result = await service.run();
+
+      expect(closerCalls).toEqual([]);
+      expect(repoCalls.markAbandoned).toEqual([]);
+      expect(result).toEqual<SessionSweeperResult>({
+        closedByHardCap: 0,
+        closedAsAbandoned: 0,
+        markedAbandoned: 0,
+      });
+    });
+
+    it('a INTERVIEW_ABANDON_AFTER_SEC de inactividad sí se abandona', async () => {
+      const session = activeSession({
+        id: 'session-interview-old',
+        kind: 'interview',
+        startedAt: isoMinus(90_000),
+        turnsCount: 0,
+      });
+      const { repo, calls: repoCalls } = fakeSweeperRepository({ sessions: [session] });
+      const { closer } = fakeCloser();
+      const service = new SessionSweeperService({
+        repository: repo,
+        closer,
+        now: () => NOW,
+        interviewAbandonAfterSec: 86_400,
+      });
+
+      const result = await service.run();
+
+      expect(repoCalls.markAbandoned).toHaveLength(1);
+      expect(result.markedAbandoned).toBe(1);
+    });
   });
 });

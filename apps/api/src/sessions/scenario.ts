@@ -23,6 +23,7 @@ import {
 } from '../content/index.js';
 import type { Locale, NewsItem, OpenableSessionKind, Session } from '../db/schema.js';
 import type { NewsScenario, RoleplayScenario } from '../llm/prompts/turn.js';
+import type { InterviewPlan } from '../interviews/interviews.types.js';
 import { resolveFreeTopicPrompt } from './topic-prompt.js';
 
 /** Lo que se resuelve del `kind` antes de tocar la base (SPEC-04 §3.2). */
@@ -63,6 +64,27 @@ export function bossScenario(topic: BossTopic, locale: Locale = 'es'): SessionSc
   return { topic: titleFor(topic, locale), promptTopic: topic.prompt_en };
 }
 
+/** `sessions.topic` de toda sesión `interview` (F12.1.T2). */
+export const INTERVIEW_TOPIC = 'Entrevista';
+
+/** `interview`: el turno usa su propio prompt (I3) armado desde el plan. */
+export interface InterviewScenario {
+  readonly topic: string;
+  readonly plan: InterviewPlan;
+  readonly totalQuestions: number;
+}
+
+export function interviewScenario(plan: InterviewPlan): InterviewScenario {
+  return { topic: INTERVIEW_TOPIC, plan, totalQuestions: plan.questions.length };
+}
+
+/** Nombre de la competencia de la pregunta `questionIdx` del plan (FR-24). */
+export function competencyFor(plan: InterviewPlan, questionIdx: number): string {
+  const question = plan.questions.find((q) => q.idx === questionIdx);
+  const competency = plan.rubric.find((c) => c.id === question?.competencyId);
+  return competency?.name ?? '';
+}
+
 /** Entrada de `ROLEPLAYS` cuyo título (es o pt) es exactamente `topic`. */
 export function findRoleplayByTitle(topic: string): Roleplay | undefined {
   return ROLEPLAYS.find((entry) => hasTitle(entry, topic));
@@ -82,6 +104,14 @@ export interface RebuiltScenario extends SessionScenario {
   readonly kind: OpenableSessionKind;
   /** `true` si se cayó al bloque `free_topic` por no poder reconstruir. */
   readonly fallback: boolean;
+}
+
+/** Escenario reconstruido de una sesión `interview` (con el plan). */
+export interface RebuiltInterviewScenario {
+  readonly kind: 'interview';
+  readonly fallback: false;
+  readonly topic: string;
+  readonly interview: InterviewScenario;
 }
 
 /**
@@ -104,8 +134,18 @@ export interface RebuiltScenario extends SessionScenario {
  */
 export function rebuildScenario(
   session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
+  newsItem: null,
+  plan: InterviewPlan,
+): RebuiltInterviewScenario;
+export function rebuildScenario(
+  session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
+  newsItem?: NewsItem | null,
+): RebuiltScenario;
+export function rebuildScenario(
+  session: Pick<Session, 'kind' | 'topic' | 'news_item_id'>,
   newsItem: NewsItem | null = null,
-): RebuiltScenario {
+  plan: InterviewPlan | null = null,
+): RebuiltScenario | RebuiltInterviewScenario {
   switch (session.kind) {
     case 'free_topic':
       return { kind: 'free_topic', fallback: false, ...freeTopicScenario(session.topic) };
@@ -129,13 +169,21 @@ export function rebuildScenario(
         : degradeToFreeTopic(session.topic);
     }
 
+    // Sin plan no hay entrevista que seguir: a diferencia del resto no se
+    // degrada a `free_topic`, porque eso rompería el rol (FR-8).
+    case 'interview': {
+      if (plan === null) {
+        throw new Error('rebuildScenario: kind=interview necesita el plan de la entrevista');
+      }
+      const interview = interviewScenario(plan);
+      return { kind: 'interview', fallback: false, topic: interview.topic, interview };
+    }
+
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
     // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
-    // F10: `interview`/`study` tampoco: el turno de entrevista usa su propio
-    // prompt (I3).
+    // `study` tampoco, hasta que F13 traiga `studyScenario`.
     case 'group':
-    case 'interview':
     case 'study':
       throw new Error(`rebuildScenario: kind='${session.kind}' no tiene escenario 1:1`);
 

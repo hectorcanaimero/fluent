@@ -64,8 +64,10 @@ cerrar la quinta completa el ciclo.
 
 - `POST /interviews/:id/reinterview`: solo con el ciclo `completed`; crea una
   entrevista hija (`parent_interview_id`) con la misma oferta y tipo, consume
-  el tope diario y encola `interview-prepare`; las preguntas anteriores ya
-  están en `interview_questions_asked`, así que no se repiten (FR-19, FR-20).
+  el tope diario y encola `interview-prepare` pasando la rúbrica de la padre
+  como `fixedRubric` (I1), para que la comparación sea entre las mismas
+  competencias; las preguntas anteriores ya están en
+  `interview_questions_asked`, así que no se repiten (FR-19, FR-20).
   El job `interview-feedback` ya pasa `previousFeedback` (F12.3.T1); verificar
   que `comparison` se guarda.
 - Si la comparación tiene competencias con `trend = down`, el `studyPlan` del

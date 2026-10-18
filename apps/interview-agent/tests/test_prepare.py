@@ -420,3 +420,18 @@ def test_previous_questions_van_delimitadas(
     assert prompt.count("<untrusted_previous_questions>") == 1
     assert prompt.count("</untrusted_previous_questions>") == 1
     assert "</previous_questions>" not in prompt
+
+
+def test_fixed_rubric_se_reusa_tal_cual(
+    client: TestClient, monkeypatch: pytest.MonkeyPatch, fake_research: list[str]
+) -> None:
+    offer, comps = OFFERS["data"]
+    fixed = [
+        {"id": f"c{i}", "name": f"Parent comp {i}", "expectedLevel": "junior", "weight": 1}
+        for i in range(1, len(comps) + 1)
+    ]
+    prompts = _fake_designer(monkeypatch, [_plan("data", comps, mixed=False)])
+    response = client.post("/v1/prepare", json=_body(offer, fixedRubric=fixed), headers=AUTH)
+    assert response.status_code == 200
+    assert response.json()["rubric"] == fixed
+    assert "<untrusted_fixed_rubric>" in prompts[0] and "Parent comp 1" in prompts[0]

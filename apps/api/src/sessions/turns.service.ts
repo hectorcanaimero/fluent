@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 
 import { ApiException } from '../common/api-error.js';
 import type { Env } from '../config/env.js';
-import type { Profile, Session } from '../db/schema.js';
+import type { Profile, Session, SessionKind } from '../db/schema.js';
 import {
   DEGRADED_REPLY,
   HISTORY_TURNS,
@@ -19,6 +19,7 @@ import { buildTurnMessages } from '../llm/prompts/turn.js';
 import { TurnOutput, type Correction as CorrectionOutput } from '../llm/schemas.js';
 import { RedisService } from '../redis/redis.service.js';
 import { DailyTurnsBudget } from './daily-turns-budget.js';
+import { SESSION_KINDS } from './dto/create-session.dto.js';
 import type { CreateTurnDto } from './dto/create-turn.dto.js';
 import { rebuildScenario } from './scenario.js';
 import { findOwnedSessionOrThrow } from './session-ownership.js';
@@ -35,6 +36,7 @@ import type { CorrectionDto, TurnResultDto } from './sessions.types.js';
 import { TurnsRepository, type InsertCorrectionRow } from './turns.repository.js';
 
 const SESSION_NOT_ACTIVE_MESSAGE = 'Esta sesión ya no está activa.';
+const WRONG_SESSION_KIND_MESSAGE = 'Esta sesión no admite turnos de conversación.';
 const TURN_IN_PROGRESS_MESSAGE = 'Espera la respuesta anterior antes de enviar otro turno.';
 const TOO_FAST_MESSAGE = 'Vas demasiado rápido: espera un momento antes del siguiente turno.';
 const VALIDATION_MESSAGE = 'Los datos enviados no son válidos.';
@@ -166,6 +168,12 @@ export class TurnsService {
     const session = await findOwnedSessionOrThrow(this.turns, userId, sessionId);
     if (session.status !== 'active') {
       throw ApiException.of('SESSION_NOT_ACTIVE', SESSION_NOT_ACTIVE_MESSAGE);
+    }
+    // Grupo, entrevista y estudio no tienen escenario 1:1: sin esto
+    // `rebuildScenario` tiraría un 500 después de insertar el turno. F12.1.T2
+    // reemplaza este guard cuando enrute los turnos de entrevista.
+    if (!(SESSION_KINDS as readonly SessionKind[]).includes(session.kind)) {
+      throw ApiException.of('WRONG_SESSION_KIND', WRONG_SESSION_KIND_MESSAGE);
     }
     return session;
   }

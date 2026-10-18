@@ -597,5 +597,15 @@
         "type": "String"
       }
     }
+  },
+  "interviewOfferCopyTextHint": "Ese es el mismo enlace. Copia el texto de la oferta y pégalo aquí.",
+  "interviewOpenLinkError": "No pudimos abrir el enlace.",
+  "interviewDetailPlaceholderTitle": "Entrevista {id}",
+  "@interviewDetailPlaceholderTitle": {
+    "placeholders": {
+      "id": {
+        "type": "String"
+      }
+    }
   }
 }

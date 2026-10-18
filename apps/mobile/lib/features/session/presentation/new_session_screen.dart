@@ -149,7 +149,9 @@ class _NewSessionScreenState extends ConsumerState<NewSessionScreen>
               AppSpacing.screenPad,
               0,
             ),
-            child: _InterviewCard(onTap: () => context.push('/interviews/new')),
+            child: _InterviewCard(
+              onTap: _starting ? null : () => context.push('/interviews/new'),
+            ),
           ),
           Expanded(child: _buildBody(context)),
         ],
@@ -451,7 +453,9 @@ class _Card extends StatelessWidget {
 class _InterviewCard extends StatelessWidget {
   const _InterviewCard({required this.onTap});
 
-  final VoidCallback onTap;
+  /// `null` mientras se arranca una sesión: no se puede abrir la entrevista
+  /// en paralelo.
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {

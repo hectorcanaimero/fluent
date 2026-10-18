@@ -1297,4 +1297,16 @@ class AppLocalizationsEs extends AppLocalizations {
   @override
   String get planPurchaseError =>
       'No pudimos completar la compra. Probá de nuevo.';
+
+  @override
+  String get interviewOfferCopyTextHint =>
+      'Ese es el mismo enlace. Copia el texto de la oferta y pégalo aquí.';
+
+  @override
+  String get interviewOpenLinkError => 'No pudimos abrir el enlace.';
+
+  @override
+  String interviewDetailPlaceholderTitle(String id) {
+    return 'Entrevista $id';
+  }
 }

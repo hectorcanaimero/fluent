@@ -2341,6 +2341,24 @@ abstract class AppLocalizations {
   /// In es, this message translates to:
   /// **'No pudimos completar la compra. Probá de nuevo.'**
   String get planPurchaseError;
+
+  /// No description provided for @interviewOfferCopyTextHint.
+  ///
+  /// In es, this message translates to:
+  /// **'Ese es el mismo enlace. Copia el texto de la oferta y pégalo aquí.'**
+  String get interviewOfferCopyTextHint;
+
+  /// No description provided for @interviewOpenLinkError.
+  ///
+  /// In es, this message translates to:
+  /// **'No pudimos abrir el enlace.'**
+  String get interviewOpenLinkError;
+
+  /// No description provided for @interviewDetailPlaceholderTitle.
+  ///
+  /// In es, this message translates to:
+  /// **'Entrevista {id}'**
+  String interviewDetailPlaceholderTitle(String id);
 }
 
 class _AppLocalizationsDelegate

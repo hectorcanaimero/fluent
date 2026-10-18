@@ -411,5 +411,8 @@
         "type": "String"
       }
     }
-  }
+  },
+  "interviewOfferCopyTextHint": "Esse é o mesmo link. Copie o texto da vaga e cole aqui.",
+  "interviewOpenLinkError": "Não conseguimos abrir o link.",
+  "interviewDetailPlaceholderTitle": "Entrevista {id}"
 }

@@ -166,8 +166,9 @@ final routerProvider = Provider<GoRouter>((ref) {
       // pantalla de preparación/resumen del plan (IE-03, IE-04).
       GoRoute(
         path: '/interviews',
-        builder: (context, state) =>
-            const PlaceholderScreen(title: 'Historial de entrevistas'),
+        builder: (context, state) => PlaceholderScreen(
+          title: AppLocalizations.of(context).interviewEntryHistoryTooltip,
+        ),
       ),
       GoRoute(
         path: '/interviews/new',
@@ -176,7 +177,8 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: '/interviews/:id',
         builder: (context, state) => PlaceholderScreen(
-          title: 'Entrevista ${state.pathParameters['id']}',
+          title: AppLocalizations.of(context)
+              .interviewDetailPlaceholderTitle(state.pathParameters['id']!),
         ),
       ),
       GoRoute(

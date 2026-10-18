@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +10,7 @@ import '../../../../app/theme.dart';
 import '../../../../core/api/models.dart';
 import '../../../../core/errors/api_error_snack_bar.dart';
 import '../../../../core/errors/api_exception.dart';
+import '../../../../core/providers.dart';
 import '../../../../core/widgets/async_body.dart';
 import '../../../../core/widgets/button_spinner.dart';
 import '../../../../l10n/gen/app_localizations.dart';
@@ -20,23 +23,31 @@ class NewInterviewScreen extends ConsumerStatefulWidget {
   const NewInterviewScreen({super.key});
 
   @override
-  ConsumerState<NewInterviewScreen> createState() =>
-      _NewInterviewScreenState();
+  ConsumerState<NewInterviewScreen> createState() => _NewInterviewScreenState();
 }
 
 class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
   final _offerController = TextEditingController();
+  final _offerFocus = FocusNode();
+  late final String? _userId;
+  Timer? _saveDebounce;
+
+  /// La entrevista ya se creó y el borrador se borró: `dispose` no tiene
+  /// que volver a guardarlo.
+  bool _created = false;
   String _type = 'technical';
   bool _submitting = false;
 
-  /// La última URL enviada que la API no pudo leer (IE-02): si no era una
-  /// URL, queda `null` y "Abrir en LinkedIn" cae a la página general.
+  /// La última URL enviada que la API no pudo leer (IE-02); `null` si lo
+  /// enviado no era una URL. "Abrir en LinkedIn" solo aparece si es de
+  /// LinkedIn.
   String? _unreadableUrl;
   bool _unreadable = false;
 
   @override
   void initState() {
     super.initState();
+    _userId = ref.read(authControllerProvider).me?.profile.userId;
     _loadDraft();
     // FR-22: cada cambio queda guardado, así un error o salir de la
     // pantalla no pierde lo que el usuario ya escribió o pegó.
@@ -44,40 +55,94 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
   }
 
   Future<void> _loadDraft() async {
-    final draft = await loadOfferDraft();
-    if (draft != null && mounted) _offerController.text = draft;
+    final String? draft;
+    try {
+      draft = await loadOfferDraft(_userId);
+    } catch (_) {
+      return;
+    }
+    // Si la persona ya escribió o pegó algo mientras se leía el borrador,
+    // no se lo pisamos.
+    if (draft != null && mounted && _offerController.text.isEmpty) {
+      _offerController.text = draft;
+    }
   }
 
   void _onOfferChanged() {
-    saveOfferDraft(_offerController.text);
+    _saveDebounce?.cancel();
+    _saveDebounce = Timer(const Duration(milliseconds: 500), _saveDraft);
+  }
+
+  void _saveDraft() {
+    if (_created) return;
+    unawaited(
+      saveOfferDraft(_userId, _offerController.text).catchError((_) {}),
+    );
   }
 
   @override
   void dispose() {
+    _saveDebounce?.cancel();
+    _saveDraft();
     _offerController.removeListener(_onOfferChanged);
     _offerController.dispose();
+    _offerFocus.dispose();
     super.dispose();
   }
 
   Future<void> _paste() async {
     final data = await Clipboard.getData(Clipboard.kTextPlain);
     final text = data?.text;
+    if (!mounted) return;
     setState(() {
       if (text != null && text.isNotEmpty) _offerController.text = text;
       _unreadable = false;
     });
   }
 
-  Future<void> _openInLinkedIn() async {
-    final url = _unreadableUrl ?? 'https://www.linkedin.com/jobs/';
-    await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+  /// IE-02 "Pegar el texto de la oferta": si en el portapapeles sigue la
+  /// misma URL que no pudimos leer, re-pegarla solo repite el error.
+  Future<void> _pasteFromUnreadable() async {
+    final data = await Clipboard.getData(Clipboard.kTextPlain);
+    final text = data?.text?.trim();
+    if (!mounted) return;
+    if (text != null && text.isNotEmpty && text != _unreadableUrl) {
+      setState(() {
+        _offerController.text = text;
+        _unreadable = false;
+      });
+      return;
+    }
+    final l10n = AppLocalizations.of(context);
+    setState(() {
+      _offerController.clear();
+      _unreadable = false;
+    });
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _offerFocus.requestFocus();
+    });
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(l10n.interviewOfferCopyTextHint)));
   }
 
-  bool _looksLikeUrl(String text) {
-    final uri = Uri.tryParse(text);
-    return uri != null &&
-        (uri.scheme == 'http' || uri.scheme == 'https') &&
-        uri.host.isNotEmpty;
+  Future<void> _openInLinkedIn() async {
+    final url = _unreadableUrl;
+    if (url == null) return;
+    var opened = false;
+    try {
+      opened = await launchUrl(
+        Uri.parse(url),
+        mode: LaunchMode.externalApplication,
+      );
+    } catch (_) {
+      // `PlatformException` sin app que lo abra, o URL que no se puede lanzar.
+    }
+    if (opened || !mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(AppLocalizations.of(context).interviewOpenLinkError),
+      ),
+    );
   }
 
   Future<void> _prepare(int remaining) async {
@@ -89,7 +154,7 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
       _submitting = true;
       _unreadable = false;
     });
-    final isUrl = _looksLikeUrl(text);
+    final isUrl = looksLikeOfferUrl(text);
     try {
       final created = await ref
           .read(interviewsRepositoryProvider)
@@ -98,7 +163,11 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
             offerText: isUrl ? null : text,
             offerUrl: isUrl ? text : null,
           );
-      await saveOfferDraft('');
+      _created = true;
+      _saveDebounce?.cancel();
+      try {
+        await saveOfferDraft(_userId, '');
+      } catch (_) {}
       if (!mounted) return;
       context.pushReplacement('/interviews/${created.id}');
     } on ApiException catch (e) {
@@ -129,10 +198,8 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
     final l10n = AppLocalizations.of(context);
     final asyncQuota = ref.watch(interviewQuotaProvider);
     final snapshot = asyncQuota.when(
-      data: (q) => AsyncSnapshot<InterviewQuota>.withData(
-        ConnectionState.done,
-        q,
-      ),
+      data: (q) =>
+          AsyncSnapshot<InterviewQuota>.withData(ConnectionState.done, q),
       error: (e, st) =>
           AsyncSnapshot<InterviewQuota>.withError(ConnectionState.done, e, st),
       loading: () => const AsyncSnapshot<InterviewQuota>.waiting(),
@@ -155,11 +222,14 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
           onRetry: () => ref.invalidate(interviewQuotaProvider),
           builder: (quota) => _unreadable
               ? _UnreadablePanel(
-                  onPasteOfferText: _paste,
-                  onOpenLinkedIn: _openInLinkedIn,
+                  onPasteOfferText: _pasteFromUnreadable,
+                  onOpenLinkedIn: isLinkedInUrl(_unreadableUrl)
+                      ? _openInLinkedIn
+                      : null,
                 )
               : _OfferForm(
                   controller: _offerController,
+                  focusNode: _offerFocus,
                   type: _type,
                   quota: quota,
                   submitting: _submitting,
@@ -173,9 +243,31 @@ class _NewInterviewScreenState extends ConsumerState<NewInterviewScreen> {
   }
 }
 
+/// Solo es URL si es un único token http(s) con host: un texto de oferta que
+/// empieza con el enlace y sigue con la descripción se manda como texto.
+@visibleForTesting
+bool looksLikeOfferUrl(String text) {
+  final trimmed = text.trim();
+  if (trimmed.isEmpty || RegExp(r'\s').hasMatch(trimmed)) return false;
+  final uri = Uri.tryParse(trimmed);
+  return uri != null &&
+      (uri.scheme == 'http' || uri.scheme == 'https') &&
+      uri.host.isNotEmpty;
+}
+
+@visibleForTesting
+bool isLinkedInUrl(String? url) {
+  if (url == null) return false;
+  final host = Uri.tryParse(url)?.host.toLowerCase() ?? '';
+  return host == 'linkedin.com' ||
+      host.endsWith('.linkedin.com') ||
+      host == 'lnkd.in';
+}
+
 class _OfferForm extends StatelessWidget {
   const _OfferForm({
     required this.controller,
+    required this.focusNode,
     required this.type,
     required this.quota,
     required this.submitting,
@@ -185,6 +277,7 @@ class _OfferForm extends StatelessWidget {
   });
 
   final TextEditingController controller;
+  final FocusNode focusNode;
   final String type;
   final InterviewQuota quota;
   final bool submitting;
@@ -209,15 +302,15 @@ class _OfferForm extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             l10n.interviewFreeNotice,
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-              color: AppColors.textMuted,
-            ),
+            style: Theme.of(context).textTheme.bodySmall
+                ?.copyWith(color: AppColors.textMuted),
           ),
         ],
         const SizedBox(height: AppSpacing.lg),
         TextField(
           key: const Key('interview_entry_offer_field'),
           controller: controller,
+          focusNode: focusNode,
           maxLines: 8,
           minLines: 6,
           enabled: !capReached,
@@ -254,10 +347,7 @@ class _OfferForm extends StatelessWidget {
               value: 'technical',
               label: Text(l10n.interviewTypeTechnical),
             ),
-            ButtonSegment(
-              value: 'mixed',
-              label: Text(l10n.interviewTypeMixed),
-            ),
+            ButtonSegment(value: 'mixed', label: Text(l10n.interviewTypeMixed)),
           ],
           selected: {type},
           onSelectionChanged: capReached
@@ -292,7 +382,9 @@ class _UnreadablePanel extends StatelessWidget {
   });
 
   final VoidCallback onPasteOfferText;
-  final VoidCallback onOpenLinkedIn;
+
+  /// `null` si la URL no es de LinkedIn: el botón no se muestra.
+  final VoidCallback? onOpenLinkedIn;
 
   @override
   Widget build(BuildContext context) {
@@ -322,12 +414,14 @@ class _UnreadablePanel extends StatelessWidget {
               onPressed: onPasteOfferText,
               child: Text(l10n.interviewOfferUnreadablePasteButton),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            OutlinedButton(
-              key: const Key('interview_entry_unreadable_linkedin_button'),
-              onPressed: onOpenLinkedIn,
-              child: Text(l10n.interviewOfferUnreadableLinkedinButton),
-            ),
+            if (onOpenLinkedIn != null) ...[
+              const SizedBox(height: AppSpacing.sm),
+              OutlinedButton(
+                key: const Key('interview_entry_unreadable_linkedin_button'),
+                onPressed: onOpenLinkedIn,
+                child: Text(l10n.interviewOfferUnreadableLinkedinButton),
+              ),
+            ],
           ],
         ),
       ),

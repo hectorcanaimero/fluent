@@ -41,11 +41,19 @@ const LocaleSchema = z.enum(['es', 'pt-BR']);
    I1 — C2/C3 → C1 (interview-agent): POST /v1/prepare
    ========================================================================== */
 
+// El agente (Pydantic) manda `null` en los opcionales que no encuentra; aguas
+// abajo se tratan como ausentes.
+const optionalText = z
+  .string()
+  .nullish()
+  .transform((v) => v ?? undefined)
+  .optional();
+
 const Company = z.object({
   name: z.string().min(1),
-  industry: z.string().optional(),
-  city: z.string().optional(),
-  workMode: z.string().optional(),
+  industry: optionalText,
+  city: optionalText,
+  workMode: optionalText,
 });
 
 const Competency = z.object({
@@ -240,7 +248,7 @@ const EnglishFeedback = z.object({
 const CompetencyFeedback = z.object({
   competencyId: z.string().min(1),
   /** Nombre de la rúbrica: la comparación no cruza competencias con otro nombre. */
-  name: z.string().optional(),
+  name: optionalText,
   observedLevel: SeniorityLevelSchema,
   expectedLevel: SeniorityLevelSchema,
   evidence: z.string(),

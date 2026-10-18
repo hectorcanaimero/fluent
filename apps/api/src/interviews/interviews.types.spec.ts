@@ -66,6 +66,16 @@ describe('InterviewPlan', () => {
     expect(InterviewPlan.safeParse(validPlan()).success).toBe(true);
   });
 
+  it('trata como ausentes los opcionales de la empresa que el agente manda en null', () => {
+    const plan = validPlan();
+    const parsed = InterviewPlan.parse({
+      ...plan,
+      company: { ...plan.company, industry: null, city: null, workMode: null },
+    });
+    expect(parsed.company.city).toBeUndefined();
+    expect(parsed.company.workMode).toBeUndefined();
+  });
+
   it('rechaza un plan con 7 preguntas', () => {
     const plan = validPlan();
     plan.questions = plan.questions.slice(0, 7);

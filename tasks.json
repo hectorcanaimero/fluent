@@ -481,6 +481,585 @@
       ],
       "specRef": "f5-limpieza-y-docs.md#F5.2.T1",
       "comments": []
+    },
+    {
+      "id": "F6.1.T1",
+      "phase": 6,
+      "title": "Migración de la sala grupal y tipos",
+      "description": "Crear `apps/api/migrations/20261006120000_sesion-grupal.sql` con el contenido de\nla sección *Data model* de la arquitectura:\n- Las tablas `group_sessions`, `group_session_participants`,\n  `group_session_messages` y `group_session_corrections`, con sus checks.\n- El índice único parcial `group_sessions_one_active ON group_sessions (group_id) WHERE status = 'active'`.\n- El índice `(session_id, id)` en mensajes.\n- `ALTER` de los checks de `sessions.kind` y `xp_events.kind` para aceptar\n  `'group'`. Antes de reescribirlos, busca su nombre actual en\n  `20260908190806_sesiones-turnos-correcciones.sql` y en las migraciones que\n  lo amplían, como `boss`.\n- La columna `sessions.group_session_id uuid NULL REFERENCES group_sessions(id)`.\n- RLS activado en las cuatro tablas y `REVOKE ALL ... FROM anon, authenticated`,\n  igual que `xp_events`: solo la API accede.\n\nEn `apps/api/src/db/schema.ts` hay que:\n- Añadir las cuatro tablas a `TABLES`.\n- Definir los tipos de fila `GroupSession`, `GroupSessionParticipant`,\n  `GroupSessionMessage` y `GroupSessionCorrection`.\n- Sumar `'group'` a `SessionKind`.\n- Añadir `group_session_id` a `Session`.\n\nTest SQL `apps/api/migrations/tests/group_sessions.sql`, con el mismo estilo que\n`migrations/tests/close_session.sql`. Debe comprobar que:\n- Una segunda sala `active` del mismo grupo falla por el índice único.\n- Una sala `ended` no bloquea abrir otra.\n- `role = 'system'` con un `system_event` fuera del check falla.\n\nDone when: la migración aplica sobre una base limpia, el test SQL pasa y\n`pnpm --filter api build` compila.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "SQL con restricciones y RLS; conviene el tier estándar de Claude.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/migrations/20261006120000_sesion-grupal.sql",
+        "apps/api/migrations/tests/group_sessions.sql",
+        "apps/api/src/db/schema.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F6.2.T1",
+      "phase": 6,
+      "title": "RoomBus: pub/sub y presencia sobre Redis",
+      "description": "Implementar `RoomBus` en `apps/api/src/group-sessions/room-bus.ts` con la\ninterfaz exacta de *Interfaces → RoomBus*:\n- `publish(sessionId, event)`, con el canal Redis `gs:{sessionId}` y el payload\n  en JSON.\n- `subscribe(sessionId, onEvent)`, que devuelve la función de unsubscribe.\n- `markOnline(sessionId, userId)`, que pone la clave\n  `gs:{sessionId}:online:{userId}` con TTL de 45 s.\n- `onlineUsers(sessionId)`.\n\nDetalles:\n- Usa una sola conexión suscriptora por proceso (duplicada del cliente Redis del\n  módulo `apps/api/src/redis`), que multiplexa los canales con un mapa de\n  listeners. Desuscribe el canal de Redis cuando no le queden listeners.\n- Exporta el tipo `RoomEvent` y declara `RoomBus` como provider de un\n  `GroupRealtimeModule` (`apps/api/src/group-sessions/group-realtime.module.ts`)\n  que importa el módulo Redis existente. Así el worker (F7) puede importarlo sin\n  traer el controller.\n\nDone when: `room-bus.spec.ts`, con Redis real o el mock que ya usen otros specs\ndel repo, cubre estos casos:\n- Dos suscriptores del mismo canal reciben el evento.\n- Tras el unsubscribe ya no llega nada.\n- La presencia expira.\n- `onlineUsers` solo lista las claves vivas.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Infra de concurrencia pequeña pero fácil de dejar con fugas de listeners.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/group-sessions/room-bus.ts",
+        "apps/api/src/group-sessions/room-bus.spec.ts",
+        "apps/api/src/group-sessions/group-realtime.module.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F6.2.T2",
+      "phase": 6,
+      "title": "Stream SSE de la sala con filtro de correcciones",
+      "description": "En `apps/api/src/group-sessions/room-stream.ts`, implementar\n`openRoomStream(res, { sessionId, userId, bus, canSeeCorrections })`, donde\n`canSeeCorrections` es `(authorId: string) =\u003e boolean | Promise\u003cboolean\u003e`.\n\nLa función escribe el stream que describe *Interfaces → Stream SSE*:\n- Mismo formato `event:` / `data:` que `apps/api/src/sessions/turn-stream.ts`.\n- Cabeceras `Content-Type: text/event-stream`, `Cache-Control: no-cache` y\n  `X-Accel-Buffering: no`.\n- Se suscribe a `bus.subscribe(sessionId)` y reenvía cada `RoomEvent` como\n  `event: \u003ctype\u003e`.\n- Un evento `corrections` solo se reenvía si su `authorId === userId` o si\n  `canSeeCorrections(authorId)` devuelve `true`.\n- Cada 20 s escribe el comentario `: ping` y llama a\n  `bus.markOnline(sessionId, userId)`. También llama a `markOnline` al abrir.\n- Cuando el cliente cierra (`res.on('close')`), desuscribe y para el ping.\n- Tras reenviar el evento `ended`, cierra el stream.\n\nNo hace comprobaciones de acceso: las hace el controller (F6.3.T2) antes de\nllamarla.\n\nDone when: `room-stream.spec.ts`, con un `res` falso y un bus en memoria,\ncomprueba que:\n- Las correcciones ajenas no compartidas no se escriben, y las propias y las\n  compartidas sí.\n- Sale el ping.\n- El cierre desuscribe.\n- `ended` termina el stream.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Contiene el filtro de privacidad de FR-11; no es para un modelo barato.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.2.T1"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/group-sessions/room-stream.ts",
+        "apps/api/src/group-sessions/room-stream.spec.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.2.T2",
+      "comments": []
+    },
+    {
+      "id": "F6.3.T1",
+      "phase": 6,
+      "title": "Módulo group-sessions: iniciar, consultar, unirse, salir y cerrar",
+      "description": "Crear el módulo `apps/api/src/group-sessions/` (module, controller, service,\nrepository y `dto/`) y registrarlo en `apps/api/src/app.module.ts`. Importa\n`GroupRealtimeModule` (F6.2.T1).\n\nEndpoints, según *Interfaces*:\n\n| Ruta | Comportamiento |\n| --- | --- |\n| `POST group-sessions` | Crea la sala (`kind`, `topic`, `roleplayId` o `newsItemId`, validados igual que `sessions/dto/create-session.dto.ts`, sin `boss`) y añade al iniciador como participante. Si el índice único salta, responde `409 GROUP_SESSION_ACTIVE` con el `sessionId` existente. Después llama a `PushService.notifyGroupSessionStarted` (F6.4.T1) sin bloquear la respuesta. |\n| `GET group-sessions/active` | Devuelve la sala activa del grupo del usuario, o `204` si no hay. |\n| `GET group-sessions/:id` | Devuelve `GroupSessionDetailDto` con los mensajes en orden de `id` y, en `corrections`, solo las del usuario o las de autores con `share_corrections`. |\n| `POST group-sessions/:id/join` | Upsert del participante: `left_at = null`, `joined_at = now()`. Emite el evento de sistema `joined`. |\n| `POST group-sessions/:id/leave` | Suma `present_sec += now - joined_at`, pone `left_at` y emite `left`. |\n| `POST group-sessions/:id/end` | Solo lo puede hacer el iniciador; si no, `403 GROUP_SESSION_FORBIDDEN`. Llama a `close(sessionId, 'initiator')`. |\n\nReglas comunes:\n- Toda ruta resuelve primero `GroupAccessService.requireOwnGroup(userId)`\n  (`apps/api/src/social/group-access.service.ts`) y responde\n  `403 GROUP_SESSION_FORBIDDEN` si `group_sessions.group_id` no es el grupo del\n  usuario. Una sala inexistente da `404`.\n- Una escritura sobre una sala `ended` responde `409 GROUP_SESSION_ENDED`.\n- Añade los códigos a `apps/api/src/common/api-error.ts`.\n\n`GroupSessionsService.close(sessionId, reason)` es **provisional** y F9.1.T2 la\nreemplaza:\n- Marca `status = 'ended'`, `ended_at` y `end_reason`.\n- Cierra la presencia de los participantes activos.\n- Inserta el mensaje de sistema `ended` y publica `message`.\n- Publica `ended` con `xp: []`.\n- Es idempotente.\n\nCada evento de sistema es una fila en `group_session_messages` con\n`role = 'system'`, que se publica en RoomBus como `message`. Con cada cambio de\nparticipantes se publica también `participants`.\n\nDone when: los specs del service y del controller cubren estos casos:\n- Iniciar.\n- Segundo inicio con 409 y el id existente.\n- `join` y `leave` con `present_sec`.\n- `end` hecho por quien no es el iniciador da 403.\n- Escribir sobre una sala `ended` da 409.\n- El snapshot filtra las correcciones ajenas.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Núcleo de la feature con reglas de acceso; estándar de Claude con buen contexto.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.1.T1",
+        "F6.2.T1",
+        "F6.4.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/api/src/group-sessions/group-sessions.module.ts",
+        "apps/api/src/group-sessions/group-sessions.controller.ts",
+        "apps/api/src/group-sessions/group-sessions.service.ts",
+        "apps/api/src/group-sessions/group-sessions.service.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.controller.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.repository.ts",
+        "apps/api/src/group-sessions/dto/",
+        "apps/api/src/common/api-error.ts",
+        "apps/api/src/app.module.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F6.3.T2",
+      "phase": 6,
+      "title": "Mensajes de texto, compartir correcciones y endpoint de eventos",
+      "description": "Sobre el módulo de F6.3.T1, añadir tres endpoints.\n\n**`POST group-sessions/:id/messages`** (`{text: string ≤ 1000, clientId: string}`):\n- Exige participación activa; si no, `403 NOT_PARTICIPANT`.\n- Inserta un mensaje `role = 'user'`, suma `messages_count` del participante,\n  pone `group_sessions.last_message_at = now()` y publica `message` con el\n  `clientId`.\n- Responde `201 GroupMessageDto`.\n- Aplica el throttler existente (`TURNS_THROTTLE`, `apps/api/src/rate-limit`).\n\nExpone en el service `postUserMessage(sessionId, userId, { text, clientId, audioKey?, audioMs? })`.\nLa usarán las notas de voz (F8.2.T1), así que acepta ya los campos de audio y\nlos guarda.\n\n**`PUT group-sessions/:id/share-corrections`** (`{share: boolean}`): actualiza\n`share_corrections` del participante y publica `participants`.\n\n**`GET group-sessions/:id/events`**:\n- Aplica las mismas comprobaciones de grupo; además exige que el usuario sea\n  participante (activo o que haya salido en esta sala).\n- Llama a `openRoomStream` (F6.2.T2) con un `canSeeCorrections` que consulta\n  `share_corrections` del autor. Ese valor se cachea mientras dura la conexión\n  y se invalida al recibir un evento `participants`.\n- Si la sala ya está `ended`, responde un único evento `ended` y cierra.\n\nDone when: hay specs para el mensaje sin participación (403), el mensaje válido\n(publica en el bus y actualiza contadores), el toggle de compartir y el stream\nde una sala `ended`.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Sigue el patrón de F6.3.T1 con un filtro de privacidad.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.3.T1",
+        "F6.2.T2"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/src/group-sessions/group-sessions.controller.ts",
+        "apps/api/src/group-sessions/group-sessions.service.ts",
+        "apps/api/src/group-sessions/group-sessions.service.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.controller.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.repository.ts",
+        "apps/api/src/group-sessions/dto/"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.3.T2",
+      "comments": []
+    },
+    {
+      "id": "F6.3.T3",
+      "phase": 6,
+      "title": "GroupSweeper: aviso de 25 min y cierres automáticos",
+      "description": "Crear `apps/api/src/group-sessions/group-sweeper.service.ts` y llamarlo desde\nel cron por minuto que ya existe (`apps/api/src/jobs/session-sweeper.ts`, que\nhoy invoca `apps/api/src/sessions/session-sweeper.service.ts`). Por cada sala\n`active`:\n- Si `now - started_at ≥ 25 min` y `warned_at` es null: inserta el mensaje de\n  sistema `ending_soon`, lo publica y fija `warned_at`.\n- Si `now - started_at ≥ 30 min`: `close(id, 'max_duration')`.\n- Si `now - last_message_at ≥ 10 min`: `close(id, 'idle')`.\n\nLas tres duraciones van como constantes en `apps/api/src/config/product.ts`:\n`GROUP_SESSION_WARN_SEC = 1500`, `GROUP_SESSION_MAX_SEC = 1800` y\n`GROUP_SESSION_IDLE_SEC = 600`. Exporta el sweeper desde\n`group-sessions.module.ts` y que el worker lo importe.\n\nDone when: el spec, con un reloj fijo, cubre el aviso emitido una sola vez, el\ncierre por duración, el cierre por inactividad y una sala reciente intacta.",
+      "model": "agy/gemini-3.8-flash-medium",
+      "reason": "Lógica de tiempo acotada que sigue el patrón del sweeper existente; vale un modelo rápido.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.3.T2"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/group-sessions/group-sweeper.service.ts",
+        "apps/api/src/group-sessions/group-sweeper.service.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.module.ts",
+        "apps/api/src/jobs/session-sweeper.ts",
+        "apps/api/src/config/product.ts",
+        "apps/api/src/worker.module.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.3.T3",
+      "comments": []
+    },
+    {
+      "id": "F6.3.T4",
+      "phase": 6,
+      "title": "Tests de aislamiento entre grupos (NFR-6)",
+      "description": "Escribir `apps/api/src/group-sessions/group-sessions.access.spec.ts`. Prepara\ndos grupos A y B, cada uno con dos miembros, y una sala activa en A. Un miembro\nde B debe recibir `403 GROUP_SESSION_FORBIDDEN` en todas estas rutas:\n\n- `GET :id`\n- `POST join`, `POST leave`, `POST end` y `POST messages`\n- `PUT share-corrections`\n- `GET events`\n\nAdemás:\n- Un miembro de A que no se unió recibe `403 NOT_PARTICIPANT` en `messages`.\n- `GET active` de un miembro de B devuelve `204`.\n\nUsa el mismo arnés de tests de controller que el resto de la API. No toca código\nde producción; si un caso falla, documenta el fallo en el PR y deja el test\nrojo con `it.fails` y una nota.\n\nDone when: el spec existe, cubre todas las rutas de la tabla de *Interfaces* y\npasa.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Tests de seguridad; tienen que ser exhaustivos.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.3.T2"
+      ],
+      "estimateHours": 1.5,
+      "files": [
+        "apps/api/src/group-sessions/group-sessions.access.spec.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.3.T4",
+      "comments": []
+    },
+    {
+      "id": "F6.4.T1",
+      "phase": 6,
+      "title": "notifyGroupSessionStarted",
+      "description": "En `apps/api/src/push/push.service.ts`, añadir\n`notifyGroupSessionStarted({ sessionId, groupId, initiatorId, initiatorName, topic }): Promise\u003cvoid\u003e`.\nEnvía, con el `sendTo` privado existente, a todos los miembros del grupo menos\nel iniciador (`GroupsRepository.listMembers`).\n\nEn `apps/api/src/push/push.messages.ts`:\n- Suma `'group_session' | 'group_message'` a `PushKind`.\n- Añade el builder i18n (es, en y pt, igual que los mensajes existentes):\n  título \"Sesión grupal\", cuerpo \"{initiatorName} abrió una sesión grupal sobre\n  {topic}\", `data: { type: 'group_session', route: '/group-session/{sessionId}' }`.\n\nSin throttle: FR-4 ya limita a una sala activa.\n\nDone when: `push.service.spec.ts` comprueba los destinatarios (sin el iniciador),\nla ruta y el idioma por locale.",
+      "model": "agy/gemini-3.8-flash-medium",
+      "reason": "Copia del patrón de notifyChallenge; trabajo mecánico.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 1.0,
+      "files": [
+        "apps/api/src/push/push.service.ts",
+        "apps/api/src/push/push.messages.ts",
+        "apps/api/src/push/push.service.spec.ts"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.4.T1",
+      "comments": []
+    },
+    {
+      "id": "F6.5.T1",
+      "phase": 6,
+      "title": "Capa de datos de la sesión grupal en la app",
+      "description": "Crear `apps/mobile/lib/features/group_session/data/` y `domain/`.\n\nEn los modelos freezed para `GroupSessionDto`, `ParticipantDto`,\n`GroupMessageDto`, `GroupCorrectionDto`, `GroupSessionDetailDto` y\n`GroupRecapDto`, copia los campos exactos de *Interfaces* de la arquitectura.\n\n`GroupSessionApi` (usando `apps/mobile/lib/core/http/api_client.dart`) cubre\ntodos los endpoints de texto: `start`, `active`, `detail`, `join`, `leave`,\n`end`, `sendMessage` y `setShareCorrections`. Mapea los códigos\n`GROUP_SESSION_ACTIVE` (devolviendo el id existente), `GROUP_SESSION_ENDED`,\n`NOT_PARTICIPANT` y `GROUP_SESSION_FORBIDDEN`.\n\n`GroupRoomStream` abre `GET group-sessions/:id/events`:\n- Reutiliza la técnica de `sendTurnStream` en\n  `apps/mobile/lib/core/api/http_fluent_api.dart` (Dio `ResponseType.stream` +\n  `LineSplitter`) y emite un `Stream\u003cRoomEvent\u003e` tipado. Ignora los `: ping`.\n- Si la conexión cae: backoff 1 s, 2 s, 5 s; luego pide `detail()` de nuevo y\n  vuelve a abrir el stream.\n\n`GroupSessionController` (Riverpod `Notifier`) guarda el estado de la sala:\n- Funde el snapshot y los eventos, deduplicando por `id` y por `clientId` (un\n  mensaje propio optimista se sustituye al llegar el `message` con el mismo\n  `clientId`).\n- Acumula `tutor_token` en un mensaje del tutor \"en curso\".\n\nDone when: hay tests de los modelos (JSON de ida y vuelta), del parser del\nstream (eventos, ping, reconexión con un Dio falso) y de la deduplicación del\ncontroller. `flutter analyze` queda limpio.",
+      "model": "agy/gemini-3.1-pro-high",
+      "reason": "Flutter con streams y estado; tier alto de Gemini, fuerte en Dart.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/data/",
+        "apps/mobile/lib/features/group_session/domain/",
+        "apps/mobile/test/features/group_session/data/",
+        "apps/mobile/test/features/group_session/domain/"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.5.T1",
+      "comments": []
+    },
+    {
+      "id": "F6.5.T2",
+      "phase": 6,
+      "title": "Pantalla de sala, entrada desde el grupo y deep link",
+      "description": "**`GroupSessionScreen`** (`apps/mobile/lib/features/group_session/presentation/`):\n- Lista de mensajes: los propios a la derecha; los ajenos con avatar y nombre;\n  los de sistema como línea centrada diferenciada (FR-14).\n- Cabecera con tema, participantes y un temporizador hasta `endsAt`.\n- Campo de texto y botones \"Salir\" y \"Terminar\" (este último solo para el\n  iniciador).\n- Al terminar la sala muestra \"sesión terminada\" y desactiva el input (FR-5).\n- Al entrar llama a `join` si el usuario no es participante activo.\n\n**`GroupScreen`** (`apps/mobile/lib/features/group/presentation/group_screen.dart`):\ntarjeta \"Sesión grupal\":\n- Si hay sala activa (`active()`), muestra \"en curso\" con el tema y el\n  iniciador y el botón \"Unirse\".\n- Si no la hay, muestra \"Iniciar\" y abre un selector de tipo (tema libre,\n  roleplay o noticia), reutilizando los catálogos que ya usa\n  `features/session/presentation/new_session_screen.dart`.\n- Si iniciar devuelve 409, entra en la sala existente (FR-4).\n\n**Ruta y deep link**:\n- Añade la ruta `/group-session/:id` en `apps/mobile/lib/app/router.dart`.\n- En `apps/mobile/lib/core/push/push_service.dart`, `_safeRoute` debe aceptar\n  `/group-session/\u003cuuid\u003e`, validado con una regex y no por prefijo libre.\n- Textos nuevos en `apps/mobile/lib/l10n/app_es.arb` y `app_pt.arb` (y en el\n  `en` base si existe).\n\nDone when: hay widget tests de la pantalla (mensaje propio, ajeno y de sistema;\ninput desactivado al terminar) y de la tarjeta del grupo (con y sin sala), y un\ntest de `_safeRoute` que acepta `/group-session/\u003cuuid\u003e` y rechaza\n`/group-session/../x`. `flutter analyze` queda limpio.",
+      "model": "agy/gemini-3.1-pro-high",
+      "reason": "UI Flutter con varias piezas; Gemini Pro rinde bien en layout de widgets.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.5.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/presentation/",
+        "apps/mobile/lib/features/group/presentation/group_screen.dart",
+        "apps/mobile/lib/app/router.dart",
+        "apps/mobile/lib/core/push/push_service.dart",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/test/features/group_session/presentation/",
+        "apps/mobile/test/features/group/group_screen_test.dart",
+        "apps/mobile/test/core/push/push_service_test.dart"
+      ],
+      "specRef": "f6-sala-grupal-texto.md#F6.5.T2",
+      "comments": []
+    },
+    {
+      "id": "F7.1.T1",
+      "phase": 7,
+      "title": "buildGroupTurnMessages y GroupTurnOutput",
+      "description": "**Esquemas.** En `apps/api/src/llm/schemas.ts`, añade `GroupTurnOutput` tal como\nlo fija *Interfaces → LLM*: `reply` de hasta 1200 caracteres y como mucho 6\n`corrections`, cada una con `messageId`, `original`, `corrected`, `category` (el\nenum `CATEGORIES` existente) y `note` de hasta 140 caracteres.\n\n**Prompt.** En `apps/api/src/llm/prompts/group-turn.ts`, exporta:\n- `GroupTurnPromptInput`.\n- `buildGroupTurnMessages(input)`.\n- Las funciones puras `quietParticipants(messages, participants)`: los\n  participantes activos sin mensaje entre los últimos 4 mensajes de usuario\n  (FR-9).\n- `minLevel(levels)`: el CEFR más bajo de los presentes (FR-13).\n\nEl system prompt tiene que:\n- Reutilizar el escenario de `apps/api/src/sessions/scenario.ts`\n  (`rebuildScenario`).\n- Presentar al tutor como moderador de un grupo de amigos.\n- Pedirle que mencione por nombre a cada participante de `quietParticipants`.\n- Fijar el techo de vocabulario en `minLevel` + 1 (A2 → como mucho B1).\n- Escribir cada `note` en el `locale` del autor de ese mensaje.\n- Corregir solo mensajes `role = 'user'` cuyo `id` aparezca en el input, sin\n  inventar ids.\n- Ajustar la instrucción a `trigger`: `open` saluda y lanza la primera pregunta;\n  `stall` reanima la conversación.\n\n**No** se inyectan brief, hechos ni errores recurrentes (NFR-3). Sigue el estilo\nde `apps/api/src/llm/prompts/turn.ts`.\n\nDone when:\n- `group-turn.spec.ts` cubre `quietParticipants` (3 personas, una callada en los\n  últimos 4) y `minLevel`.\n- Un snapshot del prompt con `trigger` distinto en cada caso muestra que no\n  contiene texto de brief ni de hechos.\n- Hay casos nuevos en el banco de prompts del repo (busca dónde viven los de\n  `turn`) para A2 + B2: respuesta sin vocabulario por encima de B1.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "El prompt es el corazón de la calidad pedagógica del grupo; premium.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/src/llm/prompts/group-turn.ts",
+        "apps/api/src/llm/prompts/group-turn.spec.ts",
+        "apps/api/src/llm/schemas.ts"
+      ],
+      "specRef": "f7-tutor-en-grupo.md#F7.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F7.2.T1",
+      "phase": 7,
+      "title": "Extraer DailyTurnsBudget de TurnsService",
+      "description": "Mover la lógica de `requireDailyTurnsBudget` (privada en\n`apps/api/src/sessions/turns.service.ts`) a un provider inyectable\n`DailyTurnsBudget` en `apps/api/src/sessions/daily-turns-budget.ts`, con\n`consume(userId, plan, tz): Promise\u003cvoid\u003e`. Mantiene:\n- La clave Redis `turns:day:{userId}:{día}` (`sessions/user-day.ts`).\n- El TTL hasta la medianoche del usuario.\n- Los topes `TURNS_DAILY_CAP_FREE` y `TURNS_DAILY_CAP_PRO`.\n- El `429 TURNS_DAILY_CAP` y el fail-open si Redis cae.\n\n`TurnsService` pasa a usar el provider. Expórtalo desde\n`apps/api/src/sessions/sessions.module.ts` para que el worker lo use.\n\nEl 1:1 no cambia de comportamiento: los specs existentes de `turns.service`\ndeben pasar sin modificar las aserciones.\n\nDone when: `daily-turns-budget.spec.ts` cubre bajo tope, en el tope (429), plan\nPro y Redis caído, y los specs de `turns.service` siguen verdes.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Refactor con riesgo de regresión en cobro de turnos.",
+      "status": "backlog",
+      "dependencies": [],
+      "estimateHours": 1.5,
+      "files": [
+        "apps/api/src/sessions/daily-turns-budget.ts",
+        "apps/api/src/sessions/daily-turns-budget.spec.ts",
+        "apps/api/src/sessions/turns.service.ts",
+        "apps/api/src/sessions/sessions.module.ts"
+      ],
+      "specRef": "f7-tutor-en-grupo.md#F7.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F7.3.T1",
+      "phase": 7,
+      "title": "Cola group y disparadores del tutor",
+      "description": "En `apps/api/src/jobs/jobs.constants.ts`, añadir la cola `group` y los nombres\nde job `group-tutor` y `group-recap`.\n\n`TutorScheduler` (`apps/api/src/group-sessions/tutor/tutor-scheduler.ts`)\nexpone dos métodos:\n\n**`onSessionStarted(sessionId, initiatorId)`** encola\n`group-tutor {trigger: 'open', triggeredBy: initiatorId}`.\n\n**`onUserMessage(sessionId, messageId, authorId, text)`**:\n- `INCR gs:{id}:since_tutor`.\n- Si `text` contiene `@tutor` (sin distinguir mayúsculas), encola\n  `trigger: 'mention'`.\n- Si no, y el contador llegó a `GROUP_TUTOR_EVERY_N` (constante nueva en\n  `apps/api/src/config/product.ts`, valor 3), encola `trigger: 'every_n'`.\n- Siempre añade además el job diferido `trigger: 'stall'` con\n  `delay: GROUP_TUTOR_STALL_MS` (60000) y `jobId: stall:{sessionId}:{messageId}`.\n- El job normal usa `jobId: tutor:{sessionId}:{messageId}` y\n  `triggeredBy = authorId`.\n\nConecta el scheduler en `apps/api/src/group-sessions/group-sessions.service.ts`:\n`start` llama a `onSessionStarted` y `postUserMessage` a `onUserMessage`, ambos\nsin bloquear la respuesta HTTP.\n\nDone when: `tutor-scheduler.spec.ts`, con una Queue falsa, comprueba que:\n- 3 mensajes seguidos encolan exactamente un `every_n`.\n- `@Tutor` encola `mention` en el primer mensaje.\n- Cada mensaje programa su `stall` con el jobId correcto.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Lógica de cadencia (FR-10) con contadores Redis.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.3.T2",
+        "F6.3.T3"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/group-sessions/tutor/tutor-scheduler.ts",
+        "apps/api/src/group-sessions/tutor/tutor-scheduler.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.service.ts",
+        "apps/api/src/group-sessions/group-sessions.module.ts",
+        "apps/api/src/jobs/jobs.constants.ts",
+        "apps/api/src/config/product.ts"
+      ],
+      "specRef": "f7-tutor-en-grupo.md#F7.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F7.3.T2",
+      "phase": 7,
+      "title": "GroupTutorProcessor: lock, cobro, LLM, streaming y persistencia",
+      "description": "Procesador BullMQ de `group-tutor` en `apps/api/src/jobs/group-tutor/`\n(processor + module), registrado en `apps/api/src/worker.module.ts` con\nconcurrencia 6. Por job, en este orden:\n\n1. Carga la sala. Si está `ended`, termina sin hacer nada.\n2. **Estancamiento**: con `trigger = 'stall'`, sigue solo si el `messageId` del\n   jobId sigue siendo el último mensaje `user` de la sala.\n3. **Lock**: `SET gs:{id}:tutor NX PX 30000`. Si no lo obtiene, termina, porque\n   el turno en curso ya cubrirá estos mensajes.\n4. **Cobro**: `DailyTurnsBudget.consume(triggeredBy, …)` (F7.2.T1). Si devuelve\n   429, inserta y publica el mensaje de sistema `tutor_unavailable`, suelta el\n   lock y termina (D6).\n5. **Modelo**: plan y preferencia del **iniciador** (`effectivePlan`,\n   `model_preferences`), según NFR-2.\n6. **Llamada**: arma el input con los últimos 20 mensajes, los participantes\n   activos con su nivel y locale, `quietParticipants` y `minLevel` (F7.1.T1), y\n   llama a `LlmService.complete({ schema: GroupTurnOutput, purpose: 'group_turn', onToken })`.\n   Cada token se publica como `tutor_token` por RoomBus.\n7. **Persistencia**: guarda el mensaje `role = 'tutor'` (modelo, tokens,\n   latencia) y las correcciones válidas en `group_session_corrections`. Se\n   descarta cualquier corrección cuyo `messageId` no sea un mensaje `user` de\n   la sala.\n8. **Publicación**: publica `message`, y luego un evento `corrections` por\n   autor, con `authorId`.\n9. **Reset**: `DEL gs:{id}:since_tutor`, actualiza `last_message_at` y suelta\n   el lock.\n\nAñade `'group_turn'` y `'group_recap'` a los `purpose` aceptados por\n`llm_calls`, si ese campo tiene un enum o check.\n\nDone when: `group-tutor.processor.spec.ts`, con LlmService, Redis y bus falsos,\ncubre estos casos:\n- Sala `ended`: no hace nada.\n- `stall` obsoleto: no hace nada.\n- Lock ocupado: no hace nada.\n- Sin cupo: publica `tutor_unavailable`.\n- Turno normal: tokens publicados, mensaje y correcciones guardados.\n- Corrección con id ajeno: se descarta.\n- Plan del iniciador: se usa aunque haya disparado un Free.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "Concurrencia, cobro y privacidad juntas; la pieza más delicada de la fase.",
+      "status": "backlog",
+      "dependencies": [
+        "F7.3.T1",
+        "F7.1.T1",
+        "F7.2.T1"
+      ],
+      "estimateHours": 4.0,
+      "files": [
+        "apps/api/src/jobs/group-tutor/",
+        "apps/api/src/worker.module.ts",
+        "apps/api/src/group-sessions/group-sessions.repository.ts",
+        "apps/api/src/db/schema.ts"
+      ],
+      "specRef": "f7-tutor-en-grupo.md#F7.3.T2",
+      "comments": []
+    },
+    {
+      "id": "F7.4.T1",
+      "phase": 7,
+      "title": "Tutor en streaming, chips de corrección y toggle de compartir",
+      "description": "En `apps/mobile/lib/features/group_session/`:\n\n**Tutor.**\n- Burbuja propia con avatar del tutor.\n- Muestra `tutor_token` mientras llega, reemplazado luego por el `message`\n  final.\n- TTS opcional con la misma preferencia y velocidad que el 1:1 (reutiliza el\n  servicio `flutter_tts` de `features/session`).\n\n**Mención.** Botón \"@tutor\" que inserta la mención en el input.\n\n**Correcciones.**\n- Chips bajo cada mensaje con el mismo widget de chip que usa\n  `features/session/presentation/conversation_screen.dart` (RF-3.4).\n- El usuario ve los suyos siempre y los ajenos cuando le llegan, ya que el\n  servidor filtra.\n- El snapshot (`detail.corrections`) y el evento `corrections` se funden por\n  `messageId`.\n\n**Compartir.**\n- Switch \"Compartir mis correcciones\" en el menú de la sala, que llama a\n  `setShareCorrections` (FR-12).\n- La lista de participantes marca quién comparte.\n\n**Tutor no disponible.** El evento de sistema `tutor_unavailable` se muestra\ncomo línea de sistema: \"El tutor no puede responder: se alcanzó el tope diario\nde quien escribió\".\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests de la burbuja en streaming (tokens y luego final),\nde los chips propios visibles, del toggle que llama a la API y de la línea\n`tutor_unavailable`. `flutter analyze` queda limpio.",
+      "model": "agy/gemini-3.1-pro-high",
+      "reason": "UI Flutter sobre la capa de F6.5; reutiliza widgets existentes.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.5.T2"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/presentation/",
+        "apps/mobile/lib/features/group_session/domain/",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/test/features/group_session/presentation/",
+        "apps/mobile/test/features/group_session/domain/"
+      ],
+      "specRef": "f7-tutor-en-grupo.md#F7.4.T1",
+      "comments": []
+    },
+    {
+      "id": "F8.1.T1",
+      "phase": 8,
+      "title": "Grabador con transcripción simultánea y degradación",
+      "description": "Crear `apps/mobile/lib/features/group_session/data/voice_note_recorder.dart`.\nGraba con el paquete `record` (AAC/m4a, mono, 64 kbps, corte duro a 60 s) y, a\nla vez, transcribe con `SpeechToTextService` en inglés.\n\n**Riesgo conocido (arquitectura, *Risks*):** Android puede no permitir dos\ncapturas de micrófono simultáneas. Si `record` o el STT fallan al arrancar\nmientras el otro está activo, el grabador **degrada a solo transcripción**:\ndevuelve `VoiceNote(transcript, audioPath: null)` y expone\n`audioSupported = false` para el resto de la sesión.\n\n`VoiceNote { String transcript; String? audioPath; int durationMs; }`.\n\nEn `apps/mobile/pubspec.yaml`, añadir `record` y `just_audio` (este último para\nF8.1.T2). Permisos:\n- `NSMicrophoneUsageDescription` en `apps/mobile/ios/Runner/Info.plist`, si no\n  está ya por el STT.\n- `RECORD_AUDIO` en `apps/mobile/android/app/src/main/AndroidManifest.xml`.\n\nEscribe en la descripción del PR qué pasó en un dispositivo Android real si el\nagente puede probarlo; si no, deja la casilla \"probar en dispositivo\" para la\npersona que revisa.\n\nDone when: tests unitarios con `record` y STT falsos cubren los dos funcionando\n(audio + transcripción), `record` fallando (degrada, sin audio) y el corte a\n60 s. `flutter analyze` queda limpio.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Integración nativa con un riesgo real de plataforma y una ruta de degradación; mejor Claude que un modelo rápido.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.5.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/data/voice_note_recorder.dart",
+        "apps/mobile/test/features/group_session/data/voice_note_recorder_test.dart",
+        "apps/mobile/pubspec.yaml",
+        "apps/mobile/ios/Runner/Info.plist",
+        "apps/mobile/android/app/src/main/AndroidManifest.xml"
+      ],
+      "specRef": "f8-voz-y-push.md#F8.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F8.1.T2",
+      "phase": 8,
+      "title": "UI de nota de voz: grabar, revisar, enviar y reproducir",
+      "description": "En la sala (`apps/mobile/lib/features/group_session/presentation/`):\n\n**Grabar.** Mantener pulsado el micrófono graba con `VoiceNoteRecorder`\n(F8.1.T1); al soltar se abre la revisión.\n\n**Revisar.** Hoja con la transcripción editable (como RF-3.1), la duración y los\nbotones \"Enviar\" y \"Descartar\".\n\n**Enviar.** Añadir `sendVoiceMessage(audioPath?, transcript, durationMs, clientId)`\na `GroupSessionApi` (`features/group_session/data/`):\n- Con audio, hace multipart a `POST group-sessions/:id/voice-messages`.\n- Sin audio (modo degradado), envía la transcripción por `sendMessage` normal.\n\n**Reproducir.** Un mensaje con `hasAudio` muestra un mini reproductor\n(`just_audio`) que descarga `GET .../messages/:messageId/audio` con el token del\n`api_client`. Un `410` muestra \"audio caducado\" y deja solo el texto.\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests de la hoja de revisión (editar y enviar llama a la\nAPI correcta en ambos modos) y del mensaje con audio (reproductor visible; 410\nda el texto de caducado). `flutter analyze` queda limpio.",
+      "model": "agy/gemini-3.1-pro-high",
+      "reason": "UI Flutter con un contrato claro.",
+      "status": "backlog",
+      "dependencies": [
+        "F8.1.T1",
+        "F7.4.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/presentation/",
+        "apps/mobile/lib/features/group_session/data/group_session_api.dart",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/test/features/group_session/presentation/"
+      ],
+      "specRef": "f8-voz-y-push.md#F8.1.T2",
+      "comments": []
+    },
+    {
+      "id": "F8.2.T1",
+      "phase": 8,
+      "title": "Bucket group-voice, subida y descarga",
+      "description": "En `apps/api/src/group-sessions/voice/` (controller + service, registrados en\n`group-sessions.module.ts`):\n\n**Subida**: `POST group-sessions/:id/voice-messages`, multipart con `audio`,\n`transcript`, `durationMs` y `clientId`.\n- Mismas comprobaciones de grupo y participación que `POST messages`.\n- Valida `durationMs ≤ 60000`, tamaño ≤ 2 MB y mime `audio/mp4`, `audio/m4a`\n  o `audio/aac`; si no cumple, `400`.\n- Sube con `admin.storage.from('group-voice')` usando la clave\n  `{sessionId}/{uuid}.m4a`.\n- Llama a `GroupSessionsService.postUserMessage(..., { text: transcript, audioKey, audioMs })`\n  (F6.3.T2), así el tutor y el push se disparan igual que con el texto.\n- Si la inserción falla, borra el objeto subido.\n\n**Descarga**: `GET group-sessions/:id/messages/:messageId/audio`.\n- Mismas comprobaciones de grupo, más ser o haber sido participante.\n- Hace stream del objeto con `Content-Type: audio/mp4`.\n- Si `audio_key` es null, `410`.\n\nQue el bucket sea privado: si InsForge lo crea por migración o por API,\ndocumenta el paso en `apps/api/README.md` o donde se documenten los otros\nbuckets (`badges`).\n\nDone when: los specs cubren la subida válida (objeto subido y mensaje creado con\n`audioKey`), el audio de más de 60 s o 2 MB (400), quien no es participante\n(403), el fallo de inserción (borra el objeto) y la descarga con `audio_key`\nnull (410).",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Subida de archivos con control de acceso y limpieza ante fallos.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.3.T2",
+        "F7.3.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/src/group-sessions/voice/",
+        "apps/api/src/group-sessions/group-sessions.module.ts",
+        "apps/api/README.md"
+      ],
+      "specRef": "f8-voz-y-push.md#F8.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F8.2.T2",
+      "phase": 8,
+      "title": "Retención de audio a 30 días",
+      "description": "En `apps/api/src/jobs/maintenance/retention.service.ts`, añadir un paso al job\ndiario. Busca los mensajes con `audio_key IS NOT NULL` y\n`created_at \u003c now() - 30 days`, borra el objeto del bucket `group-voice` y pone\n`audio_key = null`; la transcripción (`text`) se queda (NFR-5). Procesa en lotes\nde 200. Si borrar un objeto falla, registra el error y sigue con el resto sin\nanular su `audio_key`.\n\nDone when: el spec cubre que se borra el audio viejo, se respeta el reciente y\nun fallo de borrado de un objeto no detiene el lote.",
+      "model": "agy/gemini-3.8-flash-medium",
+      "reason": "Un paso más en un job de retención existente; mecánico.",
+      "status": "backlog",
+      "dependencies": [
+        "F8.2.T1"
+      ],
+      "estimateHours": 1.0,
+      "files": [
+        "apps/api/src/jobs/maintenance/retention.service.ts",
+        "apps/api/src/jobs/maintenance/retention.service.spec.ts"
+      ],
+      "specRef": "f8-voz-y-push.md#F8.2.T2",
+      "comments": []
+    },
+    {
+      "id": "F8.3.T1",
+      "phase": 8,
+      "title": "notifyGroupMessage con presencia y throttle",
+      "description": "En `apps/api/src/push/push.service.ts`, añadir\n`notifyGroupMessage({ sessionId, authorId, authorName, preview })`.\n\nDestinatarios: los participantes activos (`left_at IS NULL`) menos el autor y\nmenos los que estén en `RoomBus.onlineUsers(sessionId)`. Para cada uno, solo\nenvía si `SET push:gs:{sessionId}:{userId} 1 NX EX 60` tiene éxito (D5: como\nmucho uno por minuto por usuario y sala).\n\nMensaje i18n en `apps/api/src/push/push.messages.ts`:\n- Tipo `group_message` y ruta `/group-session/{sessionId}`.\n- El cuerpo es \"{authorName}: {preview}\" con `preview` truncado a 80\n  caracteres; para el tutor, \"Tutor\".\n\nLlama a `notifyGroupMessage` sin bloquear en dos sitios:\n- `GroupSessionsService.postUserMessage`.\n- La publicación del mensaje del tutor, en el procesador de F7.3.T2\n  (`apps/api/src/jobs/group-tutor/`).\n\nDone when: `push.service.spec.ts` comprueba que 5 mensajes en 30 s dan una sola\nnotificación por destinatario, que un usuario online no recibe nada, que el\nautor no se notifica a sí mismo y que el que salió no recibe nada.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Toca push, presencia y dos productores; requiere cuidado con los destinatarios.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.4.T1",
+        "F7.3.T2",
+        "F6.2.T1"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/push/push.service.ts",
+        "apps/api/src/push/push.messages.ts",
+        "apps/api/src/push/push.service.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.service.ts",
+        "apps/api/src/jobs/group-tutor/"
+      ],
+      "specRef": "f8-voz-y-push.md#F8.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F9.1.T1",
+      "phase": 9,
+      "title": "advance_streak y close_group_session",
+      "description": "Migración `apps/api/migrations/20261006130000_cierre-sesion-grupal.sql`.\n\n**`advance_streak`**\n- Extrae el bloque de streak de `close_session` (el cálculo de `v_streak`, el\n  bonus `streak_7` y la actualización de `profiles.streak` /\n  `longest_streak`) a\n  `advance_streak(p_user_id uuid, p_ended_at timestamptz) RETURNS jsonb`, que\n  devuelve `{streak, bonus}`.\n- Reescribe `close_session` para usarlo sin cambiar el comportamiento:\n  `apps/api/migrations/tests/close_session.sql` tiene que pasar intacto.\n\n**`close_group_session(p_session_id uuid, p_reason text) RETURNS jsonb`**, como\nlo describe *Data model*:\n- Marca la sala `ended` y cierra la presencia sumando `present_sec`.\n- Por cada participante con `messages_count ≥ 1`:\n  - Inserta en `sessions` (`kind = 'group'`, `group_session_id`,\n    `status = 'ended'`, `duration_sec = present_sec`,\n    `turns_count = messages_count`, `xp_earned`).\n  - Calcula `xp = least(messages_count*5, 60) + least(floor(present_sec/60)*2, 30)`.\n  - Inserta `xp_events(kind = 'group')`.\n  - Si `messages_count ≥ 5`, llama a `advance_streak` e inserta el bonus\n    `streak_7` si lo hay.\n- Devuelve `[{userId, sessionId, xp, streak}]`.\n- Es idempotente: una segunda llamada devuelve lo mismo sin duplicar filas.\n- `REVOKE ... FROM PUBLIC, anon, authenticated`.\n\nTest `apps/api/migrations/tests/close_group_session.sql`, que cubra:\n- 3 participantes (0, 3 y 6 mensajes): solo 2 filas `sessions`, y solo el de 6\n  avanza el streak.\n- Los topes de XP.\n- La idempotencia.\n\nDone when: los dos tests SQL pasan.",
+      "model": "claude/claude-opus-5-5",
+      "reason": "Refactor de una función SQL de XP en producción más una nueva; premium por riesgo de regresión.",
+      "status": "backlog",
+      "dependencies": [
+        "F6.1.T1"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/api/migrations/20261006130000_cierre-sesion-grupal.sql",
+        "apps/api/migrations/tests/close_group_session.sql"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.1.T1",
+      "comments": []
+    },
+    {
+      "id": "F9.1.T2",
+      "phase": 9,
+      "title": "GroupCloser reemplaza el cierre provisional",
+      "description": "**`GroupCloser.close(sessionId, reason)`** en\n`apps/api/src/group-sessions/group-closer.service.ts`:\n1. Llama al RPC `close_group_session`. Añade su tipo en\n   `apps/api/src/db/rpc.ts` y las constantes `GROUP_XP_PER_MESSAGE = 5`,\n   `GROUP_XP_MESSAGES_CAP = 60`, `GROUP_XP_PER_PRESENT_MIN = 2`,\n   `GROUP_XP_PRESENCE_CAP = 30` y `GROUP_STREAK_MIN_MESSAGES = 5` en\n   `apps/api/src/config/product.ts`, con un comentario que apunte a la\n   migración.\n2. Inserta el mensaje de sistema `ended` y publica `ended` con\n   `xp: [{userId, xp}]`.\n3. Para cada fila `sessions` con `turns_count ≥ MIN_TURNS_FOR_BRIEF`, llama a\n   `JobDispatcher.enqueueCoachingBrief(sessionId)`.\n4. Llama a `award_badges` igual que `SessionCloserService`\n   (`apps/api/src/sessions/session-closer.service.ts`).\n\n`GroupSessionsService.close` (el provisional de F6.3.T1) pasa a delegar en\n`GroupCloser`; el sweeper y `POST end` siguen llamando a `close`.\n\nDone when: el spec de `group-closer` cubre el evento `ended` con XP, el brief\nencolado solo para quien llegó al mínimo y que una segunda llamada no duplica\neventos.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Orquestación sobre un RPC ya probado.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.1.T1",
+        "F8.3.T1",
+        "F8.2.T1"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/group-sessions/group-closer.service.ts",
+        "apps/api/src/group-sessions/group-closer.service.spec.ts",
+        "apps/api/src/group-sessions/group-sessions.service.ts",
+        "apps/api/src/group-sessions/group-sessions.module.ts",
+        "apps/api/src/db/rpc.ts",
+        "apps/api/src/config/product.ts"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.1.T2",
+      "comments": []
+    },
+    {
+      "id": "F9.1.T3",
+      "phase": 9,
+      "title": "Excluir 'group' de las consultas que asumen 1:1",
+      "description": "Desde F9.1.T1 existen filas `sessions.kind = 'group'`. Revisar y, donde no\naplique, excluir `'group'`:\n- `listCandidateSessionsForMembers` (desafíos) en\n  `apps/api/src/sessions-query/sessions-query.repository.ts`.\n- `listTopicsSince`.\n- La lógica de `next_is_boss` / boss.\n- Cualquier lectura de `turns` por `session_id` que reciba una sesión `group`\n  (que no tiene turns).\n\n`countValidSessionsSince` **sí** cuenta los grupos (resumen semanal como conteo,\nD8).\n\nDeja la lista de consultas revisadas, con lo decidido para cada una, en la\ndescripción del PR.\n\nDone when: cada consulta cambiada tiene un test con una fila `group` que prueba\nla exclusión, y `countValidSessionsSince` tiene uno que prueba que la incluye.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Auditoría transversal; requiere leer bien el código existente.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.1.T1"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/sessions-query/sessions-query.repository.ts",
+        "apps/api/src/sessions-query/sessions-query.repository.spec.ts",
+        "apps/api/src/sessions/scenario.ts"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.1.T3",
+      "comments": []
+    },
+    {
+      "id": "F9.2.T1",
+      "phase": 9,
+      "title": "Recap del tutor al cerrar",
+      "description": "**Esquema.** `GroupRecapOutput` en `apps/api/src/llm/schemas.ts`, según\n*Interfaces → LLM*: hasta 5 `topics` y un `highlight` por participante con\nmensajes, en inglés (D7).\n\n**Prompt.** `apps/api/src/llm/prompts/group-recap.ts`: recibe los mensajes y los\nparticipantes; sin brief ni hechos.\n\n**Job `group-recap`** en `apps/api/src/jobs/group-recap/`, registrado en la cola\n`group` dentro de `apps/api/src/worker.module.ts`:\n- Cobra con `DailyTurnsBudget.consume` al **iniciador** (D6). Si no tiene cupo,\n  no hay recap y no pasa nada más.\n- Usa el modelo del iniciador y `purpose: 'group_recap'`.\n- Guarda en `group_sessions.recap` y publica `recap`.\n- Descarta los `highlights` cuyo `userId` no sea participante.\n\n`GroupCloser.close` lo encola con `jobId: recap:{sessionId}`.\n\nDone when: los specs cubren el recap guardado y publicado, el iniciador sin\ncupo (sin recap) y el filtrado de un `highlight` con usuario desconocido.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Llamada LLM nueva sobre la infraestructura de F7.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.1.T2",
+        "F7.3.T2"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/llm/schemas.ts",
+        "apps/api/src/llm/prompts/group-recap.ts",
+        "apps/api/src/llm/prompts/group-recap.spec.ts",
+        "apps/api/src/jobs/group-recap/",
+        "apps/api/src/worker.module.ts",
+        "apps/api/src/group-sessions/group-closer.service.ts"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.2.T1",
+      "comments": []
+    },
+    {
+      "id": "F9.3.T1",
+      "phase": 9,
+      "title": "Variante de grupo del coaching brief",
+      "description": "En `CoachingBriefService.run(sessionId)`\n(`apps/api/src/jobs/coaching-brief/coaching-brief.service.ts`), cuando la\nsesión tiene `kind = 'group'`:\n- Carga, a través de `group_session_id`, solo los mensajes `role = 'user'` de\n  `sessions.user_id` y sus `group_session_corrections`.\n- Usa una variante de `buildBriefMessages` (`apps/api/src/llm/prompts/brief.ts`)\n  que recibe el brief anterior y esas correcciones y **no** pide `facts`, con un\n  esquema sin `facts` o con `facts` forzado a `[]`.\n- Llama a `apply_brief` con `p_facts = []` (FR-18, NFR-3).\n\nEl camino 1:1 no cambia.\n\nDone when: los specs comprueban que la sesión `group` produce brief y errores\nrecurrentes, que `apply_brief` recibe `p_facts = []`, que el prompt no contiene\nmensajes de otros participantes y que los specs 1:1 existentes siguen verdes.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Toca datos personales y privacidad del brief.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.1.T2"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/jobs/coaching-brief/",
+        "apps/api/src/llm/prompts/brief.ts"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.3.T1",
+      "comments": []
+    },
+    {
+      "id": "F9.4.T1",
+      "phase": 9,
+      "title": "Detalle de historial para sesiones de grupo",
+      "description": "En `apps/api/src/sessions/sessions-history.service.ts` y\n`apps/api/src/sessions/sessions-history.repository.ts`:\n- `GET sessions` ya lista las filas `group` del usuario. Añade al ítem `kind`\n  y, para `group`, el tema y los nombres de los demás participantes.\n- `GET sessions/:id` con `kind = 'group'` devuelve los mensajes de la sala\n  (`GroupMessageDto[]`), las correcciones visibles para ese usuario (las suyas\n  más las de autores que compartieron), el `recap` y su XP.\n\nSolo el dueño de la fila `sessions` puede verla, lo que ya garantiza\n`findOwnedSessionOrThrow` (FR-17).\n\nDone when: los specs cubren el listado con una fila `group`, el detalle con\ncorrecciones filtradas y que otro usuario no puede ver la fila ajena.",
+      "model": "claude/claude-sonnet-5",
+      "reason": "Lectura con filtro de privacidad sobre servicios existentes.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.1.T2"
+      ],
+      "estimateHours": 2.0,
+      "files": [
+        "apps/api/src/sessions/sessions-history.service.ts",
+        "apps/api/src/sessions/sessions-history.repository.ts",
+        "apps/api/src/sessions/sessions-history.service.spec.ts"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.4.T1",
+      "comments": []
+    },
+    {
+      "id": "F9.4.T2",
+      "phase": 9,
+      "title": "App: pantalla de cierre con XP y recap, e historial de grupo",
+      "description": "**Cierre.** En `apps/mobile/lib/features/group_session/presentation/`, al\nrecibir `ended` se muestra la pantalla de cierre: la XP de cada participante\n(con la propia destacada) y, cuando llega `recap`, los temas y una frase por\npersona. Hasta entonces, un placeholder.\n\n**Historial.** En la lista de `apps/mobile/lib/features/session/presentation/`\n(o donde se pinte el historial), un ítem `kind = 'group'` lleva icono de grupo y\nabre la sala en solo lectura: mensajes, correcciones visibles y recap, usando\n`GET sessions/:id`. Añade los campos nuevos a los modelos de\n`apps/mobile/lib/core/api/models.dart`.\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests del cierre (XP y luego recap) y de la vista en solo\nlectura desde el historial. `flutter analyze` queda limpio.",
+      "model": "agy/gemini-3.1-pro-high",
+      "reason": "UI Flutter sobre contratos ya fijados.",
+      "status": "backlog",
+      "dependencies": [
+        "F9.4.T1",
+        "F9.2.T1",
+        "F8.1.T2"
+      ],
+      "estimateHours": 3.0,
+      "files": [
+        "apps/mobile/lib/features/group_session/presentation/",
+        "apps/mobile/lib/features/session/presentation/",
+        "apps/mobile/lib/core/api/models.dart",
+        "apps/mobile/lib/l10n/app_es.arb",
+        "apps/mobile/lib/l10n/app_pt.arb",
+        "apps/mobile/test/features/group_session/"
+      ],
+      "specRef": "f9-progreso-grupal.md#F9.4.T2",
+      "comments": []
     }
   ]
 }

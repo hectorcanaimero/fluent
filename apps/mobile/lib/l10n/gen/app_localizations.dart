@@ -2861,8 +2861,8 @@ abstract class AppLocalizations {
   /// No description provided for @interviewCycleProgress.
   ///
   /// In es, this message translates to:
-  /// **'{n} de 5 sesiones'**
-  String interviewCycleProgress(int n);
+  /// **'{n} de {total} sesiones'**
+  String interviewCycleProgress(int n, int total);
 
   /// No description provided for @interviewCycleTotalDuration.
   ///
@@ -2921,8 +2921,8 @@ abstract class AppLocalizations {
   /// No description provided for @interviewCycleReinterviewLocked.
   ///
   /// In es, this message translates to:
-  /// **'Se desbloquea al completar las 5 sesiones'**
-  String get interviewCycleReinterviewLocked;
+  /// **'Se desbloquea al completar las {total} sesiones'**
+  String interviewCycleReinterviewLocked(int total);
 
   /// No description provided for @interviewCycleReinterviewReady.
   ///

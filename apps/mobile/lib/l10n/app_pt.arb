@@ -539,10 +539,13 @@
       }
     }
   },
-  "interviewCycleProgress": "{n} de 5 sessões",
+  "interviewCycleProgress": "{n} de {total} sessões",
   "@interviewCycleProgress": {
     "placeholders": {
       "n": {
+        "type": "int"
+      },
+      "total": {
         "type": "int"
       }
     }
@@ -570,6 +573,13 @@
   "interviewCycleFormatRoleplay": "Situação de trabalho",
   "interviewCycleFocusEnglish": "Inglês",
   "interviewCycleReinterviewTitle": "Reentrevista",
-  "interviewCycleReinterviewLocked": "Desbloqueia ao completar as 5 sessões",
+  "interviewCycleReinterviewLocked": "Desbloqueia ao completar as {total} sessões",
+  "@interviewCycleReinterviewLocked": {
+    "placeholders": {
+      "total": {
+        "type": "int"
+      }
+    }
+  },
   "interviewCycleReinterviewReady": "Compare seu avanço com uma nova entrevista sobre a mesma vaga"
 }

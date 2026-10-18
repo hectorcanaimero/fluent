@@ -102,6 +102,13 @@ String? computeRedirect(
   return null;
 }
 
+/// `?from=cycle&interviewId=` (F13.2): la sesión de estudio se abrió desde
+/// el ciclo y su resumen tiene que volver a `/interviews/:id/cycle`.
+String? _cycleInterviewId(GoRouterState state) =>
+    state.uri.queryParameters['from'] == 'cycle'
+    ? state.uri.queryParameters['interviewId']
+    : null;
+
 final routerProvider = Provider<GoRouter>((ref) {
   final notifier = ref.watch(routerNotifierProvider);
 
@@ -157,8 +164,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       ),
       GoRoute(
         path: '/session/:id',
-        builder: (context, state) =>
-            ConversationScreen(sessionId: state.pathParameters['id']!),
+        builder: (context, state) => ConversationScreen(
+          sessionId: state.pathParameters['id']!,
+          cycleInterviewId: _cycleInterviewId(state),
+        ),
         routes: [
           GoRoute(
             path: 'summary',
@@ -168,6 +177,7 @@ final routerProvider = Provider<GoRouter>((ref) {
               // ejemplo, si quedó como última ruta); sin el cast
               // opcional, `state.extra as SessionSummary` reventaba.
               summary: state.extra as SessionSummary?,
+              cycleInterviewId: _cycleInterviewId(state),
             ),
           ),
         ],

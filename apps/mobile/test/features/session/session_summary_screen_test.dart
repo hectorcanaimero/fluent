@@ -13,6 +13,7 @@ import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 /// Falla la primera carga del detalle (p. ej. sin red al reabrir la app).
@@ -746,5 +747,64 @@ void main() {
     );
     expect(scale.scale.value, 1);
     await tester.pumpAndSettle();
+  });
+
+  testWidgets('una sesión de estudio del ciclo vuelve al ciclo', (
+    tester,
+  ) async {
+    SharedPreferences.setMockInitialValues({});
+    final api = FakeApi(artificialDelay: Duration.zero);
+    final created = await api.createSession(
+      kind: 'free_topic',
+      topic: 'Travel',
+    );
+    const summary = SessionSummary(
+      xpEarned: 0,
+      streak: 1,
+      correctionsCount: 0,
+      durationSec: 60,
+    );
+    final router = GoRouter(
+      initialLocation: '/summary',
+      routes: [
+        GoRoute(path: '/', builder: (context, state) => const Text('HOME')),
+        GoRoute(
+          path: '/summary',
+          builder: (context, state) => SessionSummaryScreen(
+            sessionId: created.session.id,
+            summary: summary,
+            cycleInterviewId: 'int-1',
+          ),
+        ),
+        GoRoute(
+          path: '/interviews/:id/cycle',
+          builder: (context, state) =>
+              Text('CYCLE_${state.pathParameters['id']}'),
+        ),
+      ],
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [fluentApiProvider.overrideWith((ref) => api)],
+        child: MaterialApp.router(
+          routerConfig: router,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: AppLocalizations.supportedLocales,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final back = find.byKey(const Key('summary_back_button'));
+    await tester.scrollUntilVisible(back, 200);
+    await tester.tap(back);
+    await tester.pumpAndSettle();
+
+    expect(find.text('CYCLE_int-1'), findsOneWidget);
   });
 }

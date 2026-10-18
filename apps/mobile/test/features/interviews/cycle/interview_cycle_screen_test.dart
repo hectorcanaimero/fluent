@@ -15,6 +15,23 @@ class _SpyApi extends FakeApi {
   _SpyApi() : super(artificialDelay: Duration.zero);
 
   final List<int> startedIdx = [];
+  int createCalls = 0;
+  int getCalls = 0;
+
+  /// Si no es `null`, `startStudyCycleSession` lanza esto.
+  Object? startError;
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) {
+    createCalls++;
+    return super.createStudyCycle(id);
+  }
+
+  @override
+  Future<StudyCycle> getStudyCycle(String id) {
+    getCalls++;
+    return super.getStudyCycle(id);
+  }
 
   @override
   Future<InterviewSessionStart> startStudyCycleSession({
@@ -22,11 +39,13 @@ class _SpyApi extends FakeApi {
     required int idx,
   }) {
     startedIdx.add(idx);
+    final error = startError;
+    if (error != null) throw error;
     return super.startStudyCycleSession(interviewId: interviewId, idx: idx);
   }
 }
 
-Future<void> _pump(WidgetTester tester, FakeApi api, String id) async {
+Future<GoRouter> _pump(WidgetTester tester, FakeApi api, String id) async {
   // Las 5 filas más la re-entrevista no entran en el alto por defecto del
   // test (la `ListView` real solo monta lo que entra en el viewport): un
   // lienzo más alto evita tener que scrollear para encontrarlas.
@@ -42,8 +61,13 @@ Future<void> _pump(WidgetTester tester, FakeApi api, String id) async {
       ),
       GoRoute(
         path: '/session/:id',
-        builder: (context, state) =>
-            Text('SESSION_${state.pathParameters['id']}'),
+        builder: (context, state) => Scaffold(
+          body: Text(
+            'SESSION_${state.pathParameters['id']}'
+            '_${state.uri.queryParameters['from']}'
+            '_${state.uri.queryParameters['interviewId']}',
+          ),
+        ),
       ),
     ],
   );
@@ -63,6 +87,7 @@ Future<void> _pump(WidgetTester tester, FakeApi api, String id) async {
     ),
   );
   await tester.pumpAndSettle();
+  return router;
 }
 
 /// Entrevista con parecer listo (la ficha de la API real deja crear el
@@ -76,6 +101,8 @@ Future<String> _readyInterview(FakeApi api) async {
   await api.getInterview(created.id);
   await api.getInterview(created.id);
   await api.getInterview(created.id);
+  // El `POST /cycle` lo hace el botón del parecer antes de navegar.
+  await api.createStudyCycle(created.id);
   return created.id;
 }
 
@@ -151,7 +178,51 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(api.startedIdx, [1]);
-    expect(find.textContaining('SESSION_study-session-$id-1'), findsOneWidget);
+    expect(find.text('SESSION_study-session-$id-1_cycle_$id'), findsOneWidget);
+  });
+
+  testWidgets('solo lee el ciclo con GET, nunca lo crea', (tester) async {
+    final api = _SpyApi();
+    final id = await _readyInterview(api);
+    final creates = api.createCalls;
+    await _pump(tester, api, id);
+
+    expect(api.getCalls, 1);
+    expect(api.createCalls, creates);
+  });
+
+  testWidgets('al volver de la sesión recarga el ciclo', (tester) async {
+    final api = _SpyApi();
+    final id = await _readyInterview(api);
+    final router = await _pump(tester, api, id);
+
+    await tester.tap(_sessionStart(1));
+    await tester.pumpAndSettle();
+    api.completeStudySession(id, 1);
+    router.pop();
+    await tester.pumpAndSettle();
+
+    expect(api.getCalls, 2);
+    expect(_sessionStart(2), findsOneWidget);
+    expect(find.text('1 de 5 sesiones'), findsOneWidget);
+  });
+
+  testWidgets('un error que no es de la API muestra un aviso genérico', (
+    tester,
+  ) async {
+    final api = _SpyApi()..startError = StateError('boom');
+    final id = await _readyInterview(api);
+    await _pump(tester, api, id);
+
+    await tester.tap(_sessionStart(1));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Ocurrió un error. Probá de nuevo.'), findsOneWidget);
+    // El botón vuelve a quedar habilitado.
+    expect(
+      tester.widget<ElevatedButton>(_sessionStart(1)).onPressed,
+      isNotNull,
+    );
   });
 
   testWidgets('la re-entrevista queda bloqueada hasta completar las 5', (

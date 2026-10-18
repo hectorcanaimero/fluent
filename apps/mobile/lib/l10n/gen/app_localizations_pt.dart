@@ -1590,8 +1590,8 @@ class AppLocalizationsPt extends AppLocalizations {
   }
 
   @override
-  String interviewCycleProgress(int n) {
-    return '$n de 5 sessões';
+  String interviewCycleProgress(int n, int total) {
+    return '$n de $total sessões';
   }
 
   @override
@@ -1626,8 +1626,9 @@ class AppLocalizationsPt extends AppLocalizations {
   String get interviewCycleReinterviewTitle => 'Reentrevista';
 
   @override
-  String get interviewCycleReinterviewLocked =>
-      'Desbloqueia ao completar as 5 sessões';
+  String interviewCycleReinterviewLocked(int total) {
+    return 'Desbloqueia ao completar as $total sessões';
+  }
 
   @override
   String get interviewCycleReinterviewReady =>

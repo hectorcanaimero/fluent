@@ -12,10 +12,9 @@ import '../../../../l10n/gen/app_localizations.dart';
 import '../../data/interviews_repository.dart';
 
 /// `/interviews/:id/cycle` (IE-07, FR-17 a FR-19, FR-29, FR-30): el ciclo de
-/// 5 sesiones de estudio armado desde el parecer. `POST /interviews/:id/cycle`
-/// es idempotente (devuelve el ciclo ya creado), así que abrir esta pantalla
-/// es lo que la crea o la retoma, sin que el botón del parecer necesite
-/// llamarla primero.
+/// 5 sesiones de estudio armado desde el parecer. Solo lee
+/// (`GET /interviews/:id/cycle`): el `POST` que lo crea lo hace el botón
+/// "Empezar ciclo de estudio" del parecer antes de navegar hasta acá.
 class InterviewCycleScreen extends ConsumerStatefulWidget {
   const InterviewCycleScreen({super.key, required this.interviewId});
 
@@ -34,7 +33,9 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
   int? _startingIdx;
 
   Future<StudyCycle> _load() =>
-      ref.read(interviewsRepositoryProvider).createCycle(widget.interviewId);
+      ref.read(interviewsRepositoryProvider).cycle(widget.interviewId);
+
+  void _reload() => setState(() => _future = _load());
 
   Future<void> _startSession(int idx) async {
     if (_startingIdx != null) return;
@@ -44,12 +45,25 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
           .read(interviewsRepositoryProvider)
           .startCycleSession(interviewId: widget.interviewId, idx: idx);
       if (!mounted) return;
-      context.push('/session/${start.sessionId}');
+      setState(() => _startingIdx = null);
+      // El resumen vuelve acá con `?from=cycle&interviewId=` (no hay
+      // `interviewId` en `GET /sessions/:id`); al volver, la sesión ya
+      // cuenta como hecha y la siguiente se desbloquea.
+      await context.push(
+        '/session/${start.sessionId}'
+        '?from=cycle&interviewId=${widget.interviewId}',
+      );
+      if (mounted) _reload();
     } on ApiException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context)
           .showSnackBar(apiErrorSnackBar(context, e.code));
-      setState(() => _future = _load());
+      _reload();
+    } catch (_) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).errorGeneric)),
+      );
     } finally {
       if (mounted) setState(() => _startingIdx = null);
     }
@@ -58,22 +72,16 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
   @override
   Widget build(BuildContext context) {
     final l10n = AppLocalizations.of(context);
+    final detail = ref.watch(interviewProvider(widget.interviewId)).valueOrNull;
     final competencyNames = {
-      for (final c
-          in ref
-                  .watch(interviewProvider(widget.interviewId))
-                  .valueOrNull
-                  ?.competencies ??
-              const <InterviewCompetency>[])
+      for (final c in detail?.competencies ?? const <InterviewCompetency>[])
         c.id: c.name,
     };
-    final companyName =
-        ref
-            .watch(interviewProvider(widget.interviewId))
-            .valueOrNull
-            ?.company
-            ?.name ??
-        l10n.interviewHistoryCompanyFallback;
+    // Sin la ficha todavía no hay subtítulo: mostrar el nombre genérico y
+    // cambiarlo al llegar la empresa parpadeaba.
+    final companyName = detail == null
+        ? null
+        : detail.company?.name ?? l10n.interviewHistoryCompanyFallback;
     return Scaffold(
       appBar: AppBar(title: Text(l10n.interviewCycleTitle)),
       body: SafeArea(
@@ -81,7 +89,7 @@ class _InterviewCycleScreenState extends ConsumerState<InterviewCycleScreen> {
           future: _future,
           builder: (context, snapshot) => AsyncBody<StudyCycle>(
             snapshot: snapshot,
-            onRetry: () => setState(() => _future = _load()),
+            onRetry: _reload,
             builder: (cycle) => _CycleBody(
               cycle: cycle,
               companyName: companyName,
@@ -106,7 +114,7 @@ class _CycleBody extends StatelessWidget {
   });
 
   final StudyCycle cycle;
-  final String companyName;
+  final String? companyName;
   final Map<String, String> competencyNames;
   final int? startingIdx;
   final void Function(int idx) onStart;
@@ -117,21 +125,24 @@ class _CycleBody extends StatelessWidget {
     final theme = Theme.of(context).textTheme;
     final doneCount = cycle.sessions.where((s) => s.status == 'done').length;
     final totalMin = cycle.sessions.fold<int>(0, (sum, s) => sum + s.estMin);
+    final total = cycle.sessions.length;
     final completed = cycle.status == 'completed';
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.screenPad),
       children: [
-        Text(
-          l10n.interviewCycleSubtitle(companyName),
-          key: const Key('interview_cycle_subtitle'),
-          style: theme.bodyMedium?.copyWith(color: AppColors.textSecondary),
-        ),
-        const SizedBox(height: AppSpacing.lg),
+        if (companyName != null) ...[
+          Text(
+            l10n.interviewCycleSubtitle(companyName!),
+            key: const Key('interview_cycle_subtitle'),
+            style: theme.bodyMedium?.copyWith(color: AppColors.textSecondary),
+          ),
+          const SizedBox(height: AppSpacing.lg),
+        ],
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
-              l10n.interviewCycleProgress(doneCount),
+              l10n.interviewCycleProgress(doneCount, total),
               key: const Key('interview_cycle_progress'),
               style: theme.titleMedium,
             ),
@@ -145,7 +156,7 @@ class _CycleBody extends StatelessWidget {
         ClipRRect(
           borderRadius: BorderRadius.circular(AppRadius.pill),
           child: LinearProgressIndicator(
-            value: doneCount / cycle.sessions.length,
+            value: total == 0 ? 0 : doneCount / total,
             minHeight: 6,
             color: AppColors.primary,
             backgroundColor: AppColors.locked,
@@ -164,7 +175,7 @@ class _CycleBody extends StatelessWidget {
             ),
           ),
         const SizedBox(height: AppSpacing.lg),
-        _ReinterviewCard(completed: completed),
+        _ReinterviewCard(completed: completed, total: total),
       ],
     );
   }
@@ -275,12 +286,13 @@ class _CycleSessionRow extends StatelessWidget {
 }
 
 /// La re-entrevista (IE-08) se queda bloqueada hasta completar las 5
-/// sesiones (FR-30); llamar `POST /interviews/:id/reinterview` y navegar a
+/// sesiones del ciclo (FR-30); llamar `POST /interviews/:id/reinterview` y navegar a
 /// la preparación de la hija es F13.2.T2.
 class _ReinterviewCard extends StatelessWidget {
-  const _ReinterviewCard({required this.completed});
+  const _ReinterviewCard({required this.completed, required this.total});
 
   final bool completed;
+  final int total;
 
   @override
   Widget build(BuildContext context) {
@@ -311,7 +323,7 @@ class _ReinterviewCard extends StatelessWidget {
                 Text(
                   completed
                       ? l10n.interviewCycleReinterviewReady
-                      : l10n.interviewCycleReinterviewLocked,
+                      : l10n.interviewCycleReinterviewLocked(total),
                   style: theme.bodySmall?.copyWith(
                     color: AppColors.textSecondary,
                   ),

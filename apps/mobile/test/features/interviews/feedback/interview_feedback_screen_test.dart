@@ -91,6 +91,13 @@ class _SpyApi extends FakeApi {
   int feedbackCalls = 0;
   int retryCalls = 0;
   int meCalls = 0;
+  int createCycleCalls = 0;
+
+  @override
+  Future<StudyCycle> createStudyCycle(String id) {
+    createCycleCalls++;
+    return super.createStudyCycle(id);
+  }
 
   @override
   Future<InterviewDetail> getInterview(String id) async {
@@ -247,8 +254,11 @@ void main() {
         const Key('interview_feedback_start_cycle_button'),
       );
       await tester.scrollUntilVisible(startCycleButton, 200);
+      expect(api.createCycleCalls, 0);
       await tester.tap(startCycleButton);
       await tester.pumpAndSettle();
+      // El `POST /cycle` lo hace este botón; el ciclo solo hace `GET`.
+      expect(api.createCycleCalls, 1);
       expect(find.text('CYCLE_$id'), findsOneWidget);
     },
   );

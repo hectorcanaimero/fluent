@@ -131,9 +131,14 @@ export function rebuildScenario(
 
     // `sessions.kind = 'group'` solo existe en la fila que crea
     // `close_group_session` (F9.1) por participante al cerrar la sala; esta
-    // función reconstruye turnos 1:1 y nunca se llama sobre esa fila.
+    // función reconstruye turnos 1:1 y llamarla sobre esa fila es un bug.
     case 'group':
-      return degradeToFreeTopic(session.topic);
+      throw new Error(`rebuildScenario: kind='group' no tiene escenario 1:1`);
+
+    default: {
+      const unreachable: never = session.kind;
+      throw new Error(`rebuildScenario: kind desconocido ${String(unreachable)}`);
+    }
   }
 }
 

@@ -6,11 +6,14 @@
  * módulo LLM, así que viven aquí y se reexportarán desde allí sin duplicar valores.
  */
 
+import type { OpenableSessionKind } from '../db/schema.js';
+
 export type Provider = '9router';
 export type Purpose = 'turn' | 'brief' | 'weekly';
 export type Locale = 'es' | 'pt-BR';
 export type Level = 'A2' | 'B1' | 'B2';
-export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss';
+/** Los `kind` 1:1 que llegan a los prompts; la sala grupal tiene los suyos (F9.3). */
+export type SessionKind = OpenableSessionKind;
 
 /** SPEC-03 §1: tabla de proveedores. */
 export interface ProviderConfig {

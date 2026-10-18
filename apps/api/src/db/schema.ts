@@ -34,6 +34,9 @@ export type Provider = '9router';
 /** Tipo de sesión (SPEC-01 §2.6). `'group'`: F6, fila por participante al cerrar la sala. */
 export type SessionKind = 'free_topic' | 'roleplay' | 'news' | 'boss' | 'group';
 
+/** `kind` que se abre por `POST /sessions`; la sala grupal (`'group'`) se abre por `POST group-sessions` (F6.3). */
+export type OpenableSessionKind = Exclude<SessionKind, 'group'>;
+
 /** Estado de la sesión (SPEC-01 §2.6) */
 export type SessionStatus = 'active' | 'ended' | 'abandoned';
 

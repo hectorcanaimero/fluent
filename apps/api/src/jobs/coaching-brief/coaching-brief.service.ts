@@ -36,7 +36,7 @@ export type CoachingBriefStatus = 'applied' | 'skipped';
 export interface CoachingBriefJobResult {
   readonly status: CoachingBriefStatus;
   /** Presente cuando `status = 'skipped'`. */
-  readonly reason?: 'already_done' | 'session_not_found' | 'not_applied';
+  readonly reason?: 'already_done' | 'session_not_found' | 'not_applied' | 'group_session';
   readonly factsInserted?: number;
   readonly factsSkipped?: number;
   readonly provider?: string;
@@ -80,6 +80,12 @@ export class CoachingBriefService {
     if (session.brief_job_status === 'done') {
       return { status: 'skipped', reason: 'already_done' };
     }
+    // F9.3 añade la variante de grupo (sin `facts`); hasta entonces este job
+    // no procesa sesiones `kind='group'` aunque alguien las encole.
+    if (session.kind === 'group') {
+      this.logger.warn(`Sesión ${sessionId} es de sala grupal; el brief 1:1 no aplica`);
+      return { status: 'skipped', reason: 'group_session' };
+    }
 
     await this.repository.markSessionRunning(sessionId);
 
@@ -112,9 +118,7 @@ export class CoachingBriefService {
       level: profile.level,
       previousBrief,
       knownFacts,
-      // F9.3 añade la variante de grupo (sin `facts`); hasta entonces este job
-      // no procesa sesiones `kind='group'` (no las encola nada todavía).
-      kind: session.kind as Exclude<typeof session.kind, 'group'>,
+      kind: session.kind,
       topic: session.topic,
       turns: history,
     });

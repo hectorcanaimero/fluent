@@ -11,16 +11,17 @@
  */
 import type { OpenableSessionKind } from '../db/schema.js';
 
-export const SESSION_OPENINGS: Readonly<Record<OpenableSessionKind, string>> = Object.freeze({
+export const SESSION_OPENINGS: Readonly<Record<OpenableSessionKind | 'study', string>> = Object.freeze({
   free_topic:
     "Hi! I'm glad you're here — what would you like to say about today's topic first?",
   roleplay:
     "Hi! Let's jump straight into our scene — how would you like to start?",
   news: "Hi! I read that story too — what was your first reaction to it?",
   boss: "Hi! Today's topic is a tough one, so let's warm up — what do you already know about it?",
+  study: "Hi! Let's practice today's study topic — what do you already know about it?",
 });
 
 /** Saludo fijo de la apertura degradada para un `kind`. */
-export function openingFor(kind: OpenableSessionKind): string {
+export function openingFor(kind: OpenableSessionKind | 'study'): string {
   return SESSION_OPENINGS[kind];
 }

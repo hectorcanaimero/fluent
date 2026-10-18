@@ -866,10 +866,10 @@ describe('SessionsService.openSession · apertura degradada (SPEC-04 §3, SPEC-0
     });
   });
 
-  it('hay un saludo fijo distinto para cada uno de los cuatro kind', () => {
+  it('hay un saludo fijo distinto para cada uno de los cuatro kind y study', () => {
     const texts = Object.values(SESSION_OPENINGS);
-    expect(texts).toHaveLength(4);
-    expect(new Set(texts).size).toBe(4);
+    expect(texts).toHaveLength(5);
+    expect(new Set(texts).size).toBe(5);
     for (const text of texts) {
       expect(text.trim().endsWith('?')).toBe(true);
     }

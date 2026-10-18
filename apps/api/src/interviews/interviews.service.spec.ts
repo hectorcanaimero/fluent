@@ -9,7 +9,7 @@ import type { JobDispatcher } from '../jobs/job-dispatcher.js';
 import type { ProfilesRepository } from '../profiles/profiles.repository.js';
 import type { RedisService } from '../redis/redis.service.js';
 import type { CreateInterviewDto } from './dto/create-interview.dto.js';
-import type { CreateInterviewRow, InterviewsRepository } from './interviews.repository.js';
+import type { CreateInterviewRow, InterviewListRow, InterviewsRepository } from './interviews.repository.js';
 import { InterviewsService } from './interviews.service.js';
 
 const USER_ID = '11111111-1111-4111-8111-111111111111';
@@ -172,6 +172,7 @@ function fakeProfiles(profile: Profile | null): ProfilesRepository {
 interface FakeRepoOptions {
   readonly findByIdResult?: Interview | null;
   readonly createFails?: boolean;
+  readonly listRows?: InterviewListRow[];
 }
 
 function fakeRepository(options: FakeRepoOptions = {}) {
@@ -196,7 +197,9 @@ function fakeRepository(options: FakeRepoOptions = {}) {
       findByIdCalls.push(id);
       return options.findByIdResult === undefined ? null : options.findByIdResult;
     },
-    listByUser: async () => [],
+    listByUser: async () => options.listRows ?? [],
+    listCycleProgress: async (_userId: string, ids: readonly string[]) =>
+      new Map(ids.filter((id) => id === 'with-cycle').map((id) => [id, { status: 'active', doneCount: 2 }])),
     markRetrying: async (userId: string, id: string) => {
       markRetryingCalls.push({ userId, id });
       if (options.findByIdResult?.status !== 'prep_failed') return null;
@@ -461,6 +464,43 @@ describe('InterviewsService.detail', () => {
     expect(error).toBeInstanceOf(ApiException);
     expect((error as ApiException).code).toBe('NOT_FOUND');
     expect((error as ApiException).getStatus()).toBe(404);
+  });
+});
+
+describe('InterviewsService.list', () => {
+  it('cada item trae resumable, isReinterview y el progreso del ciclo (F13.1.T1)', async () => {
+    const base = {
+      type: 'mixed',
+      status: 'feedback_ready',
+      prep_step: null,
+      created_at: '2026-10-17T10:00:00Z',
+      company: null,
+      role: null,
+      answered_count: 5,
+    } as const;
+    const { service } = buildService({
+      repoOptions: {
+        listRows: [
+          { ...base, id: 'with-cycle', parent_interview_id: null, resumable: false },
+          { ...base, id: 'no-cycle', status: 'too_short', parent_interview_id: 'p', resumable: true },
+        ],
+      },
+    });
+
+    const { items } = await service.list(USER_ID);
+
+    expect(items[0]).toMatchObject({
+      resumable: false,
+      isReinterview: false,
+      cycleCompletedSessions: 2,
+      cycleStatus: 'active',
+    });
+    expect(items[1]).toMatchObject({
+      resumable: true,
+      isReinterview: true,
+      cycleCompletedSessions: null,
+      cycleStatus: null,
+    });
   });
 });
 

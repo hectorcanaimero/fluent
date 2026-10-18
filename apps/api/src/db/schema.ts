@@ -273,6 +273,8 @@ export interface Session {
   interview_id: string | null;
   /** Tiempo activo acumulado en segundos (D4); solo lo usa `interview`. */
   active_sec: number;
+  /** Sesión del ciclo de estudio cuando `kind = 'study'` (F13.1.T1). */
+  study_cycle_session_id: string | null;
 }
 
 /**
@@ -520,6 +522,28 @@ export interface Interview {
   updated_at: string; // ISO 8601 timestamp
 }
 
+/** Ciclo de estudio de una entrevista (F13). Tabla: study_cycles. */
+export interface StudyCycle {
+  id: string;
+  user_id: string;
+  interview_id: string;
+  status: 'active' | 'completed' | 'skipped';
+  created_at: string; // ISO 8601 timestamp
+}
+
+/** Una de las 5 sesiones del ciclo (F13). Tabla: study_cycle_sessions. */
+export interface StudyCycleSession {
+  id: string;
+  cycle_id: string;
+  idx: number;
+  focus: string;
+  title: string;
+  format: 'guided' | 'roleplay';
+  est_min: number;
+  brief: string;
+  done_at: string | null; // ISO 8601 timestamp
+}
+
 /* ============================================================================
    Constantes de tablas y vistas (para usar en repos sin strings sueltos)
    ========================================================================== */
@@ -548,4 +572,6 @@ export const TABLES = {
   groupSessionMessages: 'group_session_messages',
   groupSessionCorrections: 'group_session_corrections',
   interviews: 'interviews',
+  studyCycles: 'study_cycles',
+  studyCycleSessions: 'study_cycle_sessions',
 } as const;

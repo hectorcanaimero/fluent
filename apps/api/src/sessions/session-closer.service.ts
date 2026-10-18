@@ -1,8 +1,11 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import type { InsForgeClient } from '@insforge/sdk';
 
 import type { ApiErrorCode } from '../common/api-error.js';
 import type { CloseSessionResult } from '../db/rpc.js';
 import { MIN_TURNS_FOR_BRIEF } from '../config/product.js';
+import { INSFORGE_ADMIN_CLIENT } from '../insforge/insforge.constants.js';
+import { markStudySessionDone } from '../interviews/interviews.repository.js';
 import { JOB_DISPATCHER, type JobDispatcher } from '../jobs/job-dispatcher.js';
 import { EndSessionRepository } from './end-session.repository.js';
 
@@ -63,6 +66,9 @@ export class SessionCloserService {
   constructor(
     private readonly repository: EndSessionRepository,
     @Inject(JOB_DISPATCHER) private readonly jobs: JobDispatcher,
+    // Opcional solo para los specs que construyen el servicio a mano; Nest
+    // siempre lo inyecta (`InsforgeModule` es global).
+    @Inject(INSFORGE_ADMIN_CLIENT) private readonly admin?: InsForgeClient,
   ) {}
 
   async close(params: SessionCloseParams): Promise<SessionCloseResult> {
@@ -90,6 +96,20 @@ export class SessionCloserService {
         }
       } else {
         await this.repository.markBriefDone(params.userId, params.sessionId);
+      }
+    }
+
+    // Sesión `study` (F13.1.T1): la marca como hecha en el ciclo si el
+    // aprendiz llegó a hablar (una apertura sin turnos no desbloquea la
+    // siguiente). Como las insignias, un fallo no tumba el cierre.
+    if (this.admin !== undefined && params.turnsCount > 0) {
+      try {
+        await markStudySessionDone(this.admin.database, params.sessionId);
+      } catch (error) {
+        this.logger.warn(
+          `No se pudo marcar la sesión de estudio ${params.sessionId} como hecha: ` +
+            `${(error as Error).message}`,
+        );
       }
     }
 

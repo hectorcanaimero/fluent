@@ -403,7 +403,7 @@ describe('TurnsService.addTurn · validación (SPEC-04 §4 paso 1)', () => {
     expect((error as ApiException).getApiBody().statusCode).toBe(409);
   });
 
-  it.each(['study', 'group'] as const)(
+  it.each(['group'] as const)(
     "kind='%s' → 409 WRONG_SESSION_KIND sin insertar el turno",
     async (kind) => {
       const { service, turns } = buildService({ session: sessionFixture({ kind }) });

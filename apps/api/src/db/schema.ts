@@ -124,8 +124,18 @@ export type GroupSystemEvent =
   | 'ended'
   | 'tutor_unavailable';
 
-/** Propósito de una llamada a LLM (SPEC-01 §2.14) */
-export type LlmCallPurpose = 'turn' | 'brief' | 'weekly';
+/**
+ * Propósito de una llamada a LLM (SPEC-01 §2.14). `interview*`: F10, turno,
+ * preparación y parecer del simulador de entrevistas. `llm/config.ts` lo
+ * reexporta como `Purpose`.
+ */
+export type LlmCallPurpose =
+  | 'turn'
+  | 'brief'
+  | 'weekly'
+  | 'interview'
+  | 'interview_prepare'
+  | 'interview_feedback';
 
 /** Estado de una llamada a LLM (SPEC-01 §2.14) */
 export type LlmCallStatus =

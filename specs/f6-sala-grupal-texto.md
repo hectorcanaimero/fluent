@@ -276,7 +276,7 @@ Las tres duraciones van como constantes en `apps/api/src/config/product.ts`:
 Done when: el spec, con un reloj fijo, cubre el aviso emitido una sola vez, el
 cierre por duración, el cierre por inactividad y una sala reciente intacta.
 
-- **Model**: agy/gemini-3.8-flash-medium
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 2h
 - **Reason**: Lógica de tiempo acotada que sigue el patrón del sweeper existente; vale un modelo rápido.
 - **Dependencies**: F6.3.T2
@@ -337,7 +337,7 @@ Sin throttle: FR-4 ya limita a una sala activa.
 Done when: `push.service.spec.ts` comprueba los destinatarios (sin el iniciador),
 la ruta y el idioma por locale.
 
-- **Model**: agy/gemini-3.8-flash-medium
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 1h
 - **Reason**: Copia del patrón de notifyChallenge; trabajo mecánico.
 - **Dependencies**:
@@ -379,7 +379,7 @@ Done when: hay tests de los modelos (JSON de ida y vuelta), del parser del
 stream (eventos, ping, reconexión con un Dio falso) y de la deduplicación del
 controller. `flutter analyze` queda limpio.
 
-- **Model**: agy/gemini-3.1-pro-high
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 4h
 - **Reason**: Flutter con streams y estado; tier alto de Gemini, fuerte en Dart.
 - **Dependencies**:
@@ -421,7 +421,7 @@ input desactivado al terminar) y de la tarjeta del grupo (con y sin sala), y un
 test de `_safeRoute` que acepta `/group-session/<uuid>` y rechaza
 `/group-session/../x`. `flutter analyze` queda limpio.
 
-- **Model**: agy/gemini-3.1-pro-high
+- **Model**: claude/claude-sonnet-5
 - **Estimate**: 4h
 - **Reason**: UI Flutter con varias piezas; Gemini Pro rinde bien en layout de widgets.
 - **Dependencies**: F6.5.T1

@@ -594,7 +594,7 @@
       "phase": 6,
       "title": "GroupSweeper: aviso de 25 min y cierres automáticos",
       "description": "Crear `apps/api/src/group-sessions/group-sweeper.service.ts` y llamarlo desde\nel cron por minuto que ya existe (`apps/api/src/jobs/session-sweeper.ts`, que\nhoy invoca `apps/api/src/sessions/session-sweeper.service.ts`). Por cada sala\n`active`:\n- Si `now - started_at ≥ 25 min` y `warned_at` es null: inserta el mensaje de\n  sistema `ending_soon`, lo publica y fija `warned_at`.\n- Si `now - started_at ≥ 30 min`: `close(id, 'max_duration')`.\n- Si `now - last_message_at ≥ 10 min`: `close(id, 'idle')`.\n\nLas tres duraciones van como constantes en `apps/api/src/config/product.ts`:\n`GROUP_SESSION_WARN_SEC = 1500`, `GROUP_SESSION_MAX_SEC = 1800` y\n`GROUP_SESSION_IDLE_SEC = 600`. Exporta el sweeper desde\n`group-sessions.module.ts` y que el worker lo importe.\n\nDone when: el spec, con un reloj fijo, cubre el aviso emitido una sola vez, el\ncierre por duración, el cierre por inactividad y una sala reciente intacta.",
-      "model": "agy/gemini-3.8-flash-medium",
+      "model": "claude/claude-sonnet-5",
       "reason": "Lógica de tiempo acotada que sigue el patrón del sweeper existente; vale un modelo rápido.",
       "status": "backlog",
       "dependencies": [
@@ -635,7 +635,7 @@
       "phase": 6,
       "title": "notifyGroupSessionStarted",
       "description": "En `apps/api/src/push/push.service.ts`, añadir\n`notifyGroupSessionStarted({ sessionId, groupId, initiatorId, initiatorName, topic }): Promise\u003cvoid\u003e`.\nEnvía, con el `sendTo` privado existente, a todos los miembros del grupo menos\nel iniciador (`GroupsRepository.listMembers`).\n\nEn `apps/api/src/push/push.messages.ts`:\n- Suma `'group_session' | 'group_message'` a `PushKind`.\n- Añade el builder i18n (es, en y pt, igual que los mensajes existentes):\n  título \"Sesión grupal\", cuerpo \"{initiatorName} abrió una sesión grupal sobre\n  {topic}\", `data: { type: 'group_session', route: '/group-session/{sessionId}' }`.\n\nSin throttle: FR-4 ya limita a una sala activa.\n\nDone when: `push.service.spec.ts` comprueba los destinatarios (sin el iniciador),\nla ruta y el idioma por locale.",
-      "model": "agy/gemini-3.8-flash-medium",
+      "model": "claude/claude-sonnet-5",
       "reason": "Copia del patrón de notifyChallenge; trabajo mecánico.",
       "status": "backlog",
       "dependencies": [],
@@ -653,7 +653,7 @@
       "phase": 6,
       "title": "Capa de datos de la sesión grupal en la app",
       "description": "Crear `apps/mobile/lib/features/group_session/data/` y `domain/`.\n\nEn los modelos freezed para `GroupSessionDto`, `ParticipantDto`,\n`GroupMessageDto`, `GroupCorrectionDto`, `GroupSessionDetailDto` y\n`GroupRecapDto`, copia los campos exactos de *Interfaces* de la arquitectura.\n\n`GroupSessionApi` (usando `apps/mobile/lib/core/http/api_client.dart`) cubre\ntodos los endpoints de texto: `start`, `active`, `detail`, `join`, `leave`,\n`end`, `sendMessage` y `setShareCorrections`. Mapea los códigos\n`GROUP_SESSION_ACTIVE` (devolviendo el id existente), `GROUP_SESSION_ENDED`,\n`NOT_PARTICIPANT` y `GROUP_SESSION_FORBIDDEN`.\n\n`GroupRoomStream` abre `GET group-sessions/:id/events`:\n- Reutiliza la técnica de `sendTurnStream` en\n  `apps/mobile/lib/core/api/http_fluent_api.dart` (Dio `ResponseType.stream` +\n  `LineSplitter`) y emite un `Stream\u003cRoomEvent\u003e` tipado. Ignora los `: ping`.\n- Si la conexión cae: backoff 1 s, 2 s, 5 s; luego pide `detail()` de nuevo y\n  vuelve a abrir el stream.\n\n`GroupSessionController` (Riverpod `Notifier`) guarda el estado de la sala:\n- Funde el snapshot y los eventos, deduplicando por `id` y por `clientId` (un\n  mensaje propio optimista se sustituye al llegar el `message` con el mismo\n  `clientId`).\n- Acumula `tutor_token` en un mensaje del tutor \"en curso\".\n\nDone when: hay tests de los modelos (JSON de ida y vuelta), del parser del\nstream (eventos, ping, reconexión con un Dio falso) y de la deduplicación del\ncontroller. `flutter analyze` queda limpio.",
-      "model": "agy/gemini-3.1-pro-high",
+      "model": "claude/claude-sonnet-5",
       "reason": "Flutter con streams y estado; tier alto de Gemini, fuerte en Dart.",
       "status": "backlog",
       "dependencies": [],
@@ -672,7 +672,7 @@
       "phase": 6,
       "title": "Pantalla de sala, entrada desde el grupo y deep link",
       "description": "**`GroupSessionScreen`** (`apps/mobile/lib/features/group_session/presentation/`):\n- Lista de mensajes: los propios a la derecha; los ajenos con avatar y nombre;\n  los de sistema como línea centrada diferenciada (FR-14).\n- Cabecera con tema, participantes y un temporizador hasta `endsAt`.\n- Campo de texto y botones \"Salir\" y \"Terminar\" (este último solo para el\n  iniciador).\n- Al terminar la sala muestra \"sesión terminada\" y desactiva el input (FR-5).\n- Al entrar llama a `join` si el usuario no es participante activo.\n\n**`GroupScreen`** (`apps/mobile/lib/features/group/presentation/group_screen.dart`):\ntarjeta \"Sesión grupal\":\n- Si hay sala activa (`active()`), muestra \"en curso\" con el tema y el\n  iniciador y el botón \"Unirse\".\n- Si no la hay, muestra \"Iniciar\" y abre un selector de tipo (tema libre,\n  roleplay o noticia), reutilizando los catálogos que ya usa\n  `features/session/presentation/new_session_screen.dart`.\n- Si iniciar devuelve 409, entra en la sala existente (FR-4).\n\n**Ruta y deep link**:\n- Añade la ruta `/group-session/:id` en `apps/mobile/lib/app/router.dart`.\n- En `apps/mobile/lib/core/push/push_service.dart`, `_safeRoute` debe aceptar\n  `/group-session/\u003cuuid\u003e`, validado con una regex y no por prefijo libre.\n- Textos nuevos en `apps/mobile/lib/l10n/app_es.arb` y `app_pt.arb` (y en el\n  `en` base si existe).\n\nDone when: hay widget tests de la pantalla (mensaje propio, ajeno y de sistema;\ninput desactivado al terminar) y de la tarjeta del grupo (con y sin sala), y un\ntest de `_safeRoute` que acepta `/group-session/\u003cuuid\u003e` y rechaza\n`/group-session/../x`. `flutter analyze` queda limpio.",
-      "model": "agy/gemini-3.1-pro-high",
+      "model": "claude/claude-sonnet-5",
       "reason": "UI Flutter con varias piezas; Gemini Pro rinde bien en layout de widgets.",
       "status": "backlog",
       "dependencies": [
@@ -782,7 +782,7 @@
       "phase": 7,
       "title": "Tutor en streaming, chips de corrección y toggle de compartir",
       "description": "En `apps/mobile/lib/features/group_session/`:\n\n**Tutor.**\n- Burbuja propia con avatar del tutor.\n- Muestra `tutor_token` mientras llega, reemplazado luego por el `message`\n  final.\n- TTS opcional con la misma preferencia y velocidad que el 1:1 (reutiliza el\n  servicio `flutter_tts` de `features/session`).\n\n**Mención.** Botón \"@tutor\" que inserta la mención en el input.\n\n**Correcciones.**\n- Chips bajo cada mensaje con el mismo widget de chip que usa\n  `features/session/presentation/conversation_screen.dart` (RF-3.4).\n- El usuario ve los suyos siempre y los ajenos cuando le llegan, ya que el\n  servidor filtra.\n- El snapshot (`detail.corrections`) y el evento `corrections` se funden por\n  `messageId`.\n\n**Compartir.**\n- Switch \"Compartir mis correcciones\" en el menú de la sala, que llama a\n  `setShareCorrections` (FR-12).\n- La lista de participantes marca quién comparte.\n\n**Tutor no disponible.** El evento de sistema `tutor_unavailable` se muestra\ncomo línea de sistema: \"El tutor no puede responder: se alcanzó el tope diario\nde quien escribió\".\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests de la burbuja en streaming (tokens y luego final),\nde los chips propios visibles, del toggle que llama a la API y de la línea\n`tutor_unavailable`. `flutter analyze` queda limpio.",
-      "model": "agy/gemini-3.1-pro-high",
+      "model": "claude/claude-sonnet-5",
       "reason": "UI Flutter sobre la capa de F6.5; reutiliza widgets existentes.",
       "status": "backlog",
       "dependencies": [
@@ -827,7 +827,7 @@
       "phase": 8,
       "title": "UI de nota de voz: grabar, revisar, enviar y reproducir",
       "description": "En la sala (`apps/mobile/lib/features/group_session/presentation/`):\n\n**Grabar.** Mantener pulsado el micrófono graba con `VoiceNoteRecorder`\n(F8.1.T1); al soltar se abre la revisión.\n\n**Revisar.** Hoja con la transcripción editable (como RF-3.1), la duración y los\nbotones \"Enviar\" y \"Descartar\".\n\n**Enviar.** Añadir `sendVoiceMessage(audioPath?, transcript, durationMs, clientId)`\na `GroupSessionApi` (`features/group_session/data/`):\n- Con audio, hace multipart a `POST group-sessions/:id/voice-messages`.\n- Sin audio (modo degradado), envía la transcripción por `sendMessage` normal.\n\n**Reproducir.** Un mensaje con `hasAudio` muestra un mini reproductor\n(`just_audio`) que descarga `GET .../messages/:messageId/audio` con el token del\n`api_client`. Un `410` muestra \"audio caducado\" y deja solo el texto.\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests de la hoja de revisión (editar y enviar llama a la\nAPI correcta en ambos modos) y del mensaje con audio (reproductor visible; 410\nda el texto de caducado). `flutter analyze` queda limpio.",
-      "model": "agy/gemini-3.1-pro-high",
+      "model": "claude/claude-sonnet-5",
       "reason": "UI Flutter con un contrato claro.",
       "status": "backlog",
       "dependencies": [
@@ -871,7 +871,7 @@
       "phase": 8,
       "title": "Retención de audio a 30 días",
       "description": "En `apps/api/src/jobs/maintenance/retention.service.ts`, añadir un paso al job\ndiario. Busca los mensajes con `audio_key IS NOT NULL` y\n`created_at \u003c now() - 30 days`, borra el objeto del bucket `group-voice` y pone\n`audio_key = null`; la transcripción (`text`) se queda (NFR-5). Procesa en lotes\nde 200. Si borrar un objeto falla, registra el error y sigue con el resto sin\nanular su `audio_key`.\n\nDone when: el spec cubre que se borra el audio viejo, se respeta el reciente y\nun fallo de borrado de un objeto no detiene el lote.",
-      "model": "agy/gemini-3.8-flash-medium",
+      "model": "claude/claude-sonnet-5",
       "reason": "Un paso más en un job de retención existente; mecánico.",
       "status": "backlog",
       "dependencies": [
@@ -1041,7 +1041,7 @@
       "phase": 9,
       "title": "App: pantalla de cierre con XP y recap, e historial de grupo",
       "description": "**Cierre.** En `apps/mobile/lib/features/group_session/presentation/`, al\nrecibir `ended` se muestra la pantalla de cierre: la XP de cada participante\n(con la propia destacada) y, cuando llega `recap`, los temas y una frase por\npersona. Hasta entonces, un placeholder.\n\n**Historial.** En la lista de `apps/mobile/lib/features/session/presentation/`\n(o donde se pinte el historial), un ítem `kind = 'group'` lleva icono de grupo y\nabre la sala en solo lectura: mensajes, correcciones visibles y recap, usando\n`GET sessions/:id`. Añade los campos nuevos a los modelos de\n`apps/mobile/lib/core/api/models.dart`.\n\nTextos l10n en `app_es.arb` y `app_pt.arb`.\n\nDone when: hay widget tests del cierre (XP y luego recap) y de la vista en solo\nlectura desde el historial. `flutter analyze` queda limpio.",
-      "model": "agy/gemini-3.1-pro-high",
+      "model": "claude/claude-sonnet-5",
       "reason": "UI Flutter sobre contratos ya fijados.",
       "status": "backlog",
       "dependencies": [

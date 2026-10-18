@@ -51,6 +51,15 @@ const BASE: InterviewTurnPromptInput = {
 };
 
 describe('buildInterviewTurnMessages', () => {
+  // 2026-10-18: con una oferta en portugués y el locale pt-BR, la apertura
+  // salió en portugués. El prompt dice que el idioma del candidato solo vale
+  // para las notas y que la oferta en otro idioma no cambia nada.
+  it('inglés siempre, aunque el locale o la oferta sean otros', () => {
+    const [system] = buildInterviewTurnMessages({ ...BASE, locale: 'pt-BR' });
+    expect(system?.content).toContain('Speak in English only, whatever the language of the plan, the offer or the candidate');
+    expect(system?.content).toContain('Only the correction notes use Brazilian Portuguese');
+  });
+
   it('primer turno: se presenta y pide respuestas de un minuto', () => {
     const messages = buildInterviewTurnMessages(BASE);
     expect(messages).toMatchSnapshot();

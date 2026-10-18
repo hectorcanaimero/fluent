@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { looksEnglish } from './english.js';
+
 export const CATEGORIES = [
   'past_simple',
   'present_perfect',
@@ -99,9 +101,12 @@ const InterviewCorrection = Correction.extend({
  * recorta y un `questionIdx` fuera de rango («#3», 0, 9) se lleva a 1..8.
  */
 export const InterviewTurnOutput = z.object({
+  // Fluent es para practicar inglés: un reply en otro idioma no es un turno
+  // válido (ver `english.ts`), y LlmService prueba el siguiente candidato.
   reply: z
     .string()
     .min(1)
+    .refine(looksEnglish, { message: 'reply must be in English' })
     .transform((reply) => reply.slice(0, 600)),
   questionIdx: z.preprocess(
     numberFromId,

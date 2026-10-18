@@ -9,7 +9,7 @@ import {
   type LlmCallSink,
 } from './llm.service.js';
 import { ModelResolver } from './model-resolver.js';
-import { TurnOutput } from './schemas.js';
+import { InterviewTurnOutput, TurnOutput } from './schemas.js';
 
 const FALLBACKS = [
   { provider: '9router' as const, model: 'fluent-pro' },
@@ -207,6 +207,32 @@ describe('LlmService.complete', () => {
     expect(events.filter((e) => e === 'reset')).toHaveLength(1);
     expect(events.indexOf('reset')).toBeGreaterThan(0);
     expect(events.at(-1)).toBe('token');
+  });
+
+  // 2026-10-18: el entrevistador abrió en portugués. Ese reply no pasa el
+  // esquema, así que se tira lo emitido y responde el siguiente candidato.
+  it('un reply de entrevista en portugués cae al siguiente candidato', async () => {
+    const turn = { questionIdx: 1, isFollowUp: false, done: false, corrections: [] };
+    const portuguese = JSON.stringify({
+      ...turn,
+      reply: 'Olá, sou o entrevistador. Esta conversa será em português, conforme o seu idioma.',
+    });
+    const english = JSON.stringify({ ...turn, reply: "Hi, I'm your interviewer. Tell me about your last role." });
+    const { service: svc, calls } = service([portuguese, english]);
+    const events: string[] = [];
+
+    const result = await svc.complete({
+      ...request(),
+      purpose: 'interview' as const,
+      schema: InterviewTurnOutput,
+      onToken: () => events.push('token'),
+      onReset: () => events.push('reset'),
+    });
+
+    expect(calls).toHaveLength(2);
+    expect(result.data.reply).toBe("Hi, I'm your interviewer. Tell me about your last role.");
+    expect(result.attempts.map((a) => a.status)).toEqual(['invalid_json', 'ok']);
+    expect(events).toContain('reset');
   });
 
   it('sin streaming nunca llama a onReset', async () => {

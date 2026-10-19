@@ -5,7 +5,7 @@
 	<!-- Mismo grupo que Runner: por ahí pasa lo compartido a la app. -->
 	<key>com.apple.security.application-groups</key>
 	<array>
-		<string>group.com.guria.openfluent</string>
+		<string>group.com.guria.openfluent.ShareExtension</string>
 	</array>
 </dict>
 </plist>

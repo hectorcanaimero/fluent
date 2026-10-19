@@ -51,7 +51,7 @@
 		</array>
 		<!-- App Group donde la share extension deja lo compartido. -->
 		<key>AppGroupId</key>
-		<string>group.com.guria.openfluent</string>
+		<string>group.com.guria.openfluent.ShareExtension</string>
 		<key>LSRequiresIPhoneOS</key>
 		<true/>
 		<!-- Textos por idioma en {en,es,pt}.lproj/InfoPlist.strings; estos

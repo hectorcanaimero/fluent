@@ -46,7 +46,11 @@ dependencies:
   share_plus: ^10.1.4
   # Recibir lo compartido desde otras apps (F14.2): intent-filter de Android
   # en AndroidManifest.xml y servicio en incoming_share.dart.
-  receive_sharing_intent: ^1.9.0
+  # Versión exacta: Flutter enlaza el paquete Swift en
+  # ios/Flutter/ephemeral/Packages/.packages/receive_sharing_intent-<versión>
+  # y la share extension lo referencia con esa ruta en project.pbxproj.
+  # Al subir de versión, cambiar también la ruta allí.
+  receive_sharing_intent: 1.9.0
 
   # Recordatorios locales
   flutter_local_notifications: ^18.0.1

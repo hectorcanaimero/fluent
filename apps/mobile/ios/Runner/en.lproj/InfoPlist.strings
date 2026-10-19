@@ -1,2 +1,3 @@
 "NSMicrophoneUsageDescription" = "Open Fluent uses the microphone so you can speak with your tutor. Your voice becomes text; we never store the audio.";
 "NSSpeechRecognitionUsageDescription" = "Open Fluent turns what you say into text so your tutor can answer and correct you. We never store the audio.";
+"NSPhotoLibraryUsageDescription" = "Open Fluent only reads an image if you share one with the app. It never browses your photo library.";

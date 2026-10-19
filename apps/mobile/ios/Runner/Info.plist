@@ -58,6 +58,10 @@
 		     son el respaldo (idioma base: inglés). -->
 		<key>NSMicrophoneUsageDescription</key>
 		<string>Open Fluent uses the microphone so you can speak with your tutor. Your voice becomes text; we never store the audio.</string>
+		<!-- Lo exige App Store porque receive_sharing_intent (compartir hacia la
+		     app, F14.2) referencia la API de Fotos; la app no la usa. -->
+		<key>NSPhotoLibraryUsageDescription</key>
+		<string>Open Fluent only reads an image if you share one with the app. It never browses your photo library.</string>
 		<key>NSSpeechRecognitionUsageDescription</key>
 		<string>Open Fluent turns what you say into text so your tutor can answer and correct you. We never store the audio.</string>
 		<key>CFBundleLocalizations</key>
